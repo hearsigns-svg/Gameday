@@ -42,6 +42,16 @@ source of truth for build state — never chat history.
   ("restricted method in java.lang.System"). Build Android with
   `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`
   (JBR 21). If a daemon ran under the wrong JDK: `./gradlew --stop` first.
+- Firebase emulators: `firebase emulators:start --project demo-gameday` —
+  Firestore 8180, Functions 5101 (offset from MedHandover's 8080/5001).
+  Functions need `cd functions && npm run build` first.
+- Simulator limits (verified): silent-push wake, BGTaskScheduler, and
+  AppState 'active' on `simctl launch` of a running app do NOT fire on
+  iOS sims — verify those layers on a real device (M6). Sync logic is
+  testable via the in-app Sync now button.
+- NEVER edit sync-engine source while an on-device sync is mid-run in
+  dev: fast refresh resets the mutex while old closures keep executing —
+  zombie runs race the ledger and duplicate events/calendars.
 - `npx tsc --noEmit` — typecheck (must stay clean)
 - `npm test` — jest unit tests (domain logic)
 - `cd functions && npm test` — backend tests (once functions exist)

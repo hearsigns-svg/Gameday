@@ -11,6 +11,7 @@ import {
   deleteFixtureEvent,
   ensureCalendarPermission,
   ensureGamedayCalendar,
+  getGamedayCalendarObject,
   updateFixtureEvent,
 } from './data/calendarDriver';
 import {
@@ -40,10 +41,23 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
   if (syncRunning) return err({ kind: 'sync-in-progress' });
   syncRunning = true;
   try {
+    return await runSyncInner();
+  } catch (e) {
+    // Nothing inside may leak an uncaught rejection to the UI.
+    return err({ kind: 'unknown', message: `sync failed: ${e}` });
+  } finally {
+    syncRunning = false;
+  }
+}
+
+async function runSyncInner(): Promise<Result<SyncOutcome>> {
+  {
     const perm = await ensureCalendarPermission();
     if (!perm.ok) return perm;
     const cal = await ensureGamedayCalendar();
     if (!cal.ok) return cal;
+    const calObj = await getGamedayCalendarObject(cal.value);
+    if (!calObj.ok) return calObj;
 
     const follows = loadFollows();
     const fixtures = await fetchFixturesForFollows(follows);
@@ -69,7 +83,7 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
         };
         const r =
           op.op === 'create'
-            ? await createFixtureEvent(cal.value, input)
+            ? await createFixtureEvent(calObj.value, input)
             : await updateFixtureEvent(op.entry.eventId, input);
         if (!r.ok) return r;
         upsertLedgerEntry(f.id, {
@@ -90,8 +104,6 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
 
     writeJson(LAST_SYNC_KEY, outcome);
     return ok(outcome);
-  } finally {
-    syncRunning = false;
   }
 }
 

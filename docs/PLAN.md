@@ -13,7 +13,7 @@ Toolchain verified; bare scaffold builds and runs on BOTH platforms.
   adb-reverse overrides; CocoaPods needs UTF-8 locale; Android builds
   need ANDROID_HOME + JBR 21 (default JDK 26 breaks CMake configure).
 
-## M1 — Proving vertical slice  [ ]
+## M1 — Proving vertical slice  [x]
 
 Thinnest path through every risky joint: follow ONE soccer team →
 provider adapter fetches fixtures → canonical cache (Firestore emulator
@@ -27,6 +27,20 @@ corrects the event without duplicates.
 - External unlocks needed from owner: API-Sports key (free tier OK for
   slice); Firebase project + Blaze billing for real Scheduler/FCM
   (emulator until then).
+- VERIFIED 2026-07-25 on both platforms: 63 real fixtures → both device
+  calendars; re-sync 0/0/0 (idempotent); server mutation → diff change
+  record → re-sync moved the event on BOTH platforms; re-poll restored
+  API truth and both converged back; 12 domain tests green. API key
+  received & verified (free tier = seasons 2022–24; current seasons
+  need a paid tier before M5). Sim limitations hit: silent-push wake +
+  BGTask + relaunch-AppState don't fire on simulators — push wiring is
+  registered, REAL-DEVICE proof stays in M6.
+- Carried forward: M3 — FollowScreen should subscribe to sync status
+  (app-level syncs are invisible to it today) + list auto-refresh; M4 —
+  concurrent-run guard beyond the in-process mutex (dev fast-refresh
+  spawned zombie loops that raced the ledger AND created duplicate
+  Gameday calendars; ensureGamedayCalendar must also dedupe by title,
+  recovery must scan event notes tags).
 
 ## M2 — Fixture platform hardening  [ ]
 
