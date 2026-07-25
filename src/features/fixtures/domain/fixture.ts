@@ -13,21 +13,16 @@ export type FixtureStatus =
 export interface Fixture {
   id: string; // provider-scoped stable id, e.g. 'apisports-1030318'
   sport: 'soccer';
-  competition: string;
+  competition: string; // display name
+  competitionId: string; // followable key, e.g. 'apisports-league-39'
   homeTeam: string;
   awayTeam: string;
-  teamIds: string[]; // followable keys, e.g. 'apisports-team-40'
+  followKeys: string[]; // every followable this fixture belongs to:
+  // both team keys + the competition key
   startUtc: string; // ISO 8601
   venueTz: string; // IANA zone; 'UTC' when provider omits venue zone
   status: FixtureStatus;
   updatedAt: string; // ISO 8601, server write time
 }
-
-// Statuses that mean "no timed calendar event should exist".
-// M2 refines postponed into a placeholder rather than a removal.
-export const UNSCHEDULED_STATUSES: readonly FixtureStatus[] = [
-  'postponed',
-  'cancelled',
-];
 
 export const FIXTURE_DURATION_HOURS = 2;

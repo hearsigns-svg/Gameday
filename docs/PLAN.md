@@ -42,12 +42,25 @@ corrects the event without duplicates.
   Gameday calendars; ensureGamedayCalendar must also dedupe by title,
   recovery must scan event notes tags).
 
-## M2 — Fixture platform hardening  [ ]
+## M2 — Fixture platform hardening  [x]
 
 Adapter framework, multi-league soccer, diff edge cases (TBD, postponed,
 cancelled, DST-crossing), adapter contract tests.
 - Verification: contract tests green incl. DST cases; edge-case fixture
   transitions produce correct calendar mutations in emulator E2E.
+- VERIFIED 2026-07-25: 35 tests green — contract suite pinned to a real
+  captured payload (UK DST boundary instants exact, full status map),
+  planner suite covers every transition. On-device on BOTH platforms:
+  postponed → all-day placeholder, rescheduled → sharpened timed event,
+  cancelled → deleted, restored → recreated; totals conserved at 63.
+  Model: followKeys (team keys + competitionId) replaces teamIds;
+  pollLeague lands the competition-follow data path; mutateFixture
+  drives status transitions in the emulator.
+- HAZARD FIXED: EventKit half-applies all-day↔timed conversion on
+  update (flag flips, dates don't → title-less day-spanning block).
+  Kind changes are now always delete + recreate in the engine.
+- Carried forward: emulator DNS flakiness makes mount-sync unreliable
+  (two occurrences) — M6 adds retry/backoff around the cache fetch.
 
 ## M3 — Follow experience  [ ]
 

@@ -11,13 +11,15 @@ export type FixtureStatus =
   | 'finished';
 
 export interface Fixture {
-  id: string;
+  id: string; // provider-scoped stable id, e.g. 'apisports-1030318'
   sport: 'soccer';
-  competition: string;
+  competition: string; // display name
+  competitionId: string; // followable key, e.g. 'apisports-league-39'
   homeTeam: string;
   awayTeam: string;
-  teamIds: string[];
-  startUtc: string;
+  followKeys: string[]; // every followable this fixture belongs to:
+  // both team keys + the competition key
+  startUtc: string; // ISO 8601
   venueTz: string;
   status: FixtureStatus;
   updatedAt: string;

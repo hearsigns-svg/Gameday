@@ -68,6 +68,7 @@ export interface EventInput {
   title: string;
   startUtc: string;
   endUtc: string;
+  allDay: boolean;
   reminderMinutesBefore: number | null;
 }
 
@@ -76,6 +77,7 @@ function toEventDetails(input: EventInput) {
     title: input.title,
     startDate: new Date(input.startUtc),
     endDate: new Date(input.endUtc),
+    allDay: input.allDay,
     notes: `${NOTES_TAG}${input.fixtureId}`,
     alarms:
       input.reminderMinutesBefore === null

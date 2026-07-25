@@ -38,3 +38,12 @@
   calendar is always a clean uninstall of our data.
 - mutateFixture test hook refuses to run outside the emulator
   (FUNCTIONS_EMULATOR guard) — no schedule-tampering surface in prod.
+- Placeholder semantics: tbd → all-day "— time TBC", postponed →
+  all-day "— postponed" on the original day, cancelled → delete;
+  placeholders carry no reminder (alerts for unknown times are noise).
+- followKeys[] (both teams + competition) is the single followable
+  index on fixtures; competition-follow needs no schema change later.
+- EventKit all-day↔timed conversions are delete+recreate, never
+  in-place update (half-applies on iOS: flag flips, dates don't).
+- Contract tests pin the adapter to a captured real payload committed
+  in-repo — provider shape drift fails CI before it fails users.

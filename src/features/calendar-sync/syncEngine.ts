@@ -19,7 +19,7 @@ import {
   removeLedgerEntry,
   upsertLedgerEntry,
 } from './data/ledger';
-import { eventEndUtc, eventTitle, planSync } from './domain/syncPlan';
+import { planSync } from './domain/syncPlan';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
 const REMINDER_MINUTES = 60; // slice default; a preference in M3
@@ -74,15 +74,26 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     for (const op of ops) {
       if (op.op === 'create' || op.op === 'update') {
         const f = op.fixture;
+        const d = op.desired;
         const input = {
           fixtureId: f.id,
-          title: eventTitle(f),
-          startUtc: f.startUtc,
-          endUtc: eventEndUtc(f.startUtc),
-          reminderMinutesBefore: REMINDER_MINUTES,
+          title: d.title,
+          startUtc: d.startUtc,
+          endUtc: d.endUtc,
+          allDay: d.allDay,
+          // No reminder on placeholders — an alert for an unknown time
+          // is noise; the sharpened timed event gets the reminder.
+          reminderMinutesBefore: d.allDay ? null : REMINDER_MINUTES,
         };
+        // EventKit half-applies all-day ↔ timed conversions on update
+        // (flag flips, dates don't). A kind change is always delete +
+        // recreate; same-kind changes update in place.
+        const kindFlip =
+          op.op === 'update' &&
+          (op.entry.allDay ?? false) !== op.desired.allDay;
+        if (kindFlip) await deleteFixtureEvent(op.entry.eventId);
         const r =
-          op.op === 'create'
+          op.op === 'create' || kindFlip
             ? await createFixtureEvent(calObj.value, input)
             : await updateFixtureEvent(op.entry.eventId, input);
         if (!r.ok) return r;
@@ -92,6 +103,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           startUtc: input.startUtc,
           endUtc: input.endUtc,
           title: input.title,
+          allDay: input.allDay,
         });
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;

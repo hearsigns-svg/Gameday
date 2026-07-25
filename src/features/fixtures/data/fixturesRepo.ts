@@ -19,7 +19,7 @@ export async function fetchFixturesForFollows(
     const snap = await getDocs(
       query(
         collection(db, 'fixtures'),
-        where('teamIds', 'array-contains-any', followedKeys.slice(0, 10)),
+        where('followKeys', 'array-contains-any', followedKeys.slice(0, 10)),
       ),
     );
     return ok(snap.docs.map((d) => d.data() as Fixture));

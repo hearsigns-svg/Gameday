@@ -28,26 +28,25 @@ const STATUS_MAP: Record<string, FixtureStatus> = {
   LIVE: 'in_play',
 };
 
-interface ApiFixtureRow {
+export interface ApiFixtureRow {
   fixture: {
     id: number;
     date: string;
     timezone: string;
     status: { short: string };
   };
-  league: { name: string };
+  league: { id: number; name: string };
   teams: {
     home: { id: number; name: string };
     away: { id: number; name: string };
   };
 }
 
-export async function fetchTeamSeasonFixtures(
+async function fetchRows(
   apiKey: string,
-  teamId: number,
-  season: number,
-): Promise<Fixture[]> {
-  const res = await fetch(`${BASE}/fixtures?team=${teamId}&season=${season}`, {
+  query: string,
+): Promise<ApiFixtureRow[]> {
+  const res = await fetch(`${BASE}/fixtures?${query}`, {
     headers: { 'x-apisports-key': apiKey },
   });
   if (!res.ok) throw new Error(`api-sports http ${res.status}`);
@@ -59,20 +58,42 @@ export async function fetchTeamSeasonFixtures(
   if (errors && Object.keys(errors).length > 0) {
     throw new Error(`api-sports error: ${JSON.stringify(errors)}`);
   }
+  return body.response;
+}
+
+export async function fetchTeamSeasonFixtures(
+  apiKey: string,
+  teamId: number,
+  season: number,
+): Promise<Fixture[]> {
   const now = new Date().toISOString();
-  return body.response.map((row) => normaliseRow(row, now));
+  const rows = await fetchRows(apiKey, `team=${teamId}&season=${season}`);
+  return rows.map((row) => normaliseRow(row, now));
+}
+
+export async function fetchLeagueSeasonFixtures(
+  apiKey: string,
+  leagueId: number,
+  season: number,
+): Promise<Fixture[]> {
+  const now = new Date().toISOString();
+  const rows = await fetchRows(apiKey, `league=${leagueId}&season=${season}`);
+  return rows.map((row) => normaliseRow(row, now));
 }
 
 export function normaliseRow(row: ApiFixtureRow, updatedAt: string): Fixture {
+  const competitionId = `apisports-league-${row.league.id}`;
   return {
     id: `apisports-${row.fixture.id}`,
     sport: 'soccer',
     competition: row.league.name,
+    competitionId,
     homeTeam: row.teams.home.name,
     awayTeam: row.teams.away.name,
-    teamIds: [
+    followKeys: [
       `apisports-team-${row.teams.home.id}`,
       `apisports-team-${row.teams.away.id}`,
+      competitionId,
     ],
     startUtc: new Date(row.fixture.date).toISOString(),
     venueTz:
