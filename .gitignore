@@ -43,3 +43,13 @@ yarn-error.*
 # Native dirs are generated via expo prebuild (CNG); config lives in app.json
 /ios
 /android
+
+# Secrets — never commit
+.env
+
+# Build output + emulator artifacts
+functions/lib/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/

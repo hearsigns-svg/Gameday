@@ -1,20 +1,27 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+// Side effect: defines background tasks at module scope (headless launches).
+import { registerBackgroundSync } from './src/features/calendar-sync/backgroundSync';
+import { runSync, shouldAutoSync } from './src/features/calendar-sync/syncEngine';
+import FollowScreen from './src/features/follows/FollowScreen';
 
 export default function App() {
+  useEffect(() => {
+    void registerBackgroundSync();
+    // Propagation layer 3: always sync on foreground (never on a cold
+    // first open — shouldAutoSync gates the permission prompt).
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && shouldAutoSync()) void runSync();
+    });
+    if (shouldAutoSync()) void runSync();
+    return () => sub.remove();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+    <>
+      <FollowScreen />
       <StatusBar style="auto" />
-    </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

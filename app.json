@@ -5,10 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hearsigns.Gameday"
+      "bundleIdentifier": "com.hearsigns.Gameday",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification", "processing"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,6 +25,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-background-task",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Gameday adds your followed teams' fixtures to your calendar and keeps them up to date."
+        }
+      ],
+      "expo-notifications"
+    ]
   }
 }

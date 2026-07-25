@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// SLICE RULES — emulator only. The fixture cache is world-readable public
+// data; all writes are server-only (Admin SDK bypasses rules). Real rules
+// harden alongside auth + entitlements (M6) BEFORE any production deploy.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /fixtures/{fixtureId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /fixtureChanges/{changeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
