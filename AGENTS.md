@@ -26,6 +26,22 @@ source of truth for build state — never chat history.
 ## Commands
 
 - `npm run ios` / `npm run android` — native build + launch
+- **Metro port is 8082** — 8081 belongs to the owner's MedHandover session.
+  Always pass `--port 8082`. RN 0.86 prebuilt core ignores the port at
+  build time and the blank template has no dev-client, so after install:
+  iOS sim → `xcrun simctl spawn booted defaults write com.hearsigns.Gameday
+  RCT_jsLocation "localhost:8082"` then relaunch; Android →
+  `adb reverse tcp:8081 tcp:8082`. Wrong-port symptom: RedBox
+  "PlatformConstants could not be found" (foreign bundle from 8081).
+- CocoaPods needs UTF-8: prefix pod/expo-run commands with
+  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
+- `ANDROID_HOME` is unset in the shell: prefix Android runs with
+  `ANDROID_HOME="$HOME/Library/Android/sdk"` (Gradle fails with
+  "SDK location not found" otherwise).
+- Default `java` is JDK 26, which breaks the CMake configure step
+  ("restricted method in java.lang.System"). Build Android with
+  `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`
+  (JBR 21). If a daemon ran under the wrong JDK: `./gradlew --stop` first.
 - `npx tsc --noEmit` — typecheck (must stay clean)
 - `npm test` — jest unit tests (domain logic)
 - `cd functions && npm test` — backend tests (once functions exist)

@@ -2,14 +2,16 @@
 
 Status legend: [ ] not started · [~] in progress · [x] done (checks green)
 
-## M0 — Environment & skeleton  [~]
+## M0 — Environment & skeleton  [x]
 
 Toolchain verified; bare scaffold builds and runs on BOTH platforms.
-- Verification: `npm run ios` and `npm run android` launch to the
-  template screen; `npx tsc --noEmit` clean; knowledge base committed.
-- Notes: watchman absent (optional, Metro node-watcher fallback);
-  ANDROID_HOME unset but SDK at ~/Library/Android/sdk; Java 26 — Gradle
-  compatibility proven by the Android build itself.
+- Verified 2026-07-25: template screen on-device on iPhone 17 Pro sim
+  (iOS 26.5) and Phone_1 emulator, each served by Gameday's own Metro
+  (706/707 modules); `npx tsc --noEmit` clean; knowledge base committed.
+- Environment lore discovered (recorded in AGENTS.md Commands): Metro
+  pinned to 8082 (8081 = owner's MedHandover) with RCT_jsLocation /
+  adb-reverse overrides; CocoaPods needs UTF-8 locale; Android builds
+  need ANDROID_HOME + JBR 21 (default JDK 26 breaks CMake configure).
 
 ## M1 — Proving vertical slice  [ ]
 
