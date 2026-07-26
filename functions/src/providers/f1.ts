@@ -1,0 +1,99 @@
+// Formula 1 adapter via Jolpica (Ergast successor) — open, free, no key.
+// One race weekend fans out into per-session fixtures (taxonomy: series
+// follow, per-session events, race-only preference filters 'support').
+
+import { Fixture } from '../fixture';
+
+const BASE = 'https://api.jolpi.ca/ergast/f1';
+
+interface SessionTime {
+  date: string; // YYYY-MM-DD
+  time?: string; // HH:mm:ssZ
+}
+
+export interface F1Race extends SessionTime {
+  round: string;
+  raceName: string;
+  FirstPractice?: SessionTime;
+  SecondPractice?: SessionTime;
+  ThirdPractice?: SessionTime;
+  Qualifying?: SessionTime;
+  Sprint?: SessionTime;
+  SprintQualifying?: SessionTime;
+}
+
+const SESSION_DEFS: Array<{
+  field: keyof F1Race;
+  slug: string;
+  label: string;
+}> = [
+  { field: 'FirstPractice', slug: 'fp1', label: 'Practice 1' },
+  { field: 'SecondPractice', slug: 'fp2', label: 'Practice 2' },
+  { field: 'ThirdPractice', slug: 'fp3', label: 'Practice 3' },
+  { field: 'SprintQualifying', slug: 'sprintquali', label: 'Sprint Qualifying' },
+  { field: 'Sprint', slug: 'sprint', label: 'Sprint' },
+  { field: 'Qualifying', slug: 'quali', label: 'Qualifying' },
+];
+
+function sessionFixture(
+  season: string,
+  race: F1Race,
+  slug: string,
+  label: string,
+  at: SessionTime,
+  kind: 'race' | 'support',
+  durationHours: number,
+  updatedAt: string,
+): Fixture {
+  const hasTime = Boolean(at.time);
+  const startUtc = new Date(
+    `${at.date}T${at.time ?? '00:00:00Z'}`,
+  ).toISOString();
+  return {
+    id: `f1-${season}-r${race.round}-${slug}`,
+    sport: 'f1',
+    competition: 'Formula 1',
+    competitionId: 'f1-series-1',
+    title: `${race.raceName} — ${label}`,
+    followKeys: ['f1-series-1'],
+    startUtc,
+    venueTz: 'UTC',
+    // No published time yet → placeholder machinery takes over.
+    status: hasTime ? 'scheduled' : 'tbd',
+    durationHours,
+    sessionKind: kind,
+    updatedAt,
+  };
+}
+
+export function racesToFixtures(
+  season: string,
+  races: readonly F1Race[],
+  updatedAt: string,
+): Fixture[] {
+  const fixtures: Fixture[] = [];
+  for (const race of races) {
+    for (const def of SESSION_DEFS) {
+      const at = race[def.field] as SessionTime | undefined;
+      if (at?.date) {
+        fixtures.push(
+          sessionFixture(season, race, def.slug, def.label, at, 'support', 1, updatedAt),
+        );
+      }
+    }
+    fixtures.push(
+      sessionFixture(season, race, 'race', 'Race', race, 'race', 2, updatedAt),
+    );
+  }
+  return fixtures;
+}
+
+export async function fetchF1SeasonFixtures(season: number): Promise<Fixture[]> {
+  const res = await fetch(`${BASE}/${season}.json`);
+  if (!res.ok) throw new Error(`jolpica http ${res.status}`);
+  const body = (await res.json()) as {
+    MRData: { RaceTable: { Races: F1Race[] } };
+  };
+  const now = new Date().toISOString();
+  return racesToFixtures(String(season), body.MRData.RaceTable.Races, now);
+}

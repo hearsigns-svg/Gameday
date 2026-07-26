@@ -4,14 +4,14 @@ import { functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 
 export interface DirectoryLeague {
-  id: number;
+  id: number | string;
   name: string;
   country: string;
   key: string;
 }
 
 export interface DirectoryTeam {
-  id: number;
+  id: number | string;
   name: string;
   key: string;
 }
@@ -34,10 +34,11 @@ export async function fetchLeagues(): Promise<Result<DirectoryLeague[]>> {
 }
 
 export async function fetchTeams(
-  leagueId: number,
+  sportKey: string,
+  leagueId: number | string,
 ): Promise<Result<DirectoryTeam[]>> {
   const r = await getJson<{ teams: DirectoryTeam[] }>(
-    `listTeams?leagueId=${leagueId}`,
+    `listTeams?sport=${encodeURIComponent(sportKey)}&leagueId=${leagueId}`,
   );
   return r.ok ? ok(r.value.teams) : r;
 }

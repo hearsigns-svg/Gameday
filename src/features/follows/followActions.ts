@@ -4,15 +4,34 @@
 import { err, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
-import { ACTIVE_SEASON } from './domain/sportsConfig';
+import {
+  ACTIVE_SEASON,
+  F1_SEASON,
+  MLB_SEASON,
+  NHL_SEASON_ID,
+} from './domain/sportsConfig';
 import { Followable, setFollowed } from './data/followStore';
 
+function pollPathFor(item: Followable): string {
+  const tail = item.key.split('-').pop() ?? '';
+  switch (item.sportKey) {
+    case 'baseball':
+      // Whole-league follow polls team-by-team server-side later (M6
+      // scheduler); interactively we poll the followed entity itself.
+      return `pollMlbTeam?teamId=${Number(tail)}&season=${MLB_SEASON}`;
+    case 'ice-hockey':
+      return `pollNhlTeam?abbrev=${tail}&season=${NHL_SEASON_ID}`;
+    case 'f1':
+      return `pollF1?season=${F1_SEASON}`;
+    default:
+      return item.type === 'competition'
+        ? `pollLeague?leagueId=${Number(tail)}&season=${ACTIVE_SEASON}`
+        : `pollTeam?teamId=${Number(tail)}&season=${ACTIVE_SEASON}`;
+  }
+}
+
 async function ensurePolled(item: Followable): Promise<Result<true>> {
-  const id = Number(item.key.split('-').pop());
-  const path =
-    item.type === 'competition'
-      ? `pollLeague?leagueId=${id}&season=${ACTIVE_SEASON}`
-      : `pollTeam?teamId=${id}&season=${ACTIVE_SEASON}`;
+  const path = pollPathFor(item);
   try {
     const res = await fetch(`${functionsBaseUrl}/${path}`);
     if (!res.ok) {

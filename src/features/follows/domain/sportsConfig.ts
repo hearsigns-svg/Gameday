@@ -5,6 +5,13 @@ export type FollowableType = 'team' | 'competition' | 'athlete' | 'series';
 
 export type BrowseLevelKind = 'competition' | 'team' | 'athlete';
 
+export interface StaticCompetition {
+  id: number | string;
+  name: string;
+  country: string;
+  key: string;
+}
+
 export interface SportConfig {
   key: string;
   label: string;
@@ -15,6 +22,12 @@ export interface SportConfig {
   // Which levels can be followed directly (competition rows get a
   // Follow button when 'competition' is listed here).
   followTypes: FollowableType[];
+  // Single-league sports skip the server round-trip for the competition
+  // level; the entry is config, not data.
+  staticCompetitions?: StaticCompetition[];
+  // Series sports (F1): the one followable, followed straight from the
+  // sport row.
+  seriesFollowable?: { key: string; label: string };
 }
 
 export const SPORTS: SportConfig[] = [
@@ -27,20 +40,52 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['team', 'competition'],
   },
   { key: 'cricket', label: 'Cricket', glyph: '🏏', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
-  { key: 'ice-hockey', label: 'Ice hockey', glyph: '🏒', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'ice-hockey',
+    label: 'Ice hockey',
+    glyph: '🏒',
+    enabled: true,
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
+    staticCompetitions: [
+      { id: 1, name: 'NHL', country: 'North America', key: 'nhl-league-1' },
+    ],
+  },
   { key: 'tennis', label: 'Tennis', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
   { key: 'basketball', label: 'Basketball', glyph: '🏀', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
-  { key: 'baseball', label: 'Baseball', glyph: '⚾', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'baseball',
+    label: 'Baseball',
+    glyph: '⚾',
+    enabled: true,
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
+    staticCompetitions: [
+      { id: 1, name: 'MLB', country: 'North America', key: 'mlb-league-1' },
+    ],
+  },
   { key: 'nfl', label: 'American football', glyph: '🏈', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
   { key: 'rugby', label: 'Rugby', glyph: '🏉', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
   { key: 'golf', label: 'Golf', glyph: '⛳', enabled: false, browse: ['competition'], followTypes: ['competition'] },
-  { key: 'f1', label: 'Formula 1', glyph: '🏎️', enabled: false, browse: [], followTypes: ['series'] },
+  {
+    key: 'f1',
+    label: 'Formula 1',
+    glyph: '🏎️',
+    enabled: true,
+    browse: [],
+    followTypes: ['series'],
+    seriesFollowable: { key: 'f1-series-1', label: 'Formula 1' },
+  },
   { key: 'ufc', label: 'UFC', glyph: '🥊', enabled: false, browse: ['athlete'], followTypes: ['athlete'] },
 ];
 
 export const sportByKey = (key: string): SportConfig | undefined =>
   SPORTS.find((s) => s.key === key);
 
-// Free-tier data window (API-Sports serves seasons 2022–24 on the free
-// plan). Single source; lifted to a paid-tier current season at M5.
-export const ACTIVE_SEASON = 2023;
+// Per-sport active seasons. Soccer sits on the API-Sports free-tier
+// window (2022–24) until the owner upgrades; the free official APIs
+// serve current seasons.
+export const ACTIVE_SEASON = 2023; // soccer (API-Sports free tier)
+export const MLB_SEASON = 2026;
+export const NHL_SEASON_ID = '20262027';
+export const F1_SEASON = 2026;

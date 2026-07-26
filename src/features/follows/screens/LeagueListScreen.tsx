@@ -14,6 +14,7 @@ import {
   fetchLeagues,
 } from '../data/directoryRepo';
 import { isFollowed } from '../data/followStore';
+import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
@@ -25,12 +26,18 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [, forceRender] = useState(0);
 
   useEffect(() => {
+    const sport = sportByKey(route.params.sportKey);
+    if (sport?.staticCompetitions) {
+      // Single-league sports: the competition level is config, not data.
+      setLeagues(sport.staticCompetitions);
+      return;
+    }
     void (async () => {
       const r = await fetchLeagues();
       if (r.ok) setLeagues(r.value);
       else setError(messageOf(r.error));
     })();
-  }, []);
+  }, [route.params.sportKey]);
 
   const toggle = useCallback(async (league: DirectoryLeague) => {
     const item = {
@@ -84,6 +91,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             accessibilityLabel={`${item.name}, browse teams`}
             onPress={() =>
               navigation.navigate('TeamList', {
+                sportKey: route.params.sportKey,
                 leagueId: item.id,
                 leagueName: item.name,
               })

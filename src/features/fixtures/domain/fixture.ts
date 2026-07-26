@@ -12,16 +12,18 @@ export type FixtureStatus =
 
 export interface Fixture {
   id: string; // provider-scoped stable id, e.g. 'apisports-1030318'
-  sport: 'soccer';
+  sport: string; // sport key from the sports config, e.g. 'soccer'
   competition: string; // display name
   competitionId: string; // followable key, e.g. 'apisports-league-39'
-  homeTeam: string;
-  awayTeam: string;
-  followKeys: string[]; // every followable this fixture belongs to:
-  // both team keys + the competition key
+  title: string; // calendar title base, e.g. 'Liverpool v Everton'
+  homeTeam?: string; // team sports only
+  awayTeam?: string;
+  followKeys: string[]; // every followable this fixture belongs to
   startUtc: string; // ISO 8601
   venueTz: string; // IANA zone; 'UTC' when provider omits venue zone
   status: FixtureStatus;
+  durationHours?: number; // event length; default 2 when absent
+  sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
   updatedAt: string; // ISO 8601, server write time
 }
 

@@ -4,6 +4,6 @@ export type RootStackParamList = {
   Home: undefined;
   SportPicker: undefined;
   LeagueList: { sportKey: string };
-  TeamList: { leagueId: number; leagueName: string };
+  TeamList: { sportKey: string; leagueId: number | string; leagueName: string };
   Preferences: undefined;
 };

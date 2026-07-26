@@ -61,6 +61,15 @@ export function lastSync(): SyncOutcome | null {
   return readJson<SyncOutcome | null>(LAST_SYNC_KEY, null);
 }
 
+// Staleness metric: hours since the last successful sync. The number we
+// watch to judge whether propagation layers are doing their job (M6);
+// reported to server-side telemetry once real infra lands.
+export function syncStalenessHours(): number | null {
+  const last = lastSync();
+  if (!last) return null;
+  return (Date.now() - new Date(last.at).getTime()) / 3_600_000;
+}
+
 let syncRunning = false;
 let rerunQueued = false;
 

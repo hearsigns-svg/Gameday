@@ -7,7 +7,15 @@ import {
   fetchLeagueSeasonFixtures,
   fetchTeamSeasonFixtures,
 } from './providers/apiSports';
-import { listSoccerLeagues, listSoccerTeams } from './directory';
+import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
+import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
+import { fetchF1SeasonFixtures } from './providers/f1';
+import {
+  listMlbTeams,
+  listNhlTeams,
+  listSoccerLeagues,
+  listSoccerTeams,
+} from './directory';
 
 initializeApp();
 const db = getFirestore();
@@ -27,14 +35,26 @@ async function ingest(
   );
   const changes = diffFixtures(existing, incoming);
   const at = new Date().toISOString();
-  const batch = db.batch();
+  // Firestore batches cap at 500 writes — chunk (fixtures + changes can
+  // exceed it on a first league-wide poll).
+  let batch = db.batch();
+  let pending = 0;
+  const flush = async () => {
+    if (pending > 0) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  };
   for (const f of incoming) {
     batch.set(db.collection('fixtures').doc(f.id), f);
+    if (++pending >= 450) await flush();
   }
   for (const c of changes) {
     batch.set(db.collection('fixtureChanges').doc(), { ...c, at });
+    if (++pending >= 450) await flush();
   }
-  await batch.commit();
+  await flush();
   return { fixtures: incoming.length, changes: changes.length };
 }
 
@@ -87,12 +107,66 @@ export const listLeagues = onRequest(async (_req, res) => {
 
 export const listTeams = onRequest(async (req, res) => {
   try {
+    const sport = String(req.query.sport ?? 'soccer');
+    if (sport === 'baseball') {
+      const season = Number(req.query.season ?? new Date().getFullYear());
+      res.json({ teams: await listMlbTeams(season) });
+      return;
+    }
+    if (sport === 'ice-hockey') {
+      res.json({ teams: await listNhlTeams() });
+      return;
+    }
     const leagueId = Number(req.query.leagueId);
     if (!Number.isInteger(leagueId)) {
       res.status(400).json({ error: 'leagueId is required' });
       return;
     }
     res.json({ teams: await listSoccerTeams(requireKey(), leagueId) });
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+export const pollMlbTeam = onRequest(async (req, res) => {
+  try {
+    const teamId = Number(req.query.teamId);
+    const season = Number(req.query.season);
+    if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
+      res.status(400).json({ error: 'teamId and season are required' });
+      return;
+    }
+    const incoming = await fetchMlbTeamSeasonFixtures(teamId, season);
+    res.json(await ingest(incoming, `mlb-team-${teamId}`));
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+export const pollNhlTeam = onRequest(async (req, res) => {
+  try {
+    const abbrev = String(req.query.abbrev ?? '');
+    const season = String(req.query.season ?? '');
+    if (!/^[A-Z]{2,3}$/.test(abbrev) || !/^\d{8}$/.test(season)) {
+      res.status(400).json({ error: 'abbrev and season (YYYYYYYY) required' });
+      return;
+    }
+    const incoming = await fetchNhlTeamSeasonFixtures(abbrev, season);
+    res.json(await ingest(incoming, `nhl-team-${abbrev}`));
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+export const pollF1 = onRequest(async (req, res) => {
+  try {
+    const season = Number(req.query.season);
+    if (!Number.isInteger(season)) {
+      res.status(400).json({ error: 'season is required' });
+      return;
+    }
+    const incoming = await fetchF1SeasonFixtures(season);
+    res.json(await ingest(incoming, 'f1-series-1'));
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

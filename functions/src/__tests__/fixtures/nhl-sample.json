@@ -1,0 +1,74 @@
+{
+ "games": [
+  {
+   "id": 2026020070,
+   "startTimeUTC": "2026-10-10T17:00:00Z",
+   "gameState": "FUT",
+   "homeTeam": {
+    "abbrev": "BOS",
+    "placeName": {
+     "default": "Boston"
+    },
+    "commonName": {
+     "default": "Bruins"
+    }
+   },
+   "awayTeam": {
+    "abbrev": "PHI",
+    "placeName": {
+     "default": "Philadelphia",
+     "fr": "Philadelphie"
+    },
+    "commonName": {
+     "default": "Flyers"
+    }
+   }
+  },
+  {
+   "id": 2026020071,
+   "startTimeUTC": "2026-10-10T19:30:00Z",
+   "gameState": "FUT",
+   "homeTeam": {
+    "abbrev": "NJD",
+    "placeName": {
+     "default": "New Jersey"
+    },
+    "commonName": {
+     "default": "Devils"
+    }
+   },
+   "awayTeam": {
+    "abbrev": "VAN",
+    "placeName": {
+     "default": "Vancouver"
+    },
+    "commonName": {
+     "default": "Canucks"
+    }
+   }
+  },
+  {
+   "id": 2026020072,
+   "startTimeUTC": "2026-10-10T20:00:00Z",
+   "gameState": "FUT",
+   "homeTeam": {
+    "abbrev": "SJS",
+    "placeName": {
+     "default": "San Jose"
+    },
+    "commonName": {
+     "default": "Sharks"
+    }
+   },
+   "awayTeam": {
+    "abbrev": "EDM",
+    "placeName": {
+     "default": "Edmonton"
+    },
+    "commonName": {
+     "default": "Oilers"
+    }
+   }
+  }
+ ]
+}

@@ -7,6 +7,7 @@ function fixture(overrides: Partial<Fixture> = {}): Fixture {
     sport: 'soccer',
     competition: 'Premier League',
     competitionId: 'apisports-league-39',
+    title: 'Liverpool v Everton',
     homeTeam: 'Liverpool',
     awayTeam: 'Everton',
     followKeys: ['apisports-team-40', 'apisports-team-45', 'apisports-league-39'],

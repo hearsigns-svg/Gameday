@@ -31,11 +31,11 @@ export default function TeamListScreen({ route }: Props) {
 
   useEffect(() => {
     void (async () => {
-      const r = await fetchTeams(route.params.leagueId);
+      const r = await fetchTeams(route.params.sportKey, route.params.leagueId);
       if (r.ok) setTeams(r.value);
       else setError(messageOf(r.error));
     })();
-  }, [route.params.leagueId]);
+  }, [route.params.sportKey, route.params.leagueId]);
 
   const visible = useMemo(() => {
     if (!teams) return null;
@@ -47,7 +47,7 @@ export default function TeamListScreen({ route }: Props) {
     const item = {
       key: team.key,
       label: team.name,
-      sportKey: 'soccer',
+      sportKey: route.params.sportKey,
       type: 'team' as const,
     };
     setBusyKey(team.key);

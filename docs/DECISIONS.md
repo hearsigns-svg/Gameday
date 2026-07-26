@@ -80,3 +80,11 @@
   stays user-independent. Multi-account free-tier farming rejected:
   ToS breach and doesn't lift the season lock. Matrix with verified
   pricing is M5 task 1 and gets owner sign-off before adapter code.
+- Free official providers live first (MLB statsapi, NHL api-web, Jolpica
+  F1) — verified against current 2026 seasons; each pinned by contract
+  tests on captured payloads. Data spend to date: $0/mo.
+- Canonical fixture gained title (adapters own display form), optional
+  home/away, per-fixture duration, and sessionKind — series sports fan
+  a weekend into per-session fixtures; race-only pref filters 'support'.
+- Firebase project 'gameday-fixtures' created (Spark). Blaze upgrade =
+  the one remaining owner step for function deploys + real FCM (M6).

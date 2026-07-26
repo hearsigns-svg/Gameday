@@ -88,6 +88,7 @@ export function normaliseRow(row: ApiFixtureRow, updatedAt: string): Fixture {
     sport: 'soccer',
     competition: row.league.name,
     competitionId,
+    title: `${row.teams.home.name} v ${row.teams.away.name}`,
     homeTeam: row.teams.home.name,
     awayTeam: row.teams.away.name,
     followKeys: [

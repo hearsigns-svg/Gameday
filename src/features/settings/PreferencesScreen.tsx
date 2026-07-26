@@ -84,6 +84,27 @@ export default function PreferencesScreen() {
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         Applies to every synced fixture on the next sync.
       </Text>
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Race weekends
+      </Text>
+      <View style={styles.group}>
+        <OptionRow
+          label="All sessions (practice, qualifying, race)"
+          selected={prefs.seriesSessions === 'all'}
+          onPress={() => apply({ ...prefs, seriesSessions: 'all' })}
+        />
+        <OptionRow
+          label="Race only"
+          selected={prefs.seriesSessions === 'race-only'}
+          onPress={() => apply({ ...prefs, seriesSessions: 'race-only' })}
+        />
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        For series like Formula 1.
+      </Text>
     </ScrollView>
   );
 }

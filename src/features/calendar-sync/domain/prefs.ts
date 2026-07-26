@@ -5,11 +5,13 @@
 export interface CalendarPrefs {
   reminderMinutes: number | null; // null = no reminder
   eventStyle: 'timed' | 'all-day';
+  seriesSessions: 'all' | 'race-only'; // F1-style series: include practice/quali?
 }
 
 export const DEFAULT_PREFS: CalendarPrefs = {
   reminderMinutes: 60,
   eventStyle: 'timed',
+  seriesSessions: 'all',
 };
 
 export const REMINDER_OPTIONS: Array<{ label: string; value: number | null }> = [

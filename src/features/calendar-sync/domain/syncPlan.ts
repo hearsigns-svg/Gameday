@@ -36,9 +36,12 @@ export type SyncOp =
   | { op: 'update'; fixture: Fixture; desired: DesiredEvent; entry: LedgerEntry }
   | { op: 'delete'; fixtureId: string; entry: LedgerEntry };
 
-export function eventEndUtc(startUtc: string): string {
+export function eventEndUtc(
+  startUtc: string,
+  durationHours: number = FIXTURE_DURATION_HOURS,
+): string {
   const end = new Date(startUtc);
-  end.setHours(end.getHours() + FIXTURE_DURATION_HOURS);
+  end.setMinutes(end.getMinutes() + Math.round(durationHours * 60));
   return end.toISOString();
 }
 
@@ -59,7 +62,11 @@ export function desiredEventFor(
   f: Fixture,
   prefs: CalendarPrefs,
 ): DesiredEvent | null {
-  const matchTitle = `${f.homeTeam} v ${f.awayTeam}`;
+  // Series sports: optionally keep only the race itself in the calendar.
+  if (prefs.seriesSessions === 'race-only' && f.sessionKind === 'support') {
+    return null;
+  }
+  const matchTitle = f.title;
   switch (f.status) {
     case 'cancelled':
       return null;
@@ -94,7 +101,7 @@ export function desiredEventFor(
       return {
         title: matchTitle,
         startUtc: f.startUtc,
-        endUtc: eventEndUtc(f.startUtc),
+        endUtc: eventEndUtc(f.startUtc, f.durationHours),
         allDay: false,
       };
     }

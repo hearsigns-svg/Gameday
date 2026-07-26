@@ -106,7 +106,20 @@ calendar choice, multi-device, kill-state resumption, undo-unfollow.
   only (never user calendars); user-selectable target deferred unless
   owner requests it.
 
-## M5 — Sport expansion  [ ]
+## M5 — Sport expansion  [~]
+
+FREE-PROVIDER TRANCHE VERIFIED 2026-07-26 (50 tests): docs/PROVIDERS.md
+matrix built from LIVE calls; baseball (MLB statsapi), ice hockey (NHL
+api-web), F1 (Jolpica) adapters + contract tests on captured 2026
+payloads; per-sport config drives all UI (static competitions, series
+follow on the sport row); model gained title/duration/sessionKind;
+race-weekend pref (all vs race-only) verified on-device: F1 follow 110
+events → race-only 22 (88 supports deleted) → Bruins follow +88 = 173.
+Data spend: $0/mo, current seasons.
+REMAINING (owner decisions on the matrix): soccer current-season source
+(paid API-Sports vs football-data.org), basketball/NFL source posture
+(grey public endpoints vs paid), cricket/tennis/golf/UFC providers +
+TheSportsDB premium sub (~$10/mo).
 
 MIXED PROVIDER STRATEGY (owner-approved 2026-07-26): per-sport provider
 matrix, not API-Sports-everywhere. Free official APIs where excellent
@@ -130,7 +143,12 @@ anyway (free tier's binding limit is the season lock, not volume).
 - Gate change: the paid API-Sports tier now blocks only the API-Sports-
   dependent sports, not the whole milestone.
 
-## M6 — Propagation & observability  [ ]
+## M6 — Propagation & observability  [~]
+
+PARTIAL 2026-07-26: bounded retry+backoff around cache fetch; staleness
+metric (syncStalenessHours); Firebase project gameday-fixtures created
+(Spark). REMAINING (needs Blaze): function+rules deploy, real FCM silent
+push verified on a physical device, entitlement scaffold deploy.
 
 Real FCM silent push + background fetch tuning, staleness metric,
 entitlement scaffold (server-side, no UI).

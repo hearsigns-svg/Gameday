@@ -1,0 +1,82 @@
+{
+ "games": [
+  {
+   "gamePk": 822781,
+   "gameDate": "2026-08-01T19:07:00Z",
+   "status": {
+    "abstractGameState": "Preview",
+    "codedGameState": "S",
+    "detailedState": "Scheduled",
+    "statusCode": "S",
+    "startTimeTBD": false,
+    "abstractGameCode": "P"
+   },
+   "teams": {
+    "home": {
+     "team": {
+      "id": 141,
+      "name": "Toronto Blue Jays"
+     }
+    },
+    "away": {
+     "team": {
+      "id": 138,
+      "name": "St. Louis Cardinals"
+     }
+    }
+   }
+  },
+  {
+   "gamePk": 823109,
+   "gameDate": "2026-08-01T20:10:00Z",
+   "status": {
+    "abstractGameState": "Preview",
+    "codedGameState": "S",
+    "detailedState": "Scheduled",
+    "statusCode": "S",
+    "startTimeTBD": false,
+    "abstractGameCode": "P"
+   },
+   "teams": {
+    "home": {
+     "team": {
+      "id": 136,
+      "name": "Seattle Mariners"
+     }
+    },
+    "away": {
+     "team": {
+      "id": 142,
+      "name": "Minnesota Twins"
+     }
+    }
+   }
+  },
+  {
+   "gamePk": 822944,
+   "gameDate": "2026-08-01T20:10:00Z",
+   "status": {
+    "abstractGameState": "Preview",
+    "codedGameState": "S",
+    "detailedState": "Scheduled",
+    "statusCode": "S",
+    "startTimeTBD": false,
+    "abstractGameCode": "P"
+   },
+   "teams": {
+    "home": {
+     "team": {
+      "id": 139,
+      "name": "Tampa Bay Rays"
+     }
+    },
+    "away": {
+     "team": {
+      "id": 145,
+      "name": "Chicago White Sox"
+     }
+    }
+   }
+  }
+ ]
+}

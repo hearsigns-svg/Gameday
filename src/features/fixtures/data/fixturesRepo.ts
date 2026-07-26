@@ -13,22 +13,33 @@ import { db, functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 import { Fixture } from '../domain/fixture';
 
+const FETCH_ATTEMPTS = 3;
+const BACKOFF_MS = [800, 2400];
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function fetchFixturesForFollows(
   followedKeys: readonly string[],
 ): Promise<Result<Fixture[]>> {
   if (followedKeys.length === 0) return ok([]);
-  try {
-    // array-contains-any caps at 10 keys; fine for the slice, M3 batches.
-    const snap = await getDocsFromServer(
-      query(
-        collection(db, 'fixtures'),
-        where('followKeys', 'array-contains-any', followedKeys.slice(0, 10)),
-      ),
-    );
-    return ok(snap.docs.map((d) => d.data() as Fixture));
-  } catch (e) {
-    return err({ kind: 'unknown', message: `fixture fetch failed: ${e}` });
+  let lastError = '';
+  for (let attempt = 0; attempt < FETCH_ATTEMPTS; attempt++) {
+    if (attempt > 0) await wait(BACKOFF_MS[attempt - 1]);
+    try {
+      // array-contains-any caps at 10 keys; fine for now, batched later.
+      const snap = await getDocsFromServer(
+        query(
+          collection(db, 'fixtures'),
+          where('followKeys', 'array-contains-any', followedKeys.slice(0, 10)),
+        ),
+      );
+      return ok(snap.docs.map((d) => d.data() as Fixture));
+    } catch (e) {
+      // Transient network flakes (mobile radio, DNS) get bounded retries.
+      lastError = String(e);
+    }
   }
+  return err({ kind: 'unknown', message: `fixture fetch failed: ${lastError}` });
 }
 
 export async function requestPoll(

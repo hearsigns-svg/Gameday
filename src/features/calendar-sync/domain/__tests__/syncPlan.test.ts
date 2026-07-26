@@ -17,6 +17,7 @@ function fixture(overrides: Partial<Fixture> = {}): Fixture {
     sport: 'soccer',
     competition: 'Premier League',
     competitionId: PL,
+    title: 'Liverpool v Everton',
     homeTeam: 'Liverpool',
     awayTeam: 'Everton',
     followKeys: [LIV, 'apisports-team-45', PL],
@@ -178,6 +179,37 @@ describe('planSync', () => {
     const ops = planSync([fixture()], ledgerTimed, [LIV], prefs);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
+  });
+
+  test('race-only preference drops support sessions, keeps the race', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
+    const race = fixture({
+      id: 'f1-2026-r1-race',
+      sessionKind: 'race',
+      title: 'Australian Grand Prix — Race',
+      followKeys: ['f1-series-1'],
+    });
+    const practice = fixture({
+      id: 'f1-2026-r1-fp1',
+      sessionKind: 'support',
+      title: 'Australian Grand Prix — Practice 1',
+      followKeys: ['f1-series-1'],
+    });
+    const ops = planSync([race, practice], {}, ['f1-series-1'], prefs);
+    expect(ops).toHaveLength(1);
+    if (ops[0].op === 'create') {
+      expect(ops[0].fixture.id).toBe('f1-2026-r1-race');
+    }
+    // Switching to race-only over a full ledger deletes the support events.
+    const full = applied({}, planSync([race, practice], {}, ['f1-series-1'], DEFAULT_PREFS));
+    const cleanup = planSync([race, practice], full, ['f1-series-1'], prefs);
+    expect(cleanup).toHaveLength(1);
+    expect(cleanup[0].op).toBe('delete');
+  });
+
+  test('per-fixture duration drives the timed event end', () => {
+    const d = desiredEventFor(fixture({ durationHours: 3 }), DEFAULT_PREFS);
+    expect(d?.endUtc).toBe('2023-10-21T14:30:00.000Z');
   });
 
   test('pre-M2 ledger entries (no allDay field) stay idempotent', () => {
