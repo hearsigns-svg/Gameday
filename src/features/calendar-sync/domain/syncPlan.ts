@@ -116,18 +116,33 @@ function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
   );
 }
 
+// Look-back so a match already under way stays in the calendar rather
+// than vanishing at kick-off.
+export const HORIZON_LOOKBACK_HOURS = 6;
+
+export function horizonStartFrom(nowMs: number): string {
+  return new Date(nowMs - HORIZON_LOOKBACK_HOURS * 3600_000).toISOString();
+}
+
 export function planSync(
   fixtures: readonly Fixture[],
   ledger: Ledger,
   followedKeys: readonly string[],
   prefs: CalendarPrefs,
+  horizonStartUtc: string,
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
   for (const f of fixtures) {
     if (!f.followKeys.some((k) => followedKeys.includes(k))) continue;
     const desired = desiredEventFor(f, prefs);
-    if (desired) wanted.set(f.id, { fixture: f, desired });
+    if (!desired) continue;
+    // The product is upcoming games: a finished season must never pour
+    // hundreds of past fixtures into the calendar. Events we already
+    // created stay put as they age — erasing someone's history would be
+    // worse than leaving it.
+    if (desired.startUtc < horizonStartUtc && !ledger[f.id]) continue;
+    wanted.set(f.id, { fixture: f, desired });
   }
 
   for (const { fixture, desired } of wanted.values()) {

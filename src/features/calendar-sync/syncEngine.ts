@@ -25,9 +25,15 @@ import {
   removeLedgerEntry,
   upsertLedgerEntry,
 } from './data/ledger';
-import { planSync } from './domain/syncPlan';
+import { horizonStartFrom, planSync } from './domain/syncPlan';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
+const UPCOMING_KEY = 'upcomingByFollow.v1';
+
+// Upcoming-fixture count per followed key, refreshed every sync.
+export function upcomingByFollow(): Record<string, number> {
+  return readJson<Record<string, number>>(UPCOMING_KEY, {});
+}
 
 // Sync status subscription — screens stay live no matter which layer
 // (mount, foreground, background task, manual) triggered the run.
@@ -160,7 +166,20 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       return err({ kind: 'suspect-empty' });
     }
 
-    const ops = planSync(fixtures.value, ledger, follows, prefs);
+    const horizonStart = horizonStartFrom(Date.now());
+    const ops = planSync(fixtures.value, ledger, follows, prefs, horizonStart);
+
+    // Per-followable upcoming counts drive honest off-season messaging:
+    // a followed team between seasons has fixtures, just none ahead.
+    const upcoming: Record<string, number> = {};
+    for (const key of follows) upcoming[key] = 0;
+    for (const f of fixtures.value) {
+      if (f.startUtc < horizonStart) continue;
+      for (const key of f.followKeys) {
+        if (key in upcoming) upcoming[key]++;
+      }
+    }
+    writeJson(UPCOMING_KEY, upcoming);
     const outcome: SyncOutcome = {
       created: 0,
       updated: 0,

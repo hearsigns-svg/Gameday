@@ -135,3 +135,13 @@
   catch made a hung registration indistinguishable from success.
 - iOS push tokens are APNs, not FCM — recorded as tokenType and skipped
   by the sweep rather than failing invisibly (iOS push = M6 follow-up).
+- SYNC HORIZON: fixtures starting before now−6h are never ADDED (the
+  product is upcoming games; a finished season must not pour hundreds of
+  past events into the calendar), but events already created are kept as
+  they age and still track corrections — erasing a user's history is
+  worse than leaving it. Found by auditing the production cache: NBA had
+  1,380 fixtures and 0 upcoming, so a follow would have written ~82 past
+  games. Never caught earlier because test data was a 2023 season.
+- Home rows show per-follow upcoming counts, and "no upcoming fixtures
+  yet" between seasons — an off-season follow must read as honest, not
+  broken.

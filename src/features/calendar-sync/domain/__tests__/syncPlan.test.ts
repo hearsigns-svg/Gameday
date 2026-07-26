@@ -2,12 +2,16 @@ import { Fixture } from '../../../fixtures/domain/fixture';
 import { DEFAULT_PREFS } from '../prefs';
 import {
   desiredEventFor,
+  horizonStartFrom,
   Ledger,
   LedgerEntry,
   planSync,
   SyncOp,
 } from '../syncPlan';
 
+// Fixtures in these tests are 2023-dated; a 2020 horizon keeps them in
+// scope so each test still exercises the behaviour it names.
+const PAST_HORIZON = '2020-01-01T00:00:00.000Z';
 const LIV = 'apisports-team-40';
 const PL = 'apisports-league-39';
 
@@ -98,13 +102,13 @@ describe('desiredEventFor', () => {
 describe('planSync', () => {
   test('fresh follow creates every wanted fixture', () => {
     const fixtures = [fixture(), fixture({ id: 'apisports-2', status: 'tbd' })];
-    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS);
+    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(2);
     expect(ops.every((o) => o.op === 'create')).toBe(true);
   });
 
   test('competition follow works without a team follow', () => {
-    const ops = planSync([fixture()], {}, [PL], DEFAULT_PREFS);
+    const ops = planSync([fixture()], {}, [PL], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(1);
   });
 
@@ -114,15 +118,15 @@ describe('planSync', () => {
       fixture({ id: 'apisports-2', status: 'tbd' }),
       fixture({ id: 'apisports-3', status: 'postponed' }),
     ];
-    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS));
-    expect(planSync(fixtures, ledger, [LIV], DEFAULT_PREFS)).toHaveLength(0);
+    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS, PAST_HORIZON));
+    expect(planSync(fixtures, ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON)).toHaveLength(0);
   });
 
   test('scheduled → postponed: timed event becomes placeholder (update)', () => {
     const f = fixture();
     const ledger: Ledger = { [f.id]: entryFor(f) };
     const postponed = fixture({ status: 'postponed' });
-    const ops = planSync([postponed], ledger, [LIV], DEFAULT_PREFS);
+    const ops = planSync([postponed], ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
     if (ops[0].op === 'update') {
@@ -138,7 +142,7 @@ describe('planSync', () => {
       status: 'scheduled',
       startUtc: '2023-12-20T20:00:00.000Z',
     });
-    const ops = planSync([rearranged], ledger, [LIV], DEFAULT_PREFS);
+    const ops = planSync([rearranged], ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
     if (ops[0].op === 'update') {
@@ -154,7 +158,7 @@ describe('planSync', () => {
   test('tbd → scheduled sharpening is a single update', () => {
     const tbd = fixture({ status: 'tbd' });
     const ledger: Ledger = { [tbd.id]: entryFor(tbd) };
-    const ops = planSync([fixture()], ledger, [LIV], DEFAULT_PREFS);
+    const ops = planSync([fixture()], ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
   });
@@ -162,7 +166,7 @@ describe('planSync', () => {
   test('scheduled → cancelled deletes the event', () => {
     const f = fixture();
     const ledger: Ledger = { [f.id]: entryFor(f) };
-    const ops = planSync([fixture({ status: 'cancelled' })], ledger, [LIV], DEFAULT_PREFS);
+    const ops = planSync([fixture({ status: 'cancelled' })], ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toEqual([
       { op: 'delete', fixtureId: f.id, entry: ledger[f.id] },
     ]);
@@ -176,7 +180,7 @@ describe('planSync', () => {
     // Switching the pref over an existing timed ledger is a kind-flip
     // update for every scheduled fixture.
     const ledgerTimed: Ledger = { 'apisports-1': entryFor(fixture()) };
-    const ops = planSync([fixture()], ledgerTimed, [LIV], prefs);
+    const ops = planSync([fixture()], ledgerTimed, [LIV], prefs, PAST_HORIZON);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
   });
@@ -195,14 +199,14 @@ describe('planSync', () => {
       title: 'Australian Grand Prix — Practice 1',
       followKeys: ['f1-series-1'],
     });
-    const ops = planSync([race, practice], {}, ['f1-series-1'], prefs);
+    const ops = planSync([race, practice], {}, ['f1-series-1'], prefs, PAST_HORIZON);
     expect(ops).toHaveLength(1);
     if (ops[0].op === 'create') {
       expect(ops[0].fixture.id).toBe('f1-2026-r1-race');
     }
     // Switching to race-only over a full ledger deletes the support events.
-    const full = applied({}, planSync([race, practice], {}, ['f1-series-1'], DEFAULT_PREFS));
-    const cleanup = planSync([race, practice], full, ['f1-series-1'], prefs);
+    const full = applied({}, planSync([race, practice], {}, ['f1-series-1'], DEFAULT_PREFS, PAST_HORIZON));
+    const cleanup = planSync([race, practice], full, ['f1-series-1'], prefs, PAST_HORIZON);
     expect(cleanup).toHaveLength(1);
     expect(cleanup[0].op).toBe('delete');
   });
@@ -223,14 +227,14 @@ describe('planSync', () => {
       // no allDay key — written by the M1 engine
     };
     expect(
-      planSync([f], { [f.id]: legacy }, [LIV], DEFAULT_PREFS),
+      planSync([f], { [f.id]: legacy }, [LIV], DEFAULT_PREFS, PAST_HORIZON),
     ).toHaveLength(0);
   });
 
   test('unfollowing deletes everything ledgered', () => {
     const fixtures = [fixture(), fixture({ id: 'apisports-2' })];
-    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS));
-    const ops = planSync(fixtures, ledger, [], DEFAULT_PREFS);
+    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS, PAST_HORIZON));
+    const ops = planSync(fixtures, ledger, [], DEFAULT_PREFS, PAST_HORIZON);
     expect(ops).toHaveLength(2);
     expect(ops.every((o) => o.op === 'delete')).toBe(true);
   });
@@ -241,11 +245,51 @@ describe('planSync', () => {
       fixture({ id: 'apisports-2', status: 'tbd' }),
       fixture({ id: 'apisports-3' }),
     ];
-    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS);
+    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     const partial = applied({}, ops.slice(0, 1));
-    const rerun = planSync(fixtures, partial, [LIV], DEFAULT_PREFS);
+    const rerun = planSync(fixtures, partial, [LIV], DEFAULT_PREFS, PAST_HORIZON);
     expect(rerun).toHaveLength(2);
     const final = applied(partial, rerun);
-    expect(planSync(fixtures, final, [LIV], DEFAULT_PREFS)).toHaveLength(0);
+    expect(planSync(fixtures, final, [LIV], DEFAULT_PREFS, PAST_HORIZON)).toHaveLength(0);
+  });
+});
+
+describe('sync horizon — the calendar is about upcoming games', () => {
+  const HORIZON = '2026-07-27T00:00:00.000Z';
+  const past = fixture({ id: 'past-1', startUtc: '2026-06-01T15:00:00.000Z' });
+  const future = fixture({ id: 'future-1', startUtc: '2026-09-01T15:00:00.000Z' });
+
+  test('a finished season adds nothing to the calendar', () => {
+    const wholeSeason = Array.from({ length: 82 }, (_, i) =>
+      fixture({ id: `nba-${i}`, startUtc: '2026-03-01T20:00:00.000Z' }),
+    );
+    expect(planSync(wholeSeason, {}, [LIV], DEFAULT_PREFS, HORIZON)).toHaveLength(0);
+  });
+
+  test('upcoming fixtures are still created', () => {
+    const ops = planSync([past, future], {}, [LIV], DEFAULT_PREFS, HORIZON);
+    expect(ops).toHaveLength(1);
+    if (ops[0].op === 'create') expect(ops[0].fixture.id).toBe('future-1');
+  });
+
+  test('events already in the calendar are NOT deleted as they age', () => {
+    // Erasing a user's history would be worse than leaving it.
+    const ledger: Ledger = { 'past-1': entryFor(past) };
+    expect(planSync([past], ledger, [LIV], DEFAULT_PREFS, HORIZON)).toHaveLength(0);
+  });
+
+  test('an aged, ledgered fixture still tracks corrections', () => {
+    const ledger: Ledger = { 'past-1': entryFor(past) };
+    const moved = fixture({ id: 'past-1', startUtc: '2026-06-01T17:00:00.000Z' });
+    const ops = planSync([moved], ledger, [LIV], DEFAULT_PREFS, HORIZON);
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
+  });
+
+  test('lookback keeps a match that has already kicked off', () => {
+    const nowMs = Date.parse('2026-07-27T15:00:00.000Z');
+    const inPlay = fixture({ id: 'live-1', startUtc: '2026-07-27T13:00:00.000Z' });
+    const ops = planSync([inPlay], {}, [LIV], DEFAULT_PREFS, horizonStartFrom(nowMs));
+    expect(ops).toHaveLength(1);
   });
 });

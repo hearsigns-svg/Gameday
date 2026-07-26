@@ -16,6 +16,7 @@ import {
   lastSync,
   subscribeSync,
   SyncOutcome,
+  upcomingByFollow,
 } from '../../calendar-sync/syncEngine';
 import { refollow, unfollow } from '../followActions';
 import { Followable, loadFollowables } from '../data/followStore';
@@ -24,6 +25,17 @@ import { sportByKey } from '../domain/sportsConfig';
 const UNDO_WINDOW_MS = 6000;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+// Between seasons a followed team genuinely has nothing ahead — say so
+// rather than showing a bare row that reads as broken.
+function captionFor(item: Followable, upcomingCount: number | undefined): string {
+  const sport = sportByKey(item.sportKey)?.label ?? item.sportKey;
+  if (upcomingCount === undefined) return `${sport} · ${item.type}`;
+  if (upcomingCount === 0) {
+    return `${sport} · no upcoming fixtures yet`;
+  }
+  return `${sport} · ${upcomingCount} upcoming`;
+}
 
 function summarise(outcome: SyncOutcome | null): string | null {
   if (!outcome) return null;
@@ -40,6 +52,9 @@ export default function HomeScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [undoItem, setUndoItem] = useState<Followable | null>(null);
+  const [upcoming, setUpcoming] = useState<Record<string, number>>(
+    upcomingByFollow,
+  );
 
   useEffect(() => {
     if (!undoItem) return;
@@ -52,6 +67,7 @@ export default function HomeScreen({ navigation }: Props) {
       setSyncRunning(state.running);
       setSummary(summarise(state.last));
       setFollows(loadFollowables());
+      setUpcoming(upcomingByFollow());
     });
     const focus = navigation.addListener('focus', () =>
       setFollows(loadFollowables()),
@@ -127,7 +143,7 @@ export default function HomeScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <ListRow
               title={item.label}
-              caption={`${sportByKey(item.sportKey)?.label ?? item.sportKey} · ${item.type}`}
+              caption={captionFor(item, upcoming[item.key])}
               glyph={sportByKey(item.sportKey)?.glyph}
               accessibilityLabel={`${item.label}, followed ${item.type}`}
               right={
