@@ -49,6 +49,9 @@ export default function TeamListScreen({ route }: Props) {
       label: team.name,
       sportKey: route.params.sportKey,
       type: 'team' as const,
+      ...(route.params.teamPollPath
+        ? { pollPath: route.params.teamPollPath }
+        : {}),
     };
     setBusyKey(team.key);
     const r = isFollowed(team.key) ? await unfollow(item) : await follow(item);

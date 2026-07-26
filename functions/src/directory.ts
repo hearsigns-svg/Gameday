@@ -6,6 +6,7 @@ import { ACTIVE_SEASON, CURATED_SOCCER_LEAGUES } from './config';
 import { fetchFdCompetitionTeams, FD_FREE_COMPETITIONS } from './providers/fdorg';
 import { fetchMlbTeams } from './providers/mlb';
 import { fetchNhlTeams } from './providers/nhl';
+import { fetchTsdbLeagueTeams } from './providers/tsdb';
 
 const BASE = 'https://v3.football.api-sports.io';
 
@@ -31,16 +32,46 @@ async function cachedTeams(
   return teams;
 }
 
-// Soccer browse now serves football-data.org's free competitions
-// (current seasons). The API-Sports curated list remains below for a
-// possible paid-tier upgrade path.
+// Soccer browse: football-data.org free competitions (current seasons)
+// + TSDB-backed cups plugging the free-tier cup gap. Cups are follow-
+// only (no team drill-down — TSDB team ids don't match fdorg follows).
+// The API-Sports curated list remains below for a paid upgrade path.
 export function listSoccerLeagues() {
-  return FD_FREE_COMPETITIONS.map((c) => ({
-    id: c.code,
-    name: c.name,
-    country: c.country,
-    key: `fdorg-comp-${c.code}`,
-  }));
+  return [
+    ...FD_FREE_COMPETITIONS.map((c) => ({
+      id: c.code,
+      name: c.name,
+      country: c.country,
+      key: `fdorg-comp-${c.code}`,
+    })),
+    {
+      id: '4482',
+      name: 'FA Cup',
+      country: 'England',
+      key: 'tsdb-league-4482',
+      followOnly: true,
+      pollPath:
+        'pollTsdbLeague?leagueId=4482&season=2025-2026&sport=soccer&durationHours=2',
+    },
+    {
+      id: '4570',
+      name: 'EFL Cup',
+      country: 'England',
+      key: 'tsdb-league-4570',
+      followOnly: true,
+      pollPath:
+        'pollTsdbLeague?leagueId=4570&season=2026-2027&sport=soccer&durationHours=2',
+    },
+    {
+      id: '4481',
+      name: 'UEFA Europa League',
+      country: 'Europe',
+      key: 'tsdb-league-4481',
+      followOnly: true,
+      pollPath:
+        'pollTsdbLeague?leagueId=4481&season=2026-2027&sport=soccer&durationHours=2',
+    },
+  ];
 }
 
 export function listApiSportsLeagues() {
@@ -119,6 +150,20 @@ export async function listNhlTeams(): Promise<DirectoryTeam[]> {
       id: t.abbrev,
       name: t.name,
       key: `nhl-team-${t.abbrev}`,
+    })),
+  );
+}
+
+export async function listTsdbTeams(
+  apiKey: string,
+  leagueName: string,
+  cacheKey: string,
+): Promise<DirectoryTeam[]> {
+  return cachedTeams(cacheKey, async () =>
+    (await fetchTsdbLeagueTeams(apiKey, leagueName)).map((t) => ({
+      id: t.id,
+      name: t.name,
+      key: `tsdb-team-${t.id}`,
     })),
   );
 }

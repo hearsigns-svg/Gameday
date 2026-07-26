@@ -45,6 +45,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       label: league.name,
       sportKey: route.params.sportKey,
       type: 'competition' as const,
+      ...(league.pollPath ? { pollPath: league.pollPath } : {}),
     };
     setBusyKey(league.key);
     const r = isFollowed(league.key)
@@ -88,13 +89,19 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           <ListRow
             title={item.name}
             caption={item.country}
-            accessibilityLabel={`${item.name}, browse teams`}
-            onPress={() =>
-              navigation.navigate('TeamList', {
-                sportKey: route.params.sportKey,
-                leagueId: item.id,
-                leagueName: item.name,
-              })
+            accessibilityLabel={
+              item.followOnly ? item.name : `${item.name}, browse teams`
+            }
+            onPress={
+              item.followOnly
+                ? undefined
+                : () =>
+                    navigation.navigate('TeamList', {
+                      sportKey: route.params.sportKey,
+                      leagueId: item.id,
+                      leagueName: item.name,
+                      teamPollPath: item.teamPollPath,
+                    })
             }
             right={
               <FollowButton

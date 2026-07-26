@@ -28,6 +28,7 @@ export default function SportPickerScreen({ navigation }: Props) {
       label: series.label,
       sportKey: sport.key,
       type: 'series' as const,
+      ...(series.pollPath ? { pollPath: series.pollPath } : {}),
     };
     setBusyKey(series.key);
     const r = isFollowed(series.key) ? await unfollow(item) : await follow(item);

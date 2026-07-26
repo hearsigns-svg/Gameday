@@ -14,6 +14,7 @@ import {
 import { Followable, setFollowed } from './data/followStore';
 
 function pollPathFor(item: Followable): string {
+  if (item.pollPath) return item.pollPath;
   const tail = item.key.split('-').pop() ?? '';
   // Provider is encoded in the key prefix; legacy apisports-* follows
   // keep their old (2023-window) routes until re-followed.

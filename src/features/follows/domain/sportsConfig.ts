@@ -10,6 +10,9 @@ export interface StaticCompetition {
   name: string;
   country: string;
   key: string;
+  followOnly?: boolean; // no team drill-down
+  pollPath?: string; // functions path polled when this follow syncs
+  teamPollPath?: string; // path attached to team-follows made inside it
 }
 
 export interface SportConfig {
@@ -25,9 +28,9 @@ export interface SportConfig {
   // Single-league sports skip the server round-trip for the competition
   // level; the entry is config, not data.
   staticCompetitions?: StaticCompetition[];
-  // Series sports (F1): the one followable, followed straight from the
-  // sport row.
-  seriesFollowable?: { key: string; label: string };
+  // Series sports (F1, UFC): the one followable, followed straight from
+  // the sport row.
+  seriesFollowable?: { key: string; label: string; pollPath?: string };
 }
 
 export const SPORTS: SportConfig[] = [
@@ -39,7 +42,53 @@ export const SPORTS: SportConfig[] = [
     browse: ['competition', 'team'],
     followTypes: ['team', 'competition'],
   },
-  { key: 'cricket', label: 'Cricket', glyph: '🏏', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'cricket',
+    label: 'Cricket',
+    glyph: '🏏',
+    enabled: true,
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
+    staticCompetitions: [
+      {
+        id: '4460',
+        name: 'Indian Premier League',
+        country: 'India',
+        key: 'tsdb-league-4460',
+        pollPath:
+          'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4',
+      },
+      {
+        id: '4801',
+        name: 'ODI Internationals',
+        country: 'International',
+        key: 'tsdb-league-4801',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8',
+      },
+      {
+        id: '4979',
+        name: 'T20 Internationals',
+        country: 'International',
+        key: 'tsdb-league-4979',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4',
+      },
+      {
+        id: '5103',
+        name: 'T20 World Cup',
+        country: 'International',
+        key: 'tsdb-league-5103',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4',
+      },
+    ],
+  },
   {
     key: 'ice-hockey',
     label: 'Ice hockey',
@@ -52,7 +101,26 @@ export const SPORTS: SportConfig[] = [
     ],
   },
   { key: 'tennis', label: 'Tennis', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
-  { key: 'basketball', label: 'Basketball', glyph: '🏀', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'basketball',
+    label: 'Basketball',
+    glyph: '🏀',
+    enabled: true,
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
+    staticCompetitions: [
+      {
+        id: '4387',
+        name: 'NBA',
+        country: 'North America',
+        key: 'tsdb-league-4387',
+        pollPath:
+          'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5',
+      },
+    ],
+  },
   {
     key: 'baseball',
     label: 'Baseball',
@@ -64,9 +132,64 @@ export const SPORTS: SportConfig[] = [
       { id: 1, name: 'MLB', country: 'North America', key: 'mlb-league-1' },
     ],
   },
-  { key: 'nfl', label: 'American football', glyph: '🏈', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'nfl',
+    label: 'American football',
+    glyph: '🏈',
+    enabled: true,
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
+    staticCompetitions: [
+      {
+        id: '4391',
+        name: 'NFL',
+        country: 'North America',
+        key: 'tsdb-league-4391',
+        pollPath:
+          'pollTsdbLeague?leagueId=4391&season=2026&sport=nfl&durationHours=3',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4391&season=2026&sport=nfl&durationHours=3',
+      },
+    ],
+  },
   { key: 'rugby', label: 'Rugby', glyph: '🏉', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
-  { key: 'golf', label: 'Golf', glyph: '⛳', enabled: false, browse: ['competition'], followTypes: ['competition'] },
+  {
+    key: 'golf',
+    label: 'Golf',
+    glyph: '⛳',
+    enabled: true,
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      {
+        id: '4425',
+        name: 'PGA Tour',
+        country: 'World',
+        key: 'tsdb-league-4425',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4425&season=2026&sport=golf&durationHours=5',
+      },
+      {
+        id: '4426',
+        name: 'DP World Tour',
+        country: 'World',
+        key: 'tsdb-league-4426',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4426&season=2026&sport=golf&durationHours=5',
+      },
+      {
+        id: '4553',
+        name: 'LPGA Tour',
+        country: 'World',
+        key: 'tsdb-league-4553',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4553&season=2026&sport=golf&durationHours=5',
+      },
+    ],
+  },
   {
     key: 'f1',
     label: 'Formula 1',
@@ -76,7 +199,22 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['series'],
     seriesFollowable: { key: 'f1-series-1', label: 'Formula 1' },
   },
-  { key: 'ufc', label: 'UFC', glyph: '🥊', enabled: false, browse: ['athlete'], followTypes: ['athlete'] },
+  {
+    key: 'ufc',
+    label: 'UFC',
+    glyph: '🥊',
+    enabled: true,
+    // Event-card follow (like F1): TSDB has cards, not per-fighter bouts,
+    // so athlete-follow stays deferred until bout-level data exists.
+    browse: [],
+    followTypes: ['series'],
+    seriesFollowable: {
+      key: 'tsdb-league-4443',
+      label: 'UFC',
+      pollPath:
+        'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4',
+    },
+  },
 ];
 
 export const sportByKey = (key: string): SportConfig | undefined =>

@@ -94,3 +94,17 @@
   times) maps to tbd → all-day placeholder until TIMED. Known gap: cups
   (FA Cup/EFL Cup/UEL) until TSDB premium; legacy apisports-* follows
   keep old routes until re-followed.
+- TSDB premium (owner sub, $9/mo): tsdb adapter serves NBA, NFL, UFC
+  cards, golf rounds, cricket white-ball + soccer cups (FA Cup/EFL Cup/
+  UEL) — poll paths ride ON the followable (attached at follow time from
+  config), keeping the engine provider-agnostic. strEvent used verbatim
+  as title (provider-idiomatic, away-first US convention). strTimestamp
+  is UTC without suffix — Z forced at parse. lookup_all_teams 404s on
+  premium; search_all_teams by league name instead. UFC = event-card
+  series-follow (bout/athlete data doesn't exist upstream).
+- Tennis DEFERRED on evidence: TSDB tennis is results-only even on
+  premium (zero forward fixtures, midnight times) — needs a different
+  provider; day-granularity tournament windows possible later.
+- Client cut over to PRODUCTION Firebase (USE_EMULATOR flag retained);
+  cross-backend cutover verified: first prod sync converged with zero
+  duplicates on a 173-event device.

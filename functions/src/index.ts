@@ -13,6 +13,7 @@ import {
   fetchFdTeamSeasonFixtures,
   FD_FREE_COMPETITIONS,
 } from './providers/fdorg';
+import { fetchTsdbLeagueSeasonFixtures, fetchTsdbLeagueTeams } from './providers/tsdb';
 import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
 import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
 import { fetchF1SeasonFixtures } from './providers/f1';
@@ -21,6 +22,7 @@ import {
   listMlbTeams,
   listNhlTeams,
   listSoccerLeagues,
+  listTsdbTeams,
 } from './directory';
 
 initializeApp();
@@ -123,6 +125,28 @@ export const listTeams = onRequest(async (req, res) => {
       res.json({ teams: await listNhlTeams() });
       return;
     }
+    if (sport === 'basketball') {
+      res.json({
+        teams: await listTsdbTeams(requireTsdbKey(), 'NBA', 'basketball-nba'),
+      });
+      return;
+    }
+    if (sport === 'nfl') {
+      res.json({
+        teams: await listTsdbTeams(requireTsdbKey(), 'NFL', 'nfl-nfl'),
+      });
+      return;
+    }
+    if (sport === 'cricket') {
+      res.json({
+        teams: await listTsdbTeams(
+          requireTsdbKey(),
+          'Indian Premier League',
+          'cricket-ipl',
+        ),
+      });
+      return;
+    }
     // Soccer: leagueId is a football-data competition code (PL, CL, …).
     const code = String(req.query.leagueId ?? '');
     const season = Number(req.query.season ?? 2026);
@@ -171,6 +195,35 @@ export const pollFdCompetition = onRequest(async (req, res) => {
       season,
     );
     res.json(await ingest(incoming, `fdorg-comp-${code}`));
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+function requireTsdbKey(): string {
+  const apiKey = process.env.TSDB_KEY;
+  if (!apiKey) throw new Error('TSDB_KEY not configured');
+  return apiKey;
+}
+
+export const pollTsdbLeague = onRequest(async (req, res) => {
+  try {
+    const leagueId = String(req.query.leagueId ?? '');
+    const season = String(req.query.season ?? '');
+    const sport = String(req.query.sport ?? '');
+    const durationHours = Number(req.query.durationHours ?? 2);
+    if (!/^\d{3,6}$/.test(leagueId) || !season || !sport) {
+      res.status(400).json({ error: 'leagueId, season, sport are required' });
+      return;
+    }
+    const incoming = await fetchTsdbLeagueSeasonFixtures(
+      requireTsdbKey(),
+      leagueId,
+      season,
+      sport,
+      durationHours,
+    );
+    res.json(await ingest(incoming, `tsdb-league-${leagueId}`));
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

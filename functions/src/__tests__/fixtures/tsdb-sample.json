@@ -1,0 +1,68 @@
+{
+ "nba": [
+  {
+   "idEvent": "2292728",
+   "strEvent": "New York Knicks vs Philadelphia 76ers",
+   "dateEvent": "2025-10-02",
+   "strTime": "16:00:00",
+   "strTimestamp": "2025-10-02T16:00:00",
+   "strStatus": "FT",
+   "strPostponed": "no",
+   "idHomeTeam": "134863",
+   "idAwayTeam": "134862",
+   "strHomeTeam": "Philadelphia 76ers",
+   "strAwayTeam": "New York Knicks",
+   "idLeague": "4387",
+   "strLeague": "NBA"
+  },
+  {
+   "idEvent": "2292729",
+   "strEvent": "Los Angeles Lakers vs Phoenix Suns",
+   "dateEvent": "2025-10-04",
+   "strTime": "02:00:00",
+   "strTimestamp": "2025-10-04T02:00:00",
+   "strStatus": "FT",
+   "strPostponed": "no",
+   "idHomeTeam": "134867",
+   "idAwayTeam": "134868",
+   "strHomeTeam": "Los Angeles Lakers",
+   "strAwayTeam": "Phoenix Suns",
+   "idLeague": "4387",
+   "strLeague": "NBA"
+  }
+ ],
+ "ufcTimed": [
+  {
+   "idEvent": "2389036",
+   "strEvent": "UFC 324 Gaethje vs Pimblett",
+   "dateEvent": "2026-01-24",
+   "strTime": "22:00:00",
+   "strTimestamp": "2026-01-24T22:00:00",
+   "strStatus": "NS",
+   "strPostponed": "no",
+   "idHomeTeam": null,
+   "idAwayTeam": null,
+   "strHomeTeam": null,
+   "strAwayTeam": null,
+   "idLeague": "4443",
+   "strLeague": "UFC"
+  }
+ ],
+ "ufcFuture": [
+  {
+   "idEvent": "2541772",
+   "strEvent": "UFC Fight Night 290",
+   "dateEvent": "2026-10-17",
+   "strTime": "00:00:00",
+   "strTimestamp": "2026-10-17T00:00:00",
+   "strStatus": null,
+   "strPostponed": "no",
+   "idHomeTeam": null,
+   "idAwayTeam": null,
+   "strHomeTeam": null,
+   "strAwayTeam": null,
+   "idLeague": "4443",
+   "strLeague": "UFC"
+  }
+ ]
+}

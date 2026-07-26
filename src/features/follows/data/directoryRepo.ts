@@ -8,6 +8,9 @@ export interface DirectoryLeague {
   name: string;
   country: string;
   key: string;
+  followOnly?: boolean;
+  pollPath?: string;
+  teamPollPath?: string;
 }
 
 export interface DirectoryTeam {

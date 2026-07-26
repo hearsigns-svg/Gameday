@@ -115,7 +115,7 @@ payloads; per-sport config drives all UI (static competitions, series
 follow on the sport row); model gained title/duration/sessionKind;
 race-weekend pref (all vs race-only) verified on-device: F1 follow 110
 events → race-only 22 (88 supports deleted) → Bruins follow +88 = 173.
-Data spend: $0/mo, current seasons.
+Data spend: $9/mo TSDB premium + free official APIs, current seasons everywhere.
 REMAINING (owner decisions on the matrix): soccer current-season source
 (paid API-Sports vs football-data.org), basketball/NFL source posture
 (grey public endpoints vs paid), cricket/tennis/golf/UFC providers +

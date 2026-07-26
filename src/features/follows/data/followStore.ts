@@ -10,6 +10,9 @@ export interface Followable {
   label: string;
   sportKey: string;
   type: FollowableType;
+  // Functions path polled when this follow syncs; attached at follow
+  // time from config. Absent on legacy follows → provider-prefix routes.
+  pollPath?: string;
 }
 
 const KEY_V2 = 'follows.v2';
