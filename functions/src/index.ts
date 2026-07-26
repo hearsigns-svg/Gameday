@@ -7,6 +7,7 @@ import {
   fetchLeagueSeasonFixtures,
   fetchTeamSeasonFixtures,
 } from './providers/apiSports';
+import { listSoccerLeagues, listSoccerTeams } from './directory';
 
 initializeApp();
 const db = getFirestore();
@@ -75,6 +76,23 @@ export const pollLeague = onRequest(async (req, res) => {
       season,
     );
     res.json(await ingest(incoming, `apisports-league-${leagueId}`));
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+export const listLeagues = onRequest(async (_req, res) => {
+  res.json({ leagues: listSoccerLeagues() });
+});
+
+export const listTeams = onRequest(async (req, res) => {
+  try {
+    const leagueId = Number(req.query.leagueId);
+    if (!Number.isInteger(leagueId)) {
+      res.status(400).json({ error: 'leagueId is required' });
+      return;
+    }
+    res.json({ teams: await listSoccerTeams(requireKey(), leagueId) });
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

@@ -5,7 +5,8 @@
 import { err, ok, Result } from '../../core/result';
 import { readJson, writeJson } from '../../core/storage';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
-import { loadFollows } from '../follows/data/followStore';
+import { loadFollowKeys } from '../follows/data/followStore';
+import { loadPrefs } from './data/prefsStore';
 import {
   createFixtureEvent,
   deleteFixtureEvent,
@@ -22,7 +23,25 @@ import {
 import { planSync } from './domain/syncPlan';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
-const REMINDER_MINUTES = 60; // slice default; a preference in M3
+
+// Sync status subscription — screens stay live no matter which layer
+// (mount, foreground, background task, manual) triggered the run.
+export interface SyncState {
+  running: boolean;
+  last: SyncOutcome | null;
+}
+type SyncListener = (state: SyncState) => void;
+const listeners = new Set<SyncListener>();
+
+export function subscribeSync(fn: SyncListener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+function emit(running: boolean): void {
+  const state: SyncState = { running, last: lastSync() };
+  for (const fn of listeners) fn(state);
+}
 
 export interface SyncOutcome {
   created: number;
@@ -36,10 +55,18 @@ export function lastSync(): SyncOutcome | null {
 }
 
 let syncRunning = false;
+let rerunQueued = false;
 
 export async function runSync(): Promise<Result<SyncOutcome>> {
-  if (syncRunning) return err({ kind: 'sync-in-progress' });
+  if (syncRunning) {
+    // Coalesce: whatever changed (new follow, unfollow, pref) is picked
+    // up by one queued re-run after the current run finishes. Without
+    // this, an unfollow during a long sync silently never deletes.
+    rerunQueued = true;
+    return err({ kind: 'sync-in-progress' });
+  }
   syncRunning = true;
+  emit(true);
   try {
     return await runSyncInner();
   } catch (e) {
@@ -47,6 +74,11 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
     return err({ kind: 'unknown', message: `sync failed: ${e}` });
   } finally {
     syncRunning = false;
+    emit(false);
+    if (rerunQueued) {
+      rerunQueued = false;
+      void runSync();
+    }
   }
 }
 
@@ -59,11 +91,24 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     const calObj = await getGamedayCalendarObject(cal.value);
     if (!calObj.ok) return calObj;
 
-    const follows = loadFollows();
+    const follows = loadFollowKeys();
+    const prefs = loadPrefs();
     const fixtures = await fetchFixturesForFollows(follows);
     if (!fixtures.ok) return fixtures;
 
-    const ops = planSync(fixtures.value, loadLedger(), follows);
+    const ledger = loadLedger();
+    // Circuit breaker: active follows but zero fixtures against a
+    // non-trivial ledger means an upstream/cache anomaly, not a real
+    // "everything is cancelled". Never mass-delete on that signal.
+    if (
+      follows.length > 0 &&
+      fixtures.value.length === 0 &&
+      Object.keys(ledger).length > 0
+    ) {
+      return err({ kind: 'suspect-empty' });
+    }
+
+    const ops = planSync(fixtures.value, ledger, follows, prefs);
     const outcome: SyncOutcome = {
       created: 0,
       updated: 0,
@@ -81,9 +126,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           startUtc: d.startUtc,
           endUtc: d.endUtc,
           allDay: d.allDay,
-          // No reminder on placeholders — an alert for an unknown time
-          // is noise; the sharpened timed event gets the reminder.
-          reminderMinutesBefore: d.allDay ? null : REMINDER_MINUTES,
+          // No reminder on placeholders/all-day — an alert for an
+          // unknown time is noise; timed events get the pref reminder.
+          reminderMinutesBefore: d.allDay ? null : prefs.reminderMinutes,
         };
         // EventKit half-applies all-day ↔ timed conversions on update
         // (flag flips, dates don't). A kind change is always delete +
@@ -108,7 +153,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;
       } else {
-        await deleteFixtureEvent(op.entry.eventId);
+        const del = await deleteFixtureEvent(op.entry.eventId);
+        if (!del.ok) return del; // never drop a ledger entry on a failed delete
         removeLedgerEntry(op.fixtureId);
         outcome.deleted++;
       }
@@ -122,5 +168,5 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 // Auto-sync is only appropriate once the user has engaged: it prompts for
 // calendar permission, which must never happen on a cold first open.
 export function shouldAutoSync(): boolean {
-  return loadFollows().length > 0 || Object.keys(loadLedger()).length > 0;
+  return loadFollowKeys().length > 0 || Object.keys(loadLedger()).length > 0;
 }

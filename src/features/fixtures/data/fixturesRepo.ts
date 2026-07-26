@@ -1,8 +1,11 @@
 // Fixture reads (Firestore cache) and poll triggering (functions).
 
+// getDocsFromServer, never getDocs: an unreachable backend must surface
+// as an error, not resolve silently from the (empty) local cache — a
+// silent empty read once deleted a whole calendar (see DECISIONS.md).
 import {
   collection,
-  getDocs,
+  getDocsFromServer,
   query,
   where,
 } from 'firebase/firestore';
@@ -16,7 +19,7 @@ export async function fetchFixturesForFollows(
   if (followedKeys.length === 0) return ok([]);
   try {
     // array-contains-any caps at 10 keys; fine for the slice, M3 batches.
-    const snap = await getDocs(
+    const snap = await getDocsFromServer(
       query(
         collection(db, 'fixtures'),
         where('followKeys', 'array-contains-any', followedKeys.slice(0, 10)),

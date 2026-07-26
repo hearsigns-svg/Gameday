@@ -1,0 +1,130 @@
+// Home: what you follow, live sync status, one primary action.
+
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useCallback, useEffect, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  EmptyState,
+  FollowButton,
+  ListRow,
+  StatusPill,
+} from '../../../core/components';
+import { RootStackParamList } from '../../../core/navigation';
+import { messageOf } from '../../../core/result';
+import { spacing, type, useTheme } from '../../../core/tokens';
+import {
+  lastSync,
+  subscribeSync,
+  SyncOutcome,
+} from '../../calendar-sync/syncEngine';
+import { unfollow } from '../followActions';
+import { Followable, loadFollowables } from '../data/followStore';
+import { sportByKey } from '../domain/sportsConfig';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+function summarise(outcome: SyncOutcome | null): string | null {
+  if (!outcome) return null;
+  return `Up to date · ${outcome.created} added · ${outcome.updated} updated · ${outcome.deleted} removed`;
+}
+
+export default function HomeScreen({ navigation }: Props) {
+  const t = useTheme();
+  const [follows, setFollows] = useState<Followable[]>(loadFollowables);
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [summary, setSummary] = useState<string | null>(() =>
+    summarise(lastSync()),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeSync((state) => {
+      setSyncRunning(state.running);
+      setSummary(summarise(state.last));
+      setFollows(loadFollowables());
+    });
+    const focus = navigation.addListener('focus', () =>
+      setFollows(loadFollowables()),
+    );
+    return () => {
+      unsub();
+      focus();
+    };
+  }, [navigation]);
+
+  const onUnfollow = useCallback(async (item: Followable) => {
+    setBusyKey(item.key);
+    setError(null);
+    const r = await unfollow(item);
+    if (!r.ok && r.error.kind !== 'sync-in-progress') {
+      setError(messageOf(r.error));
+    }
+    setFollows(loadFollowables());
+    setBusyKey(null);
+  }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <View style={styles.header}>
+        <StatusPill running={syncRunning} summary={summary} />
+        {error ? (
+          <Text style={[type.secondary, { color: t.danger }]}>{error}</Text>
+        ) : null}
+      </View>
+      {follows.length === 0 ? (
+        <EmptyState
+          headline="Never miss a game"
+          body="Follow teams and competitions, and their fixtures appear in your calendar — kept up to date automatically."
+          actionLabel="Choose sports"
+          onAction={() => navigation.navigate('SportPicker')}
+        />
+      ) : (
+        <FlatList
+          data={follows}
+          keyExtractor={(f) => f.key}
+          renderItem={({ item }) => (
+            <ListRow
+              title={item.label}
+              caption={`${sportByKey(item.sportKey)?.label ?? item.sportKey} · ${item.type}`}
+              glyph={sportByKey(item.sportKey)?.glyph}
+              accessibilityLabel={`${item.label}, followed ${item.type}`}
+              right={
+                <FollowButton
+                  following
+                  subject={item.label}
+                  busy={busyKey === item.key}
+                  onPress={() => void onUnfollow(item)}
+                />
+              }
+            />
+          )}
+          ListFooterComponent={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add more sports"
+              onPress={() => navigation.navigate('SportPicker')}
+              style={[styles.addMore, { borderColor: t.border }]}
+            >
+              <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
+                + Add more
+              </Text>
+            </Pressable>
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { padding: spacing.l, gap: spacing.s },
+  addMore: {
+    margin: spacing.l,
+    minHeight: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

@@ -11,6 +11,7 @@
 // same fixture id, so it is always an update, never a duplicate.
 
 import { Fixture, FIXTURE_DURATION_HOURS } from '../../fixtures/domain/fixture';
+import { CalendarPrefs } from './prefs';
 
 export interface LedgerEntry {
   eventId: string;
@@ -54,7 +55,10 @@ function nextDayUtc(dayIso: string): string {
   return d.toISOString();
 }
 
-export function desiredEventFor(f: Fixture): DesiredEvent | null {
+export function desiredEventFor(
+  f: Fixture,
+  prefs: CalendarPrefs,
+): DesiredEvent | null {
   const matchTitle = `${f.homeTeam} v ${f.awayTeam}`;
   switch (f.status) {
     case 'cancelled':
@@ -77,13 +81,23 @@ export function desiredEventFor(f: Fixture): DesiredEvent | null {
         allDay: true,
       };
     }
-    default:
+    default: {
+      if (prefs.eventStyle === 'all-day') {
+        const day = dayStartUtc(f.startUtc);
+        return {
+          title: matchTitle,
+          startUtc: day,
+          endUtc: nextDayUtc(day),
+          allDay: true,
+        };
+      }
       return {
         title: matchTitle,
         startUtc: f.startUtc,
         endUtc: eventEndUtc(f.startUtc),
         allDay: false,
       };
+    }
   }
 }
 
@@ -99,12 +113,13 @@ export function planSync(
   fixtures: readonly Fixture[],
   ledger: Ledger,
   followedKeys: readonly string[],
+  prefs: CalendarPrefs,
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
   for (const f of fixtures) {
     if (!f.followKeys.some((k) => followedKeys.includes(k))) continue;
-    const desired = desiredEventFor(f);
+    const desired = desiredEventFor(f, prefs);
     if (desired) wanted.set(f.id, { fixture: f, desired });
   }
 

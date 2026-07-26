@@ -62,12 +62,28 @@ cancelled, DST-crossing), adapter contract tests.
 - Carried forward: emulator DNS flakiness makes mount-sync unreliable
   (two occurrences) — M6 adds retry/backoff around the cache fetch.
 
-## M3 — Follow experience  [ ]
+## M3 — Follow experience  [x]
 
 Browse/search per-sport hierarchies (config-driven), follow management,
 calendar preferences (reminders, all-day, naming, F1 race-only).
 - Verification: all follow types creatable/removable; preferences apply
   to newly synced events; a11y pass on new screens; typecheck/tests green.
+- VERIFIED 2026-07-26 (36 tests): React Navigation shells; config-driven
+  browse (soccer live: 10 curated leagues via listLeagues, team lists via
+  listTeams with 24h Firestore directory cache — 1 API call per league;
+  other 10 sports render "coming soon" from config); search-filter row;
+  follow/unfollow from browse AND Home; sync-status pill subscribes to
+  engine events (M1 carry paid). Prefs (reminder none/15/30/60, event
+  style timed/all-day) thread through desiredEventFor; flip verified
+  63/63 all-day → revert timed on-device. iOS: full first-run journey
+  browse→follow→63 added. Android: UCL competition-follow (+214 incl.
+  qualifiers), unfollow (277→63), prefs both directions.
+- BUG FOUND+FIXED by E2E: sync requests during a running sync were
+  silently dropped ('sync-in-progress') — an unfollow mid-sync never
+  deleted. runSync now coalesces: one queued re-run after the current
+  run. Test pins the planner side; engine coalescing verified on-device.
+- Deferred within scope: F1 race-only pref (lands with F1 in M5);
+  event-naming pref (M7 polish); directory beyond soccer (M5).
 
 ## M4 — Sync robustness  [ ]
 

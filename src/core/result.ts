@@ -10,6 +10,7 @@ export type AppError =
   | { kind: 'provider'; status: number; message: string }
   | { kind: 'not-found'; what: string }
   | { kind: 'sync-in-progress' }
+  | { kind: 'suspect-empty' }
   | { kind: 'unknown'; message: string };
 
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
@@ -32,6 +33,8 @@ export function messageOf(e: AppError): string {
       return `Could not find ${e.what}.`;
     case 'sync-in-progress':
       return 'A sync is already running.';
+    case 'suspect-empty':
+      return 'Fixture service returned nothing — calendar left untouched.';
     case 'unknown':
       return e.message;
   }

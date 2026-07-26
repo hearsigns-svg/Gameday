@@ -128,9 +128,14 @@ export async function deleteFixtureEvent(eventId: string): Promise<Result<true>>
     const event = await Calendar.ExpoCalendarEvent.get(eventId);
     await event.delete();
     return ok(true);
-  } catch {
-    // Already gone (user deleted it by hand) — treat as success; the
-    // ledger entry is being removed either way.
-    return ok(true);
+  } catch (e) {
+    // Only a true not-found is success (user deleted it by hand). Any
+    // other failure must abort the sync BEFORE the ledger entry is
+    // dropped — swallowing real errors once orphaned events into
+    // duplicates (see DECISIONS.md).
+    if (/not.?found|no such event|does not exist/i.test(String(e))) {
+      return ok(true);
+    }
+    return err({ kind: 'unknown', message: `event delete failed: ${e}` });
   }
 }

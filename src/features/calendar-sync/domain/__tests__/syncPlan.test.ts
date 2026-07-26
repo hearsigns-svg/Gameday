@@ -1,4 +1,5 @@
 import { Fixture } from '../../../fixtures/domain/fixture';
+import { DEFAULT_PREFS } from '../prefs';
 import {
   desiredEventFor,
   Ledger,
@@ -28,7 +29,7 @@ function fixture(overrides: Partial<Fixture> = {}): Fixture {
 }
 
 function entryFor(f: Fixture): LedgerEntry {
-  const desired = desiredEventFor(f);
+  const desired = desiredEventFor(f, DEFAULT_PREFS);
   if (!desired) throw new Error('fixture has no desired event');
   return {
     eventId: `evt-${f.id}`,
@@ -61,7 +62,7 @@ function applied(ledger: Ledger, ops: SyncOp[]): Ledger {
 
 describe('desiredEventFor', () => {
   test('scheduled → timed event with 2h duration', () => {
-    const d = desiredEventFor(fixture());
+    const d = desiredEventFor(fixture(), DEFAULT_PREFS);
     expect(d).toEqual({
       title: 'Liverpool v Everton',
       startUtc: '2023-10-21T11:30:00.000Z',
@@ -71,7 +72,7 @@ describe('desiredEventFor', () => {
   });
 
   test('tbd → all-day placeholder on the fixture day', () => {
-    const d = desiredEventFor(fixture({ status: 'tbd' }));
+    const d = desiredEventFor(fixture({ status: 'tbd' }), DEFAULT_PREFS);
     expect(d).toEqual({
       title: 'Liverpool v Everton — time TBC',
       startUtc: '2023-10-21T00:00:00.000Z',
@@ -81,26 +82,28 @@ describe('desiredEventFor', () => {
   });
 
   test('postponed → all-day placeholder on the original day', () => {
-    const d = desiredEventFor(fixture({ status: 'postponed' }));
+    const d = desiredEventFor(fixture({ status: 'postponed' }), DEFAULT_PREFS);
     expect(d?.title).toBe('Liverpool v Everton — postponed');
     expect(d?.allDay).toBe(true);
   });
 
   test('cancelled → nothing', () => {
-    expect(desiredEventFor(fixture({ status: 'cancelled' }))).toBeNull();
+    expect(
+      desiredEventFor(fixture({ status: 'cancelled' }), DEFAULT_PREFS),
+    ).toBeNull();
   });
 });
 
 describe('planSync', () => {
   test('fresh follow creates every wanted fixture', () => {
     const fixtures = [fixture(), fixture({ id: 'apisports-2', status: 'tbd' })];
-    const ops = planSync(fixtures, {}, [LIV]);
+    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS);
     expect(ops).toHaveLength(2);
     expect(ops.every((o) => o.op === 'create')).toBe(true);
   });
 
   test('competition follow works without a team follow', () => {
-    const ops = planSync([fixture()], {}, [PL]);
+    const ops = planSync([fixture()], {}, [PL], DEFAULT_PREFS);
     expect(ops).toHaveLength(1);
   });
 
@@ -110,15 +113,15 @@ describe('planSync', () => {
       fixture({ id: 'apisports-2', status: 'tbd' }),
       fixture({ id: 'apisports-3', status: 'postponed' }),
     ];
-    const ledger = applied({}, planSync(fixtures, {}, [LIV]));
-    expect(planSync(fixtures, ledger, [LIV])).toHaveLength(0);
+    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS));
+    expect(planSync(fixtures, ledger, [LIV], DEFAULT_PREFS)).toHaveLength(0);
   });
 
   test('scheduled → postponed: timed event becomes placeholder (update)', () => {
     const f = fixture();
     const ledger: Ledger = { [f.id]: entryFor(f) };
     const postponed = fixture({ status: 'postponed' });
-    const ops = planSync([postponed], ledger, [LIV]);
+    const ops = planSync([postponed], ledger, [LIV], DEFAULT_PREFS);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
     if (ops[0].op === 'update') {
@@ -134,7 +137,7 @@ describe('planSync', () => {
       status: 'scheduled',
       startUtc: '2023-12-20T20:00:00.000Z',
     });
-    const ops = planSync([rearranged], ledger, [LIV]);
+    const ops = planSync([rearranged], ledger, [LIV], DEFAULT_PREFS);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
     if (ops[0].op === 'update') {
@@ -150,7 +153,7 @@ describe('planSync', () => {
   test('tbd → scheduled sharpening is a single update', () => {
     const tbd = fixture({ status: 'tbd' });
     const ledger: Ledger = { [tbd.id]: entryFor(tbd) };
-    const ops = planSync([fixture()], ledger, [LIV]);
+    const ops = planSync([fixture()], ledger, [LIV], DEFAULT_PREFS);
     expect(ops).toHaveLength(1);
     expect(ops[0].op).toBe('update');
   });
@@ -158,10 +161,23 @@ describe('planSync', () => {
   test('scheduled → cancelled deletes the event', () => {
     const f = fixture();
     const ledger: Ledger = { [f.id]: entryFor(f) };
-    const ops = planSync([fixture({ status: 'cancelled' })], ledger, [LIV]);
+    const ops = planSync([fixture({ status: 'cancelled' })], ledger, [LIV], DEFAULT_PREFS);
     expect(ops).toEqual([
       { op: 'delete', fixtureId: f.id, entry: ledger[f.id] },
     ]);
+  });
+
+  test("event style 'all-day' converts scheduled fixtures and flips kinds", () => {
+    const prefs = { ...DEFAULT_PREFS, eventStyle: 'all-day' as const };
+    const d = desiredEventFor(fixture(), prefs);
+    expect(d?.allDay).toBe(true);
+    expect(d?.title).toBe('Liverpool v Everton');
+    // Switching the pref over an existing timed ledger is a kind-flip
+    // update for every scheduled fixture.
+    const ledgerTimed: Ledger = { 'apisports-1': entryFor(fixture()) };
+    const ops = planSync([fixture()], ledgerTimed, [LIV], prefs);
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
   });
 
   test('pre-M2 ledger entries (no allDay field) stay idempotent', () => {
@@ -174,13 +190,15 @@ describe('planSync', () => {
       title: 'Liverpool v Everton',
       // no allDay key — written by the M1 engine
     };
-    expect(planSync([f], { [f.id]: legacy }, [LIV])).toHaveLength(0);
+    expect(
+      planSync([f], { [f.id]: legacy }, [LIV], DEFAULT_PREFS),
+    ).toHaveLength(0);
   });
 
   test('unfollowing deletes everything ledgered', () => {
     const fixtures = [fixture(), fixture({ id: 'apisports-2' })];
-    const ledger = applied({}, planSync(fixtures, {}, [LIV]));
-    const ops = planSync(fixtures, ledger, []);
+    const ledger = applied({}, planSync(fixtures, {}, [LIV], DEFAULT_PREFS));
+    const ops = planSync(fixtures, ledger, [], DEFAULT_PREFS);
     expect(ops).toHaveLength(2);
     expect(ops.every((o) => o.op === 'delete')).toBe(true);
   });
@@ -191,11 +209,11 @@ describe('planSync', () => {
       fixture({ id: 'apisports-2', status: 'tbd' }),
       fixture({ id: 'apisports-3' }),
     ];
-    const ops = planSync(fixtures, {}, [LIV]);
+    const ops = planSync(fixtures, {}, [LIV], DEFAULT_PREFS);
     const partial = applied({}, ops.slice(0, 1));
-    const rerun = planSync(fixtures, partial, [LIV]);
+    const rerun = planSync(fixtures, partial, [LIV], DEFAULT_PREFS);
     expect(rerun).toHaveLength(2);
     const final = applied(partial, rerun);
-    expect(planSync(fixtures, final, [LIV])).toHaveLength(0);
+    expect(planSync(fixtures, final, [LIV], DEFAULT_PREFS)).toHaveLength(0);
   });
 });

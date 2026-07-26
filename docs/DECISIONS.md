@@ -47,3 +47,15 @@
   in-place update (half-applies on iOS: flag flips, dates don't).
 - Contract tests pin the adapter to a captured real payload committed
   in-repo — provider shape drift fails CI before it fails users.
+- Fixture reads are getDocsFromServer + a mass-delete circuit breaker:
+  an unreachable backend must never look like "no fixtures" (a silent
+  cache-empty read once deleted an entire calendar in dev).
+- Event deletes: only a true not-found counts as success; any other
+  delete failure aborts the sync before the ledger entry is dropped.
+- Concurrent sync requests coalesce into one queued re-run (mutex +
+  rerun flag) — an unfollow during a long sync must eventually delete.
+- Directory browsing is server-curated (leagues) + write-through cached
+  (teams) — browsing never costs more than one provider call per league.
+- Team/competition follows share the fixture pool: shared fixtures are
+  one event, and unfollowing one followable keeps events wanted by
+  another (verified UCL + Liverpool overlap).
