@@ -108,11 +108,27 @@ calendar choice, multi-device, kill-state resumption, undo-unfollow.
 
 ## M5 — Sport expansion  [ ]
 
-Data-quality order: basketball, NFL, baseball, ice hockey, rugby, F1
-(API-Sports family) → cricket (dedicated provider) → tennis, golf, UFC
-(exercise placeholder machinery hardest).
+MIXED PROVIDER STRATEGY (owner-approved 2026-07-26): per-sport provider
+matrix, not API-Sports-everywhere. Free official APIs where excellent
+(MLB statsapi, NHL official, F1 via Jolpica, soccer top comps via
+football-data.org), one cheap aggregator sub (TheSportsDB ~$10/mo, all
+sports) as gap-filler, paid API-Sports only where quality demands.
+Target total data cost ~$10–50/mo, independent of user count (central
+cache). NO multi-account free-tier farming — ToS violation and useless
+anyway (free tier's binding limit is the season lock, not volume).
+- Task 1 (before any adapter code): full provider matrix with VERIFIED
+  current pricing, season coverage, and ToS posture per sport; owner
+  signs off the matrix. Note: pages 403 automated fetches — check in a
+  real browser.
+- Sequence within M5: free-provider sports first (baseball, hockey, F1 —
+  NO owner unlock needed), then soccer current-season source decision,
+  then aggregator-backed sports, then tennis/golf/UFC (hardest data,
+  exercise placeholders most).
 - Verification: per-sport quality bar (spot-check vs official schedules);
-  span/session/placeholder rendering correct per taxonomy.
+  span/session/placeholder rendering correct per taxonomy; contract
+  tests pinned to a captured real payload PER PROVIDER.
+- Gate change: the paid API-Sports tier now blocks only the API-Sports-
+  dependent sports, not the whole milestone.
 
 ## M6 — Propagation & observability  [ ]
 

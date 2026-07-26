@@ -66,3 +66,17 @@
   and scan-window misses.
 - Undo-unfollow: optimistic removal + 6s undo row (no confirmation
   dialogs, per friction rules); undo re-follows without re-polling.
+- M5 provider strategy: mixed matrix (free official APIs + one cheap
+  aggregator + paid only where necessary) instead of API-Sports for
+  every sport — fixtures are facts (ECJ Football Dataco 2012), the
+  adapter layer makes providers swappable per sport, and data cost
+  stays user-independent. Multi-account free-tier farming rejected:
+  ToS breach and doesn't lift the season lock. Matrix with verified
+  pricing is M5 task 1 and gets owner sign-off before adapter code.
+- M5 provider strategy: mixed matrix (free official APIs + one cheap
+  aggregator + paid only where necessary) instead of API-Sports for
+  every sport — fixtures are facts (ECJ Football Dataco 2012), the
+  adapter layer makes providers swappable per sport, and data cost
+  stays user-independent. Multi-account free-tier farming rejected:
+  ToS breach and doesn't lift the season lock. Matrix with verified
+  pricing is M5 task 1 and gets owner sign-off before adapter code.
