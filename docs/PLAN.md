@@ -168,3 +168,9 @@ strings, store listings, screenshots, name availability check.
   should start now.
 - If Play account is personal: 12-tester/14-day closed test required
   before production; organisational account avoids this.
+
+### M6 deploy addendum 2026-07-26
+Blaze enabled by owner; Firestore (default) eur3; rules + 10 functions
+live at us-central1-gameday-fixtures; mutateFixture refuses in prod;
+cache seeded (F1 110, BOS 88, LIV 63; APISPORTS_KEY env OK). Remaining:
+client prod switch, FCM rebuild, physical-device push, scheduler.
