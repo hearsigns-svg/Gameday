@@ -1,0 +1,84 @@
+{
+ "matches": [
+  {
+   "id": 560825,
+   "utcDate": "2027-03-13T12:00:00Z",
+   "status": "SCHEDULED",
+   "competition": {
+    "id": 2021,
+    "name": "Premier League",
+    "code": "PL"
+   },
+   "homeTeam": {
+    "id": 64,
+    "name": "Liverpool FC",
+    "shortName": "Liverpool"
+   },
+   "awayTeam": {
+    "id": 349,
+    "name": "Ipswich Town FC",
+    "shortName": "Ipswich Town"
+   }
+  },
+  {
+   "id": 560837,
+   "utcDate": "2027-03-20T12:00:00Z",
+   "status": "SCHEDULED",
+   "competition": {
+    "id": 2021,
+    "name": "Premier League",
+    "code": "PL"
+   },
+   "homeTeam": {
+    "id": 63,
+    "name": "Fulham FC",
+    "shortName": "Fulham"
+   },
+   "awayTeam": {
+    "id": 64,
+    "name": "Liverpool FC",
+    "shortName": "Liverpool"
+   }
+  },
+  {
+   "id": 560846,
+   "utcDate": "2027-04-10T12:00:00Z",
+   "status": "SCHEDULED",
+   "competition": {
+    "id": 2021,
+    "name": "Premier League",
+    "code": "PL"
+   },
+   "homeTeam": {
+    "id": 64,
+    "name": "Liverpool FC",
+    "shortName": "Liverpool"
+   },
+   "awayTeam": {
+    "id": 67,
+    "name": "Newcastle United FC",
+    "shortName": "Newcastle"
+   }
+  },
+  {
+   "id": 560855,
+   "utcDate": "2027-04-17T12:00:00Z",
+   "status": "SCHEDULED",
+   "competition": {
+    "id": 2021,
+    "name": "Premier League",
+    "code": "PL"
+   },
+   "homeTeam": {
+    "id": 351,
+    "name": "Nottingham Forest FC",
+    "shortName": "Nottingham"
+   },
+   "awayTeam": {
+    "id": 64,
+    "name": "Liverpool FC",
+    "shortName": "Liverpool"
+   }
+  }
+ ]
+}

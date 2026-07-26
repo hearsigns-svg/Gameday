@@ -7,14 +7,20 @@ import {
   fetchLeagueSeasonFixtures,
   fetchTeamSeasonFixtures,
 } from './providers/apiSports';
+import {
+  fetchFdCompetitionSeasonFixtures,
+  fetchFdCompetitionTeams,
+  fetchFdTeamSeasonFixtures,
+  FD_FREE_COMPETITIONS,
+} from './providers/fdorg';
 import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
 import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
 import { fetchF1SeasonFixtures } from './providers/f1';
 import {
+  listFdSoccerTeams,
   listMlbTeams,
   listNhlTeams,
   listSoccerLeagues,
-  listSoccerTeams,
 } from './directory';
 
 initializeApp();
@@ -117,12 +123,54 @@ export const listTeams = onRequest(async (req, res) => {
       res.json({ teams: await listNhlTeams() });
       return;
     }
-    const leagueId = Number(req.query.leagueId);
-    if (!Number.isInteger(leagueId)) {
-      res.status(400).json({ error: 'leagueId is required' });
+    // Soccer: leagueId is a football-data competition code (PL, CL, …).
+    const code = String(req.query.leagueId ?? '');
+    const season = Number(req.query.season ?? 2026);
+    if (!/^[A-Z0-9]{2,4}$/.test(code)) {
+      res.status(400).json({ error: 'leagueId (competition code) is required' });
       return;
     }
-    res.json({ teams: await listSoccerTeams(requireKey(), leagueId) });
+    res.json({ teams: await listFdSoccerTeams(requireFdKey(), code, season) });
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+function requireFdKey(): string {
+  const apiKey = process.env.FOOTBALLDATA_KEY;
+  if (!apiKey) throw new Error('FOOTBALLDATA_KEY not configured');
+  return apiKey;
+}
+
+export const pollFdTeam = onRequest(async (req, res) => {
+  try {
+    const teamId = Number(req.query.teamId);
+    const season = Number(req.query.season);
+    if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
+      res.status(400).json({ error: 'teamId and season are required' });
+      return;
+    }
+    const incoming = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId, season);
+    res.json(await ingest(incoming, `fdorg-team-${teamId}`));
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+export const pollFdCompetition = onRequest(async (req, res) => {
+  try {
+    const code = String(req.query.code ?? '');
+    const season = Number(req.query.season);
+    if (!/^[A-Z0-9]{2,4}$/.test(code) || !Number.isInteger(season)) {
+      res.status(400).json({ error: 'code and season are required' });
+      return;
+    }
+    const incoming = await fetchFdCompetitionSeasonFixtures(
+      requireFdKey(),
+      code,
+      season,
+    );
+    res.json(await ingest(incoming, `fdorg-comp-${code}`));
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

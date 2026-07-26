@@ -88,3 +88,9 @@
   a weekend into per-session fixtures; race-only pref filters 'support'.
 - Firebase project 'gameday-fixtures' created (Spark). Blaze upgrade =
   the one remaining owner step for function deploys + real FCM (M6).
+- Soccer switched to football-data.org free tier (owner key verified,
+  2026-27 live): 12 TIER_ONE comps, current seasons, team-follow via
+  /teams/{id}/matches. SCHEDULED (unconfirmed kickoff, placeholder noon
+  times) maps to tbd → all-day placeholder until TIMED. Known gap: cups
+  (FA Cup/EFL Cup/UEL) until TSDB premium; legacy apisports-* follows
+  keep old routes until re-followed.

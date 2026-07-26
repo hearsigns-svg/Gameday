@@ -3,6 +3,7 @@
 
 import { getFirestore } from 'firebase-admin/firestore';
 import { ACTIVE_SEASON, CURATED_SOCCER_LEAGUES } from './config';
+import { fetchFdCompetitionTeams, FD_FREE_COMPETITIONS } from './providers/fdorg';
 import { fetchMlbTeams } from './providers/mlb';
 import { fetchNhlTeams } from './providers/nhl';
 
@@ -30,11 +31,37 @@ async function cachedTeams(
   return teams;
 }
 
+// Soccer browse now serves football-data.org's free competitions
+// (current seasons). The API-Sports curated list remains below for a
+// possible paid-tier upgrade path.
 export function listSoccerLeagues() {
+  return FD_FREE_COMPETITIONS.map((c) => ({
+    id: c.code,
+    name: c.name,
+    country: c.country,
+    key: `fdorg-comp-${c.code}`,
+  }));
+}
+
+export function listApiSportsLeagues() {
   return CURATED_SOCCER_LEAGUES.map((l) => ({
     ...l,
     key: `apisports-league-${l.id}`,
   }));
+}
+
+export async function listFdSoccerTeams(
+  apiKey: string,
+  code: string,
+  season: number,
+): Promise<DirectoryTeam[]> {
+  return cachedTeams(`soccer-fd-${code}-${season}`, async () =>
+    (await fetchFdCompetitionTeams(apiKey, code, season)).map((t) => ({
+      id: t.id,
+      name: t.name,
+      key: `fdorg-team-${t.id}`,
+    })),
+  );
 }
 
 interface ApiTeamRow {

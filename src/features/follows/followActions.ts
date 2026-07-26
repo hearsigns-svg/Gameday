@@ -9,11 +9,19 @@ import {
   F1_SEASON,
   MLB_SEASON,
   NHL_SEASON_ID,
+  SOCCER_FD_SEASON,
 } from './domain/sportsConfig';
 import { Followable, setFollowed } from './data/followStore';
 
 function pollPathFor(item: Followable): string {
   const tail = item.key.split('-').pop() ?? '';
+  // Provider is encoded in the key prefix; legacy apisports-* follows
+  // keep their old (2023-window) routes until re-followed.
+  if (item.key.startsWith('fdorg-')) {
+    return item.type === 'competition'
+      ? `pollFdCompetition?code=${tail}&season=${SOCCER_FD_SEASON}`
+      : `pollFdTeam?teamId=${Number(tail)}&season=${SOCCER_FD_SEASON}`;
+  }
   switch (item.sportKey) {
     case 'baseball':
       // Whole-league follow polls team-by-team server-side later (M6

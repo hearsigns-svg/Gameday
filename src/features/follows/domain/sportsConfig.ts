@@ -82,10 +82,11 @@ export const SPORTS: SportConfig[] = [
 export const sportByKey = (key: string): SportConfig | undefined =>
   SPORTS.find((s) => s.key === key);
 
-// Per-sport active seasons. Soccer sits on the API-Sports free-tier
-// window (2022–24) until the owner upgrades; the free official APIs
-// serve current seasons.
-export const ACTIVE_SEASON = 2023; // soccer (API-Sports free tier)
+// Per-sport active seasons. Soccer runs on football-data.org's free
+// tier at CURRENT seasons (season = start year: 2026 → 2026-27).
+// ACTIVE_SEASON remains for legacy API-Sports follows only.
+export const SOCCER_FD_SEASON = 2026;
+export const ACTIVE_SEASON = 2023; // legacy apisports-* follows
 export const MLB_SEASON = 2026;
 export const NHL_SEASON_ID = '20262027';
 export const F1_SEASON = 2026;
