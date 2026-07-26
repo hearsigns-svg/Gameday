@@ -119,3 +119,19 @@
   cards, midnight times → tbd placeholders sharpen late, the honest
   shape of boxing scheduling. boxingschedule.co rejected (client-
   injected markup = real scraping); Sky-class sources stay rejected.
+- Sweep security: device docs are client-writable, so submitted routes
+  are re-validated server-side against a canonical allowlist (exact
+  function name + exact param set + typed values) and canonicalised so
+  cache-busting duplicates collapse; unknown routes are dropped, never
+  fetched. runSweep FAILS CLOSED (no key ⇒ 403) with a constant-time
+  compare. 22 tests pin the boundary.
+- Fan-out window spans since the LAST sweep, not this sweep's start —
+  changes ingested between sweeps must still notify.
+- Sync mutex is time-bounded (3 min): a run interrupted by backgrounding
+  never releases it, which silently killed EVERY later sync including
+  push-triggered ones. Safe because the ledger is per-op durable and
+  planning is idempotent.
+- Background/registry failures are logged, never swallowed: a silent
+  catch made a hung registration indistinguishable from success.
+- iOS push tokens are APNs, not FCM — recorded as tokenType and skipped
+  by the sweep rather than failing invisibly (iOS push = M6 follow-up).

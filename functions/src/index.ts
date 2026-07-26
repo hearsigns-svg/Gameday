@@ -1,6 +1,9 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { sweepAll } from './sweep';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -28,6 +31,14 @@ import {
 initializeApp();
 const db = getFirestore();
 
+// Constant-time compare over equal-length digests — avoids leaking key
+// length or prefix through response timing.
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const ha = createHash('sha256').update(a).digest();
+  const hb = createHash('sha256').update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+
 // Shared ingest: diff fresh fixtures against the cache slice for one
 // followable key, then upsert fixtures + append change records.
 async function ingest(
@@ -43,6 +54,7 @@ async function ingest(
   );
   const changes = diffFixtures(existing, incoming);
   const at = new Date().toISOString();
+  const byId = new Map(incoming.map((f) => [f.id, f]));
   // Firestore batches cap at 500 writes — chunk (fixtures + changes can
   // exceed it on a first league-wide poll).
   let batch = db.batch();
@@ -54,12 +66,24 @@ async function ingest(
       pending = 0;
     }
   };
+  // Write only what actually changed: an unchanged fixture costs a read
+  // we already did, not a write. (updatedAt is excluded from the compare
+  // — it changes on every poll by construction.)
+  const sameFixture = (a: Fixture, b: Fixture): boolean => {
+    const strip = ({ updatedAt, ...rest }: Fixture) => rest;
+    return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+  };
   for (const f of incoming) {
+    const prev = existing.get(f.id);
+    if (prev && sameFixture(prev, f)) continue;
     batch.set(db.collection('fixtures').doc(f.id), f);
     if (++pending >= 450) await flush();
   }
   for (const c of changes) {
-    batch.set(db.collection('fixtureChanges').doc(), { ...c, at });
+    // followKeys ride on the change record so the sweep can fan pushes
+    // out to affected devices without re-reading fixtures.
+    const followKeys = byId.get(c.fixtureId)?.followKeys ?? [];
+    batch.set(db.collection('fixtureChanges').doc(), { ...c, at, followKeys });
     if (++pending >= 450) await flush();
   }
   await flush();
@@ -325,7 +349,11 @@ export const mutateFixture = onRequest(async (req, res) => {
         newStatus,
       });
     }
-    await db.collection('fixtureChanges').add(record);
+    // followKeys must ride along or the sweep cannot fan out pushes for
+    // simulated changes — which is exactly what push verification needs.
+    await db
+      .collection('fixtureChanges')
+      .add({ ...record, followKeys: f.followKeys ?? [] });
     res.json({
       fixtureId,
       prevStartUtc: f.startUtc,
@@ -337,3 +365,34 @@ export const mutateFixture = onRequest(async (req, res) => {
     res.status(502).json({ error: String(e) });
   }
 });
+
+// The propagation heartbeat: re-poll everything followed, push to
+// affected devices. Every 6 hours balances freshness against provider
+// politeness; layer 2 (background fetch) and layer 3 (foreground sync)
+// cover the gaps.
+export const scheduledSweep = onSchedule(
+  { schedule: 'every 6 hours', timeoutSeconds: 540, memory: '256MiB' },
+  async () => {
+    await sweepAll();
+  },
+);
+
+// Manual trigger for verification and ops — guarded by a shared key.
+// FAILS CLOSED: a deploy without SWEEP_KEY refuses every request rather
+// than exposing a 540s provider-polling endpoint to the internet.
+export const runSweep = onRequest(
+  { timeoutSeconds: 540, memory: '256MiB', maxInstances: 2 },
+  async (req, res) => {
+    const expected = process.env.SWEEP_KEY;
+    const provided = req.get('x-sweep-key');
+    if (!expected || !provided || !timingSafeEqualStr(provided, expected)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
+    try {
+      res.json(await sweepAll());
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  },
+);

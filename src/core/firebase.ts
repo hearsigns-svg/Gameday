@@ -3,7 +3,14 @@
 // The web apiKey below is a client identifier, not a secret — access is
 // governed by Firestore rules.
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
+import { initializeAuth, signInAnonymously } from 'firebase/auth';
+// @ts-expect-error — getReactNativePersistence is typed only in the
+// react-native build; Metro resolves that build at runtime via the
+// exports condition, but TS matches the web types first (known firebase
+// packaging wart; the standard RN workaround).
+import { getReactNativePersistence } from 'firebase/auth';
 import {
   connectFirestoreEmulator,
   initializeFirestore,
@@ -41,3 +48,22 @@ if (USE_EMULATOR) {
 export const functionsBaseUrl = USE_EMULATOR
   ? `http://${EMULATOR_HOST}:${EMULATOR_PORTS.functions}/demo-gameday/us-central1`
   : 'https://us-central1-gameday-fixtures.cloudfunctions.net';
+
+// Anonymous auth: server-side identity for the device registry and
+// entitlements with zero sign-up friction (accounts link later).
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+export async function ensureSignedIn(): Promise<string | null> {
+  try {
+    if (auth.currentUser) return auth.currentUser.uid;
+    const cred = await signInAnonymously(auth);
+    return cred.user.uid;
+  } catch (e) {
+    // Offline or provider disabled — sync works without identity; the
+    // registry write is skipped and retried on a later run.
+    console.warn('[gameday] anonymous sign-in failed:', String(e));
+    return null;
+  }
+}

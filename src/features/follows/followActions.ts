@@ -11,7 +11,7 @@ import {
   NHL_SEASON_ID,
   SOCCER_FD_SEASON,
 } from './domain/sportsConfig';
-import { Followable, setFollowed } from './data/followStore';
+import { Followable, loadFollowables, setFollowed } from './data/followStore';
 
 function pollPathFor(item: Followable): string {
   if (item.pollPath) return item.pollPath;
@@ -52,6 +52,27 @@ async function ensurePolled(item: Followable): Promise<Result<true>> {
   }
 }
 
+// What the backend needs to serve this device: every followed key and
+// the distinct poll routes that keep their fixtures fresh.
+export function collectFollowState(): {
+  followKeys: string[];
+  pollPaths: string[];
+} {
+  const follows = loadFollowables();
+  return {
+    followKeys: follows.map((f) => f.key),
+    pollPaths: [...new Set(follows.map((f) => pollPathFor(f)))],
+  };
+}
+
+// Registry updates are lazy-imported to avoid a require cycle
+// (deviceRegistry → followActions).
+function updateRegistry(): void {
+  void import('../calendar-sync/data/deviceRegistry').then((m) =>
+    m.registerDevice(),
+  );
+}
+
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   setFollowed(item, true);
   const polled = await ensurePolled(item);
@@ -60,11 +81,13 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
     setFollowed(item, false);
     return polled;
   }
+  updateRegistry();
   return runSync();
 }
 
 export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
   setFollowed(item, false);
+  updateRegistry();
   return runSync();
 }
 
@@ -72,5 +95,6 @@ export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
 // so no re-poll — just restore the follow and reconcile.
 export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
   setFollowed(item, true);
+  updateRegistry();
   return runSync();
 }

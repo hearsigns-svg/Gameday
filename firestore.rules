@@ -1,8 +1,8 @@
 rules_version = '2';
 
-// SLICE RULES — emulator only. The fixture cache is world-readable public
-// data; all writes are server-only (Admin SDK bypasses rules). Real rules
-// harden alongside auth + entitlements (M6) BEFORE any production deploy.
+// Public sports data is world-readable; ALL writes are server-only
+// (Admin SDK bypasses rules). Device registry docs are written only by
+// their own anonymous identity. Everything else: deny.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /fixtures/{fixtureId} {
@@ -11,6 +11,33 @@ service cloud.firestore {
     }
     match /fixtureChanges/{changeId} {
       allow read: if true;
+      allow write: if false;
+    }
+    match /devices/{uid} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+          ['token', 'tokenType', 'platform', 'followKeys', 'pollPaths',
+           'updatedAt'])
+        && (request.resource.data.token == null
+            || (request.resource.data.token is string
+                && request.resource.data.token.size() <= 512))
+        && (request.resource.data.tokenType == null
+            || request.resource.data.tokenType in ['fcm', 'apns'])
+        && request.resource.data.platform is string
+        && request.resource.data.platform.size() <= 16
+        && request.resource.data.updatedAt is string
+        && request.resource.data.followKeys is list
+        && request.resource.data.followKeys.size() <= 200
+        && request.resource.data.pollPaths is list
+        && request.resource.data.pollPaths.size() <= 200;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // Entitlements scaffold: readable by the owner, written only by the
+    // server (billing webhooks / admin) — never by clients.
+    match /entitlements/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
     }
   }

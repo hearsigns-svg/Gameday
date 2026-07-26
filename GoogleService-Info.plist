@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyAq1qpjNv4pNUlSrJZeuzhHMEtjDrbJxik</string>
+	<key>GCM_SENDER_ID</key>
+	<string>188261010398</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.hearsigns.Gameday</string>
+	<key>PROJECT_ID</key>
+	<string>gameday-fixtures</string>
+	<key>STORAGE_BUCKET</key>
+	<string>gameday-fixtures.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:188261010398:ios:ad2c380a0f4c7151636b4f</string>
+</dict>
+</plist>

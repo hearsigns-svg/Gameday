@@ -29,6 +29,9 @@ export default function App() {
 
   useEffect(() => {
     void registerBackgroundSync();
+    void import('./src/features/calendar-sync/data/deviceRegistry').then(
+      (m) => m.registerDevice(),
+    );
     // Propagation layer 3: always sync on foreground (never on a cold
     // first open — shouldAutoSync gates the permission prompt).
     const sub = AppState.addEventListener('change', (state) => {

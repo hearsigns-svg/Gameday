@@ -71,17 +71,33 @@ export function syncStalenessHours(): number | null {
 }
 
 let syncRunning = false;
+let syncStartedAt = 0;
 let rerunQueued = false;
 
+// A run interrupted by backgrounding has its JS paused mid-flight: the
+// finally block never executes and the mutex would be held for the life
+// of the process, silently killing every later sync (including
+// push-triggered ones). Past this age a holder is treated as abandoned.
+// Safe by construction: the ledger persists per operation and planning
+// is idempotent, so a resumed zombie run finds nothing left to do.
+const STALE_RUN_MS = 3 * 60_000;
+
 export async function runSync(): Promise<Result<SyncOutcome>> {
-  if (syncRunning) {
+  const heldFor = Date.now() - syncStartedAt;
+  if (syncRunning && heldFor < STALE_RUN_MS) {
     // Coalesce: whatever changed (new follow, unfollow, pref) is picked
     // up by one queued re-run after the current run finishes. Without
     // this, an unfollow during a long sync silently never deletes.
     rerunQueued = true;
     return err({ kind: 'sync-in-progress' });
   }
+  if (syncRunning) {
+    console.warn(
+      `[gameday] taking over abandoned sync (held ${Math.round(heldFor / 1000)}s)`,
+    );
+  }
   syncRunning = true;
+  syncStartedAt = Date.now();
   emit(true);
   try {
     return await runSyncInner();
@@ -90,6 +106,7 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
     return err({ kind: 'unknown', message: `sync failed: ${e}` });
   } finally {
     syncRunning = false;
+    syncStartedAt = 0;
     emit(false);
     if (rerunQueued) {
       rerunQueued = false;
