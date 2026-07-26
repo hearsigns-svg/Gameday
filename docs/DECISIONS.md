@@ -114,3 +114,8 @@
   stable ids); world.rugby's official JSON API logged as the candidate
   for internationals later (grey-zone, owner-proposed). Season strings
   roll over per league — the M6 scheduler must own season rollover.
+- Boxing enabled as sport 12 via TSDB league 4445 (config-only, card
+  series-follow like UFC; UFC glyph → 🥋 to free 🥊): real upcoming
+  cards, midnight times → tbd placeholders sharpen late, the honest
+  shape of boxing scheduling. boxingschedule.co rejected (client-
+  injected markup = real scraping); Sky-class sources stay rejected.

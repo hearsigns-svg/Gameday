@@ -263,9 +263,25 @@ export const SPORTS: SportConfig[] = [
     seriesFollowable: { key: 'f1-series-1', label: 'Formula 1' },
   },
   {
+    key: 'boxing',
+    label: 'Boxing',
+    glyph: '🥊',
+    enabled: true,
+    // Card-follow like UFC: one follow covers the major fight cards.
+    // Times are announced late → tbd placeholders that sharpen.
+    browse: [],
+    followTypes: ['series'],
+    seriesFollowable: {
+      key: 'tsdb-league-4445',
+      label: 'Boxing',
+      pollPath:
+        'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
+    },
+  },
+  {
     key: 'ufc',
     label: 'UFC',
-    glyph: '🥊',
+    glyph: '🥋',
     enabled: true,
     // Event-card follow (like F1): TSDB has cards, not per-fighter bouts,
     // so athlete-follow stays deferred until bout-level data exists.
