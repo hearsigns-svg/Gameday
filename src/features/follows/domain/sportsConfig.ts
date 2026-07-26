@@ -152,7 +152,70 @@ export const SPORTS: SportConfig[] = [
       },
     ],
   },
-  { key: 'rugby', label: 'Rugby', glyph: '🏉', enabled: false, browse: ['competition', 'team'], followTypes: ['team', 'competition'] },
+  {
+    key: 'rugby',
+    label: 'Rugby',
+    glyph: '🏉',
+    enabled: true,
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      {
+        id: '4714',
+        name: 'Six Nations',
+        country: 'Europe',
+        key: 'tsdb-league-4714',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4714&season=2027&sport=rugby&durationHours=2',
+      },
+      {
+        id: '4414',
+        name: 'Premiership Rugby',
+        country: 'England',
+        key: 'tsdb-league-4414',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4414&season=2025-2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '4550',
+        name: 'Champions Cup',
+        country: 'Europe',
+        key: 'tsdb-league-4550',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4550&season=2025-2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '4430',
+        name: 'Top 14',
+        country: 'France',
+        key: 'tsdb-league-4430',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4430&season=2025-2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '4415',
+        name: 'Super League',
+        country: 'England',
+        key: 'tsdb-league-4415',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4415&season=2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '4416',
+        name: 'NRL',
+        country: 'Australia',
+        key: 'tsdb-league-4416',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4416&season=2026&sport=rugby&durationHours=2',
+      },
+    ],
+  },
   {
     key: 'golf',
     label: 'Golf',

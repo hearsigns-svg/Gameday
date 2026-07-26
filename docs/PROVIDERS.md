@@ -14,7 +14,7 @@ cache; polls scale with competitions, not users).
 | Soccer | API-Sports (current) + football-data.org (candidate) | LIVE (2022–24 window) | Free tier now; paid tier ~$25–40/mo for current seasons, OR football-data.org free tier (top ~12 comps) | Free tier locked to 2022–24 | OWNER DECISION: paid API-Sports (full coverage) vs football-data.org free (top comps only) vs both. |
 | Basketball (NBA) | API-Sports basketball OR public league endpoints | pending | ~$10–25/mo or free-grey | — | Decide at enablement. |
 | NFL | API-Sports american-football OR public endpoints | pending | ~$10–25/mo or free-grey | — | Decide at enablement. |
-| Rugby | API-Sports rugby | pending | ~$10–25/mo | — | |
+| Rugby | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | Six Nations 2027 + NRL/Super League current; Prem 26-27 ~Aug | Sky scraping rejected; world.rugby API = internationals candidate |
 | Cricket | cricketdata.org / Roanuz | pending | free tier / ~$ | — | Dedicated provider; evaluate quality. |
 | Tennis | aggregator (TheSportsDB or paid) | pending | ~$10/mo (TSDB covers all sports) | — | Order-of-play is late-breaking → placeholders. |
 | Golf | aggregator | pending | (same TSDB sub) | — | Span events. |

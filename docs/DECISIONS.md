@@ -108,3 +108,9 @@
 - Client cut over to PRODUCTION Firebase (USE_EMULATOR flag retained);
   cross-backend cutover verified: first prod sync converged with zero
   duplicates on a 173-event device.
+- Rugby via the existing TSDB sub (probed: 56 comps): Six Nations 2027,
+  Premiership, Champions Cup, Top 14, Super League, NRL — config only,
+  no new adapter. Sky Sports scraping REJECTED (ToS, fragile HTML, no
+  stable ids); world.rugby's official JSON API logged as the candidate
+  for internationals later (grey-zone, owner-proposed). Season strings
+  roll over per league — the M6 scheduler must own season rollover.
