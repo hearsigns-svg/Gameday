@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import { AppError, err, ok, Result } from '../../../core/result';
 import { palette } from '../../../core/tokens';
 import { readJson, writeJson } from '../../../core/storage';
+import { RecoveredEvent } from '../domain/recovery';
 
 export const NOTES_TAG = 'gameday-fixture:';
 const CAL_KEY = 'gamedayCalendarId.v1';
@@ -25,19 +26,78 @@ export async function ensureCalendarPermission(): Promise<Result<true>> {
   }
 }
 
-async function findExistingGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
+// Search window for tagged events: generous on both sides so recovery
+// sees every fixture we could plausibly have written.
+function eventWindow(): { start: Date; end: Date } {
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - 5);
+  const end = new Date();
+  end.setFullYear(end.getFullYear() + 3);
+  return { start, end };
+}
+
+function toIso(d: string | Date): string {
+  return new Date(d).toISOString();
+}
+
+async function taggedEventsOf(
+  calendar: Calendar.ExpoCalendar,
+): Promise<RecoveredEvent[]> {
+  const { start, end } = eventWindow();
+  const events = await calendar.listEvents(start, end);
+  return events
+    .filter((e) => e.notes?.startsWith(NOTES_TAG))
+    .map((e) => ({
+      fixtureId: (e.notes ?? '').slice(NOTES_TAG.length).trim(),
+      eventId: e.id,
+      title: e.title ?? '',
+      startUtc: toIso(e.startDate),
+      endUtc: toIso(e.endDate),
+      allDay: e.allDay ?? false,
+    }));
+}
+
+export async function listTaggedEvents(
+  calendarId: string,
+): Promise<Result<RecoveredEvent[]>> {
+  try {
+    const calendar = await Calendar.ExpoCalendar.get(calendarId);
+    return ok(await taggedEventsOf(calendar));
+  } catch (e) {
+    return err({ kind: 'unknown', message: `event scan failed: ${e}` });
+  }
+}
+
+// If duplicate "Gameday" calendars exist (zombie dev runs, interrupted
+// installs), keep the one holding the most tagged events and delete the
+// rest — they are ours by construction (title + local account).
+async function resolveGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
   const cached = readJson<string | null>(CAL_KEY, null);
   const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
-  return (
-    calendars.find((c) => c.id === cached) ??
-    calendars.find((c) => c.title === CAL_TITLE) ??
-    null
+  const ours = calendars.filter(
+    (c) => c.title === CAL_TITLE || c.id === cached,
   );
+  if (ours.length === 0) return null;
+  if (ours.length === 1) return ours[0];
+  const counted = await Promise.all(
+    ours.map(async (c) => ({ c, n: (await taggedEventsOf(c)).length })),
+  );
+  counted.sort((a, b) => b.n - a.n);
+  const [keep, ...drop] = counted;
+  for (const { c } of drop) {
+    try {
+      await c.delete();
+    } catch {
+      // A calendar we cannot delete stays; it no longer matches the
+      // cached id, so it will not be written to again.
+    }
+  }
+  return keep.c;
 }
 
 export async function ensureGamedayCalendar(): Promise<Result<string>> {
   try {
-    const existing = await findExistingGamedayCalendar();
+    const existing = await resolveGamedayCalendar();
     if (existing) {
       writeJson(CAL_KEY, existing.id);
       return ok(existing.id);

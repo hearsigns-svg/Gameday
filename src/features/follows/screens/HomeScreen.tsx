@@ -17,9 +17,11 @@ import {
   subscribeSync,
   SyncOutcome,
 } from '../../calendar-sync/syncEngine';
-import { unfollow } from '../followActions';
+import { refollow, unfollow } from '../followActions';
 import { Followable, loadFollowables } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
+
+const UNDO_WINDOW_MS = 6000;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -37,6 +39,13 @@ export default function HomeScreen({ navigation }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [undoItem, setUndoItem] = useState<Followable | null>(null);
+
+  useEffect(() => {
+    if (!undoItem) return;
+    const timer = setTimeout(() => setUndoItem(null), UNDO_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [undoItem]);
 
   useEffect(() => {
     const unsub = subscribeSync((state) => {
@@ -56,6 +65,8 @@ export default function HomeScreen({ navigation }: Props) {
   const onUnfollow = useCallback(async (item: Followable) => {
     setBusyKey(item.key);
     setError(null);
+    setUndoItem(item); // no confirmation — undo instead (friction rule)
+    setFollows(loadFollowables().filter((f) => f.key !== item.key));
     const r = await unfollow(item);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
       setError(messageOf(r.error));
@@ -64,12 +75,42 @@ export default function HomeScreen({ navigation }: Props) {
     setBusyKey(null);
   }, []);
 
+  const onUndo = useCallback(async (item: Followable) => {
+    setUndoItem(null);
+    setError(null);
+    const r = await refollow(item);
+    if (!r.ok && r.error.kind !== 'sync-in-progress') {
+      setError(messageOf(r.error));
+    }
+    setFollows(loadFollowables());
+  }, []);
+
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <View style={styles.header}>
         <StatusPill running={syncRunning} summary={summary} />
         {error ? (
           <Text style={[type.secondary, { color: t.danger }]}>{error}</Text>
+        ) : null}
+        {undoItem ? (
+          <View
+            style={[styles.undoRow, { backgroundColor: t.surfaceRaised, borderColor: t.border }]}
+            accessibilityLiveRegion="polite"
+          >
+            <Text style={[type.secondary, { color: t.textPrimary, flex: 1 }]}>
+              Unfollowed {undoItem.label}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Undo unfollowing ${undoItem.label}`}
+              onPress={() => void onUndo(undoItem)}
+              hitSlop={12}
+            >
+              <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
+                Undo
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
       </View>
       {follows.length === 0 ? (
@@ -119,6 +160,14 @@ export default function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   header: { padding: spacing.l, gap: spacing.s },
+  undoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingHorizontal: spacing.l,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   addMore: {
     margin: spacing.l,
     minHeight: 48,

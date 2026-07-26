@@ -59,3 +59,10 @@
 - Team/competition follows share the fixture pool: shared fixtures are
   one event, and unfollowing one followable keeps events wanted by
   another (verified UCL + Liverpool overlap).
+- Recovery: empty ledger + tagged events in calendar ⇒ rebuild ledger
+  from events (uninstall wipes MMKV; events are the durable record).
+- Prune invariant: every sync deletes tagged events the ledger does not
+  reference — one listEvents call per sync buys immunity to zombie runs
+  and scan-window misses.
+- Undo-unfollow: optimistic removal + 6s undo row (no confirmation
+  dialogs, per friction rules); undo re-follows without re-polling.

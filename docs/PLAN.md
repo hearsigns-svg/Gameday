@@ -85,12 +85,26 @@ calendar preferences (reminders, all-day, naming, F1 race-only).
 - Deferred within scope: F1 race-only pref (lands with F1 in M5);
   event-naming pref (M7 polish); directory beyond soccer (M5).
 
-## M4 — Sync robustness  [ ]
+## M4 — Sync robustness  [x]
 
 Reinstall recovery (rebuild ledger from event-embedded fixtureIds),
 calendar choice, multi-device, kill-state resumption, undo-unfollow.
 - Verification: delete+reinstall → no duplicates after recovery sync;
   unfollow removes exactly its events; two devices converge.
+- VERIFIED 2026-07-26 (41 tests): Android uninstall→reinstall→follow
+  recovered to exactly 63 events; planted duplicate "Gameday" calendar
+  consolidated 2→1 with events intact; undo-unfollow (optimistic row,
+  6s window) converged back to 63 with follow restored; iOS reinstall
+  recovery spot-checked. Kill-state resumption: per-op ledger persistence
+  + convergence unit test (M1); multi-device: iOS+Android against the
+  same cache throughout M1–M4.
+- BUG FOUND+FIXED by E2E: recovery scan window (-3y) missed the two
+  oldest fixtures → 65 events. Window widened to -5y AND a standing
+  PRUNE INVARIANT added: every sync deletes any tagged event the ledger
+  does not reference (calendar ⊆ ledger) — verified 65→63 on-device.
+- "Calendar choice" is satisfied by decision: dedicated Gameday calendar
+  only (never user calendars); user-selectable target deferred unless
+  owner requests it.
 
 ## M5 — Sport expansion  [ ]
 

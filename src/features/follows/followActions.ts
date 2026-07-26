@@ -39,3 +39,10 @@ export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
   setFollowed(item, false);
   return runSync();
 }
+
+// Undo path: the fixture cache is still warm from the original follow,
+// so no re-poll — just restore the follow and reconcile.
+export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
+  setFollowed(item, true);
+  return runSync();
+}

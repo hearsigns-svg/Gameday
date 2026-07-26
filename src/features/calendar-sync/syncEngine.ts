@@ -13,8 +13,13 @@ import {
   ensureCalendarPermission,
   ensureGamedayCalendar,
   getGamedayCalendarObject,
+  listTaggedEvents,
   updateFixtureEvent,
 } from './data/calendarDriver';
+import {
+  entriesFromRecoveredEvents,
+  orphanEventIds,
+} from './domain/recovery';
 import {
   loadLedger,
   removeLedgerEntry,
@@ -47,6 +52,8 @@ export interface SyncOutcome {
   created: number;
   updated: number;
   deleted: number;
+  recovered?: number; // ledger entries rebuilt from calendar (reinstall)
+  pruned?: number; // orphan tagged events deleted (ledger invariant)
   at: string;
 }
 
@@ -88,6 +95,25 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     if (!perm.ok) return perm;
     const cal = await ensureGamedayCalendar();
     if (!cal.ok) return cal;
+
+    // Reinstall recovery: an empty ledger with tagged events already in
+    // the calendar means the app's storage was lost (uninstall) — the
+    // events are the durable record. Rebuild before planning so the sync
+    // updates instead of duplicating.
+    let recovered = 0;
+    if (Object.keys(loadLedger()).length === 0) {
+      const scan = await listTaggedEvents(cal.value);
+      if (scan.ok && scan.value.length > 0) {
+        const rebuilt = entriesFromRecoveredEvents(scan.value, cal.value);
+        for (const [fixtureId, entry] of Object.entries(rebuilt.ledger)) {
+          upsertLedgerEntry(fixtureId, entry);
+        }
+        for (const eventId of rebuilt.surplusEventIds) {
+          await deleteFixtureEvent(eventId);
+        }
+        recovered = Object.keys(rebuilt.ledger).length;
+      }
+    }
     const calObj = await getGamedayCalendarObject(cal.value);
     if (!calObj.ok) return calObj;
 
@@ -113,6 +139,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       created: 0,
       updated: 0,
       deleted: 0,
+      recovered,
       at: new Date().toISOString(),
     };
 
@@ -157,6 +184,17 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         if (!del.ok) return del; // never drop a ledger entry on a failed delete
         removeLedgerEntry(op.fixtureId);
         outcome.deleted++;
+      }
+    }
+
+    // Prune pass: delete any tagged event the ledger does not reference
+    // (calendar ⊆ ledger invariant). Catches scan-window misses, zombie
+    // dev runs, and anything else that slipped an event past the ledger.
+    const postScan = await listTaggedEvents(cal.value);
+    if (postScan.ok) {
+      for (const eventId of orphanEventIds(postScan.value, loadLedger())) {
+        await deleteFixtureEvent(eventId);
+        outcome.pruned = (outcome.pruned ?? 0) + 1;
       }
     }
 
