@@ -29,4 +29,8 @@ Grey-zone rule: "public but undocumented" league endpoints (NBA/NFL)
 get a per-source owner decision before enablement — never enabled
 silently.
 
-Current spend: $9/month (TSDB premium). 10 of 11 sports live; tennis deferred on evidence.
+Current spend: $9/month (TSDB premium). 11 of 12 sports live; tennis
+deferred on evidence. Production cache 2026-07-27: 3,114 fixtures across
+all live sports; NBA shows 0 upcoming because the 2026-27 schedule is
+not published yet (~Aug) — the horizon rule makes that state honest
+rather than filling calendars with last season.
