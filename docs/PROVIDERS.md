@@ -11,14 +11,14 @@ cache; polls scale with competitions, not users).
 | Baseball (MLB) | MLB Stats API (statsapi.mlb.com) | LIVE in app | Free, no key | Current ✓ (2026 verified) | Official. No SLA; contract tests guard shape. |
 | Ice hockey (NHL) | NHL api-web (api-web.nhle.com) | LIVE in app | Free, no key | Current ✓ (2026-27 verified) | Official. Team keys = abbrevs. |
 | Formula 1 | Jolpica (api.jolpi.ca, Ergast successor) | LIVE in app | Free, open | Current ✓ (2026: 22 races verified) | Community-run; donation-worthy if we scale. |
-| Soccer | API-Sports (current) + football-data.org (candidate) | LIVE (2022–24 window) | Free tier now; paid tier ~$25–40/mo for current seasons, OR football-data.org free tier (top ~12 comps) | Free tier locked to 2022–24 | OWNER DECISION: paid API-Sports (full coverage) vs football-data.org free (top comps only) vs both. |
-| Basketball (NBA) | API-Sports basketball OR public league endpoints | pending | ~$10–25/mo or free-grey | — | Decide at enablement. |
-| NFL | API-Sports american-football OR public endpoints | pending | ~$10–25/mo or free-grey | — | Decide at enablement. |
+| Soccer | football-data.org free (leagues, current seasons) + TSDB cups (FA Cup/EFL Cup/UEL) | LIVE in app | Free + existing TSDB sub | 2026-27 verified | Cups: FA Cup 26-27 populates ~Aug. API-Sports legacy adapter retained. |
+| Basketball (NBA) | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | 2025-26 full (1,380 games) | 2026-27 schedule lands ~Aug. |
+| NFL | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | 2026 (321 games incl. preseason) | Round-18 times TBD → placeholders. |
 | Rugby | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | Six Nations 2027 + NRL/Super League current; Prem 26-27 ~Aug | Sky scraping rejected; world.rugby API = internationals candidate |
-| Cricket | cricketdata.org / Roanuz | pending | free tier / ~$ | — | Dedicated provider; evaluate quality. |
-| Tennis | aggregator (TheSportsDB or paid) | pending | ~$10/mo (TSDB covers all sports) | — | Order-of-play is late-breaking → placeholders. |
-| Golf | aggregator | pending | (same TSDB sub) | — | Span events. |
-| UFC | API-Sports MMA or TSDB | pending | ~$10–25/mo or TSDB | — | Cards shift → placeholders. |
+| Cricket | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | IPL + ODI/T20I + T20 WC 2026 | Test cricket dead upstream; internationals white-ball only. |
+| Tennis | — DEFERRED | blocked | — | — | TSDB results-only even premium (zero forward fixtures); needs a different provider. |
+| Golf | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | PGA/DP World/LPGA 2026 | Per-round events; future rounds tbd→sharpen. |
+| UFC | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | 2026 cards (38) | Event-card follow; no bout/athlete data upstream. |
 
 Gap-filler: **TheSportsDB** premium (~$10/mo, one sub, all sports) —
 free key verified live but truncates responses; premium unlocks full
@@ -29,5 +29,4 @@ Grey-zone rule: "public but undocumented" league endpoints (NBA/NFL)
 get a per-source owner decision before enablement — never enabled
 silently.
 
-Current spend: $0/month. Sports live on free official APIs: baseball,
-ice hockey, F1 (plus soccer on the free-tier window).
+Current spend: $9/month (TSDB premium). 10 of 11 sports live; tennis deferred on evidence.
