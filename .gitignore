@@ -53,3 +53,7 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 .firebase/
+
+# Firebase native configs (regenerate: firebase apps:sdkconfig)
+google-services.json
+GoogleService-Info.plist
