@@ -42,11 +42,9 @@ Rules:
   placeholder events ("Djokovic — Wimbledon, time TBC") that sharpen as
   data confirms.
 
-## v1 scope
+## v1 scope (amended 2026-07-27)
 
-In: the core journey; 11 sports (soccer, cricket, ice hockey, tennis,
-basketball, baseball, NFL, rugby, golf, F1, UFC); background change
-detection with silent calendar correction; iOS + Android; store-launchable.
+In: the core journey; 12 sports (soccer, cricket, ice hockey, basketball, baseball, NFL, rugby, golf, F1, boxing, MMA, motorsport — motorsport and boxing added post-gate, tennis deferred on data grounds); ~60 competitions; background change detection with silent calendar correction; iOS + Android; store-launchable.
 
 Deferred: boxing (data quality bar), push notifications on changes,
 server-side Google Calendar API write, Outlook/web, monetisation UI.

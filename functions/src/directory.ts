@@ -74,8 +74,30 @@ export function listSoccerLeagues() {
       pollPath:
         'pollTsdbLeague?leagueId=4481&season=2026-2027&sport=soccer&durationHours=2',
     },
+    ...TSDB_SOCCER_EXTRAS.map((c) => ({
+      id: c.id,
+      name: c.name,
+      country: c.country,
+      key: `tsdb-league-${c.id}`,
+      followOnly: true,
+      pollPath: `pollTsdbLeague?leagueId=${c.id}&season=${c.season}&sport=soccer&durationHours=2`,
+    })),
   ];
 }
+
+// Competitions a fan expects that football-data's free tier omits.
+// Verified live 2026-07-27: each returns real upcoming fixtures with
+// real kick-off times.
+const TSDB_SOCCER_EXTRAS = [
+  { id: '5071', name: 'UEFA Conference League', country: 'Europe', season: '2026-2027' },
+  { id: '4480', name: 'Champions League qualifying', country: 'Europe', season: '2026-2027' },
+  { id: '4490', name: 'UEFA Nations League', country: 'Europe', season: '2026-2027' },
+  { id: '4396', name: 'League One', country: 'England', season: '2026-2027' },
+  { id: '4397', name: 'League Two', country: 'England', season: '2026-2027' },
+  { id: '4330', name: 'Scottish Premiership', country: 'Scotland', season: '2026-2027' },
+  { id: '4485', name: 'DFB-Pokal', country: 'Germany', season: '2026-2027' },
+  { id: '4506', name: 'Coppa Italia', country: 'Italy', season: '2026-2027' },
+];
 
 export function listApiSportsLeagues() {
   return CURATED_SOCCER_LEAGUES.map((l) => ({

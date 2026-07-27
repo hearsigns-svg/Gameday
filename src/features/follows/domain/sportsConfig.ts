@@ -87,6 +87,15 @@ export const SPORTS: SportConfig[] = [
         pollPath:
           'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4',
       },
+      {
+        id: '4458',
+        name: 'County Championship',
+        country: 'England',
+        key: 'tsdb-league-4458',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96',
+      },
     ],
   },
   {
@@ -98,6 +107,33 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['team', 'competition'],
     staticCompetitions: [
       { id: 1, name: 'NHL', country: 'North America', key: 'nhl-league-1' },
+      {
+        id: '4920',
+        name: 'KHL',
+        country: 'Europe',
+        key: 'tsdb-league-4920',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+      },
+      {
+        id: '4931',
+        name: 'Liiga',
+        country: 'Finland',
+        key: 'tsdb-league-4931',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4931&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+      },
+      {
+        id: '4419',
+        name: 'SHL',
+        country: 'Sweden',
+        key: 'tsdb-league-4419',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4419&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+      },
     ],
   },
   { key: 'tennis', label: 'Tennis', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
@@ -119,6 +155,24 @@ export const SPORTS: SportConfig[] = [
         teamPollPath:
           'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5',
       },
+      {
+        id: '4516',
+        name: 'WNBA',
+        country: 'North America',
+        key: 'tsdb-league-4516',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5',
+      },
+      {
+        id: '4549',
+        name: 'FIBA World Cup qualifiers',
+        country: 'International',
+        key: 'tsdb-league-4549',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4549&season=2027&sport=basketball&durationHours=2',
+      },
     ],
   },
   {
@@ -130,6 +184,24 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['team', 'competition'],
     staticCompetitions: [
       { id: 1, name: 'MLB', country: 'North America', key: 'mlb-league-1' },
+      {
+        id: '4591',
+        name: 'NPB',
+        country: 'Japan',
+        key: 'tsdb-league-4591',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3',
+      },
+      {
+        id: '4830',
+        name: 'KBO League',
+        country: 'South Korea',
+        key: 'tsdb-league-4830',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3',
+      },
     ],
   },
   {
@@ -214,6 +286,33 @@ export const SPORTS: SportConfig[] = [
         pollPath:
           'pollTsdbLeague?leagueId=4416&season=2026&sport=rugby&durationHours=2',
       },
+      {
+        id: '5852',
+        name: 'Nations Championship',
+        country: 'International',
+        key: 'tsdb-league-5852',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5852&season=2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '5806',
+        name: 'Rugby League World Cup',
+        country: 'International',
+        key: 'tsdb-league-5806',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5806&season=2026&sport=rugby&durationHours=2',
+      },
+      {
+        id: '5479',
+        name: 'Rugby Championship',
+        country: 'International',
+        key: 'tsdb-league-5479',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5479&season=2026&sport=rugby&durationHours=2',
+      },
     ],
   },
   {
@@ -251,6 +350,15 @@ export const SPORTS: SportConfig[] = [
         pollPath:
           'pollTsdbLeague?leagueId=4553&season=2026&sport=golf&durationHours=5',
       },
+      {
+        id: '5329',
+        name: 'LIV Golf',
+        country: 'World',
+        key: 'tsdb-league-5329',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5329&season=2026&sport=golf&durationHours=5',
+      },
     ],
   },
   {
@@ -280,19 +388,109 @@ export const SPORTS: SportConfig[] = [
   },
   {
     key: 'ufc',
-    label: 'UFC',
+    // Was a UFC-only series row; promotions beyond the UFC carry real
+    // upcoming cards, so this became a browse level. Card-follows, not
+    // athlete-follows — no provider publishes bout-level fixtures.
+    label: 'MMA',
     glyph: '🥋',
     enabled: true,
-    // Event-card follow (like F1): TSDB has cards, not per-fighter bouts,
-    // so athlete-follow stays deferred until bout-level data exists.
-    browse: [],
-    followTypes: ['series'],
-    seriesFollowable: {
-      key: 'tsdb-league-4443',
-      label: 'UFC',
-      pollPath:
-        'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4',
-    },
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      {
+        id: '4443',
+        name: 'UFC',
+        country: 'World',
+        key: 'tsdb-league-4443',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4',
+      },
+      {
+        id: '4495',
+        name: 'ONE Championship',
+        country: 'Asia',
+        key: 'tsdb-league-4495',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4495&season=2026&sport=ufc&durationHours=4',
+      },
+      {
+        id: '5430',
+        name: 'PFL',
+        country: 'World',
+        key: 'tsdb-league-5430',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=5430&season=2026&sport=ufc&durationHours=4',
+      },
+      {
+        id: '4567',
+        name: 'Bare Knuckle FC',
+        country: 'World',
+        key: 'tsdb-league-4567',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4567&season=2026&sport=ufc&durationHours=4',
+      },
+    ],
+  },
+  {
+    key: 'motorsport',
+    label: 'Motorsport',
+    glyph: '🏍️',
+    enabled: true,
+    // Formula 1 keeps its own row (per-session events + race-only
+    // preference); these series are followed whole.
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      {
+        id: '4407',
+        name: 'MotoGP',
+        country: 'World',
+        key: 'tsdb-league-4407',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4407&season=2026&sport=motorsport&durationHours=2',
+      },
+      {
+        id: '4393',
+        name: 'NASCAR Cup Series',
+        country: 'North America',
+        key: 'tsdb-league-4393',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4393&season=2026&sport=motorsport&durationHours=4',
+      },
+      {
+        id: '4373',
+        name: 'IndyCar',
+        country: 'North America',
+        key: 'tsdb-league-4373',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4373&season=2026&sport=motorsport&durationHours=3',
+      },
+      {
+        id: '4486',
+        name: 'Formula 2',
+        country: 'World',
+        key: 'tsdb-league-4486',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5',
+      },
+      {
+        id: '4413',
+        name: 'World Endurance Championship',
+        country: 'World',
+        key: 'tsdb-league-4413',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4413&season=2026&sport=motorsport&durationHours=6',
+      },
+    ],
   },
 ];
 

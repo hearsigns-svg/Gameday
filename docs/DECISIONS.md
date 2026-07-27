@@ -188,3 +188,17 @@
   let clusters chain (A~B, B~C ⇒ A,C together) and merge matches five
   days apart. The pairwise rule and the clustering rule can no longer
   drift apart.
+- COVERAGE BATCH (audit-driven, 2026-07-27): 28 competitions added as
+  config only — Conference League, CL qualifying, Nations League, League
+  One/Two, Scottish Premiership, DFB-Pokal, Coppa Italia; WNBA + FIBA
+  qualifiers; KHL, Liiga, SHL; NPB, KBO; LIV Golf; County Championship
+  (first multi-day format, 96h events); Nations Championship, RL World
+  Cup, Rugby Championship; ONE, PFL, BKFC; MotoGP, NASCAR, IndyCar, F2,
+  WEC. Each verified live before wiring: real upcoming fixtures, real
+  kick-off times.
+- The UFC row became "MMA" with four promotions (UFC first). Costs one
+  extra tap to follow the UFC; buys three more organisations. Still
+  card-follows — no provider publishes bout-level fixtures.
+- Motorsport added as a NEW sport row (a scope addition beyond the
+  approved 12): F1 keeps its own row because it alone has per-session
+  events and the race-only preference.
