@@ -24,5 +24,10 @@ export interface Fixture {
   status: FixtureStatus;
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
+  // How much we trust this record's timing. 'provisional' sources are
+  // rendered as all-day placeholders and are overwritten by 'confirmed'
+  // ones during reconciliation. Absent ⇒ confirmed (official APIs).
+  confidence?: 'confirmed' | 'provisional';
+  firstSeenAt?: string; // first ingest — decides which id users keep
   updatedAt: string;
 }

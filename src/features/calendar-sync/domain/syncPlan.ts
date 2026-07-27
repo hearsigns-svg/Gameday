@@ -67,6 +67,19 @@ export function desiredEventFor(
     return null;
   }
   const matchTitle = f.title;
+  // A provisional record's time is not trustworthy enough to write as a
+  // precise event — show the day, say so, and let a confirmed source
+  // sharpen it later. Better an honest all-day entry than a confident
+  // wrong time in someone's calendar.
+  if (f.confidence === 'provisional' && f.status !== 'cancelled') {
+    const day = dayStartUtc(f.startUtc);
+    return {
+      title: `${matchTitle} — date TBC`,
+      startUtc: day,
+      endUtc: nextDayUtc(day),
+      allDay: true,
+    };
+  }
   switch (f.status) {
     case 'cancelled':
       return null;

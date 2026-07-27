@@ -4,6 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
+import { reconcileFixtures } from './reconcile';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -70,13 +71,16 @@ async function ingest(
   // we already did, not a write. (updatedAt is excluded from the compare
   // — it changes on every poll by construction.)
   const sameFixture = (a: Fixture, b: Fixture): boolean => {
-    const strip = ({ updatedAt, ...rest }: Fixture) => rest;
+    const strip = ({ updatedAt, firstSeenAt, ...rest }: Fixture) => rest;
     return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
   };
   for (const f of incoming) {
     const prev = existing.get(f.id);
     if (prev && sameFixture(prev, f)) continue;
-    batch.set(db.collection('fixtures').doc(f.id), f);
+    // firstSeenAt decides which id survives a cross-source merge — it
+    // must never be reset by a re-poll.
+    const record: Fixture = { ...f, firstSeenAt: prev?.firstSeenAt ?? at };
+    batch.set(db.collection('fixtures').doc(f.id), record);
     if (++pending >= 450) await flush();
   }
   for (const c of changes) {
@@ -391,6 +395,33 @@ export const runSweep = onRequest(
     }
     try {
       res.json(await sweepAll());
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  },
+);
+
+// Weekly hygiene: collapse cross-provider duplicates so one real fixture
+// is one calendar entry. Runs after the sweep's usual cadence.
+export const scheduledReconcile = onSchedule(
+  { schedule: 'every sunday 04:00', timeoutSeconds: 540, memory: '256MiB' },
+  async () => {
+    await reconcileFixtures(false);
+  },
+);
+
+// Manual trigger; dry-run by default so it can be inspected safely.
+export const runReconcile = onRequest(
+  { timeoutSeconds: 540, memory: '256MiB', maxInstances: 2 },
+  async (req, res) => {
+    const expected = process.env.SWEEP_KEY;
+    const provided = req.get('x-sweep-key');
+    if (!expected || !provided || !timingSafeEqualStr(provided, expected)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
+    try {
+      res.json(await reconcileFixtures(req.query.apply !== 'true'));
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

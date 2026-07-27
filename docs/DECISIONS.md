@@ -145,3 +145,23 @@
 - Home rows show per-follow upcoming counts, and "no upcoming fixtures
   yet" between seasons — an off-season follow must read as honest, not
   broken.
+- CONFIDENCE TIERS: fixtures carry confidence ('confirmed' default,
+  'provisional'). Provisional records render as all-day "— date TBC"
+  placeholders regardless of any time they claim — a low-trust source
+  must never write a precise time into a calendar — and sharpen when a
+  trusted source confirms. Enables the owner's tiered design: loose
+  source for the far horizon, authoritative source hardening the near
+  window.
+- CROSS-SOURCE IDENTITY: same real fixture from two providers is matched
+  on sport + order-independent normalised participants + date within 3
+  days. Merge keeps the EARLIEST-SEEN id (the one already in calendars)
+  and applies the most-trusted record's data to it, unioning followKeys
+  — so a better source CORRECTS the event instead of delete+recreate,
+  which would destroy user-set reminders.
+- THE RULE THAT PREVENTS DATA LOSS: only fixtures from DIFFERENT
+  providers may merge. Same-provider records are distinct by
+  construction. Found by tracing real data: an ODI series has the same
+  two nations 2 days apart, golf rounds and F1 sessions repeat their
+  name all week — a naive window would have deleted real fixtures.
+- Reconciliation is weekly, dry-run by default, scoped to now−7d
+  forward (rewriting history changes nothing anyone sees).
