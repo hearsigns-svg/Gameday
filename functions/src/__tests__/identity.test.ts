@@ -245,3 +245,55 @@ describe('same-provider records are never merged', () => {
     expect(clusterFixtures([a, b])).toHaveLength(1);
   });
 });
+
+// Both bugs below were found by adversarial review of code that was
+// already deployed, before the weekly job ran. Each would have DELETED a
+// real fixture from users' calendars.
+describe('regression: merges that would destroy real fixtures', () => {
+  test('league match and cup tie between the same clubs never merge', () => {
+    const league = fx({
+      id: 'fdorg-497331',
+      competition: 'Premier League',
+      competitionId: 'fdorg-comp-PL',
+      homeTeam: 'Chelsea',
+      awayTeam: 'Arsenal',
+      title: 'Chelsea v Arsenal',
+      startUtc: '2026-12-13T14:00:00.000Z',
+    });
+    const cup = fx({
+      id: 'tsdb-2411905',
+      competition: 'EFL Cup',
+      competitionId: 'tsdb-league-4570',
+      homeTeam: 'Chelsea',
+      awayTeam: 'Arsenal',
+      title: 'Chelsea vs Arsenal',
+      startUtc: '2026-12-15T20:00:00.000Z',
+    });
+    expect(isSameFixture(league, cup)).toBe(false);
+    expect(clusterFixtures([league, cup])).toHaveLength(0);
+  });
+
+  test('clusters cannot chain beyond the window', () => {
+    // A~B and B~C must not admit A~C when A and C are 5 days apart.
+    const a = fx({ id: 'fdorg-1', startUtc: '2026-09-01T15:00:00.000Z' });
+    const b = fx({ id: 'tsdb-2', startUtc: '2026-09-03T15:00:00.000Z' });
+    const c = fx({ id: 'apisports-3', startUtc: '2026-09-06T15:00:00.000Z' });
+    expect(isSameFixture(a, c)).toBe(false);
+    const clusters = clusterFixtures([a, b, c]);
+    for (const cl of clusters) {
+      for (const x of cl) {
+        for (const y of cl) expect(isSameFixture(x, y)).toBe(true);
+      }
+    }
+  });
+
+  test('the same competition across providers still merges', () => {
+    const a = fx({ id: 'fdorg-1', competition: 'Premier League' });
+    const b = fx({
+      id: 'apisports-2',
+      competition: 'Premier League',
+      startUtc: '2026-09-01T17:00:00.000Z',
+    });
+    expect(clusterFixtures([a, b])).toHaveLength(1);
+  });
+});

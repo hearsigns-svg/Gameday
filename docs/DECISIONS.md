@@ -176,3 +176,15 @@
   "AFC Liverpool" (a different, non-league club) match Liverpool FC and
   put its fixtures in the wrong calendars. Providers publish their own
   alias lists; we match those instead of guessing which words are noise.
+- MERGE SAFETY (found by adversarial review of already-deployed code,
+  before the weekly job ran): two fixtures may merge only if they are
+  the same COMPETITION. Chelsea v Arsenal in the league and in the cup
+  share participants, sit days apart, and — in our topology — come from
+  different providers, so no earlier guard caught them; merging deleted
+  the cup tie and rewrote the league fixture with the cup's date. Same
+  clubs is not enough.
+- Clustering routes through isSameFixture and requires a new member to
+  match EVERY existing member. Comparing only against the newest member
+  let clusters chain (A~B, B~C ⇒ A,C together) and merge matches five
+  days apart. The pairwise rule and the clustering rule can no longer
+  drift apart.

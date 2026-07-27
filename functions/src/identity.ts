@@ -57,6 +57,13 @@ export function identityKey(f: Fixture): string {
   return `${f.sport}|${participantsKey(f)}`;
 }
 
+// Competition names normalised for comparison. Cross-provider copies of
+// ONE fixture name the same competition; the same two clubs meeting in a
+// different competition is a DIFFERENT match and must never merge.
+export function competitionKey(f: Fixture): string {
+  return normaliseName(f.competition);
+}
+
 export function daysApart(aUtc: string, bUtc: string): number {
   return Math.abs(Date.parse(aUtc) - Date.parse(bUtc)) / 86_400_000;
 }
@@ -82,6 +89,14 @@ export function isSameFixture(
   // playing 2 days apart, and a Grand Prix weekend repeats its name all
   // week. Merging within a provider would delete real events.
   if (providerOf(a) === providerOf(b)) return false;
+  // Chelsea v Arsenal in the league and Chelsea v Arsenal in the cup are
+  // two matches, often days apart and — in our topology — supplied by
+  // different providers, so the provider guard does not catch them.
+  // Merging them deleted the cup tie AND rewrote the league fixture with
+  // the cup's date. Same clubs is not enough; it must be the same
+  // competition. Conservative by design: a missed merge shows a
+  // duplicate, a wrong merge destroys a real fixture.
+  if (competitionKey(a) !== competitionKey(b)) return false;
   return daysApart(a.startUtc, b.startUtc) <= windowDays;
 }
 
@@ -149,13 +164,14 @@ export function clusterFixtures(
     );
     const open: Fixture[][] = [];
     for (const f of sorted) {
-      // Join a cluster only if it is in-window AND holds no fixture from
-      // this provider — one provider contributes at most one record per
-      // real fixture, so same-provider entries are separate events.
-      const target = open.find(
-        (c) =>
-          !c.some((x) => providerOf(x) === providerOf(f)) &&
-          daysApart(c[c.length - 1].startUtc, f.startUtc) <= windowDays,
+      // A fixture joins only if it matches EVERY existing member.
+      // Comparing against just the newest member let clusters chain:
+      // A~B and B~C admitted A and C even when they are outside the
+      // window of each other, merging two genuinely different matches.
+      // Routing through isSameFixture also guarantees the pairwise rule
+      // and the clustering rule can never drift apart.
+      const target = open.find((c) =>
+        c.every((x) => isSameFixture(x, f, windowDays)),
       );
       if (target) target.push(f);
       else open.push([f]);
