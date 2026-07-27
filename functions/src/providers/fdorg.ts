@@ -105,6 +105,7 @@ export async function fetchFdCompetitionSeasonFixtures(
 export interface FdDirectoryTeam {
   id: number;
   name: string;
+  aliases: string[]; // every published form, for cross-provider matching
 }
 
 export async function fetchFdCompetitionTeams(
@@ -115,8 +116,24 @@ export async function fetchFdCompetitionTeams(
   const body = (await fdGet(
     apiKey,
     `/competitions/${code}/teams?season=${season}`,
-  )) as { teams: Array<{ id: number; name: string; shortName?: string }> };
-  return body.teams.map((t) => ({ id: t.id, name: t.shortName || t.name }));
+  )) as {
+    teams: Array<{
+      id: number;
+      name: string;
+      shortName?: string;
+      tla?: string;
+    }>;
+  };
+  return body.teams.map((t) => ({
+    id: t.id,
+    name: t.shortName || t.name,
+    // "Wolverhampton Wanderers FC" (name) and "Wolverhampton"
+    // (shortName) must BOTH resolve to this club — providers pick
+    // different forms.
+    aliases: [t.name, t.shortName].filter(
+      (n): n is string => typeof n === 'string' && n.length > 0,
+    ),
+  }));
 }
 
 // The 12 TIER_ONE competitions, curated for browse order.

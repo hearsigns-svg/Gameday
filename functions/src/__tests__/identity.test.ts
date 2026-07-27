@@ -31,10 +31,12 @@ function fx(o: Partial<Fixture> = {}): Fixture {
 }
 
 describe('normaliseName', () => {
-  test('strips diacritics, case, and club noise', () => {
+  test('strips diacritics, case and punctuation — but NOT club words', () => {
     expect(normaliseName('Filip Hrgović')).toBe('filip hrgovic');
-    expect(normaliseName('Liverpool FC')).toBe('liverpool');
+    expect(normaliseName('Liverpool FC')).toBe('liverpool fc');
     expect(normaliseName('  Real   Madrid  ')).toBe('real madrid');
+    // The bug this prevents: AFC Liverpool is a DIFFERENT club.
+    expect(normaliseName('AFC Liverpool')).not.toBe(normaliseName('Liverpool'));
   });
 });
 
@@ -230,8 +232,8 @@ describe('same-provider records are never merged', () => {
   test('but the SAME fixture from two providers still merges', () => {
     const a = fx({
       id: 'apisports-1',
-      homeTeam: 'Liverpool FC',
-      awayTeam: 'Everton FC',
+      homeTeam: 'Liverpool',
+      awayTeam: 'Everton',
       startUtc: '2026-09-01T15:00:00.000Z',
     });
     const b = fx({

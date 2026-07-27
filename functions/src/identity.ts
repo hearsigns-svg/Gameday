@@ -14,14 +14,21 @@ import { Fixture } from './fixture';
 // so identity ignores the exact instant and compares within a window.
 export const MATCH_WINDOW_DAYS = 3;
 
+// Deliberately CONSERVATIVE: case, diacritics, punctuation only.
+//
+// It is tempting to also strip club words ("FC", "AFC") so that
+// "Liverpool FC" matches "Liverpool" — do not. "AFC Liverpool" is a
+// different, non-league club, and stripping the prefix put its fixtures
+// into Liverpool FC followers' calendars. Providers publish their own
+// alias lists ("Liverpool FC" AND "Liverpool"); we match against those
+// instead of guessing which words are noise.
 export function normaliseName(raw: string): string {
   return raw
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip diacritics: Hrgović → Hrgovic
+    .replace(/[̀-ͯ]/g, '') // diacritics: Hrgović → Hrgovic
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9 ]/g, ' ')
-    .replace(/\b(fc|afc|cf|sc|ac|the|club|cricket|rugby)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

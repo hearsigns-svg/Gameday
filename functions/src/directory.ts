@@ -14,6 +14,9 @@ export interface DirectoryTeam {
   id: number | string;
   name: string;
   key: string; // followable key
+  // Every other name this club is published under, so fixtures from a
+  // different provider can be matched back to this key.
+  aliases?: string[];
 }
 
 // Generic 24h write-through cache for team directories.
@@ -91,6 +94,7 @@ export async function listFdSoccerTeams(
       id: t.id,
       name: t.name,
       key: `fdorg-team-${t.id}`,
+      aliases: t.aliases,
     })),
   );
 }

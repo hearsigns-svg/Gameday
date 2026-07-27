@@ -165,3 +165,14 @@
   name all week — a naive window would have deleted real fixtures.
 - Reconciliation is weekly, dry-run by default, scoped to now−7d
   forward (rewriting history changes nothing anyone sees).
+- CROSS-PROVIDER TEAM ALIASING: fixtures are stamped with every
+  provider's key for each club, so "follow your team, get every
+  competition" (a blueprint promise) survives league and cup data coming
+  from different providers. Before this, a Liverpool follow returned
+  Premier League only and cup ties were unreachable except by following
+  an entire cup (873 ties).
+- Name matching is CONSERVATIVE by design — case, diacritics and
+  punctuation only, never club-word stripping. Stripping "AFC" made
+  "AFC Liverpool" (a different, non-league club) match Liverpool FC and
+  put its fixtures in the wrong calendars. Providers publish their own
+  alias lists; we match those instead of guessing which words are noise.

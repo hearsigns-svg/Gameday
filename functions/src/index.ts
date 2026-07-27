@@ -5,6 +5,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
+import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -43,9 +44,16 @@ function timingSafeEqualStr(a: string, b: string): boolean {
 // Shared ingest: diff fresh fixtures against the cache slice for one
 // followable key, then upsert fixtures + append change records.
 async function ingest(
-  incoming: Fixture[],
+  rawIncoming: Fixture[],
   followKey: string,
 ): Promise<{ fixtures: number; changes: number }> {
+  // Stamp every provider's key for each club onto the fixture, so a
+  // team followed via one provider still matches fixtures supplied by
+  // another (league from football-data, cups from TSDB).
+  const incoming =
+    rawIncoming[0]?.sport === 'soccer'
+      ? augmentFollowKeys(rawIncoming, await loadTeamAliases(db))
+      : rawIncoming;
   const existingSnap = await db
     .collection('fixtures')
     .where('followKeys', 'array-contains', followKey)
