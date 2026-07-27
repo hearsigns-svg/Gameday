@@ -46,8 +46,11 @@ Rules:
 
 In: the core journey; 12 sports (soccer, cricket, ice hockey, basketball, baseball, NFL, rugby, golf, F1, boxing, MMA, motorsport — motorsport and boxing added post-gate, tennis deferred on data grounds); ~60 competitions; background change detection with silent calendar correction; iOS + Android; store-launchable.
 
-Deferred: boxing (data quality bar), push notifications on changes,
-server-side Google Calendar API write, Outlook/web, monetisation UI.
+Deferred: TENNIS (no provider publishes forward fixtures — verified
+twice), Test cricket (only Cricbuzz carries it; scraping decision open),
+athlete-follows (no bout-level data exists), push notifications on
+changes, server-side Google Calendar API write, Outlook/web,
+monetisation UI.
 
 ## Monetisation (architecture-relevant only)
 
