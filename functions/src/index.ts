@@ -358,9 +358,12 @@ export const mutateFixture = onRequest(async (req, res) => {
       return;
     }
     const f = snap.data() as Fixture;
-    const shifted = new Date(f.startUtc);
-    shifted.setHours(shifted.getHours() + shiftHours);
-    const newStartUtc = shifted.toISOString();
+    // Instant arithmetic, not local-clock arithmetic — a test hook that
+    // shifts by the wrong amount across a DST boundary would make the
+    // engine look broken when it is not.
+    const newStartUtc = new Date(
+      new Date(f.startUtc).getTime() + shiftHours * 3_600_000,
+    ).toISOString();
     const newStatus = status ?? f.status;
     const at = new Date().toISOString();
     await ref.update({ startUtc: newStartUtc, status: newStatus, updatedAt: at });

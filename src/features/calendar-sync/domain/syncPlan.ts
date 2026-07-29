@@ -40,9 +40,12 @@ export function eventEndUtc(
   startUtc: string,
   durationHours: number = FIXTURE_DURATION_HOURS,
 ): string {
-  const end = new Date(startUtc);
-  end.setMinutes(end.getMinutes() + Math.round(durationHours * 60));
-  return end.toISOString();
+  // Pure instant arithmetic. getMinutes/setMinutes are LOCAL-time
+  // accessors: adding a duration across a DST boundary with them lands
+  // an hour out (a 90-minute match on a clocks-change night ended at
+  // the wrong time), because the local wall clock is not monotonic.
+  const ms = new Date(startUtc).getTime();
+  return new Date(ms + Math.round(durationHours * 60) * 60_000).toISOString();
 }
 
 function dayStartUtc(iso: string): string {

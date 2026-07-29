@@ -8,7 +8,7 @@
 
 import { Fixture } from '../../../fixtures/domain/fixture';
 import { DEFAULT_PREFS } from '../prefs';
-import { desiredEventFor } from '../syncPlan';
+import { desiredEventFor, eventEndUtc } from '../syncPlan';
 
 function fixture(over: Partial<Fixture>): Fixture {
   return {
@@ -73,4 +73,37 @@ it('DST-crossing instants survive the round trip', () => {
     DEFAULT_PREFS,
   );
   expect(d!.startUtc).toBe('2026-03-29T14:00:00.000Z');
+});
+
+// Duration must be added as an INSTANT offset. The original used
+// local-clock accessors, so an event running through a clocks-change
+// ended an hour out — invisible to any test run in UTC.
+describe('eventEndUtc is immune to the local clock', () => {
+  it('adds exact elapsed time across the UK spring-forward boundary', () => {
+    // 00:30Z on 2026-03-29 is 00:30 GMT; 01:00 GMT becomes 02:00 BST.
+    expect(eventEndUtc('2026-03-29T00:30:00.000Z', 2)).toBe(
+      '2026-03-29T02:30:00.000Z',
+    );
+  });
+
+  it('adds exact elapsed time across the UK autumn fall-back boundary', () => {
+    expect(eventEndUtc('2026-10-25T00:30:00.000Z', 2)).toBe(
+      '2026-10-25T02:30:00.000Z',
+    );
+  });
+
+  it('adds exact elapsed time across a US spring-forward boundary', () => {
+    expect(eventEndUtc('2026-03-08T06:30:00.000Z', 3)).toBe(
+      '2026-03-08T09:30:00.000Z',
+    );
+  });
+
+  it('handles fractional durations and long spans', () => {
+    expect(eventEndUtc('2026-05-01T12:00:00.000Z', 2.5)).toBe(
+      '2026-05-01T14:30:00.000Z',
+    );
+    expect(eventEndUtc('2026-05-01T12:00:00.000Z', 96)).toBe(
+      '2026-05-05T12:00:00.000Z',
+    );
+  });
 });

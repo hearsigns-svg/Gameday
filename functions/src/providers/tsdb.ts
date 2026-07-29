@@ -11,8 +11,9 @@ export interface TsdbEvent {
   idEvent: string;
   strEvent: string;
   dateEvent: string; // YYYY-MM-DD
-  strTime?: string | null; // HH:mm:ss, often 00:00:00 placeholder
-  strTimestamp?: string | null; // ISO when populated
+  strTime?: string | null; // HH:mm:ss UTC, often 00:00:00 placeholder
+  strTimeLocal?: string | null; // HH:mm:ss at the venue — disambiguates
+  strTimestamp?: string | null; // ISO (UTC, no suffix) when populated
   strStatus?: string | null;
   strPostponed?: string | null; // 'yes' | 'no'
   idHomeTeam?: string | null;
@@ -44,10 +45,17 @@ export function normaliseTsdbEvent(
   durationHours: number,
   updatedAt: string,
 ): Fixture {
-  const hasTime = Boolean(
-    (e.strTime && e.strTime !== '00:00:00') ||
-      (e.strTimestamp && !e.strTimestamp.includes('T00:00:00')),
-  );
+  // Midnight UTC is ambiguous: it is both this provider's "time unknown"
+  // placeholder AND the true instant of a 7pm US Eastern tip-off
+  // (19:00 EST + 5h = 00:00Z). Treating it as unknown downgraded 254 of
+  // 1,380 real NBA fixtures to all-day placeholders with no reminder.
+  // strTimeLocal breaks the tie: a real venue-local time means the time
+  // IS known, whatever the UTC clock reads.
+  const utcMidnight =
+    (!e.strTime || e.strTime === '00:00:00') &&
+    (!e.strTimestamp || e.strTimestamp.includes('T00:00:00'));
+  const localKnown = Boolean(e.strTimeLocal && e.strTimeLocal !== '00:00:00');
+  const hasTime = !utcMidnight || localKnown;
   // strTimestamp comes without a zone suffix but is UTC — force Z so it
   // never parses as server-local time.
   const rawTs = e.strTimestamp
