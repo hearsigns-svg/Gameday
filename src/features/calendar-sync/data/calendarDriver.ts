@@ -150,6 +150,13 @@ function toEventDetails(input: EventInput) {
     startDate: new Date(input.startUtc),
     endDate: new Date(input.endUtc),
     allDay: input.allDay,
+    // All-day placeholders are built from a UTC day boundary
+    // (dayStartUtc). Without pinning the zone, the platform reads those
+    // date components in DEVICE-LOCAL time, so a user west of UTC sees
+    // the placeholder a day EARLY (2026-08-23T00:00Z is Aug 22, 17:00
+    // in Los Angeles). Timed events must NOT be pinned — they are true
+    // instants and have to render in the viewer's own zone.
+    ...(input.allDay ? { timeZone: 'UTC' } : {}),
     notes: `${NOTES_TAG}${input.fixtureId}`,
     alarms:
       input.reminderMinutesBefore === null

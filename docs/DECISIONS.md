@@ -258,3 +258,18 @@
   team follows outrank competition/series follows deterministically.
   iOS privacy manifest declared in app.json (no tracking, no collected
   data types, standard RN required-reason APIs).
+- 2026-07-29 (tz audit): TIMEZONE CORRECTNESS VERIFIED + one bug fixed.
+  Architecture is sound: fixtures carry startUtc (a true instant) and the
+  driver writes new Date(startUtc), so timed events render correctly in
+  any viewer's zone. TSDB's zone-less strTimestamp IS UTC — proven
+  empirically against strTimeLocal across 6 NBA venues (PDT -7, MDT -6,
+  EDT -4, UAE +4 all matched). NHL publishes explicit Z; fd.org utcDate.
+  BUG FIXED: all-day placeholders were written without a timeZone, so the
+  platform read the UTC day boundary in device-local time and users west
+  of UTC saw them a day EARLY. All-day events now pin timeZone:'UTC';
+  timed events deliberately do NOT (they must float to the viewer's zone).
+  Pinned by src/features/calendar-sync/domain/__tests__/timezone.test.ts.
+- 2026-07-29: venueTz is vestigial — hardcoded 'UTC' in 5 of 6 adapters.
+  Harmless for correctness, but it blocks "19:00 in Los Angeles" context
+  and is a trap for future readers. NHL (venueTimezone) and TSDB
+  (strTimeLocal/dateEventLocal) both hand us the real local time free.
