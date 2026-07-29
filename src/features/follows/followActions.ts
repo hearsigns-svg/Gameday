@@ -73,12 +73,26 @@ function updateRegistry(): void {
   );
 }
 
+// Per-key intent generation: a follow's failure rollback must never
+// reverse a NEWER follow/unfollow for the same key (rapid taps on a
+// slow network would otherwise leave the store opposite to the user's
+// last action).
+const intentGeneration = new Map<string, number>();
+
+function nextGeneration(key: string): number {
+  const gen = (intentGeneration.get(key) ?? 0) + 1;
+  intentGeneration.set(key, gen);
+  return gen;
+}
+
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
+  const gen = nextGeneration(item.key);
   setFollowed(item, true);
   const polled = await ensurePolled(item);
   if (!polled.ok) {
-    // Roll back so the UI never shows a follow whose fixtures never came.
-    setFollowed(item, false);
+    // Roll back so the UI never shows a follow whose fixtures never
+    // came — unless a newer intent for this key has superseded us.
+    if (intentGeneration.get(item.key) === gen) setFollowed(item, false);
     return polled;
   }
   updateRegistry();
@@ -86,6 +100,7 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
 }
 
 export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
+  nextGeneration(item.key);
   setFollowed(item, false);
   updateRegistry();
   return runSync();
@@ -94,6 +109,7 @@ export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
 // Undo path: the fixture cache is still warm from the original follow,
 // so no re-poll — just restore the follow and reconcile.
 export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
+  nextGeneration(item.key);
   setFollowed(item, true);
   updateRegistry();
   return runSync();

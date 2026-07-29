@@ -2,7 +2,7 @@
 // pure plan → apply. The ledger is persisted after EVERY operation, so a
 // sync killed mid-run converges on the next run. One run at a time.
 
-import { err, ok, Result } from '../../core/result';
+import { err, messageOf, ok, Result } from '../../core/result';
 import { readJson, writeJson } from '../../core/storage';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowKeys } from '../follows/data/followStore';
@@ -25,32 +25,65 @@ import {
   removeLedgerEntry,
   upsertLedgerEntry,
 } from './data/ledger';
-import { horizonStartFrom, planSync } from './domain/syncPlan';
+import {
+  horizonStartFrom,
+  planSync,
+  SnapshotFixture,
+  upcomingSnapshot,
+} from './domain/syncPlan';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
 const UPCOMING_KEY = 'upcomingByFollow.v1';
+const UPCOMING_FIXTURES_KEY = 'upcomingFixtures.v1';
+const UPCOMING_FIXTURES_CAP = 60;
 
 // Upcoming-fixture count per followed key, refreshed every sync.
 export function upcomingByFollow(): Record<string, number> {
   return readJson<Record<string, number>>(UPCOMING_KEY, {});
 }
 
+// Presentation snapshot of what's ahead, refreshed after every applied
+// sync so Home and Schedule render real fixtures offline. Read-only
+// display data — the ledger remains the only record of what's in the
+// calendar. Filtered by the CURRENT follows at read time so an
+// unfollow whose sync later failed can't keep ghost fixtures on Home.
+export type UpcomingFixture = SnapshotFixture;
+
+export function upcomingFixtures(): UpcomingFixture[] {
+  const followed = new Set(loadFollowKeys());
+  return readJson<UpcomingFixture[]>(UPCOMING_FIXTURES_KEY, []).filter((f) =>
+    f.followKeys.some((k) => followed.has(k)),
+  );
+}
+
 // Sync status subscription — screens stay live no matter which layer
 // (mount, foreground, background task, manual) triggered the run.
+// lastError carries the most recent run's failure (null after success)
+// so the UI never claims "up to date" over a sync that actually failed.
 export interface SyncState {
   running: boolean;
   last: SyncOutcome | null;
+  lastError: string | null;
 }
 type SyncListener = (state: SyncState) => void;
 const listeners = new Set<SyncListener>();
+let lastErrorMessage: string | null = null;
 
 export function subscribeSync(fn: SyncListener): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
+export function lastSyncError(): string | null {
+  return lastErrorMessage;
+}
+
 function emit(running: boolean): void {
-  const state: SyncState = { running, last: lastSync() };
+  const state: SyncState = {
+    running,
+    last: lastSync(),
+    lastError: lastErrorMessage,
+  };
   for (const fn of listeners) fn(state);
 }
 
@@ -106,9 +139,12 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
   syncStartedAt = Date.now();
   emit(true);
   try {
-    return await runSyncInner();
+    const result = await runSyncInner();
+    lastErrorMessage = result.ok ? null : messageOf(result.error);
+    return result;
   } catch (e) {
     // Nothing inside may leak an uncaught rejection to the UI.
+    lastErrorMessage = 'Sync failed — will retry';
     return err({ kind: 'unknown', message: `sync failed: ${e}` });
   } finally {
     syncRunning = false;
@@ -243,6 +279,14 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       }
     }
 
+    // Snapshot written only after every calendar op applied, and gated
+    // by the same desiredEventFor the planner uses — the app never
+    // shows a fixture the calendar doesn't want (cancelled, race-only
+    // excluded), and never runs ahead of a sync that then failed.
+    writeJson(
+      UPCOMING_FIXTURES_KEY,
+      upcomingSnapshot(fixtures.value, prefs, horizonStart, UPCOMING_FIXTURES_CAP),
+    );
     writeJson(LAST_SYNC_KEY, outcome);
     return ok(outcome);
   }

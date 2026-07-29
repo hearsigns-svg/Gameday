@@ -155,10 +155,24 @@ entitlement scaffold (server-side, no UI).
 - Verification: staleness measured on real devices; push-triggered
   background sync observed on iOS device (not just simulator).
 
-## M7 — Polish & store readiness  [ ]
+## M7 — Design system & polish  [~]
 
-Onboarding, empty states, full a11y pass, privacy manifests + purpose
-strings, store listings, screenshots, name availability check.
+Owner UI brief accepted 2026-07-29 ("the gallery provides the app; the
+favourites provide the identity" — ten rules now in DESIGN_SYSTEM.md).
+Sequenced: (1) tokens + docs → (2) teamTheme() with CI contrast
+guarantees → (3) three-tab restructure + fixture-first Home →
+(4) onboarding + skippable calendar permission + follow-time scope
+controls with volume preview → (5) composition: Schedule polish,
+federated global search, crest/colour data plumbing, motion pass.
+Then store readiness: privacy manifests + purpose strings, store
+listings, screenshots, name availability check.
+- DONE 2026-07-29 (steps 1–3): warm-shell tokens + motion tokens;
+  teamTheme() OKLCH tone-mapper (44 contrast tests — no raw team hex
+  reaches a UI slot); sport accent hues as config data; upcoming-fixture
+  snapshot persisted at sync (presentation-only engine touch); tabs
+  Home/Following/Schedule; HeroCard/EventRow/GlyphTile/SportPill/
+  SectionHeader/CountdownBadge/SyncStatusChip; humanized sync voice;
+  dev ThemeGallery pinned to worst-case identities.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

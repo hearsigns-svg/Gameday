@@ -1,27 +1,99 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  useNavigation,
 } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  createNativeStackNavigator,
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState, Pressable, Text, useColorScheme } from 'react-native';
+import { AppState, Pressable, useColorScheme } from 'react-native';
 // Side effect: defines background tasks at module scope (headless launches).
 import { registerBackgroundSync } from './src/features/calendar-sync/backgroundSync';
 import {
   runSync,
   shouldAutoSync,
 } from './src/features/calendar-sync/syncEngine';
-import { RootStackParamList } from './src/core/navigation';
+import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { palette } from './src/core/tokens';
 import HomeScreen from './src/features/follows/screens/HomeScreen';
+import FollowingScreen from './src/features/follows/screens/FollowingScreen';
+import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
 import PreferencesScreen from './src/features/settings/PreferencesScreen';
+import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+
+const TAB_ICONS: Record<
+  keyof TabParamList,
+  { active: keyof typeof Ionicons.glyphMap; idle: keyof typeof Ionicons.glyphMap }
+> = {
+  Home: { active: 'home', idle: 'home-outline' },
+  Following: { active: 'heart', idle: 'heart-outline' },
+  Schedule: { active: 'calendar', idle: 'calendar-outline' },
+};
+
+function SettingsButton() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const scheme = useColorScheme();
+  const t = scheme === 'dark' ? palette.dark : palette.light;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Calendar preferences"
+      onPress={() => navigation.navigate('Preferences')}
+      hitSlop={12}
+      style={{ paddingHorizontal: 8 }}
+    >
+      {({ pressed }) => (
+        <Ionicons
+          name="settings-outline"
+          size={22}
+          color={t.textPrimary}
+          style={{ opacity: pressed ? 0.6 : 1 }}
+        />
+      )}
+    </Pressable>
+  );
+}
+
+function Tabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => (
+          <Ionicons
+            name={TAB_ICONS[route.name][focused ? 'active' : 'idle']}
+            size={size}
+            color={color}
+          />
+        ),
+      })}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          title: 'Gameday',
+          tabBarLabel: 'Home',
+          headerRight: () => <SettingsButton />,
+        }}
+      />
+      <Tab.Screen name="Following" component={FollowingScreen} />
+      <Tab.Screen name="Schedule" component={ScheduleScreen} />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   const scheme = useColorScheme();
@@ -55,23 +127,13 @@ export default function App() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator>
+      <Stack.Navigator
+        screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
+      >
         <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          options={({ navigation }) => ({
-            title: 'Gameday',
-            headerRight: () => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Calendar preferences"
-                onPress={() => navigation.navigate('Preferences')}
-                hitSlop={12}
-              >
-                <Text style={{ fontSize: 20 }}>⚙️</Text>
-              </Pressable>
-            ),
-          })}
+          name="Tabs"
+          component={Tabs}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="SportPicker"
@@ -93,6 +155,13 @@ export default function App() {
           component={PreferencesScreen}
           options={{ title: 'Preferences' }}
         />
+        {__DEV__ ? (
+          <Stack.Screen
+            name="ThemeGallery"
+            component={ThemeGalleryScreen}
+            options={{ title: 'Theme gallery (dev)' }}
+          />
+        ) : null}
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>

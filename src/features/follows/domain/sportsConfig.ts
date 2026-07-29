@@ -19,6 +19,10 @@ export interface SportConfig {
   key: string;
   label: string;
   glyph: string; // small identity accent only, per design system
+  // Canonical sport hue — stored as data, never used raw: every surface
+  // it touches goes through teamTheme() first. Fallback identity for
+  // entities without a brand colour (the median case at launch).
+  accent: string;
   enabled: boolean; // false = data not yet live (M5 sport expansion)
   // Ordered drill-down levels, e.g. soccer: competitions → teams.
   browse: BrowseLevelKind[];
@@ -37,6 +41,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'soccer',
     label: 'Soccer',
+    accent: '#16A34A',
     glyph: '⚽',
     enabled: true,
     browse: ['competition', 'team'],
@@ -45,6 +50,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'cricket',
     label: 'Cricket',
+    accent: '#0D9488',
     glyph: '🏏',
     enabled: true,
     browse: ['competition', 'team'],
@@ -101,6 +107,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'ice-hockey',
     label: 'Ice hockey',
+    accent: '#0284C7',
     glyph: '🏒',
     enabled: true,
     browse: ['competition', 'team'],
@@ -136,10 +143,12 @@ export const SPORTS: SportConfig[] = [
       },
     ],
   },
-  { key: 'tennis', label: 'Tennis', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
+  { key: 'tennis', label: 'Tennis',
+    accent: '#65A30D', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
   {
     key: 'basketball',
     label: 'Basketball',
+    accent: '#EA580C',
     glyph: '🏀',
     enabled: true,
     browse: ['competition', 'team'],
@@ -178,6 +187,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'baseball',
     label: 'Baseball',
+    accent: '#1D4ED8',
     glyph: '⚾',
     enabled: true,
     browse: ['competition', 'team'],
@@ -207,6 +217,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'nfl',
     label: 'American football',
+    accent: '#854D0E',
     glyph: '🏈',
     enabled: true,
     browse: ['competition', 'team'],
@@ -227,6 +238,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'rugby',
     label: 'Rugby',
+    accent: '#4F46E5',
     glyph: '🏉',
     enabled: true,
     browse: ['competition'],
@@ -318,6 +330,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'golf',
     label: 'Golf',
+    accent: '#047857',
     glyph: '⛳',
     enabled: true,
     browse: ['competition'],
@@ -364,6 +377,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'f1',
     label: 'Formula 1',
+    accent: '#E10600',
     glyph: '🏎️',
     enabled: true,
     browse: [],
@@ -373,6 +387,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'boxing',
     label: 'Boxing',
+    accent: '#BE123C',
     glyph: '🥊',
     enabled: true,
     // Card-follow like UFC: one follow covers the major fight cards.
@@ -392,6 +407,7 @@ export const SPORTS: SportConfig[] = [
     // upcoming cards, so this became a browse level. Card-follows, not
     // athlete-follows — no provider publishes bout-level fixtures.
     label: 'MMA',
+    accent: '#6D28D9',
     glyph: '🥋',
     enabled: true,
     browse: ['competition'],
@@ -438,6 +454,7 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'motorsport',
     label: 'Motorsport',
+    accent: '#52525B',
     glyph: '🏍️',
     enabled: true,
     // Formula 1 keeps its own row (per-session events + race-only

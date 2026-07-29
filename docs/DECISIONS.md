@@ -202,3 +202,15 @@
 - Motorsport added as a NEW sport row (a scope addition beyond the
   approved 12): F1 keeps its own row because it alone has per-session
   events and the race-only preference.
+- UI direction (owner brief, 2026-07-29): "the app provides the gallery;
+  the user's favourites provide the identity." Ten rules encoded in
+  DESIGN_SYSTEM.md. Team colour is data passed through teamTheme()
+  (OKLCH tone-mapping, contrast pinned in CI) — no raw team hex ever
+  lands in a UI slot; app chrome keeps the single brand accent.
+- Three tabs, three jobs (Home / Following / Schedule); the Schedule tab
+  renders what Gameday manages (sync snapshot + ledger), never an
+  imitation of the user's calendar. Browse + Preferences push over tabs.
+- System fonts ARE the one type family (weight/size/case hierarchy); a
+  display cut only if the brand demands it later. Global cross-sport
+  search accepted for v1 as federated search (config + cached
+  directories + TSDB name search), grouped results as disambiguation.

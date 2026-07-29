@@ -1,12 +1,15 @@
 // Sport picker: the 11 launch sports; disabled ones say why. Series
 // sports (F1) are followed directly from their row — no drill-down.
 
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
+import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
+import { teamTheme } from '../../../core/teamTheme';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { follow, unfollow } from '../followActions';
 import { isFollowed } from '../data/followStore';
@@ -16,6 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SportPicker'>;
 
 export default function SportPickerScreen({ navigation }: Props) {
   const t = useTheme();
+  const mode = useColorSchemeMode();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, forceRender] = useState(0);
@@ -58,6 +62,7 @@ export default function SportPickerScreen({ navigation }: Props) {
               title={item.label}
               caption={item.enabled ? undefined : 'Coming soon'}
               glyph={item.glyph}
+              tileTheme={teamTheme(item.accent, mode)}
               disabled={!item.enabled}
               accessibilityLabel={
                 item.enabled ? item.label : `${item.label}, coming soon`
@@ -77,7 +82,11 @@ export default function SportPickerScreen({ navigation }: Props) {
                     onPress={() => void toggleSeries(item)}
                   />
                 ) : item.enabled ? (
-                  <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={t.textSecondary}
+                  />
                 ) : undefined
               }
             />

@@ -11,7 +11,10 @@
       "bundleIdentifier": "com.hearsigns.Gameday",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification", "processing"]
+        "UIBackgroundModes": [
+          "remote-notification",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -36,7 +39,8 @@
           "calendarPermission": "Gameday adds your followed teams' fixtures to your calendar and keeps them up to date."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font"
     ]
   }
 }

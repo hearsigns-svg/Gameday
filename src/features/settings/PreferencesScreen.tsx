@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RootScreenProps } from '../../core/navigation';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import { CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
@@ -34,7 +35,9 @@ function OptionRow(props: {
   );
 }
 
-export default function PreferencesScreen() {
+export default function PreferencesScreen({
+  navigation,
+}: RootScreenProps<'Preferences'>) {
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
 
@@ -105,6 +108,19 @@ export default function PreferencesScreen() {
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         For series like Formula 1.
       </Text>
+
+      {__DEV__ ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open theme gallery"
+          onPress={() => navigation.navigate('ThemeGallery')}
+          style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
+        >
+          <Text style={[type.body, { color: t.textSecondary, flex: 1 }]}>
+            Theme gallery (dev)
+          </Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }

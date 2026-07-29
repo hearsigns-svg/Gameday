@@ -176,3 +176,46 @@ export function planSync(
 
   return ops;
 }
+
+// Presentation snapshot of what's ahead — Home and Schedule render this.
+// It must show only what the calendar actually wants: same
+// desiredEventFor gate as the planner, so a cancelled fixture (or a
+// race-only-excluded support session) never appears in the app while
+// the same sync removes it from the calendar.
+export interface SnapshotFixture {
+  id: string;
+  title: string;
+  startUtc: string;
+  durationHours?: number;
+  status: string;
+  sport: string;
+  competition: string;
+  followKeys: string[];
+}
+
+export function upcomingSnapshot(
+  fixtures: Fixture[],
+  prefs: CalendarPrefs,
+  horizonStartUtc: string,
+  cap: number,
+): SnapshotFixture[] {
+  return fixtures
+    .filter(
+      (f) =>
+        f.startUtc >= horizonStartUtc && desiredEventFor(f, prefs) !== null,
+    )
+    .sort((a, b) => a.startUtc.localeCompare(b.startUtc))
+    .slice(0, cap)
+    .map((f) => ({
+      id: f.id,
+      title: f.title,
+      startUtc: f.startUtc,
+      ...(f.durationHours !== undefined
+        ? { durationHours: f.durationHours }
+        : {}),
+      status: f.status,
+      sport: f.sport,
+      competition: f.competition,
+      followKeys: f.followKeys,
+    }));
+}
