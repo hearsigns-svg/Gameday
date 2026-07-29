@@ -214,3 +214,43 @@ Blaze enabled by owner; Firestore (default) eur3; rules + 10 functions
 live at us-central1-gameday-fixtures; mutateFixture refuses in prod;
 cache seeded (F1 110, BOS 88, LIV 63; APISPORTS_KEY env OK). Remaining:
 client prod switch, FCM rebuild, physical-device push, scheduler.
+
+### Timezone audit carry-forward (2026-07-29)
+
+Deep audit (37 agents, 16 confirmed findings) prompted by the owner's
+"this is a potential massive issue" flag. Architecture verdict: SOUND —
+fixtures carry true UTC instants, so timed events render correctly in any
+viewer's zone. TSDB's zone-less strTimestamp empirically confirmed UTC
+against strTimeLocal across six NBA venues.
+
+FIXED: all-day placeholders landed a day early west of UTC (5addd70);
+TSDB midnight-UTC ambiguity downgrading 254/1380 real NBA fixtures, and
+eventEndUtc local-clock arithmetic breaking DST-night end times (9ccbced).
+
+STILL OPEN, in priority order:
+- [ ] HIGH: NHL cancelled/postponed/TBD games are invisible — the adapter
+      reads gameState but api-web carries those states elsewhere, so
+      called-off NHL games are never removed from calendars.
+- [ ] HIGH: client day-labelling — date-only fixtures are labelled from
+      the midnight-UTC sentinel, so Home/Schedule can show the wrong day
+      west of UTC (same root as the fixed write-path bug, display side).
+- [ ] MED: all-day endUtc is next-day UTC midnight (Android's exclusive
+      convention); EventKit treats the end day as INCLUSIVE, so iOS may
+      render a 2-day banner. Needs a device check, may be platform-split.
+- [ ] MED: reconcile tie-break — a fd.org noon placeholder can overwrite
+      a confirmed kickoff because no adapter sets `confidence`, leaving
+      poll order to decide. Rank time precision above freshness. The
+      kindFlip delete+recreate also destroys the user's reminder.
+- [ ] MED: recovery reads all-day events back as LOCAL midnight, so
+      entryMatches never matches and every recovered placeholder is
+      rewritten on every sync after a reinstall.
+- [ ] MED: several tautological tests (MLB startUtc, F1 session instants,
+      the "DST boundary" contract test) cannot fail — they gave false
+      confidence and should be rewritten to pin real behaviour.
+- [ ] LOW: venueTz is vestigial ('UTC' in 5 of 6 adapters). NHL
+      (venueTimezone) and TSDB (strTimeLocal) hand us the real local time
+      free — would let us show "2:00 AM (7:00 PM in Los Angeles)".
+- [ ] LOW: timeLabel collapses 'postponed' into 'Time TBC', so the app
+      never actually says a match was called off.
+CI LESSON: run the suite under TZ=America/Los_Angeles as well as UTC —
+every one of these hid behind a UTC-only test run.
