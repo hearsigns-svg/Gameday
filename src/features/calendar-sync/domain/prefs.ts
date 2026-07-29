@@ -11,7 +11,10 @@ export interface CalendarPrefs {
 export const DEFAULT_PREFS: CalendarPrefs = {
   reminderMinutes: 60,
   eventStyle: 'timed',
-  seriesSessions: 'all',
+  // Conservative default (ten-rules brief): a full race weekend is 5+
+  // events — opt INTO the flood, never discover it. Stored prefs are
+  // untouched; this only shapes new installs.
+  seriesSessions: 'race-only',
 };
 
 export const REMINDER_OPTIONS: Array<{ label: string; value: number | null }> = [

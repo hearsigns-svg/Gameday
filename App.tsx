@@ -11,16 +11,21 @@ import {
   NativeStackNavigationProp,
 } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { AppState, Pressable, useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, Pressable, useColorScheme, View } from 'react-native';
 // Side effect: defines background tasks at module scope (headless launches).
 import { registerBackgroundSync } from './src/features/calendar-sync/backgroundSync';
 import {
   runSync,
   shouldAutoSync,
 } from './src/features/calendar-sync/syncEngine';
+import { hasSeenWelcome } from './src/features/calendar-sync/data/calendarChoice';
+import { loadFollowables } from './src/features/follows/data/followStore';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
+import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
+import WelcomeScreen from './src/features/onboarding/WelcomeScreen';
+import CalendarPrimingScreen from './src/features/calendar-sync/screens/CalendarPrimingScreen';
 import HomeScreen from './src/features/follows/screens/HomeScreen';
 import FollowingScreen from './src/features/follows/screens/FollowingScreen';
 import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen';
@@ -98,6 +103,11 @@ function Tabs() {
 export default function App() {
   const scheme = useColorScheme();
   const t = scheme === 'dark' ? palette.dark : palette.light;
+  // Evaluated once at launch: first run (never welcomed, nothing
+  // followed) opens on the welcome screen; everyone else on the tabs.
+  const [initialRoute] = useState<keyof RootStackParamList>(() =>
+    !hasSeenWelcome() && loadFollowables().length === 0 ? 'Welcome' : 'Tabs',
+  );
 
   useEffect(() => {
     void registerBackgroundSync();
@@ -126,10 +136,22 @@ export default function App() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
-      <Stack.Navigator
-        screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
-      >
+    <View style={{ flex: 1 }}>
+      <NavigationContainer theme={navTheme}>
+        <Stack.Navigator
+          initialRouteName={initialRoute}
+          screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
+        >
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="CalendarPriming"
+          component={CalendarPrimingScreen}
+          options={{ presentation: 'modal', title: 'Your calendar' }}
+        />
         <Stack.Screen
           name="Tabs"
           component={Tabs}
@@ -162,8 +184,10 @@ export default function App() {
             options={{ title: 'Theme gallery (dev)' }}
           />
         ) : null}
-      </Stack.Navigator>
-      <StatusBar style="auto" />
-    </NavigationContainer>
+        </Stack.Navigator>
+        <StatusBar style="auto" />
+      </NavigationContainer>
+      <ToastHost />
+    </View>
   );
 }

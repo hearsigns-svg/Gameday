@@ -14,6 +14,18 @@ export const NOTES_TAG = 'gameday-fixture:';
 const CAL_KEY = 'gamedayCalendarId.v1';
 const CAL_TITLE = 'Gameday';
 
+// Non-prompting probe: reports the existing grant WITHOUT ever showing
+// the OS dialog. Used as reinstall evidence — an existing grant means
+// this device already opted in through the primed flow once.
+export async function hasCalendarGrant(): Promise<boolean> {
+  try {
+    const { status } = await Calendar.getCalendarPermissions();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
 export async function ensureCalendarPermission(): Promise<Result<true>> {
   try {
     const { status } = await Calendar.requestCalendarPermissions();

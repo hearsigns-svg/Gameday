@@ -8,7 +8,9 @@ import { FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { spacing, type, useTheme } from '../../../core/tokens';
+import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
+import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   fetchLeagues,
@@ -24,6 +26,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [, forceRender] = useState(0);
+
+  // Toast Undo (and any other sync) must refresh Follow buttons here too.
+  useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
     const sport = sportByKey(route.params.sportKey);
@@ -48,17 +53,19 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
     };
     setBusyKey(league.key);
-    const r = isFollowed(league.key)
-      ? await unfollow(item)
-      : await follow(item);
+    const wasFollow = !isFollowed(league.key);
+    const r = wasFollow ? await follow(item) : await unfollow(item);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
       setError(messageOf(r.error));
     } else {
       setError(null);
+      followFeedback(r, item, wasFollow, () =>
+        navigation.navigate('CalendarPriming'),
+      );
     }
     setBusyKey(null);
     forceRender((n) => n + 1);
-  }, [route.params.sportKey]);
+  }, [route.params.sportKey, navigation]);
 
   if (error && !leagues) {
     return (

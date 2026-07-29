@@ -15,19 +15,24 @@ import { FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
+import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
+import { followFeedback } from '../followFeedback';
 import { DirectoryTeam, fetchTeams } from '../data/directoryRepo';
 import { isFollowed } from '../data/followStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeamList'>;
 
-export default function TeamListScreen({ route }: Props) {
+export default function TeamListScreen({ navigation, route }: Props) {
   const t = useTheme();
   const [teams, setTeams] = useState<DirectoryTeam[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [queryText, setQueryText] = useState('');
   const [, forceRender] = useState(0);
+
+  // Toast Undo (and any other sync) must refresh Follow buttons here too.
+  useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
     void (async () => {
@@ -54,15 +59,19 @@ export default function TeamListScreen({ route }: Props) {
         : {}),
     };
     setBusyKey(team.key);
-    const r = isFollowed(team.key) ? await unfollow(item) : await follow(item);
+    const wasFollow = !isFollowed(team.key);
+    const r = wasFollow ? await follow(item) : await unfollow(item);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
       setError(messageOf(r.error));
     } else {
       setError(null);
+      followFeedback(r, item, wasFollow, () =>
+        navigation.navigate('CalendarPriming'),
+      );
     }
     setBusyKey(null);
     forceRender((n) => n + 1);
-  }, []);
+  }, [navigation]);
 
   if (error && !teams) {
     return (

@@ -204,8 +204,10 @@ describe('planSync', () => {
     if (ops[0].op === 'create') {
       expect(ops[0].fixture.id).toBe('f1-2026-r1-race');
     }
-    // Switching to race-only over a full ledger deletes the support events.
-    const full = applied({}, planSync([race, practice], {}, ['f1-series-1'], DEFAULT_PREFS, PAST_HORIZON));
+    // Switching to race-only over a full ledger deletes the support
+    // events. Explicit 'all' here: the DEFAULT is race-only (ten-rules
+    // conservative default), and this test is about the transition.
+    const full = applied({}, planSync([race, practice], {}, ['f1-series-1'], { ...DEFAULT_PREFS, seriesSessions: 'all' }, PAST_HORIZON));
     const cleanup = planSync([race, practice], full, ['f1-series-1'], prefs, PAST_HORIZON);
     expect(cleanup).toHaveLength(1);
     expect(cleanup[0].op).toBe('delete');

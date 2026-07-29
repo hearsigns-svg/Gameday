@@ -4,13 +4,17 @@
 
 import { err, messageOf, ok, Result } from '../../core/result';
 import { readJson, writeJson } from '../../core/storage';
+import { Fixture } from '../fixtures/domain/fixture';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowKeys } from '../follows/data/followStore';
+import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import { loadPrefs } from './data/prefsStore';
+import { CalendarPrefs } from './domain/prefs';
 import {
   createFixtureEvent,
   deleteFixtureEvent,
   ensureCalendarPermission,
+  hasCalendarGrant,
   ensureGamedayCalendar,
   getGamedayCalendarObject,
   listTaggedEvents,
@@ -93,6 +97,7 @@ export interface SyncOutcome {
   deleted: number;
   recovered?: number; // ledger entries rebuilt from calendar (reinstall)
   pruned?: number; // orphan tagged events deleted (ledger invariant)
+  calendarSkipped?: boolean; // fixtures refreshed, calendar not opted in
   at: string;
 }
 
@@ -157,7 +162,76 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
   }
 }
 
+// Shared by both sync paths: refresh the per-follow counts and the
+// presentation snapshot Home/Schedule render from.
+function writePresentationState(
+  fixtures: Fixture[],
+  follows: string[],
+  prefs: CalendarPrefs,
+  horizonStart: string,
+): void {
+  const upcoming: Record<string, number> = {};
+  for (const key of follows) upcoming[key] = 0;
+  for (const f of fixtures) {
+    if (f.startUtc < horizonStart) continue;
+    for (const key of f.followKeys) {
+      if (key in upcoming) upcoming[key]++;
+    }
+  }
+  writeJson(UPCOMING_KEY, upcoming);
+  writeJson(
+    UPCOMING_FIXTURES_KEY,
+    upcomingSnapshot(fixtures, prefs, horizonStart, UPCOMING_FIXTURES_CAP),
+  );
+}
+
+// Calendar not (yet) opted in: keep the app's view of fixtures fresh
+// without touching the calendar or triggering the OS permission prompt.
+// The permission dialog must only ever follow the primed explainer.
+async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
+  const follows = loadFollowKeys();
+  const prefs = loadPrefs();
+  const fixtures = await fetchFixturesForFollows(follows);
+  if (!fixtures.ok) return fixtures;
+  // Same circuit breaker as the full path: an anomalous empty fetch
+  // must not blank the app's schedule view.
+  if (
+    follows.length > 0 &&
+    fixtures.value.length === 0 &&
+    readJson<SnapshotFixture[]>(UPCOMING_FIXTURES_KEY, []).length > 0
+  ) {
+    return err({ kind: 'suspect-empty' });
+  }
+  writePresentationState(
+    fixtures.value,
+    follows,
+    prefs,
+    horizonStartFrom(Date.now()),
+  );
+  const outcome: SyncOutcome = {
+    created: 0,
+    updated: 0,
+    deleted: 0,
+    calendarSkipped: true,
+    at: new Date().toISOString(),
+  };
+  writeJson(LAST_SYNC_KEY, outcome);
+  return ok(outcome);
+}
+
 async function runSyncInner(): Promise<Result<SyncOutcome>> {
+  if (calendarChoice() !== 'enabled') {
+    // Reinstall healing: storage loss wipes ledger AND choice together,
+    // but an existing OS grant is durable evidence of a prior opt-in
+    // through the primed flow. The probe never prompts; when it finds a
+    // grant we latch enabled and fall through so recovery + prune run —
+    // otherwise events left in the calendar would silently rot.
+    if (calendarChoice() === 'unset' && (await hasCalendarGrant())) {
+      setCalendarChoice('enabled');
+    } else {
+      return runFixturesOnlyInner();
+    }
+  }
   {
     const perm = await ensureCalendarPermission();
     if (!perm.ok) return perm;
@@ -205,17 +279,6 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     const horizonStart = horizonStartFrom(Date.now());
     const ops = planSync(fixtures.value, ledger, follows, prefs, horizonStart);
 
-    // Per-followable upcoming counts drive honest off-season messaging:
-    // a followed team between seasons has fixtures, just none ahead.
-    const upcoming: Record<string, number> = {};
-    for (const key of follows) upcoming[key] = 0;
-    for (const f of fixtures.value) {
-      if (f.startUtc < horizonStart) continue;
-      for (const key of f.followKeys) {
-        if (key in upcoming) upcoming[key]++;
-      }
-    }
-    writeJson(UPCOMING_KEY, upcoming);
     const outcome: SyncOutcome = {
       created: 0,
       updated: 0,
@@ -279,14 +342,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       }
     }
 
-    // Snapshot written only after every calendar op applied, and gated
-    // by the same desiredEventFor the planner uses — the app never
-    // shows a fixture the calendar doesn't want (cancelled, race-only
-    // excluded), and never runs ahead of a sync that then failed.
-    writeJson(
-      UPCOMING_FIXTURES_KEY,
-      upcomingSnapshot(fixtures.value, prefs, horizonStart, UPCOMING_FIXTURES_CAP),
-    );
+    // Presentation state written only after every calendar op applied,
+    // and gated by the same desiredEventFor the planner uses — the app
+    // never shows a fixture the calendar doesn't want (cancelled,
+    // race-only excluded), and never runs ahead of a sync that failed.
+    writePresentationState(fixtures.value, follows, prefs, horizonStart);
     writeJson(LAST_SYNC_KEY, outcome);
     return ok(outcome);
   }

@@ -5,10 +5,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SectionList, StyleSheet, Text, View } from 'react-native';
 import {
+  CalendarOffBanner,
   EmptyState,
   EventRow,
   SyncStatusChip,
 } from '../../../core/components';
+import { calendarChoice } from '../data/calendarChoice';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
@@ -79,6 +81,7 @@ export default function ScheduleScreen({ navigation }: Props) {
   }, [fixtures]);
 
   const changed = last ? last.created + last.updated + last.deleted : 0;
+  const calendarOff = calendarChoice() !== 'enabled';
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -88,8 +91,15 @@ export default function ScheduleScreen({ navigation }: Props) {
           lastAt={last?.at ?? null}
           changed={changed}
           error={syncError}
+          calendarOff={calendarOff}
         />
       </View>
+      {calendarOff && fixtures.length > 0 ? (
+        <CalendarOffBanner
+          fixtureCount={fixtures.length}
+          onEnable={() => navigation.navigate('CalendarPriming')}
+        />
+      ) : null}
       {sections.length === 0 ? (
         <EmptyState
           headline="Nothing on the schedule"
@@ -137,9 +147,9 @@ export default function ScheduleScreen({ navigation }: Props) {
                 { color: t.textSecondary },
               ]}
             >
-              Everything here is in your phone calendar and updates on its
-              own — times firm up, postponements move, cancellations
-              disappear.
+              {calendarOff
+                ? 'These fixtures will be added to your phone calendar once you connect it.'
+                : 'Everything here is in your phone calendar and updates on its own — times firm up, postponements move, cancellations disappear.'}
             </Text>
           }
         />

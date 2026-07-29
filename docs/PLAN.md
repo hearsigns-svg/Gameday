@@ -173,6 +173,21 @@ listings, screenshots, name availability check.
   Home/Following/Schedule; HeroCard/EventRow/GlyphTile/SportPill/
   SectionHeader/CountdownBadge/SyncStatusChip; humanized sync voice;
   dev ThemeGallery pinned to worst-case identities.
+- DONE 2026-07-29 (step 4): onboarding = choosing favourites (Welcome →
+  sport pills → first follow → PRIMED calendar ask, one primary action
+  per screen); calendarChoice unset/deferred/enabled gates the engine —
+  fixtures-only sync keeps Home/Schedule live with zero calendar
+  permission, and the OS dialog can only ever follow the primed screen;
+  calendar-off banner + chip/footer copy stays honest in every state;
+  post-follow toast with the real created-count + Undo is the flooding
+  guard; race-only is the conservative default for NEW installs (stored
+  prefs untouched); denied-permission path ends at Open Settings, never
+  a nag loop. First-run E2E on a virgin sim: Welcome → F1 one-tap
+  follow → priming ("11 fixtures ready — about 1 in the next month",
+  desiredEventFor-filtered count) → Not now → populated Home + banner →
+  Add → OS dialog (purpose string) → 11 events in the dedicated
+  Gameday calendar (sqlite-verified). Existing devices migrate to
+  'enabled' via non-empty ledger.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

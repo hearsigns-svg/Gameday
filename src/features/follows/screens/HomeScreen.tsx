@@ -5,12 +5,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
+  CalendarOffBanner,
   EmptyState,
   EventRow,
   HeroCard,
   SectionHeader,
   SportPill,
 } from '../../../core/components';
+import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
+import { followFeedback } from '../followFeedback';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
@@ -83,13 +86,15 @@ export default function HomeScreen({ navigation }: Props) {
         type: 'series' as const,
         ...(series.pollPath ? { pollPath: series.pollPath } : {}),
       };
-      const r = isFollowed(series.key)
-        ? await unfollow(item)
-        : await follow(item);
+      const wasFollow = !isFollowed(series.key);
+      const r = wasFollow ? await follow(item) : await unfollow(item);
       if (!r.ok && r.error.kind !== 'sync-in-progress') {
         setError(messageOf(r.error));
       } else {
         setError(null);
+        followFeedback(r, item, wasFollow, () =>
+          navigation.navigate('CalendarPriming'),
+        );
       }
       pillBusyRef.current = false;
       setBusySport(null);
@@ -110,6 +115,13 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
           {error}
         </Text>
+      ) : null}
+
+      {followCount > 0 && calendarChoice() !== 'enabled' ? (
+        <CalendarOffBanner
+          fixtureCount={fixtures.length}
+          onEnable={() => navigation.navigate('CalendarPriming')}
+        />
       ) : null}
 
       {hero ? (

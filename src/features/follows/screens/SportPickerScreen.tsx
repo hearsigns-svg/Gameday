@@ -3,7 +3,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
@@ -11,7 +11,9 @@ import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
 import { spacing, type, useTheme } from '../../../core/tokens';
+import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
+import { followFeedback } from '../followFeedback';
 import { isFollowed } from '../data/followStore';
 import { SportConfig, SPORTS } from '../domain/sportsConfig';
 
@@ -24,6 +26,9 @@ export default function SportPickerScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [, forceRender] = useState(0);
 
+  // Toast Undo (and any other sync) must refresh Follow buttons here too.
+  useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+
   const toggleSeries = useCallback(async (sport: SportConfig) => {
     const series = sport.seriesFollowable;
     if (!series) return;
@@ -35,15 +40,19 @@ export default function SportPickerScreen({ navigation }: Props) {
       ...(series.pollPath ? { pollPath: series.pollPath } : {}),
     };
     setBusyKey(series.key);
-    const r = isFollowed(series.key) ? await unfollow(item) : await follow(item);
+    const wasFollow = !isFollowed(series.key);
+    const r = wasFollow ? await follow(item) : await unfollow(item);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
       setError(messageOf(r.error));
     } else {
       setError(null);
+      followFeedback(r, item, wasFollow, () =>
+        navigation.navigate('CalendarPriming'),
+      );
     }
     setBusyKey(null);
     forceRender((n) => n + 1);
-  }, []);
+  }, [navigation]);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>

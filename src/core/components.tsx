@@ -346,11 +346,18 @@ export function SyncStatusChip(props: {
   lastAt: string | null;
   changed: number; // created + updated + deleted on the last run
   error?: string | null;
+  calendarOff?: boolean; // fixtures fresh, calendar not opted in
 }) {
   const t = useTheme();
   let text: string;
-  if (props.running) text = 'Updating your calendar…';
+  if (props.running)
+    text = props.calendarOff ? 'Checking for fixtures…' : 'Updating your calendar…';
   else if (props.error) text = props.error;
+  else if (props.calendarOff)
+    text =
+      props.lastAt === null
+        ? 'Calendar sync is off'
+        : 'Fixtures up to date · calendar off';
   else if (props.lastAt === null) text = 'Not synced yet';
   else if (props.changed > 0)
     text = `Calendar updated · ${props.changed} ${props.changed === 1 ? 'change' : 'changes'} · ${relative(props.lastAt)}`;
@@ -379,6 +386,47 @@ export function SyncStatusChip(props: {
       <Text style={[type.caption, { color: t.textSecondary, flexShrink: 1 }]}>
         {text}
       </Text>
+    </View>
+  );
+}
+
+// Calendar-off banner: the standing, non-nagging path back to the
+// primed calendar ask. Rendered only while follows exist and the user
+// hasn't opted in.
+export function CalendarOffBanner(props: {
+  fixtureCount: number;
+  onEnable: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <View
+      style={[
+        styles.banner,
+        { backgroundColor: t.surfaceRaised, borderColor: t.border },
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        {/* "Sync is off" is true in every reachable state — after a
+            reinstall, events may in fact still BE in the calendar. */}
+        <Text style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}>
+          Calendar sync is off
+        </Text>
+        <Text style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}>
+          {props.fixtureCount > 0
+            ? `${props.fixtureCount} fixture${props.fixtureCount === 1 ? '' : 's'} ready to add`
+            : 'Fixtures will be added once you connect your calendar'}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add fixtures to my calendar"
+        onPress={props.onEnable}
+        style={[styles.bannerCta, { backgroundColor: t.primary }]}
+      >
+        <Text style={[type.secondary, { color: t.onPrimary, fontWeight: '600' }]}>
+          Add
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -494,6 +542,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 44,
     minWidth: 104,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.l,
+    marginHorizontal: spacing.l,
+    marginTop: spacing.l,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  bannerCta: {
+    minHeight: 44,
+    paddingHorizontal: spacing.l,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

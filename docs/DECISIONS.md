@@ -214,3 +214,31 @@
   display cut only if the brand demands it later. Global cross-sport
   search accepted for v1 as federated search (config + cached
   directories + TSDB name search), grouped results as disambiguation.
+- 2026-07-29: Calendar permission is a USER CHOICE gate (unset/deferred/
+  enabled), not an OS side effect — sync runs fixtures-only until the
+  user opts in on the primed explainer; the OS dialog can only ever
+  follow that screen. Devices with a non-empty ledger migrate to enabled.
+- 2026-07-29: Race-only is the conservative default for new installs
+  (ten-rules brief: opt INTO the flood); stored prefs untouched.
+- 2026-07-29: Flooding guard = honesty, not fake toggles: follow-time
+  counts come from the desiredEventFor-filtered snapshot, and the
+  post-follow toast reports the real created-count with a 6s Undo.
+  Scope toggles beyond race-only wait until providers give us stage/
+  round data we can actually honour.
+- 2026-07-29 (review round): calendarChoice migration LATCHES (write-once)
+  and reinstall heals via a NON-PROMPTING permission probe — an existing
+  OS grant is durable evidence of a prior primed opt-in, so recovery and
+  prune run again after storage loss without ever showing a dialog.
+- 2026-07-29 (review round): the race-only defaults migration is a
+  ONE-TIME stamp (prefsDefaultsMigrated.v2). A re-derived latch is wrong
+  in the other direction: it flips NEW race-only installs to 'all' the
+  moment their ledger is non-empty (caught on-device: 11 events became
+  55). Known accepted edge: a reinstalled pre-flip device converges to
+  race-only after recovery — post-storage-loss the device is treated as
+  a new install except for event dedup.
+- 2026-07-29 (review round): 'enabled' only sticks after a successful
+  connected sync — enable() waits out in-flight runs, reverts the choice
+  on any failure (denied => deferred + Settings guidance in-context), so
+  the OS dialog can never appear detached from the priming screen and a
+  denial can never brick syncing. Swipe-dismissing the ask records
+  'deferred' (never re-nag).
