@@ -188,6 +188,17 @@ listings, screenshots, name availability check.
   Add → OS dialog (purpose string) → 11 events in the dedicated
   Gameday calendar (sqlite-verified). Existing devices migrate to
   'enabled' via non-empty ledger.
+- DONE 2026-07-29 (step 5, 033b1b1): federated global search (owner
+  ruling: no sport scoping) — searchEntities CF over the teamDirectory
+  cache + live TSDB filtered to served team-followable leagues, grouped
+  client results, route table drift-test-pinned to sportsConfig;
+  crest/colour identity plumbing end-to-end (capture at follow time,
+  teamTheme the only gate, SVG skipped, broken art falls back);
+  follow-moment haptic. DEPLOY PENDING owner:
+  `npx firebase deploy --only functions:searchEntities,functions:listTeams`
+  then `node scripts/refresh-team-directory.mjs --apply`. Client
+  degrades cleanly until then. Deferred: Schedule polish, Following
+  swipe-actions, per-follow scope beyond race-only.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 
