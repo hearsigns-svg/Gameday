@@ -34,3 +34,42 @@ deferred on evidence. Production cache 2026-07-27: 3,114 fixtures across
 all live sports; NBA shows 0 upcoming because the 2026-27 schedule is
 not published yet (~Aug) — the horizon rule makes that state honest
 rather than filling calendars with last season.
+
+## Coverage-gap analysis — what paid API-Sports would add (2026-07-29)
+
+Researched live (owner asked what declining the API-Sports subscription
+costs us). Prices approximate, from vendor pages.
+
+**API-Sports does NOT sell tennis.** Their family is Football, AFL,
+Baseball, Basketball, Formula-1, Handball, Hockey, MMA, NBA, NFL/NCAA,
+Rugby, Volleyball. So the one sport we genuinely lack is the one sport
+that subscription could never fix. Pricing is PER SPORT ($19–39/mo
+each), so "just subscribe" is not one line item.
+
+Where paid API-Sports would add NOTHING (we use official/free or the
+existing TSDB sub): MLB, NHL, F1, NFL, NBA, rugby, cricket*, golf*,
+MMA, boxing, motorsport. (*not in the API-Sports lineup at all.)
+
+Where it WOULD add real coverage — soccer breadth only. We serve ~23
+competitions (12 football-data.org free + ~11 TSDB cups/extras);
+API-Football advertises ~1,236 leagues. Raw ratio ~2%, but that number
+is misleading: the tail is lower divisions nobody follows. By FAN
+DEMAND we already hold the big five, UCL/UEL/UECL, FA/EFL Cups,
+Championship–League Two, Scottish Prem, DFB-Pokal, Coppa Italia,
+Brasileirão, Euros, World Cup. Notable real absences: MLS, WSL (and
+women's football generally), Liga MX, Saudi Pro League, Copa
+Libertadores, AFC Champions League, National League.
+
+Options if we want them:
+- Soccer breadth: API-Football $19–39/mo (~1,236 leagues) is better
+  value than football-data.org's paid tiers (€49/mo = 30 comps,
+  €99 = 50, €199 = 100).
+- Tennis: needs a different vendor. Goalserve ~$150/mo (fixtures +
+  ATP/WTA/ITF/slams) or tennis-api.com (fixtures/schedules; price
+  unconfirmed). At $150/mo tennis alone would be 16x our current
+  total data spend — hard to justify pre-revenue.
+
+Recommendation: ship on the current $9/mo mix. Add API-Football only if
+US/women's-football demand shows up in real users (MLS + WSL are the
+two names most likely to be asked for). Treat tennis as a post-launch
+question, not a launch blocker.
