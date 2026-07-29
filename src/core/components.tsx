@@ -3,9 +3,10 @@
 // Team/sport colour arrives here ONLY as a TeamTheme (never raw hex).
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -18,14 +19,22 @@ import { countdownLabel, timeLabel, whenLabel } from './when';
 // ---------------------------------------------------------------------------
 // Identity atoms
 
-// Rounded-square sport/entity mark: quiet container tint + glyph. The
-// slot crest imagery will land in once artwork plumbing exists.
+// RN Image cannot rasterise SVG; skip those crests and let the glyph
+// fallback carry the identity (the fallback is the design).
+export const usableCrest = (url: string | undefined): string | undefined =>
+  url && !url.toLowerCase().split('?')[0].endsWith('.svg') ? url : undefined;
+
+// Rounded-square sport/entity mark: quiet container tint + crest where
+// the provider gives us one, glyph otherwise.
 export function GlyphTile(props: {
   glyph: string;
   theme: TeamTheme;
+  crestUrl?: string;
   size?: number;
 }) {
   const size = props.size ?? 40;
+  const [crestFailed, setCrestFailed] = useState(false);
+  const crest = crestFailed ? undefined : usableCrest(props.crestUrl);
   return (
     <View
       accessible={false}
@@ -38,9 +47,19 @@ export function GlyphTile(props: {
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: size * 0.5 }} accessible={false}>
-        {props.glyph}
-      </Text>
+      {crest ? (
+        <Image
+          source={{ uri: crest }}
+          resizeMode="contain"
+          onError={() => setCrestFailed(true)} // broken art → glyph, never a blank tile
+          style={{ width: size * 0.72, height: size * 0.72 }}
+          accessible={false}
+        />
+      ) : (
+        <Text style={{ fontSize: size * 0.5 }} accessible={false}>
+          {props.glyph}
+        </Text>
+      )}
     </View>
   );
 }
@@ -86,8 +105,10 @@ export function HeroCard(props: {
   status: string;
   glyph: string;
   theme: TeamTheme;
+  crestUrl?: string;
 }) {
   const th = props.theme;
+  const crest = usableCrest(props.crestUrl);
   const when = `${whenLabel(props.startUtc)} · ${timeLabel(props.startUtc, props.status)}`;
   return (
     <View
@@ -105,6 +126,14 @@ export function HeroCard(props: {
           {props.glyph}
         </Text>
         <View style={styles.heroTop}>
+          {crest ? (
+            <Image
+              source={{ uri: crest }}
+              resizeMode="contain"
+              style={{ width: 28, height: 28 }}
+              accessible={false}
+            />
+          ) : null}
           <Text
             style={[type.label, { color: th.onGradient, opacity: 0.85, flex: 1 }]}
             numberOfLines={1}
@@ -144,6 +173,7 @@ export function EventRow(props: {
   timeText: string;
   glyph: string;
   theme: TeamTheme;
+  crestUrl?: string;
   tbc?: boolean;
 }) {
   const t = useTheme();
@@ -153,7 +183,7 @@ export function EventRow(props: {
       accessibilityLabel={`${props.title}, ${props.caption}, ${props.timeText}`}
       style={[styles.eventRow, { borderColor: t.border }]}
     >
-      <GlyphTile glyph={props.glyph} theme={props.theme} />
+      <GlyphTile glyph={props.glyph} theme={props.theme} crestUrl={props.crestUrl} />
       <View style={{ flex: 1 }}>
         <Text
           style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}
@@ -187,6 +217,7 @@ export function ListRow(props: {
   caption?: string;
   glyph?: string;
   tileTheme?: TeamTheme; // when present the glyph renders in a GlyphTile
+  crestUrl?: string;
   right?: ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
@@ -196,18 +227,25 @@ export function ListRow(props: {
   return (
     <Pressable
       accessibilityRole={props.onPress ? 'button' : undefined}
-      accessibilityLabel={props.accessibilityLabel}
+      // A row without onPress is a passive container, NOT a disabled
+      // control — marking it disabled makes VoiceOver skip the Follow
+      // button inside it.
+      accessibilityLabel={props.onPress ? props.accessibilityLabel : undefined}
       onPress={props.onPress}
-      disabled={props.disabled || !props.onPress}
+      disabled={props.disabled === true}
       style={({ pressed }) => [
         styles.row,
         { borderColor: t.border, opacity: props.disabled ? 0.45 : 1 },
-        pressed && { backgroundColor: t.surface },
+        pressed && props.onPress && { backgroundColor: t.surface },
       ]}
     >
       {props.glyph ? (
         props.tileTheme ? (
-          <GlyphTile glyph={props.glyph} theme={props.tileTheme} />
+          <GlyphTile
+            glyph={props.glyph}
+            theme={props.tileTheme}
+            crestUrl={props.crestUrl}
+          />
         ) : (
           <Text style={[type.heading, styles.glyph]} accessible={false}>
             {props.glyph}

@@ -13,6 +13,11 @@ export interface Followable {
   // Functions path polled when this follow syncs; attached at follow
   // time from config. Absent on legacy follows → provider-prefix routes.
   pollPath?: string;
+  // Identity artwork/colour captured at follow time where the provider
+  // offers it — the favourites provide the identity. Colour is a raw
+  // hex or kit-colour text; it only reaches UI slots via teamTheme().
+  crestUrl?: string;
+  brandColour?: string;
 }
 
 const KEY_V2 = 'follows.v2';

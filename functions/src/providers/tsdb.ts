@@ -106,6 +106,7 @@ export async function fetchTsdbLeagueSeasonFixtures(
 export interface TsdbTeamRow {
   id: string;
   name: string;
+  crestUrl?: string;
 }
 
 // lookup_all_teams.php 404s on the premium v1 path (verified live) —
@@ -117,6 +118,50 @@ export async function fetchTsdbLeagueTeams(
   const body = (await tsdbGet(
     apiKey,
     `search_all_teams.php?l=${encodeURIComponent(leagueName)}`,
-  )) as { teams: Array<{ idTeam: string; strTeam: string }> | null };
-  return (body.teams ?? []).map((t) => ({ id: t.idTeam, name: t.strTeam }));
+  )) as {
+    teams: Array<{ idTeam: string; strTeam: string; strBadge?: string }> | null;
+  };
+  return (body.teams ?? []).map((t) => ({
+    id: t.idTeam,
+    name: t.strTeam,
+    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
+  }));
+}
+
+export interface TsdbSearchHit {
+  id: string;
+  name: string;
+  sport: string; // TSDB strSport, e.g. 'Basketball'
+  leagueId: string; // idLeague
+  league: string; // strLeague
+  crestUrl?: string;
+}
+
+// Free-text team search across all of TSDB — callers filter to leagues
+// we actually serve.
+export async function searchTsdbTeams(
+  apiKey: string,
+  q: string,
+): Promise<TsdbSearchHit[]> {
+  const body = (await tsdbGet(
+    apiKey,
+    `searchteams.php?t=${encodeURIComponent(q)}`,
+  )) as {
+    teams: Array<{
+      idTeam: string;
+      strTeam: string;
+      strSport?: string;
+      idLeague?: string;
+      strLeague?: string;
+      strBadge?: string;
+    }> | null;
+  };
+  return (body.teams ?? []).map((t) => ({
+    id: t.idTeam,
+    name: t.strTeam,
+    sport: t.strSport ?? '',
+    leagueId: t.idLeague ?? '',
+    league: t.strLeague ?? '',
+    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
+  }));
 }

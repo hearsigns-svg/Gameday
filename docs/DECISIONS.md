@@ -242,3 +242,14 @@
   the OS dialog can never appear detached from the priming screen and a
   denial can never brick syncing. Swipe-dismissing the ask records
   'deferred' (never re-nag).
+- 2026-07-29 (step 5): Global search is FEDERATED, not indexed — config
+  + cached team directories + live TSDB name search filtered to served
+  team-followable leagues; grouping is the disambiguation. Search never
+  returns what we can't deliver, dedups by followable KEY (domestic
+  label wins), and the TSDB route table is single-sourced with a CI
+  test pinning it to client sportsConfig (season-roll drift guard).
+- 2026-07-29 (step 5): Crests/colours ride the existing directory cache
+  (fdorg crest+clubColors, TSDB badges); kit-colour TEXT maps to a hue
+  via colourFromKitText and only reaches UI through teamTheme(). SVG
+  crests are skipped (RN Image), broken art falls back to the glyph.
+  OWNER ACTION before store submission: confirm crest usage rights.

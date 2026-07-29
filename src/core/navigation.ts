@@ -15,6 +15,7 @@ export type RootStackParamList = {
   Welcome: undefined; // first run only
   CalendarPriming: undefined; // primed explainer before the OS dialog
   Tabs: NavigatorScreenParams<TabParamList>;
+  Search: undefined;
   SportPicker: undefined;
   LeagueList: { sportKey: string };
   TeamList: {

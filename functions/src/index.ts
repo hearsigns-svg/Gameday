@@ -6,6 +6,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
+import { searchTeams } from './search';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -147,6 +148,23 @@ export const pollLeague = onRequest(async (req, res) => {
 
 export const listLeagues = onRequest(async (_req, res) => {
   res.json({ leagues: listSoccerLeagues() });
+});
+
+// Federated team search across everything followable (cached
+// directories + live TSDB filtered to served leagues).
+export const searchEntities = onRequest(async (req, res) => {
+  try {
+    const q = String(req.query.q ?? '').trim();
+    if (q.length < 2) {
+      res.json({ teams: [] });
+      return;
+    }
+    res.json({
+      teams: await searchTeams(getFirestore(), requireTsdbKey(), q),
+    });
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
 });
 
 export const listTeams = onRequest(async (req, res) => {

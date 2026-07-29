@@ -3,6 +3,7 @@
 // (pills, browse rows) routes through here so the behaviour never
 // drifts between screens.
 
+import * as Haptics from 'expo-haptics';
 import { Result } from '../../core/result';
 import { showToast } from '../../core/toast';
 import { calendarChoice } from '../calendar-sync/data/calendarChoice';
@@ -57,6 +58,10 @@ export function followFeedback(
   }
 
   if (r.value.created > 0) {
+    // The one moment worth a haptic: games just landed in the calendar.
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => undefined,
+    );
     showToast({
       message: `Added ${r.value.created} fixture${r.value.created === 1 ? '' : 's'} to your calendar`,
       action: { label: 'Undo', onPress: () => void unfollow(item) },

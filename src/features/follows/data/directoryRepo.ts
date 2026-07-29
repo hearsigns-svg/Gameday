@@ -17,6 +17,18 @@ export interface DirectoryTeam {
   id: number | string;
   name: string;
   key: string;
+  crestUrl?: string;
+  colours?: string; // free-text kit colours ("Red / White")
+}
+
+export interface SearchTeamHit {
+  key: string;
+  name: string;
+  sportKey: string;
+  league: string;
+  crestUrl?: string;
+  colours?: string;
+  pollPath?: string;
 }
 
 async function getJson<T>(path: string): Promise<Result<T>> {
@@ -43,5 +55,21 @@ export async function fetchTeams(
   const r = await getJson<{ teams: DirectoryTeam[] }>(
     `listTeams?sport=${encodeURIComponent(sportKey)}&leagueId=${leagueId}`,
   );
+  return r.ok ? ok(r.value.teams) : r;
+}
+
+// Federated team search — server-filtered to leagues we actually serve.
+export async function searchTeams(
+  query: string,
+): Promise<Result<SearchTeamHit[]>> {
+  const r = await getJson<{ teams: SearchTeamHit[] }>(
+    `searchEntities?q=${encodeURIComponent(query)}`,
+  );
+  // A 404 means the route isn't deployed (yet) — degrade to "no team
+  // results" so local sports/competitions keep working; real provider
+  // failures and offline stay visible.
+  if (!r.ok && r.error.kind === 'provider' && r.error.status === 404) {
+    return ok([]);
+  }
   return r.ok ? ok(r.value.teams) : r;
 }

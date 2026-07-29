@@ -24,6 +24,7 @@ import { loadFollowables } from './src/features/follows/data/followStore';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
+import SearchScreen from './src/features/follows/screens/SearchScreen';
 import WelcomeScreen from './src/features/onboarding/WelcomeScreen';
 import CalendarPrimingScreen from './src/features/calendar-sync/screens/CalendarPrimingScreen';
 import HomeScreen from './src/features/follows/screens/HomeScreen';
@@ -156,6 +157,11 @@ export default function App() {
           name="Tabs"
           component={Tabs}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Search"
+          component={SearchScreen}
+          options={{ title: 'Search' }}
         />
         <Stack.Screen
           name="SportPicker"

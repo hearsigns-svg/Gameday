@@ -17,6 +17,8 @@ export interface DirectoryTeam {
   // Every other name this club is published under, so fixtures from a
   // different provider can be matched back to this key.
   aliases?: string[];
+  crestUrl?: string; // provider artwork (client filters SVG)
+  colours?: string; // free-text kit colours, e.g. "Red / White"
 }
 
 // Generic 24h write-through cache for team directories.
@@ -117,6 +119,8 @@ export async function listFdSoccerTeams(
       name: t.name,
       key: `fdorg-team-${t.id}`,
       aliases: t.aliases,
+      ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
+      ...(t.colours ? { colours: t.colours } : {}),
     })),
   );
 }
@@ -190,6 +194,7 @@ export async function listTsdbTeams(
       id: t.id,
       name: t.name,
       key: `tsdb-team-${t.id}`,
+      ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
     })),
   );
 }

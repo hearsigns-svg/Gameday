@@ -3,7 +3,7 @@
 // the way in. Managing follows lives on the Following tab.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   CalendarOffBanner,
   EmptyState,
@@ -18,7 +18,7 @@ import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
-import { spacing, type, useTheme } from '../../../core/tokens';
+import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import {
   subscribeSync,
   UpcomingFixture,
@@ -26,7 +26,7 @@ import {
 } from '../../calendar-sync/syncEngine';
 import { timeLabel, whenLabel } from '../../../core/when';
 import { follow, unfollow } from '../followActions';
-import { isFollowed, loadFollowables } from '../data/followStore';
+import { Followable, isFollowed, loadFollowables } from '../data/followStore';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 
 type Props = TabScreenProps<'Home'>;
@@ -37,20 +37,19 @@ export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
-  const [followCount, setFollowCount] = useState(() => loadFollowables().length);
+  const [follows, setFollows] = useState<Followable[]>(loadFollowables);
+  const followCount = follows.length;
   const [error, setError] = useState<string | null>(null);
   const [busySport, setBusySport] = useState<string | null>(null);
   const [, forceRender] = useState(0);
 
   useEffect(() => {
-    const unsub = subscribeSync(() => {
+    const refresh = () => {
       setFixtures(upcomingFixtures());
-      setFollowCount(loadFollowables().length);
-    });
-    const focus = navigation.addListener('focus', () => {
-      setFixtures(upcomingFixtures());
-      setFollowCount(loadFollowables().length);
-    });
+      setFollows(loadFollowables());
+    };
+    const unsub = subscribeSync(refresh);
+    const focus = navigation.addListener('focus', refresh);
     return () => {
       unsub();
       focus();
@@ -104,6 +103,18 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const heroSport = hero ? sportByKey(hero.sport) : null;
+  // The hero wears the followed entity's identity when we have it —
+  // brand colour and crest captured at follow time; sport hue otherwise.
+  // Deterministic when both clubs are followed: team follows outrank
+  // competition/series follows, then follow order decides.
+  const heroFollow: Followable | undefined = hero
+    ? follows
+        .filter(
+          (f) =>
+            hero.followKeys.includes(f.key) && (f.brandColour || f.crestUrl),
+        )
+        .sort((a, b) => (a.type === 'team' ? 0 : 1) - (b.type === 'team' ? 0 : 1))[0]
+    : undefined;
 
   return (
     <ScrollView
@@ -116,6 +127,21 @@ export default function HomeScreen({ navigation }: Props) {
           {error}
         </Text>
       ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Search teams, competitions and sports"
+        onPress={() => navigation.navigate('Search')}
+        style={({ pressed }) => [
+          styles.searchBar,
+          { backgroundColor: t.surface, borderColor: t.border },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
+          🔍  Team, competition or sport
+        </Text>
+      </Pressable>
 
       {followCount > 0 && calendarChoice() !== 'enabled' ? (
         <CalendarOffBanner
@@ -132,7 +158,11 @@ export default function HomeScreen({ navigation }: Props) {
             startUtc={hero.startUtc}
             status={hero.status}
             glyph={heroSport?.glyph ?? '🏟️'}
-            theme={teamTheme(heroSport?.accent ?? null, mode)}
+            crestUrl={heroFollow?.crestUrl}
+            theme={teamTheme(
+              heroFollow?.brandColour ?? heroSport?.accent ?? null,
+              mode,
+            )}
           />
         </View>
       ) : followCount > 0 ? (
@@ -211,5 +241,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.s,
     paddingHorizontal: spacing.l,
+  },
+  searchBar: {
+    marginHorizontal: spacing.l,
+    marginTop: spacing.m,
+    paddingHorizontal: spacing.l,
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
   },
 });
