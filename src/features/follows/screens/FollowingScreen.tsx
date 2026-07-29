@@ -133,7 +133,11 @@ export default function FollowingScreen({ navigation }: Props) {
                 title={item.label}
                 caption={captionFor(item, upcoming[item.key])}
                 glyph={sport?.glyph}
-                tileTheme={teamTheme(sport?.accent ?? null, mode)}
+                tileTheme={teamTheme(
+                  item.brandColour ?? sport?.accent ?? null,
+                  mode,
+                )}
+                crestUrl={item.crestUrl}
                 accessibilityLabel={`${item.label}, followed ${item.type}`}
                 right={
                   <FollowButton

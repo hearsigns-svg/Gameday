@@ -27,6 +27,7 @@ import {
 import { timeLabel, whenLabel } from '../../../core/when';
 import { follow, unfollow } from '../followActions';
 import { Followable, isFollowed, loadFollowables } from '../data/followStore';
+import { identityFollow } from '../domain/followIdentity';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 
 type Props = TabScreenProps<'Home'>;
@@ -105,15 +106,8 @@ export default function HomeScreen({ navigation }: Props) {
   const heroSport = hero ? sportByKey(hero.sport) : null;
   // The hero wears the followed entity's identity when we have it —
   // brand colour and crest captured at follow time; sport hue otherwise.
-  // Deterministic when both clubs are followed: team follows outrank
-  // competition/series follows, then follow order decides.
   const heroFollow: Followable | undefined = hero
-    ? follows
-        .filter(
-          (f) =>
-            hero.followKeys.includes(f.key) && (f.brandColour || f.crestUrl),
-        )
-        .sort((a, b) => (a.type === 'team' ? 0 : 1) - (b.type === 'team' ? 0 : 1))[0]
+    ? identityFollow(hero.followKeys, follows)
     : undefined;
 
   return (
@@ -183,6 +177,7 @@ export default function HomeScreen({ navigation }: Props) {
           <View>
             {nextUp.map((f) => {
               const sport = sportByKey(f.sport);
+              const owner = identityFollow(f.followKeys, follows);
               return (
                 <EventRow
                   key={f.id}
@@ -191,7 +186,11 @@ export default function HomeScreen({ navigation }: Props) {
                   timeText={timeLabel(f.startUtc, f.status)}
                   tbc={f.status === 'tbd' || f.status === 'postponed'}
                   glyph={sport?.glyph ?? '🏟️'}
-                  theme={teamTheme(sport?.accent ?? null, mode)}
+                  crestUrl={owner?.crestUrl}
+                  theme={teamTheme(
+                    owner?.brandColour ?? sport?.accent ?? null,
+                    mode,
+                  )}
                 />
               );
             })}

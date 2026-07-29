@@ -17,7 +17,8 @@ import { teamTheme } from '../../../core/teamTheme';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { dayHeading, dayKey, timeLabel } from '../../../core/when';
 import { sportByKey } from '../../follows/domain/sportsConfig';
-import { loadFollowables } from '../../follows/data/followStore';
+import { identityFollow } from '../../follows/domain/followIdentity';
+import { Followable, loadFollowables } from '../../follows/data/followStore';
 import {
   lastSync,
   lastSyncError,
@@ -53,6 +54,7 @@ export default function ScheduleScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
+  const [follows, setFollows] = useState<Followable[]>(loadFollowables);
   const [running, setRunning] = useState(false);
   const [last, setLast] = useState(lastSync);
   const [syncError, setSyncError] = useState<string | null>(lastSyncError);
@@ -63,10 +65,12 @@ export default function ScheduleScreen({ navigation }: Props) {
       setLast(state.last);
       setSyncError(state.lastError);
       setFixtures(upcomingFixtures());
+      setFollows(loadFollowables());
     });
-    const focus = navigation.addListener('focus', () =>
-      setFixtures(upcomingFixtures()),
-    );
+    const focus = navigation.addListener('focus', () => {
+      setFixtures(upcomingFixtures());
+      setFollows(loadFollowables());
+    });
     return () => {
       unsub();
       focus();
@@ -128,6 +132,7 @@ export default function ScheduleScreen({ navigation }: Props) {
           )}
           renderItem={({ item }) => {
             const sport = sportByKey(item.sport);
+            const owner = identityFollow(item.followKeys, follows);
             return (
               <EventRow
                 title={item.title}
@@ -135,7 +140,11 @@ export default function ScheduleScreen({ navigation }: Props) {
                 timeText={timeLabel(item.startUtc, item.status)}
                 tbc={item.status === 'tbd' || item.status === 'postponed'}
                 glyph={sport?.glyph ?? '🏟️'}
-                theme={teamTheme(sport?.accent ?? null, mode)}
+                crestUrl={owner?.crestUrl}
+                theme={teamTheme(
+                  owner?.brandColour ?? sport?.accent ?? null,
+                  mode,
+                )}
               />
             );
           }}

@@ -253,3 +253,8 @@
   via colourFromKitText and only reaches UI through teamTheme(). SVG
   crests are skipped (RN Image), broken art falls back to the glyph.
   OWNER ACTION before store submission: confirm crest usage rights.
+- 2026-07-29 (polish round): identityFollow() decides which follow owns
+  a fixture's identity everywhere (hero, Next up, Schedule, Following) —
+  team follows outrank competition/series follows deterministically.
+  iOS privacy manifest declared in app.json (no tracking, no collected
+  data types, standard RN required-reason APIs).
