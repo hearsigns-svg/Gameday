@@ -273,3 +273,18 @@
   Harmless for correctness, but it blocks "19:00 in Los Angeles" context
   and is a trap for future readers. NHL (venueTimezone) and TSDB
   (strTimeLocal/dateEventLocal) both hand us the real local time free.
+- 2026-07-30: NAME CHOSEN — KickOffCal (owner decision after the
+  NAME_CHECK verdict against "Gameday"). kickoffcal.app verified
+  UNREGISTERED at decision time (RDAP 404) — register immediately;
+  formal TMview/UKIPO screen on "KickOffCal" still owed before filing.
+- 2026-07-30: BUNDLE ID STAYS com.hearsigns.Gameday — user-invisible,
+  no legal exposure (bundle ids are not use-in-commerce of a mark), and
+  changing it would orphan the Firebase app registrations and both
+  google-services configs. All USER-FACING surfaces renamed: display
+  name, slug, Welcome wordmark, Home header, priming/settings/search
+  copy, calendar title.
+- 2026-07-30: CALENDAR RENAME MIGRATION — resolution now matches
+  'KickOffCal' OR legacy 'Gameday' (or the cached id) and renames the
+  calendar in place; events, ids and ledger untouched, never duplicated.
+  NOTES_TAG, MMKV id and storage keys stay 'gameday' — internal
+  identifiers that recovery depends on must never chase branding.

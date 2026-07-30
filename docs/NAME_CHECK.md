@@ -21,3 +21,12 @@ SIX ALTERNATIVES (quick checks today via registry RDAP + iTunes API; none tradem
 6. Kickoffs — kickoffs.app UNREGISTERED; but the iOS "Kickoff" family is crowded with football games, and the word skews football/NFL.
 
 One flag from the checks: "Fixtured: Your Sports Calendar" already exists on iOS — a direct-niche competitor, so avoid "Fixtured"-style names and expect neighbours whatever we pick. Domain-free candidates should be registered the same day the shortlist is agreed; .app availability is first-come.
+
+## Decision (2026-07-30)
+
+Owner chose **KickOffCal**. kickoffcal.app UNREGISTERED at check time
+(RDAP 404; kickoffcal.com taken, not needed) — register same-day.
+Remaining owner action: formal TMview/UKIPO screen on "KickOffCal"
+before store submission/filing. Note from the original sweep: the
+"Kickoff" iOS namespace is crowded with football games; the "-Cal"
+suffix differentiates function, and no exact-name app was found.
