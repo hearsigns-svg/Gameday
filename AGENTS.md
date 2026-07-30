@@ -39,6 +39,18 @@ source of truth for build state — never chat history.
   both directories are generated, never hand-edited.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
+- Emulator DNS is captured AT BOOT. If the host Mac changes network
+  after the emulator started, every hostname inside it stops resolving
+  (raw-IP pings still work) and Firestore fails with code=unavailable —
+  looks exactly like an app bug, is not. Reboot with
+  `emulator -avd Phone_1 -dns-server 8.8.8.8,1.1.1.1`. A killed
+  emulator can leave a stale AVD lock: add `-read-only`.
+- Verify Android sync HEADLESSLY when the emulator UI is ANR-thrashing
+  (8GB host vs the AVD's 16GB suggestion): the calendar provider is the
+  source of truth —
+  `adb shell content query --uri content://com.android.calendar/calendars`
+  then `.../events --where "calendar_id=N"`. Stronger proof than a
+  screenshot, and immune to SystemUI hangs.
 - `ANDROID_HOME` is unset in the shell: prefix Android runs with
   `ANDROID_HOME="$HOME/Library/Android/sdk"` (Gradle fails with
   "SDK location not found" otherwise).
