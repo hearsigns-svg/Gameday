@@ -39,7 +39,9 @@ function pollPathFor(item: Followable): string {
   }
 }
 
-async function ensurePolled(item: Followable): Promise<Result<true>> {
+// Exported for the team-preview screen: seeing a team's fixtures
+// before following requires the same one-shot poll a follow performs.
+export async function ensurePolled(item: Followable): Promise<Result<true>> {
   const path = pollPathFor(item);
   try {
     const res = await fetch(`${functionsBaseUrl}/${path}`);

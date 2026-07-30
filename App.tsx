@@ -33,6 +33,7 @@ import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen'
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
+import TeamScreen from './src/features/follows/screens/TeamScreen';
 import PreferencesScreen from './src/features/settings/PreferencesScreen';
 import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
 
@@ -177,6 +178,11 @@ export default function App() {
           name="TeamList"
           component={TeamListScreen}
           options={({ route }) => ({ title: route.params.leagueName })}
+        />
+        <Stack.Screen
+          name="Team"
+          component={TeamScreen}
+          options={({ route }) => ({ title: route.params.name })}
         />
         <Stack.Screen
           name="Preferences"

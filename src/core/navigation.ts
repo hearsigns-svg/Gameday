@@ -24,6 +24,14 @@ export type RootStackParamList = {
     leagueName: string;
     teamPollPath?: string;
   };
+  Team: {
+    teamKey: string;
+    name: string;
+    sportKey: string;
+    pollPath?: string;
+    crestUrl?: string;
+    colours?: string;
+  };
   Preferences: undefined;
   ThemeGallery: undefined; // dev-only design QA screen
 };

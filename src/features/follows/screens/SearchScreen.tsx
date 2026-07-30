@@ -283,12 +283,23 @@ export default function SearchScreen({ navigation }: Props) {
                 crestUrl={item.crestUrl}
                 accessibilityLabel={`${item.title}, ${item.caption}`}
                 onPress={
-                  item.followable
-                    ? undefined
-                    : () =>
-                        navigation.navigate('LeagueList', {
+                  item.kind === 'team' && item.followable
+                    ? () =>
+                        navigation.navigate('Team', {
+                          teamKey: item.followable!.key,
+                          name: item.title,
                           sportKey: item.sportKey,
+                          ...(item.followable!.pollPath
+                            ? { pollPath: item.followable!.pollPath }
+                            : {}),
+                          ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                         })
+                    : item.followable
+                      ? undefined
+                      : () =>
+                          navigation.navigate('LeagueList', {
+                            sportKey: item.sportKey,
+                          })
                 }
                 right={
                   item.followable ? (

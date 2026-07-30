@@ -133,14 +133,34 @@ export default function TeamListScreen({ navigation, route }: Props) {
               mode,
             )}
             crestUrl={item.crestUrl}
-            accessibilityLabel={item.name}
+            accessibilityLabel={`${item.name}, view fixtures`}
+            onPress={() =>
+              navigation.navigate('Team', {
+                teamKey: item.key,
+                name: item.name,
+                sportKey: route.params.sportKey,
+                ...(route.params.teamPollPath
+                  ? { pollPath: route.params.teamPollPath }
+                  : {}),
+                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                ...(item.colours ? { colours: item.colours } : {}),
+              })
+            }
             right={
-              <FollowButton
-                following={isFollowed(item.key)}
-                subject={item.name}
-                busy={busyKey === item.key}
-                onPress={() => void toggle(item)}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
+                <FollowButton
+                  following={isFollowed(item.key)}
+                  subject={item.name}
+                  busy={busyKey === item.key}
+                  onPress={() => void toggle(item)}
+                />
+                <Text
+                  style={[type.body, { color: t.textSecondary }]}
+                  accessible={false}
+                >
+                  ›
+                </Text>
+              </View>
             }
           />
         )}
