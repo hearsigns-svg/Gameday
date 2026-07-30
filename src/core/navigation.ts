@@ -33,6 +33,7 @@ export type RootStackParamList = {
     colours?: string;
   };
   Preferences: undefined;
+  Credits: undefined;
   ThemeGallery: undefined; // dev-only design QA screen
 };
 

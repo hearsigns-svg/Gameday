@@ -218,6 +218,10 @@ export function EventRow(props: {
   // Per-event opt-IN: add ONE fixture without following anything.
   pinned?: boolean;
   onTogglePinned?: () => void;
+  // Licence-gated photo of a participant NAMED in this fixture
+  // (combat sports). Identifies who is fighting; credited on the
+  // Photo credits screen, never used as decoration elsewhere.
+  participantPhotoUrl?: string;
 }) {
   const t = useTheme();
   const dimmed = props.excluded === true;
@@ -230,7 +234,11 @@ export function EventRow(props: {
       style={[styles.eventRow, { borderColor: t.border }]}
     >
       <View style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.m, flex: 1 }, dimmed && { opacity: 0.4 }]}>
-        <GlyphTile glyph={props.glyph} theme={props.theme} crestUrl={props.crestUrl} />
+        <GlyphTile
+          glyph={props.glyph}
+          theme={props.theme}
+          crestUrl={props.participantPhotoUrl ?? props.crestUrl}
+        />
         <View style={{ flex: 1 }}>
           <Text
             style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}

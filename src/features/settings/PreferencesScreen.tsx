@@ -166,6 +166,18 @@ export default function PreferencesScreen({
         How KickOffCal events look inside your phone's calendar app.
       </Text>
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Photo credits"
+        onPress={() => navigation.navigate('Credits')}
+        style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
+      >
+        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
+          Photo credits
+        </Text>
+        <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
+      </Pressable>
+
       {__DEV__ ? (
         <Pressable
           accessibilityRole="button"

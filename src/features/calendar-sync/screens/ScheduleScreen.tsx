@@ -20,6 +20,8 @@ import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
 import { sportByKey } from '../../follows/domain/sportsConfig';
+import { headlineParticipant } from '../../follows/domain/participants';
+import { useAthletePhoto } from '../../follows/useEntityPhoto';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { Followable, loadFollowables } from '../../follows/data/followStore';
 import {
@@ -137,11 +139,14 @@ export default function ScheduleScreen({ navigation }: Props) {
     void runSync();
   };
 
-  const renderRow = (item: UpcomingFixture) => {
+  // Rows are a component so the participant-photo hook is legal.
+  const Row = ({ item }: { item: UpcomingFixture }) => {
     const sport = sportByKey(item.sport);
     const owner = identityFollow(item.followKeys, follows);
+    const photo = useAthletePhoto(headlineParticipant(item.title, item.sport));
     return (
       <EventRow
+        participantPhotoUrl={photo?.url}
         title={item.title}
         caption={item.competition}
         timeText={timeLabel(item.startUtc, item.status)}
@@ -224,7 +229,7 @@ export default function ScheduleScreen({ navigation }: Props) {
           />
           {selectedDay ? (
             dayFixtures.length > 0 ? (
-              dayFixtures.map((f) => <View key={f.id}>{renderRow(f)}</View>)
+              dayFixtures.map((f) => <Row key={f.id} item={f} />)
             ) : (
               <Text
                 style={[
@@ -263,7 +268,7 @@ export default function ScheduleScreen({ navigation }: Props) {
               {section.title}
             </Text>
           )}
-          renderItem={({ item }) => renderRow(item)}
+          renderItem={({ item }) => <Row item={item} />}
           ListFooterComponent={
             <Text
               style={[

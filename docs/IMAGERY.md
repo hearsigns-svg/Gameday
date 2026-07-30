@@ -82,3 +82,32 @@ Ship venue-led photography now at $0 on top of the existing $9/mo. Add
 athlete photos only inside fixture cards, licence-gated and credited.
 Keep the gradient as the floor. Revisit paid editorial feeds (Getty,
 Imagn, Icon Sportswire) only if there is revenue to justify them.
+
+## Implementation state (2026-07-30)
+
+SHIPPED, Tier 1 (venue): client-side resolver, licence-gated, inline
+credit on the hero card, gradient floor on any failure.
+
+SHIPPED, Tier 2 (athlete): licence-gated portraits resolved from
+Wikidata P18 → Commons, rendered ONLY in the identity tile of a fixture
+whose title NAMES that participant (combat sports — "Rolando Romero vs
+Teofimo Lopez"). This is the editorial shape: the photo identifies who
+is competing in the event being listed. Guards in code:
+- domain/participants.ts extracts the headline fighter and returns null
+  for club sports, motorsport, and title-only strings, so no photo can
+  attach to a fixture that does not name a person.
+- The entity search skips Wikidata items described as a competition or
+  event, so "Tyson Fury vs Wilder III" cannot supply a "portrait".
+- Only CC BY / CC BY-SA / CC0 / public domain pass the same allowlist
+  as venues; NC and ND never.
+- Transient failures are NOT cached (a network blip must not deny an
+  entity its photo forever).
+
+ATTRIBUTION: every rendered photo is registered and listed on a
+**Photo credits** screen (Preferences → Photo credits) with artist and
+licence, alongside the hero's inline credit. Required by CC BY/BY-SA.
+
+STILL FORBIDDEN, unchanged: TSDB team strFanart, TSDB player artwork
+without strCreativeCommons='Yes', athlete photos in App Store
+screenshots, on paywall screens, or in any marketing — that is the
+advertising-shaped use the DraftKings case turned on.

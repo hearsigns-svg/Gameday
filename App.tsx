@@ -35,6 +35,7 @@ import SportPickerScreen from './src/features/follows/screens/SportPickerScreen'
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
 import TeamScreen from './src/features/follows/screens/TeamScreen';
 import PreferencesScreen from './src/features/settings/PreferencesScreen';
+import CreditsScreen from './src/features/settings/CreditsScreen';
 import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -188,6 +189,11 @@ export default function App() {
           name="Preferences"
           component={PreferencesScreen}
           options={{ title: 'Preferences' }}
+        />
+        <Stack.Screen
+          name="Credits"
+          component={CreditsScreen}
+          options={{ title: 'Photo credits' }}
         />
         {__DEV__ ? (
           <Stack.Screen

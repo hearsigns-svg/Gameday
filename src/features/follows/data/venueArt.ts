@@ -64,14 +64,9 @@ export type VenueArtResult =
   | { status: 'none' }
   | { status: 'failed' };
 
-export async function resolveVenuePhoto(
-  teamName: string,
-): Promise<VenueArtResult> {
+// Shared tail: Commons file → licence gate → sized thumb.
+async function artFromCommonsFile(file: string): Promise<VenueArtResult> {
   try {
-    const hit = await entityWithVenue(teamName);
-    if (!hit) return { status: 'none' };
-    const file = await claimValue(hit.venue, 'P18');
-    if (!file) return { status: 'none' };
     const info = (await getJson(
       `${COMMONS}?action=query&titles=${encodeURIComponent(`File:${file}`)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`,
     )) as {
@@ -101,6 +96,45 @@ export async function resolveVenuePhoto(
   } catch {
     // Transient: the gradient floor carries this render, and the next
     // one retries.
+    return { status: 'failed' };
+  }
+}
+
+export async function resolveVenuePhoto(
+  teamName: string,
+): Promise<VenueArtResult> {
+  try {
+    const hit = await entityWithVenue(teamName);
+    if (!hit) return { status: 'none' };
+    const file = await claimValue(hit.venue, 'P18');
+    if (!file) return { status: 'none' };
+    return artFromCommonsFile(file);
+  } catch {
+    return { status: 'failed' };
+  }
+}
+
+// PERSON photos (docs/IMAGERY.md Tier 2). Same licence gate; used ONLY
+// to identify a named participant on that participant's own fixture —
+// never as Home decoration, never in store screenshots or marketing,
+// which is the advertising-shaped use the DraftKings case turned on.
+export async function resolveAthletePhoto(
+  personName: string,
+): Promise<VenueArtResult> {
+  try {
+    const d = (await getJson(
+      `${WD}?action=wbsearchentities&search=${encodeURIComponent(personName)}&language=en&type=item&limit=3&format=json&origin=*`,
+    )) as { search?: Array<{ id: string; description?: string }> };
+    for (const cand of d.search ?? []) {
+      // Only accept entities that look like people — a competition
+      // named after a fighter must not supply a "portrait".
+      const desc = (cand.description ?? '').toLowerCase();
+      if (/competition|event|fight card|match|season/.test(desc)) continue;
+      const file = await claimValue(cand.id, 'P18');
+      if (file) return artFromCommonsFile(file);
+    }
+    return { status: 'none' };
+  } catch {
     return { status: 'failed' };
   }
 }
