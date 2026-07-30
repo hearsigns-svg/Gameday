@@ -7,6 +7,7 @@
 
 import { Firestore } from 'firebase-admin/firestore';
 import { normaliseName } from './identity';
+import { TSDB_TEAM_LEAGUES as TSDB_LEAGUES } from './tsdbTeamLeagues';
 import { searchTsdbTeams } from './providers/tsdb';
 
 export interface SearchTeamHit {
@@ -19,36 +20,9 @@ export interface SearchTeamHit {
   pollPath?: string; // only where the client can't derive it (tsdb)
 }
 
-// TSDB leagues with team-level follows. ONE table drives the live
-// search filter, the directory doc handling, and the pollPath a
-// search-created follow carries — and a test pins these strings to the
-// client sportsConfig so a season roll can't drift them apart.
-export const TSDB_TEAM_LEAGUES: Record<
-  string,
-  { docId: string; sportKey: string; league: string; pollPath: string }
-> = {
-  '4387': {
-    docId: 'basketball-nba',
-    sportKey: 'basketball',
-    league: 'NBA',
-    pollPath:
-      'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5',
-  },
-  '4391': {
-    docId: 'nfl-nfl',
-    sportKey: 'nfl',
-    league: 'NFL',
-    pollPath:
-      'pollTsdbLeague?leagueId=4391&season=2026&sport=nfl&durationHours=3',
-  },
-  '4460': {
-    docId: 'cricket-ipl',
-    sportKey: 'cricket',
-    league: 'IPL',
-    pollPath:
-      'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4',
-  },
-};
+// Single-sourced TSDB team-league table — shared with the listTeams
+// route; pinned to client sportsConfig by the drift test.
+export { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 
 const FD_LABELS: Record<string, string> = {
   PL: 'Premier League',
@@ -101,10 +75,10 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
     })),
     { id: `baseball-mlb-${FD_SEASON}`, sportKey: 'baseball', league: 'MLB' },
     { id: 'ice-hockey-nhl', sportKey: 'ice-hockey', league: 'NHL' },
-    ...Object.values(TSDB_TEAM_LEAGUES).map((l) => ({
-      id: l.docId,
+    ...Object.values(TSDB_LEAGUES).map((l) => ({
+      id: l.cacheKey,
       sportKey: l.sportKey,
-      league: l.league,
+      league: l.label,
       tsdbPollPath: l.pollPath,
     })),
   ];
@@ -165,7 +139,7 @@ export async function searchTeams(
   // (a club already found via fdorg must not reappear as tsdb).
   try {
     for (const hit of await searchTsdbTeams(tsdbKey, rawQuery)) {
-      const served = TSDB_TEAM_LEAGUES[hit.leagueId];
+      const served = TSDB_LEAGUES[hit.leagueId];
       if (!served) continue;
       const key = `tsdb-team-${hit.id}`;
       if (seenKeys.has(key) || seenNames.has(normaliseName(hit.name))) continue;
@@ -174,7 +148,7 @@ export async function searchTeams(
         key,
         name: hit.name,
         sportKey: served.sportKey,
-        league: served.league,
+        league: served.label,
         pollPath: served.pollPath,
         ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
       });

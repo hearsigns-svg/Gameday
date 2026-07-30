@@ -71,8 +71,9 @@ export const SPORTS: SportConfig[] = [
         name: 'ODI Internationals',
         country: 'International',
         key: 'tsdb-league-4801',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8',
       },
       {
@@ -80,8 +81,9 @@ export const SPORTS: SportConfig[] = [
         name: 'T20 Internationals',
         country: 'International',
         key: 'tsdb-league-4979',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4',
       },
       {
@@ -119,8 +121,9 @@ export const SPORTS: SportConfig[] = [
         name: 'KHL',
         country: 'Europe',
         key: 'tsdb-league-4920',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5',
       },
       {
@@ -128,8 +131,9 @@ export const SPORTS: SportConfig[] = [
         name: 'Liiga',
         country: 'Finland',
         key: 'tsdb-league-4931',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4931&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4931&season=2026-2027&sport=ice-hockey&durationHours=2.5',
       },
       {
@@ -137,8 +141,9 @@ export const SPORTS: SportConfig[] = [
         name: 'SHL',
         country: 'Sweden',
         key: 'tsdb-league-4419',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4419&season=2026-2027&sport=ice-hockey&durationHours=2.5',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4419&season=2026-2027&sport=ice-hockey&durationHours=2.5',
       },
     ],
@@ -169,8 +174,9 @@ export const SPORTS: SportConfig[] = [
         name: 'WNBA',
         country: 'North America',
         key: 'tsdb-league-4516',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5',
       },
       {
@@ -199,8 +205,9 @@ export const SPORTS: SportConfig[] = [
         name: 'NPB',
         country: 'Japan',
         key: 'tsdb-league-4591',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3',
       },
       {
@@ -208,8 +215,9 @@ export const SPORTS: SportConfig[] = [
         name: 'KBO League',
         country: 'South Korea',
         key: 'tsdb-league-4830',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3',
       },
     ],
@@ -241,16 +249,17 @@ export const SPORTS: SportConfig[] = [
     accent: '#4F46E5',
     glyph: '🏉',
     enabled: true,
-    browse: ['competition'],
-    followTypes: ['competition'],
+    browse: ['competition', 'team'],
+    followTypes: ['team', 'competition'],
     staticCompetitions: [
       {
         id: '4714',
         name: 'Six Nations',
         country: 'Europe',
         key: 'tsdb-league-4714',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4714&season=2027&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4714&season=2027&sport=rugby&durationHours=2',
       },
       {
@@ -258,8 +267,9 @@ export const SPORTS: SportConfig[] = [
         name: 'Premiership Rugby',
         country: 'England',
         key: 'tsdb-league-4414',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4414&season=2025-2026&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4414&season=2025-2026&sport=rugby&durationHours=2',
       },
       {
@@ -267,8 +277,9 @@ export const SPORTS: SportConfig[] = [
         name: 'Champions Cup',
         country: 'Europe',
         key: 'tsdb-league-4550',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4550&season=2025-2026&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4550&season=2025-2026&sport=rugby&durationHours=2',
       },
       {
@@ -276,8 +287,9 @@ export const SPORTS: SportConfig[] = [
         name: 'Top 14',
         country: 'France',
         key: 'tsdb-league-4430',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4430&season=2025-2026&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4430&season=2025-2026&sport=rugby&durationHours=2',
       },
       {
@@ -285,8 +297,9 @@ export const SPORTS: SportConfig[] = [
         name: 'Super League',
         country: 'England',
         key: 'tsdb-league-4415',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4415&season=2026&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4415&season=2026&sport=rugby&durationHours=2',
       },
       {
@@ -294,8 +307,9 @@ export const SPORTS: SportConfig[] = [
         name: 'NRL',
         country: 'Australia',
         key: 'tsdb-league-4416',
-        followOnly: true,
         pollPath:
+          'pollTsdbLeague?leagueId=4416&season=2026&sport=rugby&durationHours=2',
+        teamPollPath:
           'pollTsdbLeague?leagueId=4416&season=2026&sport=rugby&durationHours=2',
       },
       {

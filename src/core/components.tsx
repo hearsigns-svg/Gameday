@@ -464,6 +464,7 @@ export function FollowButton(props: {
   subject: string;
   onPress: () => void;
   busy?: boolean;
+  label?: string; // e.g. 'Follow all' on competition rows
 }) {
   const t = useTheme();
   return (
@@ -496,7 +497,7 @@ export function FollowButton(props: {
             },
           ]}
         >
-          {props.following ? 'Following' : 'Follow'}
+          {props.following ? 'Following' : (props.label ?? 'Follow')}
         </Text>
       )}
     </Pressable>

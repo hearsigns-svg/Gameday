@@ -7,6 +7,7 @@ import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import { searchTeams } from './search';
+import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -170,6 +171,21 @@ export const searchEntities = onRequest(async (req, res) => {
 export const listTeams = onRequest(async (req, res) => {
   try {
     const sport = String(req.query.sport ?? 'soccer');
+    // Generic TSDB team-league branch: any league in the shared table
+    // serves a team directory — rugby, WNBA, KHL, NPB, internationals —
+    // the same way NBA/NFL/IPL always did (verified live: every entry
+    // returns a full badge-complete team list).
+    const tsdbLeague = TSDB_TEAM_LEAGUES[String(req.query.leagueId ?? '')];
+    if (tsdbLeague) {
+      res.json({
+        teams: await listTsdbTeams(
+          requireTsdbKey(),
+          tsdbLeague.tsdbName,
+          tsdbLeague.cacheKey,
+        ),
+      });
+      return;
+    }
     if (sport === 'baseball') {
       const season = Number(req.query.season ?? new Date().getFullYear());
       res.json({ teams: await listMlbTeams(season, optionalTsdbKey()) });

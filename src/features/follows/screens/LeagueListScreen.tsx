@@ -3,7 +3,7 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
@@ -134,12 +134,31 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                   following={isFollowed(item.key)}
                   subject={item.name}
                   busy={busyKey === item.key}
+                  label="Follow all"
                   onPress={() => void toggle(item)}
                 />
                 {!item.followOnly ? (
-                  <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
-                    ›
-                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Browse ${item.name} teams`}
+                    onPress={() =>
+                      navigation.navigate('TeamList', {
+                        sportKey: route.params.sportKey,
+                        leagueId: item.id,
+                        leagueName: item.name,
+                        teamPollPath: item.teamPollPath,
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.teamsButton,
+                      { borderColor: t.border },
+                      pressed && { backgroundColor: t.surface },
+                    ]}
+                  >
+                    <Text style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}>
+                      Teams ›
+                    </Text>
+                  </Pressable>
                 ) : null}
               </View>
             }
@@ -152,4 +171,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
 const styles = {
   center: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
+  teamsButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.m,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
 };
