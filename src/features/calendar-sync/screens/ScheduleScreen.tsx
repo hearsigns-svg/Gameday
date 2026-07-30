@@ -15,7 +15,7 @@ import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
 import { spacing, type, useTheme } from '../../../core/tokens';
-import { dayHeading, dayKey, timeLabel } from '../../../core/when';
+import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { Followable, loadFollowables } from '../../follows/data/followStore';
@@ -37,7 +37,7 @@ interface DaySection {
 function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
   const byDay = new Map<string, UpcomingFixture[]>();
   for (const f of fixtures) {
-    const key = dayKey(f.startUtc);
+    const key = dayKey(f.startUtc, isDateOnly(f.status));
     const bucket = byDay.get(key);
     if (bucket) bucket.push(f);
     else byDay.set(key, [f]);
@@ -45,7 +45,7 @@ function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, data]) => ({
-      title: dayHeading(data[0].startUtc),
+      title: dayHeading(data[0].startUtc, isDateOnly(data[0].status)),
       data,
     }));
 }

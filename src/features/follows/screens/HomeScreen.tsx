@@ -24,7 +24,7 @@ import {
   UpcomingFixture,
   upcomingFixtures,
 } from '../../calendar-sync/syncEngine';
-import { timeLabel, whenLabel } from '../../../core/when';
+import { isDateOnly, timeLabel, whenLabel } from '../../../core/when';
 import { follow, unfollow } from '../followActions';
 import { Followable, isFollowed, loadFollowables } from '../data/followStore';
 import { identityFollow } from '../domain/followIdentity';
@@ -182,7 +182,7 @@ export default function HomeScreen({ navigation }: Props) {
                 <EventRow
                   key={f.id}
                   title={f.title}
-                  caption={`${whenLabel(f.startUtc)} · ${f.competition}`}
+                  caption={`${whenLabel(f.startUtc, isDateOnly(f.status))} · ${f.competition}`}
                   timeText={timeLabel(f.startUtc, f.status)}
                   tbc={f.status === 'tbd' || f.status === 'postponed'}
                   glyph={sport?.glyph ?? '🏟️'}

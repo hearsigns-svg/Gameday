@@ -8,7 +8,9 @@ const BASE = 'https://api-web.nhle.com/v1';
 export interface NhlGame {
   id: number;
   startTimeUTC: string;
-  gameState: string; // FUT | PRE | LIVE | CRIT | OFF | FINAL | PPD | CNCL
+  gameState: string; // FUT | PRE | LIVE | CRIT | OFF | FINAL
+  gameScheduleState?: string; // OK | PPD | CNCL | TBD — disruptions live HERE
+  venueTimezone?: string; // IANA zone, e.g. 'US/Eastern'
   homeTeam: NhlTeamRef;
   awayTeam: NhlTeamRef;
 }
@@ -26,7 +28,20 @@ function teamName(t: NhlTeamRef): string {
   return name || t.abbrev;
 }
 
-function nhlStatus(state: string): FixtureStatus {
+// api-web splits state across TWO fields: gameState is the live
+// lifecycle (FUT/PRE/LIVE/CRIT/OFF/FINAL) while gameScheduleState
+// carries schedule DISRUPTIONS (OK/PPD/CNCL/TBD). Reading only
+// gameState made cancelled and postponed games invisible — a called-off
+// game never left anyone's calendar.
+function nhlStatus(state: string, scheduleState?: string): FixtureStatus {
+  switch (scheduleState) {
+    case 'PPD':
+      return 'postponed';
+    case 'CNCL':
+      return 'cancelled';
+    case 'TBD':
+      return 'tbd';
+  }
   switch (state) {
     case 'LIVE':
     case 'CRIT':
@@ -34,10 +49,6 @@ function nhlStatus(state: string): FixtureStatus {
     case 'OFF':
     case 'FINAL':
       return 'finished';
-    case 'PPD':
-      return 'postponed';
-    case 'CNCL':
-      return 'cancelled';
     default: // FUT, PRE
       return 'scheduled';
   }
@@ -60,8 +71,8 @@ export function normaliseNhlGame(g: NhlGame, updatedAt: string): Fixture {
       'nhl-league-1',
     ],
     startUtc: new Date(g.startTimeUTC).toISOString(),
-    venueTz: 'UTC',
-    status: nhlStatus(g.gameState),
+    venueTz: g.venueTimezone || 'UTC',
+    status: nhlStatus(g.gameState, g.gameScheduleState),
     durationHours: 2.5,
     updatedAt,
   };

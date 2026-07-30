@@ -53,7 +53,10 @@ source of truth for build state — never chat history.
   dev: fast refresh resets the mutex while old closures keep executing —
   zombie runs race the ledger and duplicate events/calendars.
 - `npx tsc --noEmit` — typecheck (must stay clean)
-- `npm test` — jest unit tests (domain logic)
+- `npm test` — jest unit tests, run TWICE: under UTC and under
+  TZ=America/Los_Angeles. Every timezone bug the 2026-07-29 audit found
+  was invisible in a UTC-only run — never reduce this back to one pass.
+  (`npm run test:fast` = single current-zone pass for quick iteration.)
 - `cd functions && npm test` — backend tests (once functions exist)
 - `firebase emulators:start` — local Firestore/Functions/Auth
 

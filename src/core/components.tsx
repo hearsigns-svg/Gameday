@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { radius, spacing, type, useTheme } from './tokens';
 import { TeamTheme } from './teamTheme';
-import { countdownLabel, timeLabel, whenLabel } from './when';
+import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
 
 // ---------------------------------------------------------------------------
 // Identity atoms
@@ -79,7 +79,11 @@ export function SectionHeader(props: { title: string; right?: ReactNode }) {
   );
 }
 
-export function CountdownBadge(props: { startUtc: string; theme: TeamTheme }) {
+export function CountdownBadge(props: {
+  startUtc: string;
+  theme: TeamTheme;
+  dateOnly?: boolean;
+}) {
   return (
     <View
       style={[
@@ -88,7 +92,7 @@ export function CountdownBadge(props: { startUtc: string; theme: TeamTheme }) {
       ]}
     >
       <Text style={[type.label, { color: props.theme.gradient[1] }]}>
-        {countdownLabel(props.startUtc)}
+        {countdownLabel(props.startUtc, props.dateOnly ?? false)}
       </Text>
     </View>
   );
@@ -109,7 +113,8 @@ export function HeroCard(props: {
 }) {
   const th = props.theme;
   const crest = usableCrest(props.crestUrl);
-  const when = `${whenLabel(props.startUtc)} · ${timeLabel(props.startUtc, props.status)}`;
+  const dateOnly = isDateOnly(props.status);
+  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status)}`;
   return (
     <View
       accessible
@@ -140,7 +145,7 @@ export function HeroCard(props: {
           >
             {props.competition}
           </Text>
-          <CountdownBadge startUtc={props.startUtc} theme={th} />
+          <CountdownBadge startUtc={props.startUtc} theme={th} dateOnly={dateOnly} />
         </View>
         <View style={{ flex: 1 }} />
         <Text

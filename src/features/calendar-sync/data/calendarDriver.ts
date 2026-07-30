@@ -52,6 +52,14 @@ function toIso(d: string | Date): string {
   return new Date(d).toISOString();
 }
 
+// Snap a platform-reported all-day boundary to the nearest UTC day
+// boundary (a device-local midnight read-back sits within ±14h of it).
+function nearestUtcDay(d: string | Date): string {
+  return new Date(
+    Math.round(new Date(d).getTime() / 86_400_000) * 86_400_000,
+  ).toISOString();
+}
+
 async function taggedEventsOf(
   calendar: Calendar.ExpoCalendar,
 ): Promise<RecoveredEvent[]> {
@@ -59,14 +67,22 @@ async function taggedEventsOf(
   const events = await calendar.listEvents(start, end);
   return events
     .filter((e) => e.notes?.startsWith(NOTES_TAG))
-    .map((e) => ({
-      fixtureId: (e.notes ?? '').slice(NOTES_TAG.length).trim(),
-      eventId: e.id,
-      title: e.title ?? '',
-      startUtc: toIso(e.startDate),
-      endUtc: toIso(e.endDate),
-      allDay: e.allDay ?? false,
-    }));
+    .map((e) => {
+      const allDay = e.allDay ?? false;
+      return {
+        fixtureId: (e.notes ?? '').slice(NOTES_TAG.length).trim(),
+        eventId: e.id,
+        title: e.title ?? '',
+        // All-day reads must be normalised to the UTC day boundary the
+        // planner writes (platforms may report local midnight instead).
+        // Without this, a recovered placeholder never matches its
+        // desired shape and is pointlessly rewritten on every sync
+        // after a reinstall.
+        startUtc: allDay ? nearestUtcDay(e.startDate) : toIso(e.startDate),
+        endUtc: allDay ? nearestUtcDay(e.endDate) : toIso(e.endDate),
+        allDay,
+      };
+    });
 }
 
 export async function listTaggedEvents(
@@ -145,10 +161,20 @@ export interface EventInput {
 }
 
 function toEventDetails(input: EventInput) {
+  // The planner's all-day span is EXCLUSIVE next-midnight (Android's
+  // CalendarContract convention). EventKit treats the end date's DAY as
+  // INCLUSIVE — passing next-midnight made every one-day placeholder
+  // render as a two-day banner on iOS (verified in the sim's calendar
+  // store: 00:00 → next day 23:59:59). On iOS the end must stay inside
+  // the SAME day; EventKit snaps it to end-of-day itself.
+  const allDayEnd =
+    Platform.OS === 'ios'
+      ? new Date(new Date(input.startUtc).getTime() + 3_600_000)
+      : new Date(input.endUtc);
   return {
     title: input.title,
     startDate: new Date(input.startUtc),
-    endDate: new Date(input.endUtc),
+    endDate: input.allDay ? allDayEnd : new Date(input.endUtc),
     allDay: input.allDay,
     // All-day placeholders are built from a UTC day boundary
     // (dayStartUtc). Without pinning the zone, the platform reads those

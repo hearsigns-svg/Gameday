@@ -117,6 +117,28 @@ describe('mergeCluster — keeps the id users already have', () => {
     expect(mergeCluster([better, older]).keepId).toBe('apisports-1');
   });
 
+  test('a known kickoff ALWAYS beats a placeholder, even a fresher one', () => {
+    // fd.org noon placeholders arrive as status:'tbd'. When that poll is
+    // the most recent, freshness alone would let it overwrite a record
+    // that actually knows the kickoff — downgrading a timed calendar
+    // event to an all-day 'time TBC' and destroying the reminder.
+    const knowsKickoff = fx({
+      id: 'apisports-1',
+      status: 'scheduled',
+      startUtc: '2026-09-01T15:00:00.000Z',
+      updatedAt: '2026-07-27T10:00:00.000Z', // older poll
+    });
+    const fresherPlaceholder = fx({
+      id: 'fdorg-2',
+      status: 'tbd',
+      startUtc: '2026-09-01T12:00:00.000Z',
+      updatedAt: '2026-07-29T10:00:00.000Z', // newer poll
+    });
+    const d = mergeCluster([fresherPlaceholder, knowsKickoff]);
+    expect(d.data.status).toBe('scheduled');
+    expect(d.data.startUtc).toBe('2026-09-01T15:00:00.000Z');
+  });
+
   test('surviving DATA comes from the most trusted source', () => {
     const d = mergeCluster([older, better]);
     expect(d.data.startUtc).toBe('2026-09-01T15:00:00.000Z');

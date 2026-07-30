@@ -22,7 +22,10 @@ describe('MLB adapter against real payload', () => {
     expect(f.title).toBe(`${f.awayTeam} at ${f.homeTeam}`);
     expect(f.followKeys).toHaveLength(3);
     expect(f.followKeys).toContain('mlb-league-1');
-    expect(f.startUtc).toBe(new Date(games[0].gameDate).toISOString());
+    // LITERAL instant from the banked payload (gameDate 2026-08-01T19:07:00Z).
+    // Deriving the expectation from the input via the same conversion the
+    // adapter performs is a tautology — it passes even when both are wrong.
+    expect(f.startUtc).toBe('2026-08-01T19:07:00.000Z');
     expect(f.durationHours).toBe(3);
   });
 
@@ -71,8 +74,36 @@ describe('NHL adapter against real payload', () => {
     });
     expect(normaliseNhlGame(withState('LIVE'), NOW).status).toBe('in_play');
     expect(normaliseNhlGame(withState('OFF'), NOW).status).toBe('finished');
-    expect(normaliseNhlGame(withState('PPD'), NOW).status).toBe('postponed');
-    expect(normaliseNhlGame(withState('CNCL'), NOW).status).toBe('cancelled');
+  });
+
+  test('disruptions arrive via gameScheduleState, NOT gameState', () => {
+    // The old test put PPD/CNCL in gameState — a field api-web never
+    // carries them in — so it passed while real cancellations were
+    // invisible and a called-off game never left users' calendars.
+    const withSchedule = (gameScheduleState: string): NhlGame => ({
+      ...games[0],
+      gameState: 'FUT',
+      gameScheduleState,
+    });
+    expect(normaliseNhlGame(withSchedule('PPD'), NOW).status).toBe('postponed');
+    expect(normaliseNhlGame(withSchedule('CNCL'), NOW).status).toBe('cancelled');
+    expect(normaliseNhlGame(withSchedule('TBD'), NOW).status).toBe('tbd');
+    expect(normaliseNhlGame(withSchedule('OK'), NOW).status).toBe('scheduled');
+    // A disruption outranks the live lifecycle field.
+    expect(
+      normaliseNhlGame(
+        { ...games[0], gameState: 'FUT', gameScheduleState: 'PPD' },
+        NOW,
+      ).status,
+    ).toBe('postponed');
+  });
+
+  test('venue timezone is captured when api-web provides it', () => {
+    const f = normaliseNhlGame(
+      { ...games[0], venueTimezone: 'US/Eastern' },
+      NOW,
+    );
+    expect(f.venueTz).toBe('US/Eastern');
   });
 });
 
@@ -96,9 +127,10 @@ describe('F1 adapter against real payload', () => {
   test('session instants parse to exact UTC', () => {
     const fixtures = racesToFixtures('2026', [races[0]], NOW);
     const race = fixtures.find((f) => f.sessionKind === 'race');
-    expect(race?.startUtc).toBe(
-      new Date(`${races[0].date}T${races[0].time}`).toISOString(),
-    );
+    // LITERAL instant from the banked payload (date 2026-03-08, time
+    // 04:00:00Z) — never derived from the input through the same code
+    // path under test, which cannot fail.
+    expect(race?.startUtc).toBe('2026-03-08T04:00:00.000Z');
   });
 
   test('missing session time becomes a tbd placeholder', () => {
