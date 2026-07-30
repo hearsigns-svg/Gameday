@@ -33,6 +33,10 @@ source of truth for build state — never chat history.
   RCT_jsLocation "localhost:8082"` then relaunch; Android →
   `adb reverse tcp:8081 tcp:8082`. Wrong-port symptom: RedBox
   "PlatformConstants could not be found" (foreign bundle from 8081).
+- app.json changes (name, icon, splash, plugins) do NOT reach native
+  builds via `expo run:ios` when ios/ already exists — run
+  `npx expo prebuild -p ios --clean` first (same for android/). CNG:
+  both directories are generated, never hand-edited.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - `ANDROID_HOME` is unset in the shell: prefix Android runs with
