@@ -12,6 +12,7 @@ import {
   SOCCER_FD_SEASON,
 } from './domain/sportsConfig';
 import { Followable, loadFollowables, setFollowed } from './data/followStore';
+import { pinFollowKeys, pinPollPaths } from '../calendar-sync/data/pinStore';
 
 function pollPathFor(item: Followable): string {
   if (item.pollPath) return item.pollPath;
@@ -61,9 +62,13 @@ export function collectFollowState(): {
   pollPaths: string[];
 } {
   const follows = loadFollowables();
+  // Pinned single fixtures ride along: the server sweep must keep them
+  // correct even though nothing they belong to is followed.
   return {
-    followKeys: follows.map((f) => f.key),
-    pollPaths: [...new Set(follows.map((f) => pollPathFor(f)))],
+    followKeys: [...new Set([...follows.map((f) => f.key), ...pinFollowKeys()])],
+    pollPaths: [
+      ...new Set([...follows.map((f) => pollPathFor(f)), ...pinPollPaths()]),
+    ],
   };
 }
 

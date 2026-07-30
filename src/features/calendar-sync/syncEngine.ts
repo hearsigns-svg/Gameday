@@ -9,6 +9,7 @@ import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowKeys } from '../follows/data/followStore';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import { loadExclusions, pruneExclusions } from './data/exclusionStore';
+import { pinFollowKeys, pinnedIds, prunePinStore } from './data/pinStore';
 import { loadPrefs } from './data/prefsStore';
 import { CalendarPrefs } from './domain/prefs';
 import {
@@ -56,8 +57,9 @@ export type UpcomingFixture = SnapshotFixture;
 
 export function upcomingFixtures(): UpcomingFixture[] {
   const followed = new Set(loadFollowKeys());
-  return readJson<UpcomingFixture[]>(UPCOMING_FIXTURES_KEY, []).filter((f) =>
-    f.followKeys.some((k) => followed.has(k)),
+  const pins = pinnedIds();
+  return readJson<UpcomingFixture[]>(UPCOMING_FIXTURES_KEY, []).filter(
+    (f) => pins.has(f.id) || f.followKeys.some((k) => followed.has(k)),
   );
 }
 
@@ -195,6 +197,7 @@ function writePresentationState(
   // and the display cap — never prune merely because a fixture is
   // absent from this fetch.
   pruneExclusions();
+  prunePinStore();
 }
 
 // Calendar not (yet) opted in: keep the app's view of fixtures fresh
@@ -203,7 +206,11 @@ function writePresentationState(
 async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
   const follows = loadFollowKeys();
   const prefs = loadPrefs();
-  const fixtures = await fetchFixturesForFollows(follows);
+  // Pinned fixtures may belong to nothing followed — their competition
+  // key has to join the query or they are never fetched.
+  const fixtures = await fetchFixturesForFollows(
+    [...new Set([...follows, ...pinFollowKeys()])],
+  );
   if (!fixtures.ok) return fixtures;
   // Same circuit breaker as the full path: an anomalous empty fetch
   // must not blank the app's schedule view.
@@ -274,7 +281,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 
     const follows = loadFollowKeys();
     const prefs = loadPrefs();
-    const fixtures = await fetchFixturesForFollows(follows);
+    const fixtures = await fetchFixturesForFollows(
+      [...new Set([...follows, ...pinFollowKeys()])],
+    );
     if (!fixtures.ok) return fixtures;
 
     const ledger = loadLedger();
@@ -291,6 +300,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 
     const horizonStart = horizonStartFrom(Date.now());
     const excluded = loadExclusions();
+    const pins = pinnedIds();
     const ops = planSync(
       fixtures.value,
       ledger,
@@ -298,6 +308,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       prefs,
       horizonStart,
       excluded,
+      pins,
     );
 
     const outcome: SyncOutcome = {
@@ -376,5 +387,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 // Auto-sync is only appropriate once the user has engaged: it prompts for
 // calendar permission, which must never happen on a cold first open.
 export function shouldAutoSync(): boolean {
-  return loadFollowKeys().length > 0 || Object.keys(loadLedger()).length > 0;
+  return (
+    loadFollowKeys().length > 0 ||
+    pinnedIds().size > 0 ||
+    Object.keys(loadLedger()).length > 0
+  );
 }

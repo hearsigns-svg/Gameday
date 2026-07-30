@@ -215,6 +215,9 @@ export function EventRow(props: {
   // a removed event must never just vanish (owner ruling).
   excluded?: boolean;
   onToggleExcluded?: () => void;
+  // Per-event opt-IN: add ONE fixture without following anything.
+  pinned?: boolean;
+  onTogglePinned?: () => void;
 }) {
   const t = useTheme();
   const dimmed = props.excluded === true;
@@ -253,6 +256,30 @@ export function EventRow(props: {
           {props.timeText}
         </Text>
       </View>
+      {props.onTogglePinned ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: props.pinned === true }}
+          accessibilityLabel={
+            props.pinned
+              ? `Remove ${props.title} from your calendar`
+              : `Add ${props.title} to your calendar`
+          }
+          onPress={props.onTogglePinned}
+          hitSlop={8}
+          style={styles.excludeButton}
+        >
+          <Text
+            style={[
+              type.heading,
+              { color: props.pinned ? t.accent : t.primary },
+            ]}
+            accessible={false}
+          >
+            {props.pinned ? '✓' : '+'}
+          </Text>
+        </Pressable>
+      ) : null}
       {props.onToggleExcluded ? (
         <Pressable
           accessibilityRole="button"

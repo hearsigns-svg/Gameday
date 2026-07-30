@@ -28,6 +28,7 @@ import {
   loadExclusions,
   setExcluded,
 } from '../../calendar-sync/data/exclusionStore';
+import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
 import { Fixture } from '../../fixtures/domain/fixture';
@@ -54,6 +55,7 @@ export default function TeamScreen({ navigation, route }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
+  const [pinIds, setPinIds] = useState<Set<string>>(pinnedIds);
   const [, forceRender] = useState(0);
   const mounted = useRef(true);
 
@@ -92,6 +94,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     }
     const unsub = subscribeSync(() => {
       setExcludedIds(loadExclusions());
+      setPinIds(pinnedIds());
       forceRender((n) => n + 1);
     });
     return () => {
@@ -117,6 +120,31 @@ export default function TeamScreen({ navigation, route }: Props) {
     }
     setBusy(false);
     forceRender((n) => n + 1);
+  };
+
+  // Opt-in for a single fixture — no follow, no flood.
+  const togglePin = (f: Fixture) => {
+    const was = pinIds.has(f.id);
+    setPinned(
+      {
+        id: f.id,
+        title: f.title,
+        startUtc: f.startUtc,
+        competition: f.competition,
+        sport: f.sport,
+        followKey: f.competitionId,
+        ...(pollPath ? { pollPath } : {}),
+        at: new Date().toISOString(),
+      },
+      !was,
+    );
+    setPinIds(pinnedIds());
+    showToast({
+      message: was
+        ? 'Removed from your calendar'
+        : `Added ${f.title} to your calendar`,
+    });
+    void runSync();
   };
 
   const toggleExclude = (f: Fixture) => {
@@ -200,6 +228,8 @@ export default function TeamScreen({ navigation, route }: Props) {
               theme={theme}
               excluded={following ? excludedIds.has(f.id) : undefined}
               onToggleExcluded={following ? () => toggleExclude(f) : undefined}
+              pinned={!following ? pinIds.has(f.id) : undefined}
+              onTogglePinned={!following ? () => togglePin(f) : undefined}
             />
           )}
           ListFooterComponent={
@@ -207,8 +237,8 @@ export default function TeamScreen({ navigation, route }: Props) {
               <Text
                 style={[type.caption, styles.footer, { color: t.textSecondary }]}
               >
-                Follow to add these to your calendar — you can remove
-                individual matches afterwards.
+                Tap + to add a single match, or Follow for all of them —
+                you can remove individual matches afterwards.
               </Text>
             ) : null
           }
