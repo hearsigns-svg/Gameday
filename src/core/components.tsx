@@ -183,39 +183,71 @@ export function EventRow(props: {
   theme: TeamTheme;
   crestUrl?: string;
   tbc?: boolean;
+  // Per-event opt-out: greyed-but-visible with a restore affordance —
+  // a removed event must never just vanish (owner ruling).
+  excluded?: boolean;
+  onToggleExcluded?: () => void;
 }) {
   const t = useTheme();
+  const dimmed = props.excluded === true;
   return (
     <View
       accessible
-      accessibilityLabel={`${props.title}, ${props.caption}, ${props.timeText}`}
+      accessibilityLabel={`${props.title}, ${props.caption}, ${
+        dimmed ? 'removed from calendar' : props.timeText
+      }`}
       style={[styles.eventRow, { borderColor: t.border }]}
     >
-      <GlyphTile glyph={props.glyph} theme={props.theme} crestUrl={props.crestUrl} />
-      <View style={{ flex: 1 }}>
+      <View style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.m, flex: 1 }, dimmed && { opacity: 0.4 }]}>
+        <GlyphTile glyph={props.glyph} theme={props.theme} crestUrl={props.crestUrl} />
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}
+            numberOfLines={1}
+          >
+            {props.title}
+          </Text>
+          <Text
+            style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}
+            numberOfLines={1}
+          >
+            {dimmed ? 'Removed — not in your calendar' : props.caption}
+          </Text>
+        </View>
         <Text
-          style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}
-          numberOfLines={1}
+          style={[
+            type.secondary,
+            props.tbc || dimmed
+              ? { color: t.textSecondary, fontStyle: 'italic' }
+              : { color: t.textPrimary, fontWeight: '600' },
+          ]}
         >
-          {props.title}
-        </Text>
-        <Text
-          style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}
-          numberOfLines={1}
-        >
-          {props.caption}
+          {props.timeText}
         </Text>
       </View>
-      <Text
-        style={[
-          type.secondary,
-          props.tbc
-            ? { color: t.textSecondary, fontStyle: 'italic' }
-            : { color: t.textPrimary, fontWeight: '600' },
-        ]}
-      >
-        {props.timeText}
-      </Text>
+      {props.onToggleExcluded ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            dimmed
+              ? `Restore ${props.title} to your calendar`
+              : `Remove ${props.title} from your calendar`
+          }
+          onPress={props.onToggleExcluded}
+          hitSlop={8}
+          style={styles.excludeButton}
+        >
+          <Text
+            style={[
+              type.heading,
+              { color: dimmed ? t.accent : t.textSecondary },
+            ]}
+            accessible={false}
+          >
+            {dimmed ? '↩' : '×'}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -675,6 +707,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: spacing.l,
     borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  excludeButton: {
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -146,11 +146,16 @@ export function planSync(
   followedKeys: readonly string[],
   prefs: CalendarPrefs,
   horizonStartUtc: string,
+  excluded: ReadonlySet<string> = new Set(),
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
   for (const f of fixtures) {
     if (!f.followKeys.some((k) => followedKeys.includes(k))) continue;
+    // Per-event opt-out: an excluded fixture is simply not wanted — a
+    // ledgered event for it falls into the delete pass below, and
+    // clearing the exclusion re-creates it on the next sync.
+    if (excluded.has(f.id)) continue;
     const desired = desiredEventFor(f, prefs);
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour

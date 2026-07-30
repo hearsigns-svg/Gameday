@@ -24,6 +24,7 @@ import {
   SportCard,
 } from '../../../core/components';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
+import { loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
@@ -66,8 +67,13 @@ export default function HomeScreen({ navigation }: Props) {
   }, [navigation]);
 
   const [carousel, nextUp] = useMemo(() => {
+    // Removed (excluded) events never lead Home — they live greyed on
+    // Schedule. Re-reads on every sync-triggered refresh.
+    const excluded = loadExclusions();
     const upcoming = fixtures.filter(
-      (f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000,
+      (f) =>
+        new Date(f.startUtc).getTime() > Date.now() - 3_600_000 &&
+        !excluded.has(f.id),
     );
     const heroes = upcoming.slice(0, CAROUSEL_MAX);
     return [heroes, upcoming.slice(heroes.length, heroes.length + NEXT_UP_COUNT)];

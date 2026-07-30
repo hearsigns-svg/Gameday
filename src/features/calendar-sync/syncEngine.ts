@@ -8,6 +8,7 @@ import { Fixture } from '../fixtures/domain/fixture';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowKeys } from '../follows/data/followStore';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
+import { loadExclusions, pruneExclusions } from './data/exclusionStore';
 import { loadPrefs } from './data/prefsStore';
 import { CalendarPrefs } from './domain/prefs';
 import {
@@ -169,19 +170,34 @@ function writePresentationState(
   follows: string[],
   prefs: CalendarPrefs,
   horizonStart: string,
+  excluded: ReadonlySet<string>,
 ): void {
   const upcoming: Record<string, number> = {};
   for (const key of follows) upcoming[key] = 0;
   for (const f of fixtures) {
     if (f.startUtc < horizonStart) continue;
+    if (excluded.has(f.id)) continue; // removed events don't count
     for (const key of f.followKeys) {
       if (key in upcoming) upcoming[key]++;
     }
   }
   writeJson(UPCOMING_KEY, upcoming);
-  writeJson(
-    UPCOMING_FIXTURES_KEY,
-    upcomingSnapshot(fixtures, prefs, horizonStart, UPCOMING_FIXTURES_CAP),
+  // The snapshot KEEPS excluded fixtures — Schedule shows them greyed
+  // with a restore affordance; silent disappearance reads as a bug.
+  const snapshot = upcomingSnapshot(
+    fixtures,
+    prefs,
+    horizonStart,
+    UPCOMING_FIXTURES_CAP,
+  );
+  writeJson(UPCOMING_FIXTURES_KEY, snapshot);
+  // Prune against ALL upcoming fixtures, never the capped snapshot — an
+  // exclusion beyond the display cap must not be forgotten (it would
+  // silently re-add the event).
+  pruneExclusions(
+    new Set(
+      fixtures.filter((f) => f.startUtc >= horizonStart).map((f) => f.id),
+    ),
   );
 }
 
@@ -207,6 +223,7 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
     follows,
     prefs,
     horizonStartFrom(Date.now()),
+    loadExclusions(),
   );
   const outcome: SyncOutcome = {
     created: 0,
@@ -277,7 +294,15 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     }
 
     const horizonStart = horizonStartFrom(Date.now());
-    const ops = planSync(fixtures.value, ledger, follows, prefs, horizonStart);
+    const excluded = loadExclusions();
+    const ops = planSync(
+      fixtures.value,
+      ledger,
+      follows,
+      prefs,
+      horizonStart,
+      excluded,
+    );
 
     const outcome: SyncOutcome = {
       created: 0,
@@ -346,7 +371,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // and gated by the same desiredEventFor the planner uses — the app
     // never shows a fixture the calendar doesn't want (cancelled,
     // race-only excluded), and never runs ahead of a sync that failed.
-    writePresentationState(fixtures.value, follows, prefs, horizonStart);
+    writePresentationState(fixtures.value, follows, prefs, horizonStart, excluded);
     writeJson(LAST_SYNC_KEY, outcome);
     return ok(outcome);
   }
