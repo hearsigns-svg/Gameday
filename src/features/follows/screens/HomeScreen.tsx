@@ -4,7 +4,7 @@
 // Home never follows anything directly — every card navigates, and
 // Follow buttons are always visible where they act (owner ruling).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -35,7 +35,13 @@ import {
   upcomingFixtures,
 } from '../../calendar-sync/syncEngine';
 import { isDateOnly, timeLabel, whenLabel } from '../../../core/when';
-import { Followable, isFollowed, loadFollowables } from '../data/followStore';
+import {
+  Followable,
+  isFollowed,
+  loadFollowables,
+  setVenueArt,
+} from '../data/followStore';
+import { resolveVenuePhoto } from '../data/venueArt';
 import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -84,6 +90,25 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     setPage((p) => Math.min(p, Math.max(0, carousel.length - 1)));
   }, [carousel.length]);
+
+  // Lazy venue photography (docs/IMAGERY.md Tier 1): resolve once per
+  // team follow the first time it fronts a hero card; null results are
+  // persisted so nothing re-fetches on every render.
+  const resolvingArt = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const f of carousel) {
+      const owner = identityFollow(f.followKeys, follows);
+      if (!owner || owner.type !== 'team') continue;
+      if (owner.venueArt !== undefined) continue;
+      if (resolvingArt.current.has(owner.key)) continue;
+      resolvingArt.current.add(owner.key);
+      void resolveVenuePhoto(owner.label).then((art) => {
+        setVenueArt(owner.key, art);
+        resolvingArt.current.delete(owner.key);
+        setFollows(loadFollowables());
+      });
+    }
+  }, [carousel, follows]);
 
   const cardWidth = windowWidth - spacing.l * 2;
   const snap = cardWidth + spacing.m;
@@ -147,6 +172,12 @@ export default function HomeScreen({ navigation }: Props) {
                   status={item.status}
                   glyph={sport?.glyph ?? '🏟️'}
                   crestUrl={owner?.crestUrl}
+                  photoUrl={owner?.venueArt?.url}
+                  photoCredit={
+                    owner?.venueArt
+                      ? `Photo: ${owner.venueArt.artist} · ${owner.venueArt.licence}`
+                      : undefined
+                  }
                   theme={teamTheme(
                     owner?.brandColour ?? sport?.accent ?? null,
                     mode,

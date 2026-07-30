@@ -112,10 +112,18 @@ export function HeroCard(props: {
   glyph: string;
   theme: TeamTheme;
   crestUrl?: string;
+  // Venue photograph layer (docs/IMAGERY.md): the photo renders
+  // UNMODIFIED in its own layer — the gradient scrim and type are
+  // separate overlays (baking a composite would create a ShareAlike
+  // adaptation) — and the credit line is a licence condition.
+  photoUrl?: string;
+  photoCredit?: string;
   style?: StyleProp<ViewStyle>; // carousel overrides width/margins
 }) {
   const th = props.theme;
   const crest = usableCrest(props.crestUrl);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const photo = photoFailed ? undefined : props.photoUrl;
   const dateOnly = isDateOnly(props.status);
   const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status)}`;
   return (
@@ -124,12 +132,24 @@ export function HeroCard(props: {
       accessibilityLabel={`Next up: ${props.title}, ${when}`}
       style={[styles.heroShadow, props.style]}
     >
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          resizeMode="cover"
+          onError={() => setPhotoFailed(true)}
+          style={styles.heroPhoto}
+          accessible={false}
+        />
+      ) : null}
       <LinearGradient
         colors={th.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.9, y: 1 }}
-        style={styles.hero}
-      >
+        // Scrim is a SIBLING layer: opacity on a parent would dim the
+        // type as well. Full-strength poster when there is no photo.
+        style={[styles.heroFill, photo ? styles.heroScrim : null]}
+      />
+      <View style={styles.hero}>
         <Text style={styles.heroWatermark} accessible={false}>
           {props.glyph}
         </Text>
@@ -167,7 +187,15 @@ export function HeroCard(props: {
         >
           {when}
         </Text>
-      </LinearGradient>
+        {photo && props.photoCredit ? (
+          <Text
+            style={[type.caption, styles.heroCredit, { color: th.onGradient }]}
+            numberOfLines={1}
+          >
+            {props.photoCredit}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -646,6 +674,30 @@ const styles = StyleSheet.create({
     minHeight: 180,
     padding: spacing.l,
     overflow: 'hidden',
+  },
+  heroPhoto: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.hero,
+  },
+  heroFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.hero,
+  },
+  heroScrim: { opacity: 0.82 },
+  heroCredit: {
+    position: 'absolute',
+    right: spacing.m,
+    top: spacing.m + 32, // clear of the label/countdown row
+    opacity: 0.6,
+    fontSize: 10,
   },
   heroWatermark: {
     position: 'absolute',

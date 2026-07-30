@@ -18,6 +18,10 @@ export interface Followable {
   // hex or kit-colour text; it only reaches UI slots via teamTheme().
   crestUrl?: string;
   brandColour?: string;
+  // Venue photograph (docs/IMAGERY.md Tier 1), resolved lazily after
+  // follow. undefined = not tried yet; null = resolved, none available
+  // (never retried on every render).
+  venueArt?: import('../domain/venueArtRules').VenueArt | null;
 }
 
 const KEY_V2 = 'follows.v2';
@@ -51,6 +55,19 @@ export function loadFollowKeys(): string[] {
 
 export function isFollowed(key: string): boolean {
   return loadFollowables().some((f) => f.key === key);
+}
+
+// Attach lazily-resolved venue art to an existing follow. No-op if the
+// follow has gone (unfollowed while resolving).
+export function setVenueArt(
+  key: string,
+  art: import('../domain/venueArtRules').VenueArt | null,
+): void {
+  const current = loadFollowables();
+  const idx = current.findIndex((f) => f.key === key);
+  if (idx < 0) return;
+  current[idx] = { ...current[idx], venueArt: art };
+  writeJson(KEY_V2, current);
 }
 
 export function setFollowed(item: Followable, followed: boolean): Followable[] {
