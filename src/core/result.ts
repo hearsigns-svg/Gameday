@@ -36,6 +36,10 @@ export function messageOf(e: AppError): string {
     case 'suspect-empty':
       return 'Fixture service returned nothing — calendar left untouched.';
     case 'unknown':
-      return e.message;
+      // Never surface raw SDK text: long, jargon-laden, and sometimes
+      // contains developer instructions. Callers put detail in logs.
+      return e.message.length <= 80 && !/[{}]|Error:/.test(e.message)
+        ? e.message
+        : 'Something went wrong — we will retry.';
   }
 }

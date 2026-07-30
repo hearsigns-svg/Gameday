@@ -191,14 +191,10 @@ function writePresentationState(
     UPCOMING_FIXTURES_CAP,
   );
   writeJson(UPCOMING_FIXTURES_KEY, snapshot);
-  // Prune against ALL upcoming fixtures, never the capped snapshot — an
-  // exclusion beyond the display cap must not be forgotten (it would
-  // silently re-add the event).
-  pruneExclusions(
-    new Set(
-      fixtures.filter((f) => f.startUtc >= horizonStart).map((f) => f.id),
-    ),
-  );
+  // Age-based: an exclusion must survive an unfollow/re-follow cycle
+  // and the display cap — never prune merely because a fixture is
+  // absent from this fetch.
+  pruneExclusions();
 }
 
 // Calendar not (yet) opted in: keep the app's view of fixtures fresh

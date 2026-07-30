@@ -102,9 +102,10 @@ export default function HomeScreen({ navigation }: Props) {
       if (owner.venueArt !== undefined) continue;
       if (resolvingArt.current.has(owner.key)) continue;
       resolvingArt.current.add(owner.key);
-      void resolveVenuePhoto(owner.label).then((art) => {
-        setVenueArt(owner.key, art);
+      void resolveVenuePhoto(owner.label).then((r) => {
         resolvingArt.current.delete(owner.key);
+        if (r.status === 'failed') return; // transient — retry next time
+        setVenueArt(owner.key, r.status === 'found' ? r.art : null);
         setFollows(loadFollowables());
       });
     }
@@ -175,7 +176,14 @@ export default function HomeScreen({ navigation }: Props) {
                   photoUrl={owner?.venueArt?.url}
                   photoCredit={
                     owner?.venueArt
-                      ? `Photo: ${owner.venueArt.artist} · ${owner.venueArt.licence}`
+                      ? [
+                          owner.venueArt.artist
+                            ? `Photo: ${owner.venueArt.artist}`
+                            : 'Photo: Wikimedia Commons',
+                          owner.venueArt.licence,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
                       : undefined
                   }
                   theme={teamTheme(

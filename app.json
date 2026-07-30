@@ -72,7 +72,6 @@
       ],
       "expo-notifications",
       "expo-font",
-      "expo-splash-screen",
       [
         "expo-splash-screen",
         {

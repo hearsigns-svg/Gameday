@@ -56,14 +56,22 @@ async function entityWithVenue(
   return null;
 }
 
+// 'none' = resolved, nothing usable (persist so we never refetch).
+// 'failed' = transient (offline, rate limit) — MUST NOT be persisted,
+// or one bad moment denies a team its photo forever.
+export type VenueArtResult =
+  | { status: 'found'; art: VenueArt }
+  | { status: 'none' }
+  | { status: 'failed' };
+
 export async function resolveVenuePhoto(
   teamName: string,
-): Promise<VenueArt | null> {
+): Promise<VenueArtResult> {
   try {
     const hit = await entityWithVenue(teamName);
-    if (!hit) return null;
+    if (!hit) return { status: 'none' };
     const file = await claimValue(hit.venue, 'P18');
-    if (!file) return null;
+    if (!file) return { status: 'none' };
     const info = (await getJson(
       `${COMMONS}?action=query&titles=${encodeURIComponent(`File:${file}`)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`,
     )) as {
@@ -81,13 +89,18 @@ export async function resolveVenuePhoto(
     const pages = info.query?.pages ?? {};
     const meta = Object.values(pages)[0]?.imageinfo?.[0]?.extmetadata;
     const licence = meta?.LicenseShortName?.value;
-    if (!isAllowedLicence(licence)) return null;
+    if (!isAllowedLicence(licence)) return { status: 'none' };
     return {
-      url: commonsThumbUrl(file),
-      artist: stripHtml(meta?.Artist?.value),
-      licence: licence ?? '',
+      status: 'found',
+      art: {
+        url: commonsThumbUrl(file),
+        artist: stripHtml(meta?.Artist?.value),
+        licence: licence ?? '',
+      },
     };
   } catch {
-    return null; // offline / API hiccup — the gradient floor carries it
+    // Transient: the gradient floor carries this render, and the next
+    // one retries.
+    return { status: 'failed' };
   }
 }

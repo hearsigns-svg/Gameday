@@ -39,7 +39,15 @@ export async function fetchFixturesForFollows(
       lastError = String(e);
     }
   }
-  return err({ kind: 'unknown', message: `fixture fetch failed: ${lastError}` });
+  // Firestore reports an unreachable backend as 'unavailable' with a
+  // long SDK message that includes developer advice — never show that
+  // to a user. Classify it as what it is: we could not reach the
+  // service. The detail stays in the log for us.
+  console.warn(`[kickoffcal] fixture fetch failed: ${lastError}`);
+  if (/unavailable|network|failed to get documents|timeout/i.test(lastError)) {
+    return err({ kind: 'offline' });
+  }
+  return err({ kind: 'unknown', message: 'Could not load fixtures.' });
 }
 
 export async function requestPoll(

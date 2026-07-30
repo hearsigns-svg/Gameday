@@ -111,12 +111,28 @@ export async function listTaggedEvents(
 async function resolveGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
   const cached = readJson<string | null>(CAL_KEY, null);
   const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
-  const ours = calendars.filter(
+  // A legacy-titled calendar is only OURS if it actually holds our
+  // tagged events (or is the cached id). Adopting on title alone would
+  // hijack — and rename — a user's own calendar that happens to be
+  // called "Gameday".
+  const candidates = calendars.filter(
     (c) =>
       c.title === CAL_TITLE ||
       LEGACY_CAL_TITLES.includes(c.title ?? '') ||
       c.id === cached,
   );
+  const ours: Calendar.ExpoCalendar[] = [];
+  for (const c of candidates) {
+    if (c.title === CAL_TITLE || c.id === cached) {
+      ours.push(c);
+      continue;
+    }
+    try {
+      if ((await taggedEventsOf(c)).length > 0) ours.push(c);
+    } catch {
+      // unreadable → not provably ours; leave it alone
+    }
+  }
   if (ours.length === 0) return null;
   if (ours.length === 1) return ours[0];
   const counted = await Promise.all(
