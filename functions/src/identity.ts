@@ -127,17 +127,23 @@ export function mergeCluster(cluster: readonly Fixture[]): MergeDecision {
     return fa === fb ? a.id.localeCompare(b.id) : fa.localeCompare(fb);
   });
   const keep = byAge[0];
-  // A record that KNOWS the kickoff beats one that does not, always.
-  // Freshness is the last resort — it is a poll-ordering artifact, and
-  // letting it decide let an fd.org noon placeholder overwrite a real
-  // kickoff, downgrading a timed event to an all-day 'time TBC' (a
-  // kindFlip delete+recreate that also destroys the user's reminder).
-  const precisionOf = (f: Fixture): number => (f.status === 'tbd' ? 0 : 1);
+  // A record that KNOWS the kickoff beats a day sentinel — but only
+  // within the same confidence tier, and freshness stays the last
+  // resort. All three sentinel statuses rank low (tbd, postponed,
+  // cancelled carry a day, not a kickoff), so sentinel-vs-sentinel is
+  // still decided by freshness: a fresher tbd re-listing beats a stale
+  // postponed. The motivating bug stays fixed: an fd.org noon
+  // placeholder can no longer overwrite a real kickoff just because it
+  // polled last (a downgrade that delete+recreated the event and
+  // destroyed the user's reminder).
+  const SENTINELS = new Set(['tbd', 'postponed', 'cancelled']);
+  const precisionOf = (f: Fixture): number => (SENTINELS.has(f.status) ? 0 : 1);
   const byTrust = [...cluster].sort((a, b) => {
+    const c = confidenceOf(b) - confidenceOf(a);
+    if (c !== 0) return c;
     const p = precisionOf(b) - precisionOf(a);
     if (p !== 0) return p;
-    const c = confidenceOf(b) - confidenceOf(a);
-    return c !== 0 ? c : b.updatedAt.localeCompare(a.updatedAt);
+    return b.updatedAt.localeCompare(a.updatedAt);
   });
   const winner = byTrust[0];
   return {

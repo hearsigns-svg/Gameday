@@ -52,11 +52,17 @@ function toIso(d: string | Date): string {
   return new Date(d).toISOString();
 }
 
-// Snap a platform-reported all-day boundary to the nearest UTC day
-// boundary (a device-local midnight read-back sits within ±14h of it).
-function nearestUtcDay(d: string | Date): string {
+// Normalise a platform-reported all-day boundary to the UTC day the
+// planner wrote. Two read-back shapes exist: an exact UTC boundary
+// (kept as-is), or device-local midnight — whose LOCAL calendar date IS
+// the intended day. A round-to-nearest cannot cover both: inhabited
+// offsets span −11…+14 (25h > 24h), so UTC+13/+14 devices would snap a
+// day early.
+function nearestUtcDay(input: string | Date): string {
+  const d = new Date(input);
+  if (d.getTime() % 86_400_000 === 0) return d.toISOString();
   return new Date(
-    Math.round(new Date(d).getTime() / 86_400_000) * 86_400_000,
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
   ).toISOString();
 }
 
@@ -123,16 +129,52 @@ async function resolveGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
   return keep.c;
 }
 
+// The user's chosen calendar colour (how Gameday events appear in the
+// OS calendar). Stored even before the calendar exists — creation and
+// later changes both read it.
+const CAL_COLOUR_KEY = 'calendarColour.v1';
+
+export function calendarColour(): string {
+  return readJson<string>(CAL_COLOUR_KEY, palette.light.primary);
+}
+
+// Persists the choice always; applies it live when the calendar already
+// exists. Returns whether it was applied now (false = saved for when
+// the calendar is created/connected).
+export async function setCalendarColour(hex: string): Promise<boolean> {
+  writeJson(CAL_COLOUR_KEY, hex);
+  const id = readJson<string | null>(CAL_KEY, null);
+  if (!id) return false;
+  try {
+    const cal = await Calendar.ExpoCalendar.get(id);
+    await cal.update({ color: hex });
+    return true;
+  } catch {
+    return false; // no permission / calendar gone — applies on next create
+  }
+}
+
 export async function ensureGamedayCalendar(): Promise<Result<string>> {
   try {
     const existing = await resolveGamedayCalendar();
     if (existing) {
       writeJson(CAL_KEY, existing.id);
+      // A colour picked before the calendar connected must still land —
+      // creation applies it, so resolution has to as well. Cosmetic:
+      // never let it fail the sync.
+      const want = calendarColour();
+      if ((existing.color ?? '').slice(0, 7).toLowerCase() !== want.toLowerCase()) {
+        try {
+          await existing.update({ color: want });
+        } catch {
+          // keep the platform's colour
+        }
+      }
       return ok(existing.id);
     }
     const details: NonNullable<Parameters<typeof Calendar.createCalendar>[0]> = {
       title: CAL_TITLE,
-      color: palette.light.primary,
+      color: calendarColour(),
       entityType: Calendar.EntityTypes.EVENT,
       name: CAL_TITLE,
     };

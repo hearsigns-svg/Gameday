@@ -22,6 +22,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
+  const sport = sportByKey(route.params.sportKey);
   const [leagues, setLeagues] = useState<DirectoryLeague[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -31,7 +32,23 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
-    const sport = sportByKey(route.params.sportKey);
+    // Series sports (F1, boxing) render their one followable as a normal
+    // competition row — following is ALWAYS a visible button on a row,
+    // never a hidden tap side-effect on the sport itself.
+    if (sport?.seriesFollowable && !sport.staticCompetitions) {
+      const series = sport.seriesFollowable;
+      setLeagues([
+        {
+          id: sport.key,
+          name: series.label,
+          country: 'All events',
+          key: series.key,
+          followOnly: true,
+          ...(series.pollPath ? { pollPath: series.pollPath } : {}),
+        },
+      ]);
+      return;
+    }
     if (sport?.staticCompetitions) {
       // Single-league sports: the competition level is config, not data.
       setLeagues(sport.staticCompetitions);
@@ -42,14 +59,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       if (r.ok) setLeagues(r.value);
       else setError(messageOf(r.error));
     })();
-  }, [route.params.sportKey]);
+  }, [sport]);
 
   const toggle = useCallback(async (league: DirectoryLeague) => {
+    const isSeries = league.key === sport?.seriesFollowable?.key;
     const item = {
       key: league.key,
       label: league.name,
       sportKey: route.params.sportKey,
-      type: 'competition' as const,
+      type: isSeries ? ('series' as const) : ('competition' as const),
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
     };
     setBusyKey(league.key);
@@ -65,7 +83,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     }
     setBusyKey(null);
     forceRender((n) => n + 1);
-  }, [route.params.sportKey, navigation]);
+  }, [route.params.sportKey, navigation, sport]);
 
   if (error && !leagues) {
     return (
@@ -111,12 +129,19 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                     })
             }
             right={
-              <FollowButton
-                following={isFollowed(item.key)}
-                subject={item.name}
-                busy={busyKey === item.key}
-                onPress={() => void toggle(item)}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
+                <FollowButton
+                  following={isFollowed(item.key)}
+                  subject={item.name}
+                  busy={busyKey === item.key}
+                  onPress={() => void toggle(item)}
+                />
+                {!item.followOnly ? (
+                  <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
+                    ›
+                  </Text>
+                ) : null}
+              </View>
             }
           />
         )}

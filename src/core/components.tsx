@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   View,
+  ViewStyle,
 } from 'react-native';
 import { radius, spacing, type, useTheme } from './tokens';
 import { TeamTheme } from './teamTheme';
@@ -110,6 +112,7 @@ export function HeroCard(props: {
   glyph: string;
   theme: TeamTheme;
   crestUrl?: string;
+  style?: StyleProp<ViewStyle>; // carousel overrides width/margins
 }) {
   const th = props.theme;
   const crest = usableCrest(props.crestUrl);
@@ -119,7 +122,7 @@ export function HeroCard(props: {
     <View
       accessible
       accessibilityLabel={`Next up: ${props.title}, ${when}`}
-      style={styles.heroShadow}
+      style={[styles.heroShadow, props.style]}
     >
       <LinearGradient
         colors={th.gradient}
@@ -266,6 +269,75 @@ export function ListRow(props: {
         ) : null}
       </View>
       {props.right}
+    </Pressable>
+  );
+}
+
+// Carousel page indicator — passive; the cards themselves are the
+// swipe surface. Never auto-advances (ten-rules brief).
+export function CarouselDots(props: { count: number; active: number }) {
+  const t = useTheme();
+  if (props.count < 2) return null;
+  return (
+    <View style={styles.dots} accessible={false}>
+      {Array.from({ length: props.count }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.dot,
+            { backgroundColor: i === props.active ? t.primary : t.border },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+// Sport entry card (2-per-row grid on Home). Every card NAVIGATES —
+// following always happens on a visible Follow button inside, never as
+// a hidden tap side-effect (owner ruling: no invisible affordances).
+export function SportCard(props: {
+  label: string;
+  glyph: string;
+  theme: TeamTheme;
+  caption: string;
+  captionAccent?: boolean;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.sportCard,
+        { backgroundColor: t.surfaceRaised, borderColor: t.border },
+        pressed && { backgroundColor: t.surface },
+      ]}
+    >
+      <GlyphTile glyph={props.glyph} theme={props.theme} size={36} />
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}
+          numberOfLines={1}
+        >
+          {props.label}
+        </Text>
+        <Text
+          style={[
+            type.caption,
+            { color: props.captionAccent ? t.accent : t.textSecondary },
+          ]}
+          numberOfLines={1}
+        >
+          {props.caption}
+        </Text>
+      </View>
+      <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
+        ›
+      </Text>
     </Pressable>
   );
 }
@@ -605,6 +677,25 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.s,
+    marginTop: spacing.m,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  sportCard: {
+    flexBasis: '46%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.m,
+    minHeight: 64,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.m,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   statusChip: {
     flexDirection: 'row',

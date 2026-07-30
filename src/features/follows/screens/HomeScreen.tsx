@@ -1,22 +1,31 @@
 // Home answers one question at a glance: when do I next care?
-// Hero = the soonest fixture; Next up = what follows it; sport pills =
-// the way in. Managing follows lives on the Following tab.
+// Carousel = the next few fixtures, swipeable (never auto-advancing);
+// Next up = the rest of the week at a glance; sport cards = the way in.
+// Home never follows anything directly — every card navigates, and
+// Follow buttons are always visible where they act (owner ruling).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import {
   CalendarOffBanner,
+  CarouselDots,
   EmptyState,
   EventRow,
   HeroCard,
   SectionHeader,
-  SportPill,
+  SportCard,
 } from '../../../core/components';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
-import { followFeedback } from '../followFeedback';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
-import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import {
@@ -25,24 +34,23 @@ import {
   upcomingFixtures,
 } from '../../calendar-sync/syncEngine';
 import { isDateOnly, timeLabel, whenLabel } from '../../../core/when';
-import { follow, unfollow } from '../followActions';
 import { Followable, isFollowed, loadFollowables } from '../data/followStore';
 import { identityFollow } from '../domain/followIdentity';
-import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
+import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
 type Props = TabScreenProps<'Home'>;
 
-const NEXT_UP_COUNT = 5;
+const CAROUSEL_MAX = 4;
+const NEXT_UP_COUNT = 3;
 
 export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
+  const { width: windowWidth } = useWindowDimensions();
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
+  const [page, setPage] = useState(0);
   const followCount = follows.length;
-  const [error, setError] = useState<string | null>(null);
-  const [busySport, setBusySport] = useState<string | null>(null);
-  const [, forceRender] = useState(0);
 
   useEffect(() => {
     const refresh = () => {
@@ -57,58 +65,22 @@ export default function HomeScreen({ navigation }: Props) {
     };
   }, [navigation]);
 
-  const [hero, nextUp] = useMemo(() => {
+  const [carousel, nextUp] = useMemo(() => {
     const upcoming = fixtures.filter(
       (f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000,
     );
-    return [upcoming[0] ?? null, upcoming.slice(1, 1 + NEXT_UP_COUNT)];
+    const heroes = upcoming.slice(0, CAROUSEL_MAX);
+    return [heroes, upcoming.slice(heroes.length, heroes.length + NEXT_UP_COUNT)];
   }, [fixtures]);
 
-  // One in-flight pill action at a time — a second tap mid-flight would
-  // read the already-flipped store and silently reverse the first.
-  const pillBusyRef = useRef(false);
+  // A refresh can shrink the carousel under the current page (FlatList
+  // clamps the offset without a momentum event) — keep the dot honest.
+  useEffect(() => {
+    setPage((p) => Math.min(p, Math.max(0, carousel.length - 1)));
+  }, [carousel.length]);
 
-  // Series sports follow straight from the pill; browse sports navigate.
-  const onPill = useCallback(
-    async (sport: SportConfig) => {
-      const series = sport.seriesFollowable;
-      if (!series) {
-        navigation.navigate('LeagueList', { sportKey: sport.key });
-        return;
-      }
-      if (pillBusyRef.current) return;
-      pillBusyRef.current = true;
-      setBusySport(sport.key);
-      const item = {
-        key: series.key,
-        label: series.label,
-        sportKey: sport.key,
-        type: 'series' as const,
-        ...(series.pollPath ? { pollPath: series.pollPath } : {}),
-      };
-      const wasFollow = !isFollowed(series.key);
-      const r = wasFollow ? await follow(item) : await unfollow(item);
-      if (!r.ok && r.error.kind !== 'sync-in-progress') {
-        setError(messageOf(r.error));
-      } else {
-        setError(null);
-        followFeedback(r, item, wasFollow, () =>
-          navigation.navigate('CalendarPriming'),
-        );
-      }
-      pillBusyRef.current = false;
-      setBusySport(null);
-      forceRender((n) => n + 1);
-    },
-    [navigation],
-  );
-
-  const heroSport = hero ? sportByKey(hero.sport) : null;
-  // The hero wears the followed entity's identity when we have it —
-  // brand colour and crest captured at follow time; sport hue otherwise.
-  const heroFollow: Followable | undefined = hero
-    ? identityFollow(hero.followKeys, follows)
-    : undefined;
+  const cardWidth = windowWidth - spacing.l * 2;
+  const snap = cardWidth + spacing.m;
 
   return (
     <ScrollView
@@ -116,12 +88,6 @@ export default function HomeScreen({ navigation }: Props) {
       contentContainerStyle={{ paddingBottom: spacing.xxl }}
       contentInsetAdjustmentBehavior="automatic"
     >
-      {error ? (
-        <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
-          {error}
-        </Text>
-      ) : null}
-
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Search teams, competitions and sports"
@@ -144,19 +110,49 @@ export default function HomeScreen({ navigation }: Props) {
         />
       ) : null}
 
-      {hero ? (
+      {carousel.length > 0 ? (
         <View style={{ marginTop: spacing.l }}>
-          <HeroCard
-            title={hero.title}
-            competition={hero.competition}
-            startUtc={hero.startUtc}
-            status={hero.status}
-            glyph={heroSport?.glyph ?? '🏟️'}
-            crestUrl={heroFollow?.crestUrl}
-            theme={teamTheme(
-              heroFollow?.brandColour ?? heroSport?.accent ?? null,
-              mode,
-            )}
+          <FlatList
+            horizontal
+            data={carousel}
+            keyExtractor={(f) => f.id}
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={snap}
+            decelerationRate="fast"
+            disableIntervalMomentum
+            contentContainerStyle={{ paddingHorizontal: spacing.l }}
+            ItemSeparatorComponent={() => <View style={{ width: spacing.m }} />}
+            onMomentumScrollEnd={(e) =>
+              setPage(
+                Math.min(
+                  carousel.length - 1,
+                  Math.max(0, Math.round(e.nativeEvent.contentOffset.x / snap)),
+                ),
+              )
+            }
+            renderItem={({ item }) => {
+              const sport = sportByKey(item.sport);
+              const owner = identityFollow(item.followKeys, follows);
+              return (
+                <HeroCard
+                  title={item.title}
+                  competition={item.competition}
+                  startUtc={item.startUtc}
+                  status={item.status}
+                  glyph={sport?.glyph ?? '🏟️'}
+                  crestUrl={owner?.crestUrl}
+                  theme={teamTheme(
+                    owner?.brandColour ?? sport?.accent ?? null,
+                    mode,
+                  )}
+                  style={{ width: cardWidth, marginHorizontal: 0 }}
+                />
+              );
+            }}
+          />
+          <CarouselDots
+            count={carousel.length}
+            active={Math.min(page, Math.max(0, carousel.length - 1))}
           />
         </View>
       ) : followCount > 0 ? (
@@ -184,7 +180,7 @@ export default function HomeScreen({ navigation }: Props) {
                   title={f.title}
                   caption={`${whenLabel(f.startUtc, isDateOnly(f.status))} · ${f.competition}`}
                   timeText={timeLabel(f.startUtc, f.status)}
-                  tbc={f.status === 'tbd' || f.status === 'postponed'}
+                  tbc={isDateOnly(f.status)}
                   glyph={sport?.glyph ?? '🏟️'}
                   crestUrl={owner?.crestUrl}
                   theme={teamTheme(
@@ -199,43 +195,34 @@ export default function HomeScreen({ navigation }: Props) {
       ) : null}
 
       <SectionHeader title={followCount > 0 ? 'Add sports' : 'Choose a sport'} />
-      <View style={styles.pills}>
+      <View style={styles.grid}>
         {SPORTS.filter((s) => s.enabled).map((s) => {
           const series = s.seriesFollowable;
           const following = series ? isFollowed(series.key) : false;
           return (
-            <SportPill
+            <SportCard
               key={s.key}
               label={s.label}
               glyph={s.glyph}
               theme={teamTheme(s.accent, mode)}
-              following={series ? following : undefined}
-              busy={busySport === s.key}
-              onPress={() => void onPill(s)}
-              accessibilityLabel={
-                series
-                  ? following
-                    ? `Unfollow ${series.label}`
-                    : `Follow ${series.label}`
-                  : `Browse ${s.label}`
+              caption={
+                series ? (following ? 'Following' : 'One follow') : 'Browse'
               }
+              captionAccent={following}
+              onPress={() =>
+                navigation.navigate('LeagueList', { sportKey: s.key })
+              }
+              accessibilityLabel={`${s.label}${following ? ', following' : ''}`}
             />
           );
         })}
       </View>
-      {busySport ? (
-        <Text
-          style={[type.caption, { color: t.textSecondary, paddingHorizontal: spacing.l }]}
-        >
-          Updating…
-        </Text>
-      ) : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  pills: {
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.s,

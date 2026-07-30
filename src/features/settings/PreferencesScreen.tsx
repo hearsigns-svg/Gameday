@@ -7,7 +7,25 @@ import { RootScreenProps } from '../../core/navigation';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import { CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
+import {
+  calendarColour,
+  setCalendarColour,
+} from '../calendar-sync/data/calendarDriver';
 import { runSync } from '../calendar-sync/syncEngine';
+import { showToast } from '../../core/toast';
+
+// Colour choices for the Gameday calendar as it appears in the OS
+// calendar app. Named for accessibility; applied live when possible.
+const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
+  { name: 'Gameday blue', hex: '#1463F3' },
+  { name: 'Red', hex: '#C81E1E' },
+  { name: 'Orange', hex: '#EA580C' },
+  { name: 'Green', hex: '#16A34A' },
+  { name: 'Teal', hex: '#0D9488' },
+  { name: 'Purple', hex: '#6D28D9' },
+  { name: 'Pink', hex: '#DB2777' },
+  { name: 'Graphite', hex: '#52525B' },
+];
 
 function OptionRow(props: {
   label: string;
@@ -40,6 +58,17 @@ export default function PreferencesScreen({
 }: RootScreenProps<'Preferences'>) {
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
+  const [colour, setColour] = useState<string>(calendarColour);
+
+  const pickColour = async (hex: string, name: string) => {
+    setColour(hex);
+    const applied = await setCalendarColour(hex);
+    showToast({
+      message: applied
+        ? `Calendar colour is now ${name.toLowerCase()}`
+        : 'Colour saved — applies when your calendar connects',
+    });
+  };
 
   const apply = (next: CalendarPrefs) => {
     setPrefs(next);
@@ -109,6 +138,34 @@ export default function PreferencesScreen({
         For series like Formula 1.
       </Text>
 
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Calendar colour
+      </Text>
+      <View style={styles.swatches}>
+        {CALENDAR_COLOURS.map((c) => (
+          <Pressable
+            key={c.hex}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: colour === c.hex }}
+            accessibilityLabel={`Calendar colour ${c.name}`}
+            onPress={() => void pickColour(c.hex, c.name)}
+            style={[
+              styles.swatch,
+              { backgroundColor: c.hex },
+              colour === c.hex && {
+                borderWidth: 3,
+                borderColor: t.textPrimary,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        How Gameday events look inside your phone's calendar app.
+      </Text>
+
       {__DEV__ ? (
         <Pressable
           accessibilityRole="button"
@@ -126,6 +183,17 @@ export default function PreferencesScreen({
 }
 
 const styles = StyleSheet.create({
+  swatches: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.m,
+    marginTop: spacing.m,
+  },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
   group: {
     marginTop: spacing.m,
     borderRadius: radius.card,

@@ -3,6 +3,7 @@
 
 import { getFirestore } from 'firebase-admin/firestore';
 import { ACTIVE_SEASON, CURATED_SOCCER_LEAGUES } from './config';
+import { normaliseName } from './identity';
 import { fetchFdCompetitionTeams, FD_FREE_COMPETITIONS } from './providers/fdorg';
 import { fetchMlbTeams } from './providers/mlb';
 import { fetchNhlTeams } from './providers/nhl';
@@ -164,24 +165,57 @@ export async function listSoccerTeams(
   return teams;
 }
 
-export async function listMlbTeams(season: number): Promise<DirectoryTeam[]> {
-  return cachedTeams(`baseball-mlb-${season}`, async () =>
-    (await fetchMlbTeams(season)).map((t) => ({
-      id: t.id,
-      name: t.name,
-      key: `mlb-team-${t.id}`,
-    })),
-  );
+// NHL and MLB publish official logos as SVG only, which RN Image cannot
+// render — so club badges come from TheSportsDB (PNG), joined by
+// normalised name onto the official team list. Enrichment must never
+// break the directory: any TSDB failure just means no badges.
+async function tsdbBadgesByName(
+  tsdbKey: string | undefined,
+  leagueName: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!tsdbKey) return map;
+  try {
+    for (const t of await fetchTsdbLeagueTeams(tsdbKey, leagueName)) {
+      if (t.crestUrl) map.set(normaliseName(t.name), t.crestUrl);
+    }
+  } catch {
+    // badge-less directory beats a broken one
+  }
+  return map;
 }
 
-export async function listNhlTeams(): Promise<DirectoryTeam[]> {
-  return cachedTeams('ice-hockey-nhl', async () =>
-    (await fetchNhlTeams()).map((t) => ({
-      id: t.abbrev,
-      name: t.name,
-      key: `nhl-team-${t.abbrev}`,
-    })),
-  );
+export async function listMlbTeams(
+  season: number,
+  tsdbKey?: string,
+): Promise<DirectoryTeam[]> {
+  return cachedTeams(`baseball-mlb-${season}`, async () => {
+    const badges = await tsdbBadgesByName(tsdbKey, 'MLB');
+    return (await fetchMlbTeams(season)).map((t) => {
+      const crestUrl = badges.get(normaliseName(t.name));
+      return {
+        id: t.id,
+        name: t.name,
+        key: `mlb-team-${t.id}`,
+        ...(crestUrl ? { crestUrl } : {}),
+      };
+    });
+  });
+}
+
+export async function listNhlTeams(tsdbKey?: string): Promise<DirectoryTeam[]> {
+  return cachedTeams('ice-hockey-nhl', async () => {
+    const badges = await tsdbBadgesByName(tsdbKey, 'NHL');
+    return (await fetchNhlTeams()).map((t) => {
+      const crestUrl = badges.get(normaliseName(t.name));
+      return {
+        id: t.abbrev,
+        name: t.name,
+        key: `nhl-team-${t.abbrev}`,
+        ...(crestUrl ? { crestUrl } : {}),
+      };
+    });
+  });
 }
 
 export async function listTsdbTeams(

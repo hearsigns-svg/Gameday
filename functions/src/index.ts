@@ -172,11 +172,11 @@ export const listTeams = onRequest(async (req, res) => {
     const sport = String(req.query.sport ?? 'soccer');
     if (sport === 'baseball') {
       const season = Number(req.query.season ?? new Date().getFullYear());
-      res.json({ teams: await listMlbTeams(season) });
+      res.json({ teams: await listMlbTeams(season, optionalTsdbKey()) });
       return;
     }
     if (sport === 'ice-hockey') {
-      res.json({ teams: await listNhlTeams() });
+      res.json({ teams: await listNhlTeams(optionalTsdbKey()) });
       return;
     }
     if (sport === 'basketball') {
@@ -213,6 +213,12 @@ export const listTeams = onRequest(async (req, res) => {
     res.status(502).json({ error: String(e) });
   }
 });
+
+// Badge enrichment is best-effort — a missing TSDB key must not take
+// the official-team directory down with it.
+function optionalTsdbKey(): string | undefined {
+  return process.env.TSDB_KEY || undefined;
+}
 
 function requireFdKey(): string {
   const apiKey = process.env.FOOTBALLDATA_KEY;

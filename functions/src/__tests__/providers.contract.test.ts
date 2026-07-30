@@ -89,13 +89,21 @@ describe('NHL adapter against real payload', () => {
     expect(normaliseNhlGame(withSchedule('CNCL'), NOW).status).toBe('cancelled');
     expect(normaliseNhlGame(withSchedule('TBD'), NOW).status).toBe('tbd');
     expect(normaliseNhlGame(withSchedule('OK'), NOW).status).toBe('scheduled');
-    // A disruption outranks the live lifecycle field.
+    // A disruption outranks the live lifecycle field — pinned with
+    // lifecycle values that map DIFFERENTLY on their own, so reordering
+    // the two switches in nhlStatus fails here.
     expect(
       normaliseNhlGame(
-        { ...games[0], gameState: 'FUT', gameScheduleState: 'PPD' },
+        { ...games[0], gameState: 'OFF', gameScheduleState: 'PPD' },
         NOW,
       ).status,
     ).toBe('postponed');
+    expect(
+      normaliseNhlGame(
+        { ...games[0], gameState: 'LIVE', gameScheduleState: 'CNCL' },
+        NOW,
+      ).status,
+    ).toBe('cancelled');
   });
 
   test('venue timezone is captured when api-web provides it', () => {
