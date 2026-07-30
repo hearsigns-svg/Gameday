@@ -8,6 +8,7 @@ import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import { searchTeams } from './search';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
+import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import {
@@ -285,21 +286,38 @@ function requireTsdbKey(): string {
 export const pollTsdbLeague = onRequest(async (req, res) => {
   try {
     const leagueId = String(req.query.leagueId ?? '');
-    const season = String(req.query.season ?? '');
+    const hint = String(req.query.season ?? '') || undefined;
     const sport = String(req.query.sport ?? '');
     const durationHours = Number(req.query.durationHours ?? 2);
-    if (!/^\d{3,6}$/.test(leagueId) || !season || !sport) {
-      res.status(400).json({ error: 'leagueId, season, sport are required' });
+    if (!/^\d{3,6}$/.test(leagueId) || !sport) {
+      res.status(400).json({ error: 'leagueId and sport are required' });
       return;
     }
-    const incoming = await fetchTsdbLeagueSeasonFixtures(
-      requireTsdbKey(),
-      leagueId,
-      season,
-      sport,
-      durationHours,
-    );
-    res.json(await ingest(incoming, `tsdb-league-${leagueId}`));
+    // The season on the path is only a HINT. Follows persist their
+    // pollPath at follow time, so a season baked in last year would
+    // otherwise poll a finished season forever. We try the hint plus
+    // the seasons the calendar says are live, and keep whichever
+    // actually has upcoming fixtures — self-healing across a rollover.
+    const attempts: Array<{ season: string; fixtures: Fixture[] }> = [];
+    for (const season of seasonsToTry(hint)) {
+      const fixtures = await fetchTsdbLeagueSeasonFixtures(
+        requireTsdbKey(),
+        leagueId,
+        season,
+        sport,
+        durationHours,
+      );
+      attempts.push({ season, fixtures });
+      // Stop early when the hint already has a live season's worth.
+      if (fixtures.some((f) => f.startUtc >= new Date().toISOString())) break;
+    }
+    const best = bestSeason(attempts);
+    if (!best) {
+      res.json({ fixtures: 0, changes: 0, season: null, triedSeasons: attempts.map((a) => a.season) });
+      return;
+    }
+    const result = await ingest(best.fixtures, `tsdb-league-${leagueId}`);
+    res.json({ ...result, season: best.season });
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
