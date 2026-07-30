@@ -17,7 +17,7 @@ import { showToast } from '../../core/toast';
 // Colour choices for the Gameday calendar as it appears in the OS
 // calendar app. Named for accessibility; applied live when possible.
 const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
-  { name: 'Gameday blue', hex: '#1463F3' },
+  { name: 'KickOffCal blue', hex: '#1463F3' },
   { name: 'Red', hex: '#C81E1E' },
   { name: 'Orange', hex: '#EA580C' },
   { name: 'Green', hex: '#16A34A' },
@@ -163,7 +163,7 @@ export default function PreferencesScreen({
         ))}
       </View>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        How Gameday events look inside your phone's calendar app.
+        How KickOffCal events look inside your phone's calendar app.
       </Text>
 
       {__DEV__ ? (

@@ -21,7 +21,7 @@ export default function WelcomeScreen({ navigation }: Props) {
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
       <View style={{ flex: 1 }} />
-      <Text style={[type.display, { color: t.textPrimary }]}>Gameday</Text>
+      <Text style={[type.display, { color: t.textPrimary }]}>KickOffCal</Text>
       <Text
         style={[
           type.title,

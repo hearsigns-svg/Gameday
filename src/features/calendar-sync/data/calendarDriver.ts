@@ -12,7 +12,10 @@ import { RecoveredEvent } from '../domain/recovery';
 
 export const NOTES_TAG = 'gameday-fixture:';
 const CAL_KEY = 'gamedayCalendarId.v1';
-const CAL_TITLE = 'Gameday';
+const CAL_TITLE = 'KickOffCal';
+// Calendars created before the rename — matched during resolution and
+// renamed in place (never duplicated, never orphaned).
+const LEGACY_CAL_TITLES = ['Gameday'];
 
 // Non-prompting probe: reports the existing grant WITHOUT ever showing
 // the OS dialog. Used as reinstall evidence — an existing grant means
@@ -109,7 +112,10 @@ async function resolveGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
   const cached = readJson<string | null>(CAL_KEY, null);
   const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
   const ours = calendars.filter(
-    (c) => c.title === CAL_TITLE || c.id === cached,
+    (c) =>
+      c.title === CAL_TITLE ||
+      LEGACY_CAL_TITLES.includes(c.title ?? '') ||
+      c.id === cached,
   );
   if (ours.length === 0) return null;
   if (ours.length === 1) return ours[0];
@@ -159,6 +165,15 @@ export async function ensureGamedayCalendar(): Promise<Result<string>> {
     const existing = await resolveGamedayCalendar();
     if (existing) {
       writeJson(CAL_KEY, existing.id);
+      // Rename migration: a pre-rename 'Gameday' calendar becomes
+      // 'KickOffCal' in place — events, ids and ledger all untouched.
+      if (existing.title !== CAL_TITLE) {
+        try {
+          await existing.update({ title: CAL_TITLE });
+        } catch {
+          // keep serving under the old title rather than fail the sync
+        }
+      }
       // A colour picked before the calendar connected must still land —
       // creation applies it, so resolution has to as well. Cosmetic:
       // never let it fail the sync.

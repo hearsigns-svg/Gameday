@@ -91,7 +91,7 @@ function Tabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Gameday',
+          title: 'KickOffCal',
           tabBarLabel: 'Home',
           headerRight: () => <SettingsButton />,
         }}

@@ -14,7 +14,7 @@ import {
 
 const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
-const HEADERS = { 'User-Agent': 'Gameday-dev/1.0 (fixtures calendar app)' };
+const HEADERS = { 'User-Agent': 'KickOffCal-dev/1.0 (fixtures calendar app)' };
 
 async function getJson(url: string): Promise<unknown> {
   const res = await fetch(url, { headers: HEADERS });

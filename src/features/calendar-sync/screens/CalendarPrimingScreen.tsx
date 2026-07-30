@@ -21,7 +21,7 @@ import { runSync, upcomingFixtures } from '../syncEngine';
 type Props = RootScreenProps<'CalendarPriming'>;
 
 const EXPLAINS = [
-  ['🗓️', 'Gameday creates its own calendar — your other calendars are never touched'],
+  ['🗓️', 'KickOffCal creates its own calendar — your other calendars are never touched'],
   ['🔄', 'Events update themselves when times change or games move'],
   ['🧹', 'Unfollow and its fixtures disappear again'],
 ] as const;
@@ -125,7 +125,7 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
       </View>
       {denied ? (
         <Text style={[type.secondary, { color: t.danger, marginTop: spacing.xl }]}>
-          Calendar access is turned off for Gameday. Allow it in Settings,
+          Calendar access is turned off for KickOffCal. Allow it in Settings,
           then come back — your fixtures are waiting.
         </Text>
       ) : failure ? (

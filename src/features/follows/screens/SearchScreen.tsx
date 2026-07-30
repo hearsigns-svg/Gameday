@@ -253,7 +253,7 @@ export default function SearchScreen({ navigation }: Props) {
         <View style={styles.empty}>
           <Text style={[type.body, { color: t.textSecondary, textAlign: 'center' }]}>
             Nothing followable matches “{q}” — search covers the sports
-            and leagues Gameday serves today.
+            and leagues KickOffCal serves today.
           </Text>
         </View>
       ) : (
