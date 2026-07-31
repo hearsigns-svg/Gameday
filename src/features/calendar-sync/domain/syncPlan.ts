@@ -207,6 +207,12 @@ export interface SnapshotFixture {
   sport: string;
   competition: string;
   followKeys: string[];
+  // Team sports only. Carried so the app can identify a fixture by its
+  // PARTICIPANTS rather than by whichever follow happened to pull it in:
+  // a competition follow knows the league, not who is playing, which is
+  // why those cards had no identity to show.
+  homeTeam?: string;
+  awayTeam?: string;
 }
 
 export function upcomingSnapshot(
@@ -233,5 +239,7 @@ export function upcomingSnapshot(
       sport: f.sport,
       competition: f.competition,
       followKeys: f.followKeys,
+      ...(f.homeTeam !== undefined ? { homeTeam: f.homeTeam } : {}),
+      ...(f.awayTeam !== undefined ? { awayTeam: f.awayTeam } : {}),
     }));
 }

@@ -385,3 +385,24 @@
   from browse but a resolved HEX from a stored follow — passing a hex
   through colourFromKitText finds no colour word and drops the identity,
   so a team looked themed on Home and grey on its own page.
+- 2026-07-31: VENUE PHOTOS FOLLOW THE HOME TEAM, not the followed
+  entity. Two bugs in one: a Liverpool follow put Anfield on Liverpool's
+  AWAY games, and a competition follow had no home venue to look up at
+  all, so every Premier League fixture fell through to the sport emoji.
+  `homeTeam`/`awayTeam` were already on Fixture and are now carried
+  through SnapshotFixture — identity should come from WHO IS PLAYING,
+  not from whichever follow happened to pull the fixture in.
+- 2026-07-31: Venue art moved from the Followable onto the name-keyed
+  photoCache under a `venue:` prefix (a ground and a fighter can share a
+  name and must never be served for one another). It inherits the
+  in-flight guard and the never-cache-a-transient-failure rule, and —
+  the point — venue photos now reach the Photo credits screen. They were
+  previously credited only inline on the hero, and CC BY/BY-SA
+  attribution is not a per-surface nicety.
+- 2026-07-31: The hero watermark prefers the team crest over the sport
+  emoji; the emoji is the floor, not the default. A badge says whose
+  game this is, where the emoji only repeats the competition line.
+  Crests for teams the user does NOT follow still need the backend —
+  there is no on-device team directory to resolve a badge by name, so
+  the fix is `homeCrestUrl` on the fixture (safe TSDB strBadge), not
+  client-side guessing.

@@ -111,3 +111,45 @@ STILL FORBIDDEN, unchanged: TSDB team strFanart, TSDB player artwork
 without strCreativeCommons='Yes', athlete photos in App Store
 screenshots, on paywall screens, or in any marketing — that is the
 advertising-shaped use the DraftKings case turned on.
+
+## 2026-07-31 — venue photos follow the HOME TEAM
+
+Tier 1 was keyed on the FOLLOWED entity, which was wrong twice over:
+
+- **Wrong ground.** A Liverpool follow put Anfield on Liverpool's away
+  games. The photograph is of the ground the match is played at, so it
+  belongs to the home side.
+- **No ground at all.** A COMPETITION follow (Premier League) has no
+  home venue to look up, so every one of its fixtures — the majority on
+  a browse-led Home — fell straight through to the sport emoji. The app
+  knew the league and nothing about the two clubs playing.
+
+Fixed by carrying `homeTeam` / `awayTeam` (already on `Fixture`) through
+`SnapshotFixture`, and resolving Tier 1 from the home team's name.
+Non-team sports have no home side and fall back to the followed team
+where there is one, then to the gradient floor.
+
+Venue art now shares the name-keyed `photoCache` with athlete photos,
+under a `venue:` prefix so a ground and a fighter of the same name can
+never be served for one another. Consequence worth having: venue photos
+now appear on the **Photo credits** screen, which they did not before —
+they were credited only inline on the card, and attribution is a licence
+condition, not a per-surface nicety.
+
+MEASURED on the simulator against a Premier League follow, where
+coverage was previously ZERO: Arsenal→Emirates, Hull City→MKM,
+Ipswich→Portman Road, Everton→Goodison all resolved with licence and
+artist. One miss in five: "Nottingham" — provider team names are
+short-forms, and Wikidata search does not reach the club from the city
+name within its candidate window.
+
+KNOWN GAP, needs the backend: crests for teams the user does not follow.
+`crestUrl` only exists on a Followable or a browsed DirectoryTeam; there
+is no on-device team directory to look one up by name, so a competition
+follow still has no badge to show. The fix is a `homeCrestUrl` on the
+fixture from the functions layer (safe TSDB `strBadge`), not more
+client-side guessing.
+
+The hero watermark now prefers the crest over the sport emoji. A badge
+says whose game this is; the emoji says only "football", which the
+competition line already said.

@@ -10,37 +10,62 @@ import {
   claimResolve,
   putPhoto,
   releaseResolve,
+  venueKey,
 } from './data/photoCache';
-import { resolveAthletePhoto } from './data/venueArt';
+import { resolveAthletePhoto, resolveVenuePhoto } from './data/venueArt';
 
-export function useAthletePhoto(name: string | null): VenueArt | null | undefined {
+type Resolver = (name: string) => Promise<
+  Awaited<ReturnType<typeof resolveAthletePhoto>>
+>;
+
+// One lazy-resolve-and-cache loop; the two hooks below differ only in
+// which resolver runs and which namespace they cache under.
+function usePhoto(
+  key: string | null,
+  subject: string | null,
+  resolve: Resolver,
+): VenueArt | null | undefined {
   const [art, setArt] = useState<VenueArt | null | undefined>(() =>
-    name ? cachedPhoto(name) : null,
+    key ? cachedPhoto(key) : null,
   );
 
   useEffect(() => {
-    if (!name) {
+    if (!key || !subject) {
       setArt(null);
       return;
     }
-    const cached = cachedPhoto(name);
+    const cached = cachedPhoto(key);
     if (cached !== undefined) {
       setArt(cached);
       return;
     }
-    if (!claimResolve(name)) return;
+    if (!claimResolve(key)) return;
     let alive = true;
-    void resolveAthletePhoto(name).then((r) => {
-      releaseResolve(name);
+    void resolve(subject).then((r) => {
+      releaseResolve(key);
       if (r.status === 'failed') return; // retry on a later render
       const resolved = r.status === 'found' ? r.art : null;
-      putPhoto(name, resolved);
+      putPhoto(key, resolved);
       if (alive) setArt(resolved);
     });
     return () => {
       alive = false;
     };
-  }, [name]);
+  }, [key, subject, resolve]);
 
   return art;
+}
+
+export function useAthletePhoto(name: string | null): VenueArt | null | undefined {
+  return usePhoto(name, name, resolveAthletePhoto);
+}
+
+// The ground a fixture is PLAYED at — i.e. the home team's. Resolving it
+// from the followed team instead put Anfield on Liverpool's away games,
+// and gave a competition follow no photograph at all, because a league
+// has no home venue to look up.
+export function useVenuePhoto(
+  homeTeam: string | null,
+): VenueArt | null | undefined {
+  return usePhoto(homeTeam ? venueKey(homeTeam) : null, homeTeam, resolveVenuePhoto);
 }

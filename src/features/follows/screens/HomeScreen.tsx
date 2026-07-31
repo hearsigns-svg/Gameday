@@ -9,7 +9,7 @@
 // Home never follows anything directly — every card navigates, and
 // Follow buttons are always visible where they act (owner ruling).
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -44,9 +44,8 @@ import {
   Followable,
   isFollowed,
   loadFollowables,
-  setVenueArt,
 } from '../data/followStore';
-import { resolveVenuePhoto } from '../data/venueArt';
+import { useVenuePhoto } from '../useEntityPhoto';
 import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -134,28 +133,48 @@ export default function HomeScreen({ navigation }: Props) {
     setPage((p) => Math.min(p, Math.max(0, carousel.length - 1)));
   }, [carousel.length]);
 
-  // Lazy venue photography (docs/IMAGERY.md Tier 1): resolve once per
-  // team follow the first time it fronts a hero card; null results are
-  // persisted so nothing re-fetches on every render.
-  const resolvingArt = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    for (const f of carousel) {
-      const owner = identityFollow(f.followKeys, follows);
-      if (!owner || owner.type !== 'team') continue;
-      if (owner.venueArt !== undefined) continue;
-      if (resolvingArt.current.has(owner.key)) continue;
-      resolvingArt.current.add(owner.key);
-      void resolveVenuePhoto(owner.label).then((r) => {
-        resolvingArt.current.delete(owner.key);
-        if (r.status === 'failed') return; // transient — retry next time
-        setVenueArt(owner.key, r.status === 'found' ? r.art : null);
-        setFollows(loadFollowables());
-      });
-    }
-  }, [carousel, follows]);
-
   const cardWidth = windowWidth - spacing.l * 2;
   const snap = cardWidth + spacing.m;
+
+  // A component so the venue-photo hook is legal inside renderItem.
+  // Identity comes from the FIXTURE first (who is playing, where) and
+  // only then from whichever follow pulled it in — a competition follow
+  // knows the league and nothing about the two clubs, which is why those
+  // cards fell all the way through to the sport emoji.
+  function Hero({ item, width }: { item: UpcomingFixture; width: number }) {
+    const sport = sportByKey(item.sport);
+    const owner = identityFollow(item.followKeys, follows);
+    // The photograph is of the ground the match is PLAYED at, so it
+    // follows the home team — not the team you happen to follow.
+    // Non-team sports have no home side; fall back to the followed team
+    // where there is one, and to the gradient floor otherwise.
+    const homeTeam =
+      item.homeTeam ?? (owner?.type === 'team' ? owner.label : null);
+    const art = useVenuePhoto(homeTeam);
+    return (
+      <HeroCard
+        title={item.title}
+        competition={item.competition}
+        startUtc={item.startUtc}
+        status={item.status}
+        glyph={sport?.glyph ?? '🏟️'}
+        crestUrl={owner?.crestUrl}
+        photoUrl={art?.url}
+        photoCredit={
+          art
+            ? [
+                art.artist ? `Photo: ${art.artist}` : 'Photo: Wikimedia Commons',
+                art.licence,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            : undefined
+        }
+        theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
+        style={{ width, marginHorizontal: 0 }}
+      />
+    );
+  }
 
   return (
     <ScrollView
@@ -205,38 +224,9 @@ export default function HomeScreen({ navigation }: Props) {
                 ),
               )
             }
-            renderItem={({ item }) => {
-              const sport = sportByKey(item.sport);
-              const owner = identityFollow(item.followKeys, follows);
-              return (
-                <HeroCard
-                  title={item.title}
-                  competition={item.competition}
-                  startUtc={item.startUtc}
-                  status={item.status}
-                  glyph={sport?.glyph ?? '🏟️'}
-                  crestUrl={owner?.crestUrl}
-                  photoUrl={owner?.venueArt?.url}
-                  photoCredit={
-                    owner?.venueArt
-                      ? [
-                          owner.venueArt.artist
-                            ? `Photo: ${owner.venueArt.artist}`
-                            : 'Photo: Wikimedia Commons',
-                          owner.venueArt.licence,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
-                      : undefined
-                  }
-                  theme={teamTheme(
-                    owner?.brandColour ?? sport?.accent ?? null,
-                    mode,
-                  )}
-                  style={{ width: cardWidth, marginHorizontal: 0 }}
-                />
-              );
-            }}
+            renderItem={({ item }) => (
+              <Hero item={item} width={cardWidth} />
+            )}
           />
           <CarouselDots
             count={carousel.length}

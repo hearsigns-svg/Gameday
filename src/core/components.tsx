@@ -225,9 +225,22 @@ export function HeroCard(props: {
         style={[styles.heroFill, photo ? styles.heroScrim : null]}
       />
       <View style={styles.hero}>
-        <Text style={styles.heroWatermark} accessible={false}>
-          {props.glyph}
-        </Text>
+        {/* The identity we have, in preference order. A club badge says
+            whose game this is; the sport emoji says only "football",
+            which the competition line above already said. The emoji is
+            the floor, not the default. */}
+        {crest ? (
+          <Image
+            source={{ uri: crest }}
+            resizeMode="contain"
+            style={styles.heroWatermarkCrest}
+            accessible={false}
+          />
+        ) : (
+          <Text style={styles.heroWatermark} accessible={false}>
+            {props.glyph}
+          </Text>
+        )}
         <View style={styles.heroTop}>
           {crest ? (
             <Image
@@ -816,6 +829,17 @@ const styles = StyleSheet.create({
     bottom: -22,
     fontSize: 130,
     opacity: 0.12,
+  },
+  // Same optical weight as the emoji watermark, inset rather than bled
+  // off the edge: a crest cropped in half reads as a rendering fault,
+  // where a cropped emoji reads as texture.
+  heroWatermarkCrest: {
+    position: 'absolute',
+    right: -6,
+    bottom: -10,
+    width: 132,
+    height: 132,
+    opacity: 0.16,
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
   eventRow: {
