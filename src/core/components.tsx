@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
+  ScrollView,
   StyleProp,
   StyleSheet,
   Text,
@@ -33,6 +34,9 @@ export function GlyphTile(props: {
   theme: TeamTheme;
   crestUrl?: string;
   size?: number;
+  // Circular: reserved for marks that stand for a TEAM OR PERSON rather
+  // than an event, so the two never read as the same kind of thing.
+  round?: boolean;
 }) {
   const size = props.size ?? 40;
   const [crestFailed, setCrestFailed] = useState(false);
@@ -43,7 +47,7 @@ export function GlyphTile(props: {
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.3,
+        borderRadius: props.round ? size / 2 : size * 0.3,
         backgroundColor: props.theme.container,
         alignItems: 'center',
         justifyContent: 'center',
@@ -63,6 +67,77 @@ export function GlyphTile(props: {
         </Text>
       )}
     </View>
+  );
+}
+
+// Who you follow, as a rail. Home's carousel answers a TIME question —
+// when is the next thing? — and this answers an IDENTITY one: whose
+// schedule can I open? Asking both is what stops the second section
+// being a smaller copy of the first, which is exactly what "Next up"
+// was (slice(0,n) and slice(n,n+3) of one array).
+//
+// Circular marks, deliberately: two horizontal strips of the same shape
+// are indistinguishable mid-swipe, and the user cannot tell which one
+// moved. Round reads as people and teams; square reads as events.
+export interface FollowRailItem {
+  key: string;
+  label: string;
+  caption: string;
+  glyph: string;
+  theme: TeamTheme;
+  crestUrl?: string;
+}
+
+export function FollowRail(props: {
+  items: FollowRailItem[];
+  onPress: (key: string) => void;
+}) {
+  const t = useTheme();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // Under four it already fits: bouncing a strip that cannot scroll
+      // reads as broken rather than playful.
+      bounces={props.items.length > 3}
+      contentContainerStyle={styles.rail}
+    >
+      {props.items.map((item) => (
+        <Pressable
+          key={item.key}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.label}, ${item.caption}. See their fixtures`}
+          onPress={() => props.onPress(item.key)}
+          style={({ pressed }) => [styles.railItem, pressed && { opacity: 0.6 }]}
+        >
+          <GlyphTile
+            glyph={item.glyph}
+            theme={item.theme}
+            crestUrl={item.crestUrl}
+            size={64}
+            round
+          />
+          <Text
+            numberOfLines={2}
+            style={[
+              type.caption,
+              { color: t.textPrimary, fontWeight: '600', textAlign: 'center' },
+            ]}
+          >
+            {item.label}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              type.caption,
+              { color: t.textSecondary, textAlign: 'center' },
+            ]}
+          >
+            {item.caption}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -810,6 +885,13 @@ const styles = StyleSheet.create({
     gap: spacing.s,
     marginTop: spacing.m,
   },
+  rail: {
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.s,
+    paddingBottom: spacing.m,
+    gap: spacing.l,
+  },
+  railItem: { width: 76, alignItems: 'center', gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   sportCard: {
     flexBasis: '46%',

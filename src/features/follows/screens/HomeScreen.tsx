@@ -1,6 +1,11 @@
-// Home answers one question at a glance: when do I next care?
-// Carousel = the next few fixtures, swipeable (never auto-advancing);
-// Next up = the rest of the week at a glance; sport cards = the way in.
+// Home asks two DIFFERENT questions, which is the whole layout rule:
+//   Carousel  — when do I next care? (time)
+//   Following — whose schedule can I open? (identity)
+// It used to ask the first one twice: "Next up" was slice(n, n+3) of the
+// same array the carousel sliced 0..n, so it was the same stream in a
+// smaller font, and items 5-7 could all be the same afternoon.
+// Sport cards = the way in for anything not followed yet.
+//
 // Home never follows anything directly — every card navigates, and
 // Follow buttons are always visible where they act (owner ruling).
 
@@ -18,7 +23,7 @@ import {
   CalendarOffBanner,
   CarouselDots,
   EmptyState,
-  EventRow,
+  FollowRail,
   HeroCard,
   SectionHeader,
   SportCard,
@@ -34,7 +39,7 @@ import {
   UpcomingFixture,
   upcomingFixtures,
 } from '../../calendar-sync/syncEngine';
-import { isDateOnly, timeLabel, whenLabel } from '../../../core/when';
+import { isDateOnly, whenLabel } from '../../../core/when';
 import {
   Followable,
   isFollowed,
@@ -47,8 +52,9 @@ import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
 type Props = TabScreenProps<'Home'>;
 
-const CAROUSEL_MAX = 4;
-const NEXT_UP_COUNT = 3;
+// The carousel is now the ONLY "what's next" surface on Home, so it
+// carries the whole run rather than a teaser of it.
+const CAROUSEL_MAX = 10;
 
 export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
@@ -72,18 +78,55 @@ export default function HomeScreen({ navigation }: Props) {
     };
   }, [navigation]);
 
-  const [carousel, nextUp] = useMemo(() => {
+  const upcoming = useMemo(() => {
     // Removed (excluded) events never lead Home — they live greyed on
     // Schedule. Re-reads on every sync-triggered refresh.
     const excluded = loadExclusions();
-    const upcoming = fixtures.filter(
+    return fixtures.filter(
       (f) =>
         new Date(f.startUtc).getTime() > Date.now() - 3_600_000 &&
         !excluded.has(f.id),
     );
-    const heroes = upcoming.slice(0, CAROUSEL_MAX);
-    return [heroes, upcoming.slice(heroes.length, heroes.length + NEXT_UP_COUNT)];
   }, [fixtures]);
+
+  const carousel = useMemo(
+    () => upcoming.slice(0, CAROUSEL_MAX),
+    [upcoming],
+  );
+
+  // Everything followed, soonest first, each showing when it next plays.
+  // Ordering by next fixture rather than by follow date is what makes
+  // this useful at a glance instead of just a list of names.
+  const railItems = useMemo(() => {
+    const next = new Map<string, UpcomingFixture>();
+    for (const f of upcoming) {
+      // `upcoming` is already ascending, so first write wins.
+      for (const key of f.followKeys) if (!next.has(key)) next.set(key, f);
+    }
+    return [...follows]
+      .sort((a, b) => {
+        const sa = next.get(a.key)?.startUtc;
+        const sb = next.get(b.key)?.startUtc;
+        if (sa && sb) return sa.localeCompare(sb);
+        // Follows with nothing scheduled sink, alphabetical among
+        // themselves — an off-season team is still worth opening.
+        return sa ? -1 : sb ? 1 : a.label.localeCompare(b.label);
+      })
+      .map((item) => {
+        const sport = sportByKey(item.sportKey);
+        const fixture = next.get(item.key);
+        return {
+          key: item.key,
+          label: item.label,
+          caption: fixture
+            ? whenLabel(fixture.startUtc, isDateOnly(fixture.status))
+            : 'Nothing scheduled',
+          glyph: sport?.glyph ?? '🏟️',
+          theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
+          ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+        };
+      });
+  }, [follows, upcoming, mode]);
 
   // A refresh can shrink the carousel under the current page (FlatList
   // clamps the offset without a momentum event) — keep the dot honest.
@@ -212,30 +255,25 @@ export default function HomeScreen({ navigation }: Props) {
         />
       )}
 
-      {nextUp.length > 0 ? (
+      {railItems.length > 0 ? (
         <>
-          <SectionHeader title="Next up" />
-          <View>
-            {nextUp.map((f) => {
-              const sport = sportByKey(f.sport);
-              const owner = identityFollow(f.followKeys, follows);
-              return (
-                <EventRow
-                  key={f.id}
-                  title={f.title}
-                  caption={`${whenLabel(f.startUtc, isDateOnly(f.status))} · ${f.competition}`}
-                  timeText={timeLabel(f.startUtc, f.status)}
-                  tbc={isDateOnly(f.status)}
-                  glyph={sport?.glyph ?? '🏟️'}
-                  crestUrl={owner?.crestUrl}
-                  theme={teamTheme(
-                    owner?.brandColour ?? sport?.accent ?? null,
-                    mode,
-                  )}
-                />
-              );
-            })}
-          </View>
+          <SectionHeader title="Following" />
+          <FollowRail
+            items={railItems}
+            onPress={(key) => {
+              const item = follows.find((f) => f.key === key);
+              if (!item) return;
+              navigation.navigate('Team', {
+                teamKey: item.key,
+                name: item.label,
+                sportKey: item.sportKey,
+                followType: item.type,
+                ...(item.pollPath ? { pollPath: item.pollPath } : {}),
+                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                ...(item.brandColour ? { colours: item.brandColour } : {}),
+              });
+            }}
+          />
         </>
       ) : null}
 

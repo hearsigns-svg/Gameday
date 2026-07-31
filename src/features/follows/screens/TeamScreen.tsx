@@ -45,11 +45,18 @@ type Props = RootScreenProps<'Team'>;
 const polledThisSession = new Set<string>();
 
 export default function TeamScreen({ navigation, route }: Props) {
-  const { teamKey, name, sportKey, pollPath, crestUrl, colours } = route.params;
+  const { teamKey, name, sportKey, pollPath, crestUrl, colours, followType } =
+    route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
   const sport = sportByKey(sportKey);
-  const brandColour = colourFromKitText(colours);
+  // `colours` is kit-colour TEXT from browse, but an already-followed
+  // entity arrives carrying its resolved hex — passing that through
+  // colourFromKitText finds no colour WORD and drops the identity, so
+  // the team would look themed on Home and grey here.
+  const brandColour = /^#[0-9a-f]{3,8}$/i.test(colours ?? '')
+    ? (colours as string)
+    : colourFromKitText(colours);
   const theme = teamTheme(brandColour ?? sport?.accent ?? null, mode);
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +70,10 @@ export default function TeamScreen({ navigation, route }: Props) {
     key: teamKey,
     label: name,
     sportKey,
-    type: 'team',
+    // Browse only ever reaches this screen with a team; the Following
+    // rail can arrive with a competition or series, and unfollow →
+    // re-follow from here must not rewrite what it is.
+    type: followType ?? 'team',
     ...(pollPath ? { pollPath } : {}),
     ...(crestUrl ? { crestUrl } : {}),
     ...(brandColour ? { brandColour } : {}),

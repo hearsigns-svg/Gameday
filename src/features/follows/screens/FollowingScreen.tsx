@@ -138,7 +138,21 @@ export default function FollowingScreen({ navigation }: Props) {
                   mode,
                 )}
                 crestUrl={item.crestUrl}
-                accessibilityLabel={`${item.label}, followed ${item.type}`}
+                accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
+                // A followed thing's own schedule was previously
+                // reachable only from browse or search — you could not
+                // open the page for something you already follow.
+                onPress={() =>
+                  navigation.navigate('Team', {
+                    teamKey: item.key,
+                    name: item.label,
+                    sportKey: item.sportKey,
+                    followType: item.type,
+                    ...(item.pollPath ? { pollPath: item.pollPath } : {}),
+                    ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                    ...(item.brandColour ? { colours: item.brandColour } : {}),
+                  })
+                }
                 right={
                   <FollowButton
                     following

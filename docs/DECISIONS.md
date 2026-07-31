@@ -352,3 +352,36 @@
   otherwise want. Confirms the existing rule that a removed fixture
   stays visible and greyed with a restore affordance — it is the only
   route back, so silent disappearance would make removal one-way.
+- 2026-07-31: HOME ASKS TWO QUESTIONS, not one twice (owner ruling).
+  "Next up" was `slice(n, n+3)` of the very array the carousel sliced
+  `0..n` — the same chronological stream in a smaller font, and items
+  5-7 could all be the same afternoon. No amount of restyling fixes a
+  section that is a copy of the one above it. Replaced with FOLLOWING:
+  the carousel answers a TIME question (when do I next care?), the rail
+  answers an IDENTITY one (whose schedule can I open?). Ordered by next
+  fixture, not by follow date, so it is useful at a glance; follows with
+  nothing scheduled sink rather than vanish.
+- 2026-07-31: The Following rail uses CIRCULAR marks (GlyphTile `round`).
+  Two horizontal strips of the same shape stacked on one screen are
+  indistinguishable mid-swipe — the user cannot tell which one moved.
+  Round reads as people and teams, square as events. It does not scroll
+  under four items, and does not bounce there either: bouncing a strip
+  that cannot scroll reads as broken.
+- 2026-07-31: Carousel raised 4 → 10. It is now the only "what's next"
+  surface on Home, so it carries the whole run instead of teasing it.
+- 2026-07-31: A followed thing's own page was UNREACHABLE — neither the
+  Home rows nor the Following tab rows navigated anywhere, and
+  TeamScreen (which already lists a full fixture run with the per-event
+  remove/restore toggles) could only be opened from browse or search.
+  So you could open the page for a team you might follow, but not for
+  one you already do. Both surfaces now navigate there.
+- 2026-07-31: The Team route carries `followType`. TeamScreen hardcoded
+  `type: 'team'` because browse only ever arrived with a team; the
+  Following rail can arrive with a competition or series, and an
+  unfollow → re-follow from that screen would have silently rewritten
+  what the follow IS (identityFollow ranks team follows above
+  competition ones, so it would have changed which follow owns a
+  fixture's identity everywhere). Also: `colours` is kit-colour TEXT
+  from browse but a resolved HEX from a stored follow — passing a hex
+  through colourFromKitText finds no colour word and drops the identity,
+  so a team looked themed on Home and grey on its own page.

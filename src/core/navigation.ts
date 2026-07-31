@@ -34,6 +34,12 @@ export type RootStackParamList = {
     pollPath?: string;
     crestUrl?: string;
     colours?: string;
+    // Mirrors FollowableType (features/follows/domain/sportsConfig) —
+    // inlined because core must not import from a feature. Reached from
+    // browse it is always a team; reached from the Following rail it can
+    // be a competition or series, and re-following from here would
+    // otherwise silently rewrite its type.
+    followType?: 'team' | 'competition' | 'athlete' | 'series';
   };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
