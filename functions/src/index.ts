@@ -11,6 +11,19 @@ import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
+import { loadCoverage } from './coverage';
+import {
+  countsFrom,
+  EMPTY_COUNTS,
+  httpStatusFromError,
+  isZeroYield,
+  recordSourceRun,
+  RunContext,
+  RunCounts,
+  RunTrigger,
+  TRIGGER_HEADER,
+  triggerOf,
+} from './sourceRuns';
 import {
   fetchLeagueSeasonFixtures,
   fetchTeamSeasonFixtures,
@@ -44,12 +57,17 @@ function timingSafeEqualStr(a: string, b: string): boolean {
   return timingSafeEqual(ha, hb);
 }
 
+// What one ingest did, in the terms the coverage report needs. `fetched`
+// is the provider's raw row count and belongs to the caller, which is the
+// only layer that has seen the wire.
+export type IngestCounts = Omit<RunCounts, 'fetched' | 'futureDated'>;
+
 // Shared ingest: diff fresh fixtures against the cache slice for one
 // followable key, then upsert fixtures + append change records.
 async function ingest(
   rawIncoming: Fixture[],
   followKey: string,
-): Promise<{ fixtures: number; changes: number }> {
+): Promise<{ fixtures: number; changes: number; counts: IngestCounts }> {
   // Stamp every provider's key for each club onto the fixture, so a
   // team followed via one provider still matches fixtures supplied by
   // another (league from football-data, cups from TSDB).
@@ -85,13 +103,19 @@ async function ingest(
     const strip = ({ updatedAt, firstSeenAt, ...rest }: Fixture) => rest;
     return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
   };
+  let stored = 0;
+  let unchanged = 0;
   for (const f of incoming) {
     const prev = existing.get(f.id);
-    if (prev && sameFixture(prev, f)) continue;
+    if (prev && sameFixture(prev, f)) {
+      unchanged++;
+      continue;
+    }
     // firstSeenAt decides which id survives a cross-source merge — it
     // must never be reset by a re-poll.
     const record: Fixture = { ...f, firstSeenAt: prev?.firstSeenAt ?? at };
     batch.set(db.collection('fixtures').doc(f.id), record);
+    stored++;
     if (++pending >= 450) await flush();
   }
   for (const c of changes) {
@@ -102,7 +126,83 @@ async function ingest(
     if (++pending >= 450) await flush();
   }
   await flush();
-  return { fixtures: incoming.length, changes: changes.length };
+  return {
+    fixtures: incoming.length,
+    changes: changes.length,
+    // `rejected` is 0 by construction: there is no validation stage yet
+    // (Stage 6 adds one). The counter ships now so the identity
+    // parsed === stored + unchanged + rejected is pinned from day one.
+    counts: { parsed: incoming.length, rejected: 0, stored, unchanged },
+  };
+}
+
+// One connector invocation, instrumented. Every exit — success, provider
+// failure, or an honest empty season — writes exactly one sourceRuns doc,
+// so "it ran and found nothing" and "it never ran" stop looking alike.
+//
+// Returns the HTTP shape rather than writing it, to keep express types out
+// of the helper.
+interface PollWork {
+  rawCount: number;
+  fixtures: Fixture[];
+  followKey: string;
+  seasonResolved: string | null;
+  body?: Record<string, unknown>; // extra response fields
+}
+
+async function servePoll(
+  trigger: RunTrigger,
+  ctx: Omit<RunContext, 'trigger'>,
+  work: (trace: { seasonsTried: string[] }) => Promise<PollWork>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const startedAt = new Date().toISOString();
+  const runCtx: RunContext = { ...ctx, trigger };
+  // Captured rather than returned so a throw mid-way through a multi-season
+  // resolution still records which seasons were actually tried.
+  const trace = { seasonsTried: [] as string[] };
+  try {
+    const w = await work(trace);
+    const ingested = await ingest(w.fixtures, w.followKey);
+    const counts = countsFrom(
+      { fetched: w.rawCount, ...ingested.counts },
+      w.fixtures,
+      startedAt,
+    );
+    await recordSourceRun(
+      runCtx,
+      {
+        httpStatus: 200,
+        seasonResolved: w.seasonResolved,
+        seasonsTried: trace.seasonsTried,
+        counts,
+        error: null,
+      },
+      startedAt,
+    );
+    return {
+      status: 200,
+      body: {
+        fixtures: ingested.fixtures,
+        changes: ingested.changes,
+        counts,
+        zeroYield: isZeroYield(counts),
+        ...(w.body ?? {}),
+      },
+    };
+  } catch (e) {
+    await recordSourceRun(
+      runCtx,
+      {
+        httpStatus: httpStatusFromError(e),
+        seasonResolved: null,
+        seasonsTried: trace.seasonsTried,
+        counts: EMPTY_COUNTS,
+        error: String(e),
+      },
+      startedAt,
+    );
+    return { status: 502, body: { error: String(e) } };
+  }
 }
 
 function requireKey(): string {
@@ -115,37 +215,55 @@ function requireKey(): string {
 // driven sweep over all followed followables (M6); the adapter → diff →
 // cache pipeline is identical.
 export const pollTeam = onRequest(async (req, res) => {
-  try {
-    const teamId = Number(req.query.teamId);
-    const season = Number(req.query.season);
-    if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
-      res.status(400).json({ error: 'teamId and season are required' });
-      return;
-    }
-    const incoming = await fetchTeamSeasonFixtures(requireKey(), teamId, season);
-    res.json(await ingest(incoming, `apisports-team-${teamId}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const teamId = Number(req.query.teamId);
+  const season = Number(req.query.season);
+  if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
+    res.status(400).json({ error: 'teamId and season are required' });
+    return;
   }
+  const followKey = `apisports-team-${teamId}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'apisports',
+      sport: 'soccer',
+      competitionId: followKey,
+      pollPath: `pollTeam?teamId=${teamId}&season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchTeamSeasonFixtures(requireKey(), teamId, season);
+      return { ...r, followKey, seasonResolved: String(season) };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const pollLeague = onRequest(async (req, res) => {
-  try {
-    const leagueId = Number(req.query.leagueId);
-    const season = Number(req.query.season);
-    if (!Number.isInteger(leagueId) || !Number.isInteger(season)) {
-      res.status(400).json({ error: 'leagueId and season are required' });
-      return;
-    }
-    const incoming = await fetchLeagueSeasonFixtures(
-      requireKey(),
-      leagueId,
-      season,
-    );
-    res.json(await ingest(incoming, `apisports-league-${leagueId}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const leagueId = Number(req.query.leagueId);
+  const season = Number(req.query.season);
+  if (!Number.isInteger(leagueId) || !Number.isInteger(season)) {
+    res.status(400).json({ error: 'leagueId and season are required' });
+    return;
   }
+  const followKey = `apisports-league-${leagueId}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'apisports',
+      sport: 'soccer',
+      competitionId: followKey,
+      pollPath: `pollLeague?leagueId=${leagueId}&season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchLeagueSeasonFixtures(requireKey(), leagueId, season);
+      return { ...r, followKey, seasonResolved: String(season) };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const listLeagues = onRequest(async (_req, res) => {
@@ -244,37 +362,59 @@ function requireFdKey(): string {
 }
 
 export const pollFdTeam = onRequest(async (req, res) => {
-  try {
-    const teamId = Number(req.query.teamId);
-    const season = Number(req.query.season);
-    if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
-      res.status(400).json({ error: 'teamId and season are required' });
-      return;
-    }
-    const incoming = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId, season);
-    res.json(await ingest(incoming, `fdorg-team-${teamId}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const teamId = Number(req.query.teamId);
+  const season = Number(req.query.season);
+  if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
+    res.status(400).json({ error: 'teamId and season are required' });
+    return;
   }
+  const followKey = `fdorg-team-${teamId}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'fdorg',
+      sport: 'soccer',
+      competitionId: followKey,
+      pollPath: `pollFdTeam?teamId=${teamId}&season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId, season);
+      return { ...r, followKey, seasonResolved: String(season) };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const pollFdCompetition = onRequest(async (req, res) => {
-  try {
-    const code = String(req.query.code ?? '');
-    const season = Number(req.query.season);
-    if (!/^[A-Z0-9]{2,4}$/.test(code) || !Number.isInteger(season)) {
-      res.status(400).json({ error: 'code and season are required' });
-      return;
-    }
-    const incoming = await fetchFdCompetitionSeasonFixtures(
-      requireFdKey(),
-      code,
-      season,
-    );
-    res.json(await ingest(incoming, `fdorg-comp-${code}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const code = String(req.query.code ?? '');
+  const season = Number(req.query.season);
+  if (!/^[A-Z0-9]{2,4}$/.test(code) || !Number.isInteger(season)) {
+    res.status(400).json({ error: 'code and season are required' });
+    return;
   }
+  const followKey = `fdorg-comp-${code}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'fdorg',
+      sport: 'soccer',
+      competitionId: followKey,
+      pollPath: `pollFdCompetition?code=${code}&season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchFdCompetitionSeasonFixtures(
+        requireFdKey(),
+        code,
+        season,
+      );
+      return { ...r, followKey, seasonResolved: String(season) };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 function requireTsdbKey(): string {
@@ -284,87 +424,150 @@ function requireTsdbKey(): string {
 }
 
 export const pollTsdbLeague = onRequest(async (req, res) => {
-  try {
-    const leagueId = String(req.query.leagueId ?? '');
-    const hint = String(req.query.season ?? '') || undefined;
-    const sport = String(req.query.sport ?? '');
-    const durationHours = Number(req.query.durationHours ?? 2);
-    if (!/^\d{3,6}$/.test(leagueId) || !sport) {
-      res.status(400).json({ error: 'leagueId and sport are required' });
-      return;
-    }
-    // The season on the path is only a HINT. Follows persist their
-    // pollPath at follow time, so a season baked in last year would
-    // otherwise poll a finished season forever. We try the hint plus
-    // the seasons the calendar says are live, and keep whichever
-    // actually has upcoming fixtures — self-healing across a rollover.
-    const attempts: Array<{ season: string; fixtures: Fixture[] }> = [];
-    for (const season of seasonsToTry(hint)) {
-      const fixtures = await fetchTsdbLeagueSeasonFixtures(
-        requireTsdbKey(),
-        leagueId,
-        season,
-        sport,
-        durationHours,
-      );
-      attempts.push({ season, fixtures });
-      // Stop early when the hint already has a live season's worth.
-      if (fixtures.some((f) => f.startUtc >= new Date().toISOString())) break;
-    }
-    const best = bestSeason(attempts);
-    if (!best) {
-      res.json({ fixtures: 0, changes: 0, season: null, triedSeasons: attempts.map((a) => a.season) });
-      return;
-    }
-    const result = await ingest(best.fixtures, `tsdb-league-${leagueId}`);
-    res.json({ ...result, season: best.season });
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const leagueId = String(req.query.leagueId ?? '');
+  const hint = String(req.query.season ?? '') || undefined;
+  const sport = String(req.query.sport ?? '');
+  const durationHours = Number(req.query.durationHours ?? 2);
+  if (!/^\d{3,6}$/.test(leagueId) || !sport) {
+    res.status(400).json({ error: 'leagueId and sport are required' });
+    return;
   }
+  const followKey = `tsdb-league-${leagueId}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'tsdb',
+      sport,
+      competitionId: followKey,
+      pollPath: `pollTsdbLeague?leagueId=${leagueId}&season=${hint ?? ''}&sport=${sport}&durationHours=${durationHours}`,
+      seasonRequested: hint ?? null,
+    },
+    async (trace) => {
+      // The season on the path is only a HINT. Follows persist their
+      // pollPath at follow time, so a season baked in last year would
+      // otherwise poll a finished season forever. We try the hint plus
+      // the seasons the calendar says are live, and keep whichever
+      // actually has upcoming fixtures — self-healing across a rollover.
+      const attempts: Array<{
+        season: string;
+        fixtures: Fixture[];
+        rawCount: number;
+      }> = [];
+      for (const season of seasonsToTry(hint)) {
+        trace.seasonsTried.push(season);
+        const r = await fetchTsdbLeagueSeasonFixtures(
+          requireTsdbKey(),
+          leagueId,
+          season,
+          sport,
+          durationHours,
+        );
+        attempts.push({ season, fixtures: r.fixtures, rawCount: r.rawCount });
+        // Stop early when the hint already has a live season's worth.
+        if (r.fixtures.some((f) => f.startUtc >= new Date().toISOString())) {
+          break;
+        }
+      }
+      const best = bestSeason(attempts);
+      const chosen = best
+        ? attempts.find((a) => a.season === best.season)
+        : undefined;
+      // No candidate season had anything at all. Recorded as a real run
+      // with zero yield rather than an error — it is a true statement
+      // about the upstream, and the run doc is what makes it visible.
+      return {
+        rawCount: chosen?.rawCount ?? 0,
+        fixtures: chosen?.fixtures ?? [],
+        followKey,
+        seasonResolved: best?.season ?? null,
+        body: {
+          season: best?.season ?? null,
+          triedSeasons: attempts.map((a) => a.season),
+        },
+      };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const pollMlbTeam = onRequest(async (req, res) => {
-  try {
-    const teamId = Number(req.query.teamId);
-    const season = Number(req.query.season);
-    if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
-      res.status(400).json({ error: 'teamId and season are required' });
-      return;
-    }
-    const incoming = await fetchMlbTeamSeasonFixtures(teamId, season);
-    res.json(await ingest(incoming, `mlb-team-${teamId}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const teamId = Number(req.query.teamId);
+  const season = Number(req.query.season);
+  if (!Number.isInteger(teamId) || !Number.isInteger(season)) {
+    res.status(400).json({ error: 'teamId and season are required' });
+    return;
   }
+  const followKey = `mlb-team-${teamId}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'mlb',
+      sport: 'baseball',
+      competitionId: followKey,
+      pollPath: `pollMlbTeam?teamId=${teamId}&season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchMlbTeamSeasonFixtures(teamId, season);
+      return { ...r, followKey, seasonResolved: String(season) };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const pollNhlTeam = onRequest(async (req, res) => {
-  try {
-    const abbrev = String(req.query.abbrev ?? '');
-    const season = String(req.query.season ?? '');
-    if (!/^[A-Z]{2,3}$/.test(abbrev) || !/^\d{8}$/.test(season)) {
-      res.status(400).json({ error: 'abbrev and season (YYYYYYYY) required' });
-      return;
-    }
-    const incoming = await fetchNhlTeamSeasonFixtures(abbrev, season);
-    res.json(await ingest(incoming, `nhl-team-${abbrev}`));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const abbrev = String(req.query.abbrev ?? '');
+  const season = String(req.query.season ?? '');
+  if (!/^[A-Z]{2,3}$/.test(abbrev) || !/^\d{8}$/.test(season)) {
+    res.status(400).json({ error: 'abbrev and season (YYYYYYYY) required' });
+    return;
   }
+  const followKey = `nhl-team-${abbrev}`;
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'nhl',
+      sport: 'ice-hockey',
+      competitionId: followKey,
+      pollPath: `pollNhlTeam?abbrev=${abbrev}&season=${season}`,
+      seasonRequested: season,
+    },
+    async (trace) => {
+      trace.seasonsTried.push(season);
+      const r = await fetchNhlTeamSeasonFixtures(abbrev, season);
+      return { ...r, followKey, seasonResolved: season };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 export const pollF1 = onRequest(async (req, res) => {
-  try {
-    const season = Number(req.query.season);
-    if (!Number.isInteger(season)) {
-      res.status(400).json({ error: 'season is required' });
-      return;
-    }
-    const incoming = await fetchF1SeasonFixtures(season);
-    res.json(await ingest(incoming, 'f1-series-1'));
-  } catch (e) {
-    res.status(502).json({ error: String(e) });
+  const season = Number(req.query.season);
+  if (!Number.isInteger(season)) {
+    res.status(400).json({ error: 'season is required' });
+    return;
   }
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'f1',
+      sport: 'f1',
+      competitionId: 'f1-series-1',
+      pollPath: `pollF1?season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchF1SeasonFixtures(season);
+      return {
+        ...r,
+        followKey: 'f1-series-1',
+        seasonResolved: String(season),
+      };
+    },
+  );
+  res.status(out.status).json(out.body);
 });
 
 const MUTABLE_STATUSES: FixtureStatus[] = [
@@ -476,6 +679,28 @@ export const scheduledReconcile = onSchedule(
   { schedule: 'every sunday 04:00', timeoutSeconds: 540, memory: '256MiB' },
   async () => {
     await reconcileFixtures(false);
+  },
+);
+
+// What every connector has actually delivered lately, per ingest slice.
+// Read-only, but it scans the run history and every future-dated fixture,
+// so it is guarded with the same shared key as the other ops endpoints and
+// FAILS CLOSED — an unauthenticated unbounded scan is a cost surface, not
+// a convenience.
+export const coverageReport = onRequest(
+  { timeoutSeconds: 120, memory: '256MiB', maxInstances: 2 },
+  async (req, res) => {
+    const expected = process.env.SWEEP_KEY;
+    const provided = req.get('x-sweep-key');
+    if (!expected || !provided || !timingSafeEqualStr(provided, expected)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
+    try {
+      res.json(await loadCoverage(db, Date.now()));
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
   },
 );
 

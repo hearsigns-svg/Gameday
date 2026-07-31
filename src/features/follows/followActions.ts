@@ -45,7 +45,12 @@ function pollPathFor(item: Followable): string {
 export async function ensurePolled(item: Followable): Promise<Result<true>> {
   const path = pollPathFor(item);
   try {
-    const res = await fetch(`${functionsBaseUrl}/${path}`);
+    // Labels the server-side run record: a follow warming the cache is a
+    // different event from the scheduled sweep, and coverage reporting
+    // needs to tell them apart.
+    const res = await fetch(`${functionsBaseUrl}/${path}`, {
+      headers: { 'x-kickoffcal-trigger': 'follow' },
+    });
     if (!res.ok) {
       return err({ kind: 'provider', status: res.status, message: await res.text() });
     }

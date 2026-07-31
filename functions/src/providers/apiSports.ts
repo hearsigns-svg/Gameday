@@ -2,6 +2,7 @@
 // canonical Fixture. The only file that knows this provider's shapes.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://v3.football.api-sports.io';
 
@@ -52,33 +53,39 @@ async function fetchRows(
   if (!res.ok) throw new Error(`api-sports http ${res.status}`);
   const body = (await res.json()) as {
     errors: unknown;
-    response: ApiFixtureRow[];
+    response?: ApiFixtureRow[];
   };
   const errors = body.errors;
   if (errors && Object.keys(errors).length > 0) {
     throw new Error(`api-sports error: ${JSON.stringify(errors)}`);
   }
-  return body.response;
+  return requireArray(body.response, 'api-sports', 'response');
 }
 
 export async function fetchTeamSeasonFixtures(
   apiKey: string,
   teamId: number,
   season: number,
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const now = new Date().toISOString();
   const rows = await fetchRows(apiKey, `team=${teamId}&season=${season}`);
-  return rows.map((row) => normaliseRow(row, now));
+  return {
+    rawCount: rows.length,
+    fixtures: rows.map((row) => normaliseRow(row, now)),
+  };
 }
 
 export async function fetchLeagueSeasonFixtures(
   apiKey: string,
   leagueId: number,
   season: number,
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const now = new Date().toISOString();
   const rows = await fetchRows(apiKey, `league=${leagueId}&season=${season}`);
-  return rows.map((row) => normaliseRow(row, now));
+  return {
+    rawCount: rows.length,
+    fixtures: rows.map((row) => normaliseRow(row, now)),
+  };
 }
 
 export function normaliseRow(row: ApiFixtureRow, updatedAt: string): Fixture {

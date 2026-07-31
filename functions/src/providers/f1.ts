@@ -3,6 +3,7 @@
 // follow, per-session events, race-only preference filters 'support').
 
 import { Fixture } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.jolpi.ca/ergast/f1';
 
@@ -88,12 +89,24 @@ export function racesToFixtures(
   return fixtures;
 }
 
-export async function fetchF1SeasonFixtures(season: number): Promise<Fixture[]> {
+export async function fetchF1SeasonFixtures(
+  season: number,
+): Promise<ProviderFetch> {
   const res = await fetch(`${BASE}/${season}.json`);
   if (!res.ok) throw new Error(`jolpica http ${res.status}`);
   const body = (await res.json()) as {
-    MRData: { RaceTable: { Races: F1Race[] } };
+    MRData?: { RaceTable?: { Races?: F1Race[] } };
   };
   const now = new Date().toISOString();
-  return racesToFixtures(String(season), body.MRData.RaceTable.Races, now);
+  // rawCount is race WEEKENDS; one weekend fans out into up to 7 session
+  // fixtures, so this is the one adapter where fetched ≠ parsed by design.
+  const races = requireArray(
+    body.MRData?.RaceTable?.Races,
+    'jolpica',
+    'MRData.RaceTable.Races',
+  );
+  return {
+    rawCount: races.length,
+    fixtures: racesToFixtures(String(season), races, now),
+  };
 }

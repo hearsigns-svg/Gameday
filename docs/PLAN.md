@@ -290,3 +290,48 @@ STILL OPEN, in priority order:
       never actually says a match was called off.
 CI LESSON: run the suite under TZ=America/Los_Angeles as well as UTC —
 every one of these hid behind a UTC-only test run.
+
+## Coverage remediation (staged, from 2026-07-31)
+
+Driven by the read-only coverage audit of 2026-07-31, which traced where
+events are lost between a provider and a user's calendar. Findings that
+each stage does not fix are recorded in `FINDINGS.md`, not carried in
+chat. Stages are independently revertible, one commit each.
+
+Standing invariant from Stage 1 onward: **a read failure must never be
+indistinguishable from an empty result.** No new `?? []`, no new
+"2xx means it worked"; each stage fixes the instances in code it touches.
+
+### Stage 0 — Instrumentation  [x]
+
+Nothing later is verifiable without it: the County Championship poll path
+had been dropped from every sweep since it was written, and was found by
+hand-replaying a validator.
+- `sourceRuns` collection, one doc per connector invocation, written by
+  the poller wrapper + `ingest()` (never by the sweep, which sees only an
+  aggregate 2xx). Carries trigger, slice, seasons tried/resolved, HTTP
+  status, the six counts, error, and `zeroYield`. 90-day `expiresAt`.
+- `coverageReport` HTTP function (shared-key guarded, fails closed): per
+  ingest slice, last run, last run WITHOUT an error, last run that yielded
+  a future-dated fixture, hours since each, and the stored future-dated
+  count. No UI, no alerting.
+- Provider fetchers now return `{ rawCount, fixtures }` so funnel stage A
+  (fetched) and stage B (parsed) stop being the same number, and
+  `requireArray` makes a missing response key an error instead of an
+  empty season.
+- VERIFIED 2026-07-31 against the Firebase emulator with real providers:
+  10 connector calls → 10 run docs; idempotent re-poll recorded
+  stored=0/unchanged=115; FA Cup recorded HTTP 200, 873 rows, zeroYield
+  true, error null, while fd.org CL recorded httpStatus 404 with an error
+  — the two cases that used to be identical. A 400 writes no run record.
+  `coverageReport` 403s without the key. 320 tests green under UTC and
+  America/Los_Angeles; `tsc --noEmit` and the functions build clean.
+- OWNER ACTIONS OWED: deploy (`firebase deploy --only functions`), and
+  enable the Firestore TTL policy on `sourceRuns.expiresAt` — the field is
+  written but TTL is a project-level policy, so retention is not enforced
+  until it is turned on. `sweeps.expiresAt` may never have been enabled
+  either; worth checking at the same time.
+- BASELINE (production, 2026-07-31T11:03Z, before deploy): 10,755 stored
+  fixtures, 5,199 future-dated across 43 competition slices; every slice
+  reads never-run because nothing is deployed yet. Recorded in the Stage 0
+  report as the datum every later stage is measured against.

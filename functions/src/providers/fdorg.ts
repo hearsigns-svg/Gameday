@@ -7,6 +7,7 @@
 // placeholder machinery renders an all-day entry until TIMED lands.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.football-data.org/v4';
 
@@ -80,26 +81,34 @@ export async function fetchFdTeamSeasonFixtures(
   apiKey: string,
   teamId: number,
   season: number, // season start year, e.g. 2026 for 2026-27
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const body = (await fdGet(
     apiKey,
     `/teams/${teamId}/matches?season=${season}`,
-  )) as { matches: FdMatch[] };
+  )) as { matches?: FdMatch[] };
   const now = new Date().toISOString();
-  return body.matches.map((m) => normaliseFdMatch(m, now));
+  const matches = requireArray(body.matches, 'football-data', 'matches');
+  return {
+    rawCount: matches.length,
+    fixtures: matches.map((m) => normaliseFdMatch(m, now)),
+  };
 }
 
 export async function fetchFdCompetitionSeasonFixtures(
   apiKey: string,
   code: string, // e.g. 'PL', 'CL', 'WC'
   season: number,
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const body = (await fdGet(
     apiKey,
     `/competitions/${code}/matches?season=${season}`,
-  )) as { matches: FdMatch[] };
+  )) as { matches?: FdMatch[] };
   const now = new Date().toISOString();
-  return body.matches.map((m) => normaliseFdMatch(m, now));
+  const matches = requireArray(body.matches, 'football-data', 'matches');
+  return {
+    rawCount: matches.length,
+    fixtures: matches.map((m) => normaliseFdMatch(m, now)),
+  };
 }
 
 export interface FdDirectoryTeam {

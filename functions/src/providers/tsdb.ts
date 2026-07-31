@@ -4,6 +4,7 @@
 // none). The only file that knows this provider's shapes.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://www.thesportsdb.com/api/v1/json';
 
@@ -100,15 +101,17 @@ export async function fetchTsdbLeagueSeasonFixtures(
   season: string, // exact TSDB season string; format varies per league
   sport: string,
   durationHours: number,
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const body = (await tsdbGet(
     apiKey,
     `eventsseason.php?id=${leagueId}&s=${encodeURIComponent(season)}`,
-  )) as { events: TsdbEvent[] | null };
+  )) as { events?: TsdbEvent[] | null };
   const now = new Date().toISOString();
-  return (body.events ?? []).map((e) =>
-    normaliseTsdbEvent(e, sport, durationHours, now),
-  );
+  const events = requireArray(body.events, 'thesportsdb', 'events');
+  return {
+    rawCount: events.length,
+    fixtures: events.map((e) => normaliseTsdbEvent(e, sport, durationHours, now)),
+  };
 }
 
 export interface TsdbTeamRow {

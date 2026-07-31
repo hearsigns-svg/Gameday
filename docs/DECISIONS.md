@@ -406,3 +406,28 @@
   there is no on-device team directory to resolve a badge by name, so
   the fix is `homeCrestUrl` on the fixture (safe TSDB strBadge), not
   client-side guessing.
+- 2026-07-31: Every connector invocation writes one `sourceRuns` doc —
+  written by the poller wrapper and `ingest()`, never by the sweep, which
+  only ever sees an aggregate 2xx. The record carries the pair that makes
+  the standing invariant checkable: an error has a message and a status,
+  an empty result has neither, and BOTH set `zeroYield` when nothing
+  future-dated came back. Retention 90 days via `expiresAt`.
+- 2026-07-31: `zeroYield` is defined on `futureDated === 0`, deliberately
+  NOT on HTTP status or row count. Every dead season in this system
+  answers 200 with hundreds of rows (FA Cup: 873 docs, none upcoming);
+  status and volume are exactly the signals that hid the problem.
+- 2026-07-31: Provider fetchers return `{ rawCount, fixtures }` instead of
+  a bare `Fixture[]`. Collapsing the two makes selector rot (800 rows in,
+  3 out) indistinguishable from a quiet season — and F1 is a live case
+  where they legitimately differ, 23 race weekends becoming 115 sessions.
+- 2026-07-31: A run's `competitionId` is the INGEST SLICE KEY (the
+  followKey the fetch is diffed against), not the display competition.
+  Consequently `coverageReport` counts stored fixtures against every
+  followKey a fixture carries: keyed by `competitionId` alone the two
+  sides never met, and every team poller read as "stored nothing" while
+  every league read as "never polled". Caught by the emulator run, not by
+  a unit test.
+- 2026-07-31: `coverageReport` is guarded by the same shared key as
+  runSweep/runReconcile and fails closed. It is read-only but scans the
+  run history plus every future-dated fixture, which is a cost surface,
+  not a convenience.

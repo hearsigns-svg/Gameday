@@ -2,6 +2,7 @@
 // Teams are keyed by abbreviation (BOS, PHI …) throughout this provider.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api-web.nhle.com/v1';
 
@@ -81,12 +82,16 @@ export function normaliseNhlGame(g: NhlGame, updatedAt: string): Fixture {
 export async function fetchNhlTeamSeasonFixtures(
   abbrev: string,
   seasonId: string, // e.g. '20262027'
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const res = await fetch(`${BASE}/club-schedule-season/${abbrev}/${seasonId}`);
   if (!res.ok) throw new Error(`nhl api-web http ${res.status}`);
-  const body = (await res.json()) as { games: NhlGame[] };
+  const body = (await res.json()) as { games?: NhlGame[] };
   const now = new Date().toISOString();
-  return body.games.map((g) => normaliseNhlGame(g, now));
+  const games = requireArray(body.games, 'nhl api-web', 'games');
+  return {
+    rawCount: games.length,
+    fixtures: games.map((g) => normaliseNhlGame(g, now)),
+  };
 }
 
 export interface NhlTeamRow {

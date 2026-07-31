@@ -2,6 +2,7 @@
 // The only file that knows this provider's shapes.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://statsapi.mlb.com/api/v1';
 
@@ -20,7 +21,7 @@ export interface MlbGame {
 }
 
 interface ScheduleResponse {
-  dates: Array<{ games: MlbGame[] }>;
+  dates?: Array<{ games?: MlbGame[] }>;
 }
 
 function mlbStatus(g: MlbGame): FixtureStatus {
@@ -62,14 +63,20 @@ export function normaliseMlbGame(g: MlbGame, updatedAt: string): Fixture {
 export async function fetchMlbTeamSeasonFixtures(
   teamId: number,
   season: number,
-): Promise<Fixture[]> {
+): Promise<ProviderFetch> {
   const res = await fetch(
     `${BASE}/schedule?sportId=1&teamId=${teamId}&startDate=${season}-02-01&endDate=${season}-11-30`,
   );
   if (!res.ok) throw new Error(`mlb statsapi http ${res.status}`);
   const body = (await res.json()) as ScheduleResponse;
   const now = new Date().toISOString();
-  return body.dates.flatMap((d) => d.games.map((g) => normaliseMlbGame(g, now)));
+  const games = requireArray(body.dates, 'mlb statsapi', 'dates').flatMap((d) =>
+    requireArray(d.games, 'mlb statsapi', 'dates[].games'),
+  );
+  return {
+    rawCount: games.length,
+    fixtures: games.map((g) => normaliseMlbGame(g, now)),
+  };
 }
 
 export interface MlbTeamRow {

@@ -11,6 +11,7 @@
 
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { TRIGGER_HEADER } from './sourceRuns';
 
 const SELF_BASE =
   process.env.SELF_BASE ??
@@ -93,7 +94,13 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { signal: controller.signal });
+    // The poller, not the sweep, writes the per-run record (the sweep only
+    // ever sees an aggregate 2xx). It tells the poller who asked, so a
+    // scheduled run is distinguishable from a follow warming the cache.
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: { [TRIGGER_HEADER]: 'sweep' },
+    });
   } finally {
     clearTimeout(timer);
   }
