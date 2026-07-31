@@ -6,6 +6,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
+import { enrichBoutParticipants } from './participants';
 import { searchTeams } from './search';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
@@ -70,13 +71,19 @@ async function ingest(
   rawIncoming: Fixture[],
   followKey: string,
 ): Promise<{ fixtures: number; changes: number; counts: IngestCounts }> {
+  // Combat cards arrive as a title with no participants; parse the
+  // fighters out and give them athlete follow keys before anything else
+  // looks at the fixture.
+  const withPeople = enrichBoutParticipants(rawIncoming);
   // Stamp every provider's key for each club onto the fixture, so a
   // team followed via one provider still matches fixtures supplied by
   // another (league from football-data, cups from TSDB).
-  const incoming =
-    rawIncoming[0]?.sport === 'soccer'
-      ? augmentFollowKeys(rawIncoming, await loadTeamAliases(db))
-      : rawIncoming;
+  //
+  // No longer gated to soccer: the gate was there because only the soccer
+  // directories were populated, but the alias table now covers every
+  // league with a team directory, and a cross-provider club is a
+  // cross-provider club whatever the sport.
+  const incoming = augmentFollowKeys(withPeople, await loadTeamAliases(db));
   const existingSnap = await db
     .collection('fixtures')
     .where('followKeys', 'array-contains', followKey)
@@ -350,8 +357,27 @@ export const listTeams = onRequest(async (req, res) => {
       });
       return;
     }
-    // Soccer: leagueId is a football-data competition code (PL, CL, …).
-    const code = String(req.query.leagueId ?? '');
+    // Soccer has two directory sources. A NUMERIC leagueId is a
+    // TheSportsDB league (League One, League Two, the Scottish
+    // Premiership — the ones football-data's free tier cannot reach);
+    // anything else is a football-data competition code (PL, CL, …).
+    const rawId = String(req.query.leagueId ?? '');
+    if (/^\d{3,6}$/.test(rawId)) {
+      const league = TSDB_TEAM_LEAGUES[rawId];
+      if (!league) {
+        res.status(404).json({ error: `no team directory for ${rawId}` });
+        return;
+      }
+      res.json({
+        teams: await listTsdbTeams(
+          requireTsdbKey(),
+          league.tsdbName,
+          league.cacheKey,
+        ),
+      });
+      return;
+    }
+    const code = rawId;
     if (!/^[A-Z0-9]{2,4}$/.test(code)) {
       res.status(400).json({ error: 'leagueId (competition code) is required' });
       return;

@@ -18,6 +18,36 @@ export interface TsdbTeamLeague {
 }
 
 export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
+  // ── Soccer leagues football-data's free tier structurally cannot cover.
+  // Their clubs had no canonical entity at ALL: 1,078 unresolved
+  // participant strings in the coverage audit were dominated by these
+  // three, because the alias table is built from team directories and
+  // there were none. Seeding them gives every club an identity AND turns
+  // the browse rows from follow-only into team drill-downs.
+  '4396': {
+    tsdbName: 'English League 1',
+    cacheKey: 'soccer-4396',
+    sportKey: 'soccer',
+    label: 'League One',
+    pollPath:
+      'pollTsdbLeague?leagueId=4396&season=2026-2027&sport=soccer&durationHours=2',
+  },
+  '4397': {
+    tsdbName: 'English League 2',
+    cacheKey: 'soccer-4397',
+    sportKey: 'soccer',
+    label: 'League Two',
+    pollPath:
+      'pollTsdbLeague?leagueId=4397&season=2026-2027&sport=soccer&durationHours=2',
+  },
+  '4330': {
+    tsdbName: 'Scottish Premier League',
+    cacheKey: 'soccer-4330',
+    sportKey: 'soccer',
+    label: 'Scottish Premiership',
+    pollPath:
+      'pollTsdbLeague?leagueId=4330&season=2026-2027&sport=soccer&durationHours=2',
+  },
   '4387': {
     tsdbName: 'NBA',
     cacheKey: 'basketball-nba',

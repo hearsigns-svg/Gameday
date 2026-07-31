@@ -4,6 +4,7 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { ACTIVE_SEASON, CURATED_SOCCER_LEAGUES } from './config';
 import { FdSeason } from './fdSeasons';
+import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { normaliseName } from './identity';
 import { fetchFdCompetitionTeams, FD_FREE_COMPETITIONS } from './providers/fdorg';
 import { fetchMlbTeams } from './providers/mlb';
@@ -126,14 +127,23 @@ export function listSoccerLeagues(seasons: ReadonlyMap<string, FdSeason>) {
       pollPath:
         'pollTsdbLeague?leagueId=4481&season=2026-2027&sport=soccer&durationHours=2',
     },
-    ...TSDB_SOCCER_EXTRAS.map((c) => ({
-      id: c.id,
-      name: c.name,
-      country: c.country,
-      key: `tsdb-league-${c.id}`,
-      followOnly: true,
-      pollPath: `pollTsdbLeague?leagueId=${c.id}&season=${c.season}&sport=soccer&durationHours=2`,
-    })),
+    ...TSDB_SOCCER_EXTRAS.map((c) => {
+      // A competition with a seeded team directory can be drilled into;
+      // the rest stay follow-only because we have no squad list for them.
+      const hasTeams = c.id in TSDB_TEAM_LEAGUES;
+      const pollPath = `pollTsdbLeague?leagueId=${c.id}&season=${c.season}&sport=soccer&durationHours=2`;
+      return {
+        id: c.id,
+        name: c.name,
+        country: c.country,
+        key: `tsdb-league-${c.id}`,
+        ...(hasTeams ? {} : { followOnly: true }),
+        pollPath,
+        // Following a TEAM inside a TSDB league polls the whole league —
+        // there is no per-team route — so the same path serves both.
+        ...(hasTeams ? { teamPollPath: pollPath } : {}),
+      };
+    }),
   ];
 }
 

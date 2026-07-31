@@ -296,3 +296,55 @@ four `listEvents` calls, one per window. The cost is real and was accepted
 deliberately: the alternative is reusing the pre-op scan for the post-op
 prune, which would report already-deleted events as orphans. Worth
 revisiting if sync latency becomes a complaint.
+
+---
+
+## Found during Prompt 4 (source investigation, 2026-07-31)
+
+### F18 — Four of nine boxing promoters cannot be used, for three different reasons
+Investigated read-only, robots.txt first, no UA spoofing, no auth bypass.
+
+- **Golden Boy** — `robots.txt` permits everything, but Cloudflare returns
+  **HTTP 403 sitewide** to an honest client. Actively blocks automated
+  access. Not a robots question; a server one.
+- **MVP (Most Valuable Promotions)** — `robots.txt` names our agent
+  explicitly: `User-agent: ClaudeBot` / `Disallow: /`. A stated policy, not
+  a technical block; a browser can read the page. One request was made (to
+  robots.txt) and nothing else.
+- **DAZN** — not blocked, but categorically excluded by the owner's own
+  rule. It is a BROADCASTER EPG, and it labels each boxing row with the
+  actual promoter (Golden Boy, Queensberry, BOXXER, Red Owl). It is a TV
+  guide filtered to carriage rights, varying by locale, interleaved with
+  rallies and esports.
+- **Riyadh Season** — served by `cdn.webook.com`, a third-party ticketing
+  platform's Contentful gateway. The verifier reclassified it
+  promoter → **aggregator**, so the owner's rule excludes it.
+
+### F19 — ATP Tour disallows our agent; the Tennis ICS is robots-disallowed at Google
+- `atptour.com/robots.txt` names ClaudeBot among nine blanket
+  `Disallow: /` blocks. Not fetched beyond robots.txt.
+- The TennisTV calendar the owner remembered **exists, is official and is
+  current** — confirmed via Zendesk's public Help Center API on
+  `support.tennistv.com` (which permits it), article "How to download the
+  Tennis TV tournament calendar", updated 2025-11-05. Scope, quoted: all
+  ATP Masters 1000s, 500s and 250s, the Nitto ATP Finals, Next Gen Finals
+  and the United Cup.
+- BUT the feed lives at `calendar.google.com`, whose robots.txt is
+  `Allow: /$` / `Disallow: /` — everything except the root is disallowed.
+  An ICS subscription URL is designed to be polled by calendar clients,
+  which are not crawlers and do not consult robots.txt; whether a server
+  fetching it every few hours is a crawler is a judgement the owner has to
+  make, not one to make silently. HELD pending that decision.
+
+### F20 — Top Rank publishes zero upcoming events, and their own site is broken
+`api.toprank.com/api/admin/events/` is a clean, permissive, paginated JSON
+API (53 published events). But `types[]=upcoming` returns HTTP 404 with an
+empty body, and `toprank.com/events/upcoming` renders an empty page with a
+visible console error on their own site. The connector would be correct and
+would yield nothing. Worth building only when they fix their feed.
+
+### F21 — queensberrypromotions.com is a parked domain
+The real site is `queensberry.co.uk` (Shopify). The named domain returns a
+114-byte GoDaddy parking redirect. Its JSON-LD `SportsEvent` blocks are
+present but STALE — all four are Feb–Mar 2025 — so the live schedule has to
+come from the page body, not the structured data that looks authoritative.
