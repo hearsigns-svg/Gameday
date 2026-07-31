@@ -431,3 +431,17 @@
   runSweep/runReconcile and fails closed. It is read-only but scans the
   run history plus every future-dated fixture, which is a cost surface,
   not a convenience.
+- 2026-07-31: The fixture query chunks follow keys 30 at a time and is
+  ALL-OR-NOTHING: one failing chunk fails the whole fetch. A partial
+  union is indistinguishable from an unfollow to planSync, and planSync
+  deletes what it cannot find, so a partial success would delete real
+  events from a real calendar. The failure shape carries no `fixtures`
+  field at all — a partial union is unrepresentable, not merely
+  unreturned.
+- 2026-07-31: Chunks run SEQUENTIALLY with per-chunk retries, aborting on
+  the first chunk that exhausts them. Parallel would be faster, but the
+  common case is one chunk (≤30 follows) and the failure path should not
+  fire seven queries into a dead radio.
+- 2026-07-31: 30 is not a guess — verified live against production
+  Firestore: 30 comparison values accepted, 31 rejected with
+  "'ARRAY_CONTAINS_ANY' supports up to 30 comparison values."

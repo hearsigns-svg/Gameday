@@ -335,3 +335,31 @@ hand-replaying a validator.
   fixtures, 5,199 future-dated across 43 competition slices; every slice
   reads never-run because nothing is deployed yet. Recorded in the Stage 0
   report as the datum every later stage is measured against.
+
+### Stage 1 — The follow cap  [x]
+
+`fetchFixturesForFollows` truncated to `followedKeys.slice(0, 10)`. Not a
+display bug: planSync deletes any ledgered event it cannot find a fixture
+for, so every follow past the tenth had its real calendar events pruned on
+the next sync.
+- New pure module `src/features/fixtures/domain/fixtureQuery.ts`: chunks
+  follow keys 30 at a time (Firestore's real ceiling), retries per chunk,
+  unions by fixture id — and is ALL-OR-NOTHING. One failing chunk fails the
+  whole fetch; the failure shape has no `fixtures` field, so a partial
+  union is unrepresentable rather than merely unreturned.
+- `data/fixturesRepo.ts` keeps only the Firestore closure and the error
+  classification. `getDocsFromServer` (never `getDocs`) is unchanged.
+- VERIFIED 2026-07-31 against PRODUCTION Firestore, read-only: 30
+  comparison values accepted, 31 rejected ("'ARRAY_CONTAINS_ANY' supports
+  up to 30 comparison values"). With 40 real production team follows the
+  old truncation returned 1,113 fixtures and the chunked fetch returns
+  3,100 — 1,987 recovered, and ZERO fixtures present under the old path
+  are missing from the new one, so the change can only create, never
+  delete. Composed with the real planner: 40 follows in steady state
+  planned 30 deletions under truncation and zero operations after the fix.
+- Circuit breaker (`syncEngine.ts:445-451`) deliberately unchanged: a
+  partial fetch can no longer reach it, because `fetchFixturesForFollows`
+  returns `err` and `syncEngine.ts:439` bails before planning.
+- 341 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean.
+

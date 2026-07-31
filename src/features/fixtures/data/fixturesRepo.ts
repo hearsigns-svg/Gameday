@@ -12,39 +12,35 @@ import {
 import { db, functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 import { Fixture } from '../domain/fixture';
+import { fetchInChunks } from '../domain/fixtureQuery';
 
-const FETCH_ATTEMPTS = 3;
-const BACKOFF_MS = [800, 2400];
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// One `array-contains-any` window. Retries, chunking and the
+// all-or-nothing rule live in domain/fixtureQuery.ts, which is pure and
+// tested; this closure is the only part that knows about Firestore.
+async function queryChunk(keys: readonly string[]): Promise<Fixture[]> {
+  const snap = await getDocsFromServer(
+    query(
+      collection(db, 'fixtures'),
+      where('followKeys', 'array-contains-any', [...keys]),
+    ),
+  );
+  return snap.docs.map((d) => d.data() as Fixture);
+}
 
 export async function fetchFixturesForFollows(
   followedKeys: readonly string[],
 ): Promise<Result<Fixture[]>> {
   if (followedKeys.length === 0) return ok([]);
-  let lastError = '';
-  for (let attempt = 0; attempt < FETCH_ATTEMPTS; attempt++) {
-    if (attempt > 0) await wait(BACKOFF_MS[attempt - 1]);
-    try {
-      // array-contains-any caps at 10 keys; fine for now, batched later.
-      const snap = await getDocsFromServer(
-        query(
-          collection(db, 'fixtures'),
-          where('followKeys', 'array-contains-any', followedKeys.slice(0, 10)),
-        ),
-      );
-      return ok(snap.docs.map((d) => d.data() as Fixture));
-    } catch (e) {
-      // Transient network flakes (mobile radio, DNS) get bounded retries.
-      lastError = String(e);
-    }
-  }
+  const result = await fetchInChunks(followedKeys, queryChunk);
+  if (result.ok) return ok(result.fixtures);
   // Firestore reports an unreachable backend as 'unavailable' with a
   // long SDK message that includes developer advice — never show that
   // to a user. Classify it as what it is: we could not reach the
   // service. The detail stays in the log for us.
-  console.warn(`[kickoffcal] fixture fetch failed: ${lastError}`);
-  if (/unavailable|network|failed to get documents|timeout/i.test(lastError)) {
+  console.warn(
+    `[kickoffcal] fixture fetch failed on chunk ${result.failedChunk + 1}/${result.chunks}: ${result.error}`,
+  );
+  if (/unavailable|network|failed to get documents|timeout/i.test(result.error)) {
     return err({ kind: 'offline' });
   }
   return err({ kind: 'unknown', message: 'Could not load fixtures.' });

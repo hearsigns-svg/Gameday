@@ -85,3 +85,29 @@ That is not a sweep slot (sweeps land at HH:20), so it was an interactive
 audit's `fdorg-comp-PL = 108` is therefore already superseded by 380.
 Baselines taken before Stage 0 is deployed are snapshots of a moving
 target; after deployment, `sourceRuns` records who caused each change.
+
+---
+
+## Found during Stage 1 (the follow cap)
+
+### F9 — The device registry caps followKeys and pollPaths at 200, and fails closed
+`firestore.rules` — the `devices/{uid}` write rule requires
+`followKeys.size() <= 200` and `pollPaths.size() <= 200`. Stage 1 removed
+the client-side 10-key read cap, but a user who crosses 200 follows will
+have their entire registry write REJECTED by rules. `registerDevice`
+catches the failure and only `console.warn`s
+(`deviceRegistry.ts:64-68`), so the device silently stops being swept:
+its follows are never re-polled and its fixtures go stale forever. The
+same class of bug as the one Stage 1 fixed, one layer up, with a worse
+failure mode (nothing is written at all rather than a truncated read).
+
+### F10 — `MAX_PATHS_PER_SWEEP = 250` is a coverage ceiling across ALL users
+`functions/src/sweep.ts:37`. The sweep unions poll paths across every
+registered device and then takes the first 250. Beyond that, paths are
+dropped for that run — recorded as `truncated: true` in the `sweeps` doc
+and nowhere else. With a growing user base the union grows, so some
+followed competitions would simply stop being refreshed, arbitrarily and
+invisibly. The `sourceRuns`/`coverageReport` work from Stage 0 would now
+make the consequence visible (those slices stop having runs), but the
+truncation itself is unaddressed. Relevant to Stage 7's catalogue design,
+which changes what the sweep is driven by.
