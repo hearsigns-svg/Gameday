@@ -295,3 +295,92 @@ describe('sync horizon — the calendar is about upcoming games', () => {
     expect(ops).toHaveLength(1);
   });
 });
+
+// ─── Bounded passes (Stage 1b item 2) ─────────────────────────────────
+//
+// Measured 2026-07-31: Android emulator writes 15 calendar ops/sec, so a
+// pass longer than ~2,700 ops outlives STALE_RUN_MS (180s) and a second
+// run starts on top of the first. These pin the budget that prevents it.
+
+import { capOps, MAX_OPS_PER_PASS } from '../syncPlan';
+
+const createOp = (id: string): SyncOp => ({
+  op: 'create',
+  fixture: fixture({ id }),
+  desired: {
+    title: 't',
+    startUtc: '2026-12-25T15:00:00.000Z',
+    endUtc: '2026-12-25T17:00:00.000Z',
+    allDay: false,
+  },
+});
+const deleteOp = (id: string): SyncOp => ({
+  op: 'delete',
+  fixtureId: id,
+  entry: {
+    eventId: `ev-${id}`,
+    calendarId: 'c',
+    startUtc: '2026-12-25T15:00:00.000Z',
+    endUtc: '2026-12-25T17:00:00.000Z',
+    title: 't',
+  },
+});
+
+describe('capOps', () => {
+  test('a plan inside the budget is applied whole, nothing deferred', () => {
+    const ops = [createOp('a'), deleteOp('b')];
+    expect(capOps(ops)).toEqual({ apply: ops, deferred: 0 });
+  });
+
+  test('an oversized plan is bounded and the remainder is COUNTED, not dropped', () => {
+    const ops = Array.from({ length: 4000 }, (_, i) => createOp(`f${i}`));
+    const { apply, deferred } = capOps(ops);
+    expect(apply).toHaveLength(MAX_OPS_PER_PASS);
+    expect(deferred).toBe(4000 - MAX_OPS_PER_PASS);
+    // Every op is accounted for: applied + deferred === planned.
+    expect(apply.length + deferred).toBe(ops.length);
+  });
+
+  test('deletes and updates are never the ops that get deferred', () => {
+    // A capped pass that deferred a delete would leave a cancelled fixture
+    // sitting in the user's calendar until some later pass got to it.
+    const ops = [
+      ...Array.from({ length: 3000 }, (_, i) => createOp(`c${i}`)),
+      ...Array.from({ length: 20 }, (_, i) => deleteOp(`d${i}`)),
+    ];
+    const { apply } = capOps(ops);
+    expect(apply.filter((o) => o.op === 'delete')).toHaveLength(20);
+    expect(apply.slice(0, 20).every((o) => o.op === 'delete')).toBe(true);
+  });
+
+  test('the budget holds even when corrections alone exceed it', () => {
+    const ops = Array.from({ length: 2000 }, (_, i) => deleteOp(`d${i}`));
+    const { apply, deferred } = capOps(ops);
+    expect(apply).toHaveLength(MAX_OPS_PER_PASS);
+    expect(deferred).toBe(500);
+  });
+
+  test('the budget is under the measured stale-run ceiling on the slowest platform', () => {
+    // 15 ops/sec measured on the Android emulator; STALE_RUN_MS is 180s.
+    const SLOWEST_OPS_PER_SEC = 15;
+    const STALE_RUN_SECONDS = 180;
+    expect(MAX_OPS_PER_PASS / SLOWEST_OPS_PER_SEC).toBeLessThan(
+      STALE_RUN_SECONDS,
+    );
+  });
+
+  test('progress is guaranteed: each pass applies a full budget', () => {
+    // Convergence argument — 5,160 creates (the all-competitions case)
+    // drains in a bounded number of passes rather than one long hang.
+    let remaining = 5160;
+    let passes = 0;
+    while (remaining > 0) {
+      const ops = Array.from({ length: remaining }, (_, i) => createOp(`f${i}`));
+      const { apply, deferred } = capOps(ops);
+      expect(apply.length).toBeGreaterThan(0); // never a zero-progress pass
+      remaining = deferred;
+      passes++;
+    }
+    expect(passes).toBe(4);
+  });
+});

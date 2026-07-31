@@ -74,18 +74,71 @@ interface DeviceDoc {
   pollPaths?: unknown;
 }
 
+// How many skipped paths to name in the record. Naming none made
+// truncation a bare boolean with no way to know WHAT stopped being
+// refreshed; naming all of them is unbounded. The list is capped and the
+// cap is reported, never silently applied.
+const MAX_SKIPPED_NAMED = 200;
+
 export interface SweepResult {
-  paths: number;
-  dropped: number;
+  paths: number; // paths actually attempted this run
+  dropped: number; // submitted routes rejected by the allowlist
   polled: number;
   pollErrors: number;
   changes: number;
   devicesNotified: number;
   tokensPruned: number;
   truncated: boolean;
+  // Truncation detail. `truncated` alone said a ceiling was hit but not
+  // which competitions stopped being refreshed because of it — and a
+  // silently unrefreshed slice is exactly what this remediation is about.
+  pathsSeen: number; // distinct valid paths across all devices
+  skippedByCap: number; // beyond MAX_PATHS_PER_SWEEP
+  skippedByDeadline: number; // in range but the clock ran out first
+  skippedPaths: string[]; // up to MAX_SKIPPED_NAMED of them
+  skippedPathsNamed: number; // how many of the skipped are listed above
+  truncationReason: 'cap' | 'deadline' | 'cap+deadline' | null;
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export interface SkippedSummary {
+  skippedByCap: number;
+  skippedByDeadline: number;
+  skippedPaths: string[];
+  skippedPathsNamed: number;
+  truncationReason: SweepResult['truncationReason'];
+}
+
+// What this run never touched, and why. Pure so the accounting can be
+// tested; sweepAll itself is all I/O.
+export function summariseSkipped(
+  allPaths: readonly string[],
+  maxPaths: number,
+  attempted: number,
+  hitDeadline: boolean,
+): SkippedSummary {
+  const byCap = allPaths.slice(maxPaths);
+  // Deadline skips are the tail of what the cap DID admit.
+  const byDeadline = hitDeadline
+    ? allPaths.slice(attempted, Math.min(allPaths.length, maxPaths))
+    : [];
+  const all = [...byCap, ...byDeadline];
+  return {
+    skippedByCap: byCap.length,
+    skippedByDeadline: byDeadline.length,
+    skippedPaths: all.slice(0, MAX_SKIPPED_NAMED),
+    skippedPathsNamed: Math.min(all.length, MAX_SKIPPED_NAMED),
+    truncationReason:
+      byCap.length > 0 && byDeadline.length > 0
+        ? 'cap+deadline'
+        : byCap.length > 0
+          ? 'cap'
+          : byDeadline.length > 0
+            ? 'deadline'
+            : null,
+  };
+}
 
 const asStringList = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
@@ -138,17 +191,27 @@ export async function sweepAll(): Promise<SweepResult> {
       else dropped++;
     }
   }
+  // DROP ORDER IS ARBITRARY. `canonical` is a Set in first-insertion
+  // order, and insertion follows the device scan — Firestore's natural
+  // document order (anonymous uid, ascending) — then each device's own
+  // pollPaths array order. So what survives the cap is decided by uid
+  // lexicography, not by how many users follow a competition or how stale
+  // it is. Left as-is deliberately; see docs/PLAN.md Stage 1b item 5.
   const allPaths = [...canonical];
   const paths = allPaths.slice(0, MAX_PATHS_PER_SWEEP);
 
   let polled = 0;
   let pollErrors = 0;
+  let attempted = 0;
+  let hitDeadline = false;
   let truncated = allPaths.length > paths.length;
   for (const path of paths) {
     if (Date.now() - startedAtMs > DEADLINE_MS) {
       truncated = true;
+      hitDeadline = true;
       break; // never let polling eat the fan-out
     }
+    attempted++;
     try {
       const res = await fetchWithTimeout(`${SELF_BASE}/${path}`);
       if (res.ok) polled++;
@@ -219,7 +282,7 @@ export async function sweepAll(): Promise<SweepResult> {
   }
 
   const summary: SweepResult = {
-    paths: paths.length,
+    paths: attempted,
     dropped,
     polled,
     pollErrors,
@@ -227,6 +290,8 @@ export async function sweepAll(): Promise<SweepResult> {
     devicesNotified,
     tokensPruned,
     truncated,
+    pathsSeen: allPaths.length,
+    ...summariseSkipped(allPaths, MAX_PATHS_PER_SWEEP, attempted, hitDeadline),
   };
   await db.collection('sweeps').doc(startedAt).set({
     ...summary,

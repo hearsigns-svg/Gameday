@@ -193,6 +193,44 @@ export function planSync(
   return ops;
 }
 
+// Ops applied in one pass. The op loop is serial and each op is a native
+// calendar write, so a first sync is as long as it is wide. Measured
+// 2026-07-31: iOS simulator 150 ops/sec, Android emulator 15 ops/sec.
+//
+// The ceiling that matters is not patience, it is STALE_RUN_MS in the
+// engine: a run holding the lock longer than three minutes is treated as
+// abandoned, and the next trigger starts a SECOND run while the first is
+// still writing. Two live runs racing the ledger is the zombie-run
+// duplication this codebase already knows about. At 15 ops/sec that
+// threshold arrives at ~2,700 ops, and a user who follows the ten
+// heaviest competitions plans 3,369 creates on their first sync.
+//
+// So a pass is capped and later passes drain the rest. 1,500 ops is ~100s
+// on the slowest thing measured — comfortably inside the window — and ~10s
+// on iOS.
+export const MAX_OPS_PER_PASS = 1500;
+
+export interface CappedOps {
+  apply: SyncOp[];
+  deferred: number;
+}
+
+// Deletes and updates go first. They are bounded by what is already IN the
+// calendar, and they correct or remove events the user can see right now;
+// deferring a removal would leave a cancelled fixture sitting in someone's
+// calendar for another pass. Creates — the unbounded part — fill whatever
+// budget is left.
+export function capOps(
+  ops: readonly SyncOp[],
+  cap: number = MAX_OPS_PER_PASS,
+): CappedOps {
+  if (ops.length <= cap) return { apply: [...ops], deferred: 0 };
+  const corrections = ops.filter((o) => o.op !== 'create');
+  const creates = ops.filter((o) => o.op === 'create');
+  const apply = [...corrections, ...creates].slice(0, cap);
+  return { apply, deferred: ops.length - apply.length };
+}
+
 // Presentation snapshot of what's ahead — Home and Schedule render this.
 // It must show only what the calendar actually wants: same
 // desiredEventFor gate as the planner, so a cancelled fixture (or a

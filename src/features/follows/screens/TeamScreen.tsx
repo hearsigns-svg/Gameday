@@ -83,7 +83,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     const r = await fetchFixturesForFollows([teamKey]);
     if (!mounted.current) return;
     if (r.ok) {
-      const upcoming = r.value
+      const upcoming = r.value.fixtures
         .filter((f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000)
         .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
       setFixtures(upcoming);

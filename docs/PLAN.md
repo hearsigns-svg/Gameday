@@ -363,3 +363,42 @@ the next sync.
 - 341 tests green under UTC and America/Los_Angeles; typecheck and the
   functions build clean.
 
+### Stage 1b — carry-forward  [~]
+
+Closes what Stage 1 skipped. Two items were deploy/build blockers.
+
+- **requireArray (item 1) — RESOLVED.** Verified live against all six
+  providers: only TheSportsDB uses the `null`-for-empty convention
+  (`eventsseason` for FA Cup 2026-2027, and for a league id that does not
+  exist); football-data, NHL, MLB and Jolpica all return an empty ARRAY.
+  Documented-empty is correctly recorded as `zeroYield: true, error: null`.
+  Found and fixed a real overshoot: the guard only checked `undefined`, so
+  a present-but-non-array body passed through and reported its character
+  count as a row count. Now three-way: missing key throws, null is empty,
+  non-array throws.
+  A throw inside the season loop ABORTS the poll; it does not continue to
+  the next candidate. Kept deliberately (see DECISIONS).
+- **Re-creation burst (item 2) — MEASURED, and one blocker found.**
+  iOS simulator 150 ops/sec, Android emulator 15 ops/sec; 748 creates took
+  5.0s and 48.8s respectively. Ops are applied SERIALLY, one native write
+  each, sharing one calendar object; there was no cap and no budget.
+  Capped at 1,500/pass (see DECISIONS) because Android crosses
+  STALE_RUN_MS at ~2,700. The Stage 1 recovery figure is corrected: 1,987
+  recovered FIXTURES is only **212 extra calendar creates** for a 40-team
+  user, because planSync drops past-dated fixtures; the genuinely large
+  bursts are competition follows (10 comps = 3,369 creates).
+  BLOCKER: 38 orphaned events survive every sync and prune never fires —
+  see FINDINGS.md F11. The app build stays blocked on that.
+- **Instrumentation (item 3) — DONE.** `SyncOutcome` gained
+  `followKeyCount` and `queryChunks`; confirmed on-device on BOTH
+  platforms (iOS `followKeyCount: 3`, Android `followKeyCount: 6`).
+- **Query window (item 4) — NOTE ONLY**, docs/QUERY_WINDOW.md. A windowed
+  query would delete 2,571 past events for a 40-team user. Recommends
+  option (b), not before Stage 4.
+- **Sweep truncation (item 5) — DONE.** `sweeps` records `pathsSeen`,
+  `skippedByCap`, `skippedByDeadline`, the skipped paths themselves (capped
+  at 200, and says so) and a `truncationReason`. Drop order is arbitrary
+  and unchanged.
+- 362 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean.
+

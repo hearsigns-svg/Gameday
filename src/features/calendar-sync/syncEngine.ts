@@ -44,6 +44,7 @@ import {
   upsertLedgerEntry,
 } from './data/ledger';
 import {
+  capOps,
   horizonStartFrom,
   planSync,
   SnapshotFixture,
@@ -114,6 +115,18 @@ export interface SyncOutcome {
   pruned?: number; // orphan tagged events deleted (ledger invariant)
   moved?: number; // events relocated to a new calendar target
   calendarSkipped?: boolean; // fixtures refreshed, calendar not opted in
+  // Shape of the fixture query that fed this run. Recorded so a cap
+  // cannot silently reappear at a new threshold: followKeyCount should
+  // track the user's follows, and queryChunks should be
+  // ceil(followKeyCount / 30). If either flatlines while follows grow,
+  // something is truncating again.
+  followKeyCount?: number;
+  queryChunks?: number;
+  // Ops this pass did not get to. A first sync can plan thousands of
+  // creates; applying them all in one pass outlasts STALE_RUN_MS and
+  // invites a second concurrent run. Non-zero means another pass is
+  // queued, not that anything was lost.
+  deferred?: number;
   at: string;
 }
 
@@ -238,13 +251,13 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
   // must not blank the app's schedule view.
   if (
     follows.length > 0 &&
-    fixtures.value.length === 0 &&
+    fixtures.value.fixtures.length === 0 &&
     readJson<SnapshotFixture[]>(UPCOMING_FIXTURES_KEY, []).length > 0
   ) {
     return err({ kind: 'suspect-empty' });
   }
   writePresentationState(
-    fixtures.value,
+    fixtures.value.fixtures,
     follows,
     prefs,
     horizonStartFrom(Date.now()),
@@ -255,6 +268,8 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
     updated: 0,
     deleted: 0,
     calendarSkipped: true,
+    followKeyCount: fixtures.value.keys,
+    queryChunks: fixtures.value.chunks,
     at: new Date().toISOString(),
   };
   writeJson(LAST_SYNC_KEY, outcome);
@@ -444,7 +459,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // "everything is cancelled". Never mass-delete on that signal.
     if (
       follows.length > 0 &&
-      fixtures.value.length === 0 &&
+      fixtures.value.fixtures.length === 0 &&
       Object.keys(ledger).length > 0
     ) {
       return err({ kind: 'suspect-empty' });
@@ -454,7 +469,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     const excluded = loadExclusions();
     const pins = pinnedIds();
     const ops = planSync(
-      fixtures.value,
+      fixtures.value.fixtures,
       ledger,
       follows,
       prefs,
@@ -463,16 +478,21 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       pins,
     );
 
+    // Bounded pass: corrections first, creates fill the remainder.
+    const { apply, deferred } = capOps(ops);
     const outcome: SyncOutcome = {
       created: 0,
       updated: 0,
       deleted: 0,
       recovered,
+      ...(deferred > 0 ? { deferred } : {}),
       ...(moved.value > 0 ? { moved: moved.value } : {}),
+      followKeyCount: fixtures.value.keys,
+      queryChunks: fixtures.value.chunks,
       at: new Date().toISOString(),
     };
 
-    for (const op of ops) {
+    for (const op of apply) {
       if (op.op === 'create' || op.op === 'update') {
         const f = op.fixture;
         const d = op.desired;
@@ -534,8 +554,18 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // and gated by the same desiredEventFor the planner uses — the app
     // never shows a fixture the calendar doesn't want (cancelled,
     // race-only excluded), and never runs ahead of a sync that failed.
-    writePresentationState(fixtures.value, follows, prefs, horizonStart, excluded);
+    writePresentationState(
+      fixtures.value.fixtures,
+      follows,
+      prefs,
+      horizonStart,
+      excluded,
+    );
     writeJson(LAST_SYNC_KEY, outcome);
+    // Drain the remainder on the next pass. Reuses the lock's existing
+    // coalescing hop rather than recursing here, so the run finishes and
+    // releases before the next one starts.
+    if (deferred > 0) rerunQueued = true;
     return ok(outcome);
   }
 }

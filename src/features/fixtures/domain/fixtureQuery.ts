@@ -30,8 +30,12 @@ export interface ChunkedFetchOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
+// The success shape carries the query's own dimensions so a cap cannot
+// silently reappear at a new threshold: if `keys` stops tracking the
+// user's follow count, or `chunks` stops tracking ceil(keys / 30), the
+// sync record shows it.
 export type ChunkedFetch =
-  | { ok: true; fixtures: Fixture[]; chunks: number }
+  | { ok: true; fixtures: Fixture[]; keys: number; chunks: number }
   | { ok: false; error: string; failedChunk: number; chunks: number };
 
 const realSleep = (ms: number): Promise<void> =>
@@ -78,7 +82,10 @@ export async function fetchInChunks(
     sleep = realSleep,
   } = options;
   const chunks = chunkFollowKeys(followedKeys, chunkSize);
-  if (chunks.length === 0) return { ok: true, fixtures: [], chunks: 0 };
+  const keys = chunks.reduce((n, c) => n + c.length, 0);
+  if (chunks.length === 0) {
+    return { ok: true, fixtures: [], keys: 0, chunks: 0 };
+  }
 
   // Accumulated LOCALLY. Nothing here is visible to a caller until the
   // loop has completed every chunk — see the single ok:true return below.
@@ -109,6 +116,7 @@ export async function fetchInChunks(
   return {
     ok: true,
     fixtures: mergeFixtureBatches(batches),
+    keys,
     chunks: chunks.length,
   };
 }

@@ -445,3 +445,26 @@
 - 2026-07-31: 30 is not a guess — verified live against production
   Firestore: 30 comparison values accepted, 31 rejected with
   "'ARRAY_CONTAINS_ANY' supports up to 30 comparison values."
+- 2026-07-31: `requireArray` distinguishes SHAPE from CONTENT in three
+  cases, not two: a missing key throws, an explicit null is a documented
+  empty (verified live — only TheSportsDB uses that convention), and a
+  present-but-not-an-array value throws. Without the third check a string
+  sailed through and reported its character count as a row count.
+- 2026-07-31: A throw anywhere in the multi-season TSDB loop aborts the
+  whole poll rather than falling through to the next candidate season.
+  Kept deliberately: continuing risks resolving to a stale season and —
+  once Stage 4's reaper lands — reaping a live season's fixtures against
+  a dead season's data. Failing means nothing is ingested and nothing is
+  reaped, and the run record now makes the failure visible.
+- 2026-07-31: Calendar ops are capped at 1,500 per sync pass, corrections
+  before creates, with the remainder drained by a queued re-run. Measured:
+  iOS 150 ops/sec, Android 15 ops/sec. The binding constraint is
+  STALE_RUN_MS (180s) — a longer pass is treated as abandoned and a second
+  run starts on top of it, which is the zombie-run duplication this
+  codebase already knows about. At 15 ops/sec that arrives at ~2,700 ops,
+  and a ten-competition follower plans 3,369 creates on first sync.
+- 2026-07-31: The sweep records WHICH poll paths it skipped and why (cap
+  vs deadline), not just a `truncated` boolean. Drop order is arbitrary —
+  Set insertion order following Firestore's device-document order — so
+  what survives the ceiling is decided by anonymous uid lexicography.
+  Left unchanged pending Stage 7.

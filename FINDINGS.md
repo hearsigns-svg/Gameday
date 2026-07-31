@@ -111,3 +111,50 @@ invisibly. The `sourceRuns`/`coverageReport` work from Stage 0 would now
 make the consequence visible (those slices stop having runs), but the
 truncation itself is unaddressed. Relevant to Stage 7's catalogue design,
 which changes what the sweep is driven by.
+
+---
+
+## Found during Stage 1b (carry-forward)
+
+### F11 — BLOCKING: the prune invariant never fires; 38 orphaned events survive every sync
+Measured on the iOS simulator, 2026-07-31. The KickOffCal calendar held
+**1,246 tagged events for 1,208 distinct fixture ids** — 38 fixtures with
+two calendar events each. For `fdorg-560772` the two events are ROWID 1182
+(created 2026-07-30 22:33, UUID `9983710B…`) and ROWID 1301 (created
+2026-07-31 10:15, UUID `625FA963…`); the MMKV ledger references only
+`625FA963…`, so 1182 is a textbook orphan: tagged, in the target calendar,
+inside the −5y…+3y scan window, and unreferenced by the ledger.
+
+`syncEngine.ts:525-531` is supposed to delete exactly this. Two full syncs
+were observed (a 748-create follow and a mount sync) and **neither recorded
+a `pruned` count**, while all 38 orphans survived. Ledger-driven ops are
+exact over the same period — unfollowing KHL deleted precisely 748 — so the
+defect is isolated to the prune path, not to planning.
+
+Leading hypothesis, NOT yet confirmed: `eventWindow()`
+(`calendarDriver.ts:91-97`) asks EventKit for **8 years** (now−5y to
+now+3y). Apple documents `predicateForEvents(withStart:end:calendars:)` as
+limited to a **4-year** span. Truncated from the start date, the effective
+window would be 2021-07 → 2025-07, which contains none of our fixtures —
+so `listTaggedEvents` would return an empty list, prune would find nothing
+to do, and **reinstall recovery would rebuild an empty ledger and duplicate
+the entire calendar**. That last consequence matches the observed
+duplicate pairs being created on two different days.
+
+Cheap confirmation: narrow `eventWindow()` to under 4 years and re-run a
+sync; if `pruned: 38` appears, the hypothesis holds. NOT done here —
+`calendarDriver` is outside Stage 1b's five items.
+
+### F12 — A mid-burst kill could not be staged on iOS; the write phase is too short
+748 creates take 5.0s on the iOS simulator. Two attempts to terminate the
+app inside that window both landed after the op loop had already completed
+(`created: 748` was written to the sync record each time). So kill-resilience
+is proven for a *completed* run (a following sync planned zero ops and
+created zero duplicates) but the genuine mid-loop interruption case remains
+unexercised on iOS. On Android the same burst takes 48.8s, which is a wide
+enough window to stage properly — worth doing there.
+
+Note the interaction with F11: a real mid-loop kill leaves events created
+but not yet ledgered. Those are exactly the orphans prune is meant to
+collect — and prune does not work. So an interrupted burst would currently
+leave permanent duplicates.

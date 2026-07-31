@@ -27,12 +27,29 @@ async function queryChunk(keys: readonly string[]): Promise<Fixture[]> {
   return snap.docs.map((d) => d.data() as Fixture);
 }
 
+// Fixtures plus the shape of the query that produced them. The dimensions
+// ride along so the sync record can show them: a truncating cap is exactly
+// the kind of bug that hides until someone measures.
+export interface FixturePage {
+  fixtures: Fixture[];
+  keys: number; // follow keys queried, deduped
+  chunks: number; // array-contains-any windows issued
+}
+
 export async function fetchFixturesForFollows(
   followedKeys: readonly string[],
-): Promise<Result<Fixture[]>> {
-  if (followedKeys.length === 0) return ok([]);
+): Promise<Result<FixturePage>> {
+  if (followedKeys.length === 0) {
+    return ok({ fixtures: [], keys: 0, chunks: 0 });
+  }
   const result = await fetchInChunks(followedKeys, queryChunk);
-  if (result.ok) return ok(result.fixtures);
+  if (result.ok) {
+    return ok({
+      fixtures: result.fixtures,
+      keys: result.keys,
+      chunks: result.chunks,
+    });
+  }
   // Firestore reports an unreachable backend as 'unavailable' with a
   // long SDK message that includes developer advice — never show that
   // to a user. Classify it as what it is: we could not reach the
