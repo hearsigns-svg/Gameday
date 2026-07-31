@@ -34,6 +34,7 @@ import {
   ourEventsIn,
   RecoveredEvent,
   ScannedEvent,
+  scanWindows,
 } from '../domain/recovery';
 import {
   CalendarTarget,
@@ -86,15 +87,10 @@ export async function ensureCalendarPermission(): Promise<Result<true>> {
   }
 }
 
-// Search window for tagged events: generous on both sides so recovery
-// sees every fixture we could plausibly have written.
-function eventWindow(): { start: Date; end: Date } {
-  const start = new Date();
-  start.setFullYear(start.getFullYear() - 5);
-  const end = new Date();
-  end.setFullYear(end.getFullYear() + 3);
-  return { start, end };
-}
+// Search windows for tagged events. Generous on both sides so recovery
+// sees every fixture we could plausibly have written — but asked for in
+// chunks, because EventKit answers a span this long with an empty list
+// rather than an error. See domain/recovery.ts::scanWindows.
 
 // Platform events → the minimal shape the pure ownership gate consumes.
 function toScanned(e: Calendar.ExpoCalendarEvent): ScannedEvent {
@@ -117,8 +113,18 @@ interface CalendarScan {
 async function scanCalendar(
   calendar: Calendar.ExpoCalendar,
 ): Promise<CalendarScan> {
-  const { start, end } = eventWindow();
-  const events = (await calendar.listEvents(start, end)).map(toScanned);
+  // Windows are contiguous and their boundaries touch, so one event can
+  // come back from two of them — dedupe by platform event id before the
+  // ownership gate sees the list, or a boundary event would look like a
+  // duplicate of itself.
+  const byId = new Map<string, ScannedEvent>();
+  for (const { start, end } of scanWindows()) {
+    for (const e of await calendar.listEvents(start, end)) {
+      const scanned = toScanned(e);
+      if (!byId.has(scanned.id)) byId.set(scanned.id, scanned);
+    }
+  }
+  const events = [...byId.values()];
   return {
     ours: ourEventsIn(events, calendar.id),
     foreign: foreignEventCount(events),

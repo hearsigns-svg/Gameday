@@ -116,7 +116,8 @@ which changes what the sweep is driven by.
 
 ## Found during Stage 1b (carry-forward)
 
-### F11 — BLOCKING: the prune invariant never fires; 38 orphaned events survive every sync
+### F11 — RESOLVED in Stage 1c: the prune invariant never fires; 38 orphaned events survive every sync
+**Root cause confirmed and fixed 2026-07-31 — see F13/F14 below.**
 Measured on the iOS simulator, 2026-07-31. The KickOffCal calendar held
 **1,246 tagged events for 1,208 distinct fixture ids** — 38 fixtures with
 two calendar events each. For `fdorg-560772` the two events are ROWID 1182
@@ -145,7 +146,7 @@ Cheap confirmation: narrow `eventWindow()` to under 4 years and re-run a
 sync; if `pruned: 38` appears, the hypothesis holds. NOT done here —
 `calendarDriver` is outside Stage 1b's five items.
 
-### F12 — A mid-burst kill could not be staged on iOS; the write phase is too short
+### F12 — CLOSED in Stage 1c. A mid-burst kill could not be staged on iOS; the write phase is too short
 748 creates take 5.0s on the iOS simulator. Two attempts to terminate the
 app inside that window both landed after the op loop had already completed
 (`created: 748` was written to the sync record each time). So kill-resilience
@@ -158,3 +159,87 @@ Note the interaction with F11: a real mid-loop kill leaves events created
 but not yet ledgered. Those are exactly the orphans prune is meant to
 collect — and prune does not work. So an interrupted burst would currently
 leave permanent duplicates.
+
+---
+
+## Found during Stage 1c (F11 root cause)
+
+### F13 — CONFIRMED AND FIXED: EventKit returns NOTHING for a long scan range
+The single decisive measurement, same code and same scenario on both
+platforms (ledger wiped, OS permission intact, zero follows):
+
+| Platform | Tagged events present | `recovered` |
+|---|---|---|
+| Android (CalendarProvider) | 964 | **964** |
+| iOS 26.5 (EventKit) | 1,790 | **0** |
+
+`eventWindow()` asked for now−5y…now+3y — an **8-year** span. EventKit
+answered with an empty list and no error. Android's CalendarProvider
+answered the identical range completely, which is the free discriminator:
+the defect is EventKit's range handling, not our code's logic.
+
+Both reported symptoms follow from this one cause:
+- **Non-collection.** Prune consumes the same scan, so `orphanEventIds`
+  always received an empty list and `pruned` never appeared in any outcome.
+- **Creation.** `entriesFromRecoveredEvents` consumes the same scan, so
+  reinstall recovery rebuilt an EMPTY ledger — and the next follow then
+  created events that already existed physically.
+
+FIXED by chunking the scan into 2-year windows and concatenating
+(`recovery.ts::scanWindows`, consumed by `calendarDriver.ts::scanCalendar`),
+deduped by event id because window boundaries touch. After the fix, the
+identical iOS test returned `recovered: 1752` — from 0.
+
+OBSERVED, NOT DOCUMENTED: I confirmed that 8 years returns nothing and
+2-year chunks return everything. **I did not bisect the exact ceiling.**
+Apple documents a 4-year limit for `predicateForEvents`; 2 years was chosen
+for margin, not tuned to a measured boundary.
+
+### F14 — The creation mechanism: recovery, not concurrency
+The 38 duplicates were all Liverpool's 38 Premier League fixtures — the
+brief was right that a truncated prune window is indifferent to key count
+and cannot explain that. The creation-time forensics do:
+
+| Batch | Events | Reading |
+|---|---|---|
+| 07-30 22:33:48–49 | 117 | Liverpool follow |
+| 07-31 10:15:23 | 37 | duplicate batch |
+| 07-31 10:30:55–56, 10:31:09 | 343 | rest of the Premier League |
+
+10:15 + 10:30 + 10:31 = **380 = a complete Premier League season created
+from scratch**, including the 38 Liverpool fixtures already in the ledger
+from the night before. The ledger was therefore empty when the PL follow
+ran — recovery had rebuilt it from a scan that returned nothing (F13).
+
+So the dual-key correlation is real but not causal: the 38 are exactly the
+INTERSECTION of "already physically in the calendar" and "wanted by the
+next follow". Liverpool's other 79 events were not in the PL follow's
+wanted set, so they were not duplicated. Ruled out along the way:
+- **Double admission** — `planSync` keys `wanted` by fixture id
+  (`syncPlan.ts:174`), and pre-Stage-1 the fetch was a single Firestore
+  query which cannot return a document twice. Not reachable.
+- **Concurrent runs** — would duplicate the whole wanted set, not one
+  follow's intersection, and would not produce two clean single-second
+  batches a day apart.
+
+### F15 — A pass is bounded by the budget PLUS one op, and one op can be very slow
+Measured on Android, 2026-07-31, draining a 1,656-op plan:
+
+| Pass | opsApplied | passMs | rate |
+|---|---|---|---|
+| 1 | 1,281 | 108,028 ms | 11.9 ops/sec |
+| 2 | 144 | **227,161 ms** | 0.6 ops/sec |
+
+Pass 1 honoured the 108,000 ms budget to within 28 ms. Pass 2 overshot it
+by 119 seconds and therefore exceeded `STALE_RUN_MS` (180 s), which is the
+very condition the budget exists to avoid. The cause is structural: the
+budget is checked BETWEEN ops, so a pass is bounded by `budget + one op`,
+and on a degraded emulator a single native calendar write blocked for
+roughly two minutes. The 60% fraction leaves 72 s of headroom, which was
+not enough here.
+
+Not fixed — the remedies are a lower fraction, a per-op timeout, or making
+the stale-run takeover heartbeat-based rather than start-time-based, and
+that last one is the sync lock, which Stage 1c was not authorised to
+restructure. Worth noting the emulator is running on an 8 GB host against
+a 16 GB recommendation, so this is a pathological rather than typical rate.

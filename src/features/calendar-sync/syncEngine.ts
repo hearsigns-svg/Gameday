@@ -44,9 +44,11 @@ import {
   upsertLedgerEntry,
 } from './data/ledger';
 import {
-  capOps,
   horizonStartFrom,
+  orderOps,
+  passBudgetMs,
   planSync,
+  shouldStopPass,
   SnapshotFixture,
   upcomingSnapshot,
 } from './domain/syncPlan';
@@ -127,6 +129,11 @@ export interface SyncOutcome {
   // invites a second concurrent run. Non-zero means another pass is
   // queued, not that anything was lost.
   deferred?: number;
+  // What the pass actually cost. Recorded so real-world throughput —
+  // against a CLOUD-backed calendar, which no simulator here could
+  // measure — becomes visible once this ships.
+  opsApplied?: number;
+  passMs?: number;
   at: string;
 }
 
@@ -478,21 +485,26 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       pins,
     );
 
-    // Bounded pass: corrections first, creates fill the remainder.
-    const { apply, deferred } = capOps(ops);
+    // Bounded pass: corrections first, creates after, stopping when the
+    // time budget is spent rather than at a fixed op count.
+    const ordered = orderOps(ops);
+    const budgetMs = passBudgetMs(STALE_RUN_MS);
+    const passStartedAt = Date.now();
+    let applied = 0;
     const outcome: SyncOutcome = {
       created: 0,
       updated: 0,
       deleted: 0,
       recovered,
-      ...(deferred > 0 ? { deferred } : {}),
+
       ...(moved.value > 0 ? { moved: moved.value } : {}),
       followKeyCount: fixtures.value.keys,
       queryChunks: fixtures.value.chunks,
       at: new Date().toISOString(),
     };
 
-    for (const op of apply) {
+    for (const op of ordered) {
+      if (shouldStopPass(applied, Date.now() - passStartedAt, budgetMs)) break;
       if (op.op === 'create' || op.op === 'update') {
         const f = op.fixture;
         const d = op.desired;
@@ -528,13 +540,19 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         });
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;
+        applied++;
       } else {
         const del = await deleteFixtureEvent(op.entry.eventId);
         if (!del.ok) return del; // never drop a ledger entry on a failed delete
         removeLedgerEntry(op.fixtureId);
         outcome.deleted++;
+        applied++;
       }
     }
+    const deferred = ordered.length - applied;
+    outcome.opsApplied = applied;
+    outcome.passMs = Date.now() - passStartedAt;
+    if (deferred > 0) outcome.deferred = deferred;
 
     // Prune pass: delete any tagged event the ledger does not reference
     // (calendar ⊆ ledger invariant). Catches scan-window misses, zombie

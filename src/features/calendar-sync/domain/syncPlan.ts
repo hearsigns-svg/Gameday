@@ -193,42 +193,48 @@ export function planSync(
   return ops;
 }
 
-// Ops applied in one pass. The op loop is serial and each op is a native
-// calendar write, so a first sync is as long as it is wide. Measured
-// 2026-07-31: iOS simulator 150 ops/sec, Android emulator 15 ops/sec.
+// How long one pass may spend applying ops.
 //
-// The ceiling that matters is not patience, it is STALE_RUN_MS in the
-// engine: a run holding the lock longer than three minutes is treated as
-// abandoned, and the next trigger starts a SECOND run while the first is
-// still writing. Two live runs racing the ledger is the zombie-run
-// duplication this codebase already knows about. At 15 ops/sec that
-// threshold arrives at ~2,700 ops, and a user who follows the ten
-// heaviest competitions plans 3,369 creates on their first sync.
+// The op loop is serial and each op is a native calendar write, so a first
+// sync is as long as it is wide. Measured 2026-07-31 writing to a
+// DEVICE-LOCAL calendar: iOS simulator ~150 ops/sec, Android emulator
+// ~15 ops/sec. Those are an order of magnitude apart, which is exactly why
+// this is a TIME budget and not an op count — a fixed count tuned on one
+// platform is wrong on the other, and both were measured against a local
+// calendar while calendarTarget.ts prefers a CLOUD-backed one for real
+// users. A cloud target's per-write cost is unmeasured (see PLAN.md).
 //
-// So a pass is capped and later passes drain the rest. 1,500 ops is ~100s
-// on the slowest thing measured — comfortably inside the window — and ~10s
-// on iOS.
-export const MAX_OPS_PER_PASS = 1500;
+// The ceiling that matters is STALE_RUN_MS in the engine: a run holding
+// the lock longer is treated as abandoned, and the next trigger starts a
+// SECOND run while the first is still writing. Two live runs racing the
+// ledger is the zombie-run duplication this codebase already knows about.
+// Spending 60% of that window leaves room for the fetch, the plan, the
+// recovery scan and the prune pass that bracket the loop.
+export const PASS_BUDGET_FRACTION = 0.6;
 
-export interface CappedOps {
-  apply: SyncOp[];
-  deferred: number;
+export function passBudgetMs(staleRunMs: number): number {
+  return Math.floor(staleRunMs * PASS_BUDGET_FRACTION);
 }
 
 // Deletes and updates go first. They are bounded by what is already IN the
 // calendar, and they correct or remove events the user can see right now;
 // deferring a removal would leave a cancelled fixture sitting in someone's
-// calendar for another pass. Creates — the unbounded part — fill whatever
-// budget is left.
-export function capOps(
-  ops: readonly SyncOp[],
-  cap: number = MAX_OPS_PER_PASS,
-): CappedOps {
-  if (ops.length <= cap) return { apply: [...ops], deferred: 0 };
-  const corrections = ops.filter((o) => o.op !== 'create');
-  const creates = ops.filter((o) => o.op === 'create');
-  const apply = [...corrections, ...creates].slice(0, cap);
-  return { apply, deferred: ops.length - apply.length };
+// calendar for another pass. Creates — the unbounded part — follow.
+export function orderOps(ops: readonly SyncOp[]): SyncOp[] {
+  return [
+    ...ops.filter((o) => o.op !== 'create'),
+    ...ops.filter((o) => o.op === 'create'),
+  ];
+}
+
+// Stop when the budget is spent — but never before applying anything, or
+// a slow platform could make zero progress and loop forever.
+export function shouldStopPass(
+  applied: number,
+  elapsedMs: number,
+  budgetMs: number,
+): boolean {
+  return applied > 0 && elapsedMs >= budgetMs;
 }
 
 // Presentation snapshot of what's ahead — Home and Schedule render this.

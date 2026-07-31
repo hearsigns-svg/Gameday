@@ -468,3 +468,13 @@
   Set insertion order following Firestore's device-document order — so
   what survives the ceiling is decided by anonymous uid lexicography.
   Left unchanged pending Stage 7.
+- 2026-07-31: The calendar scan is chunked into 2-year windows. A single
+  8-year predicate returns NOTHING from EventKit — no error, an empty
+  list — while Android's CalendarProvider answers the same range in full.
+  That one behaviour caused both halves of F11: prune saw no orphans and
+  reinstall recovery rebuilt an empty ledger. Verified 0 → 1,752 recovered.
+- 2026-07-31: The pass budget is TIME, not an op count. iOS writes ~150
+  calendar ops/sec and Android ~15 — an order of magnitude apart, so any
+  fixed count is wrong on one of them. Both figures are from a
+  DEVICE-LOCAL calendar; a cloud-backed target is what real users get and
+  its per-write cost remains unmeasured.

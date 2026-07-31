@@ -402,3 +402,43 @@ Closes what Stage 1 skipped. Two items were deploy/build blockers.
 - 362 tests green under UTC and America/Los_Angeles; typecheck and the
   functions build clean.
 
+### Stage 1c — F11: calendar-sync integrity  [x]
+
+Root-caused and fixed. One defect, not two.
+
+- **The scan, not the logic.** Identical code and scenario on both
+  platforms (ledger wiped, permission intact, no follows): Android
+  recovered 964 of 964 tagged events; iOS recovered **0 of 1,790**. An
+  8-year `predicateForEvents` returns an empty list from EventKit with no
+  error. Android's CalendarProvider answers the same range in full — the
+  free discriminator, no code change needed to prove it.
+- Both symptoms follow from that one cause: prune consumed the empty scan
+  (so `pruned` never appeared in any outcome), and recovery consumed it
+  too (so a reinstalling iOS user rebuilt an EMPTY ledger and had their
+  whole calendar re-created, not 38 events of it).
+- **Creation mechanism identified** — recovery, not concurrency. The 38
+  duplicates are exactly the intersection of "already in the calendar
+  from the Liverpool follow" and "wanted by the Premier League follow";
+  creation-time forensics show a complete 380-event PL season written from
+  scratch over an empty ledger. Double admission is unreachable
+  (`planSync` keys `wanted` by fixture id); concurrency would have
+  duplicated the whole wanted set. See FINDINGS F14.
+- FIXED: `recovery.ts::scanWindows` splits the span into 2-year windows,
+  `calendarDriver.ts::scanCalendar` concatenates and dedupes by event id.
+  iOS `recovered` went 0 → 1,752, and the 38 duplicates were collected
+  naturally as recovery surplus — no one-off migration needed.
+- **Op cap replaced by a TIME budget** (60% of STALE_RUN_MS = 108s),
+  corrections before creates, with `opsApplied` and `passMs` on the sync
+  outcome so real-world throughput becomes visible. Multi-pass drain
+  exercised on Android: a 1,656-op plan drained over three passes to 1,656
+  events with zero duplicates.
+- CAVEAT, FINDINGS F15: the budget is checked between ops, so a pass is
+  bounded by budget + one op. On the emulator one native write blocked
+  ~119s and that pass reached 227s, exceeding STALE_RUN_MS. Not fixed —
+  the fix is in the lock, which this stage was not authorised to touch.
+- UNMEASURED: throughput against a CLOUD-backed calendar. Neither
+  simulator has an iCloud or Google account attached, so every figure here
+  is device-local. Not estimated.
+- 371 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean. App build still held pending checkpoint approval.
+

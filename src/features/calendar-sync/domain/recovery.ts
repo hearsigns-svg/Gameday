@@ -38,6 +38,59 @@ export interface ScannedEvent {
   allDay?: boolean;
 }
 
+// How far either side of today a scan looks for events we wrote. The span
+// has to cover everything we could plausibly have written: fixtures land
+// up to ~3 years out (World Cup, F1 calendars) and the recovery audit of
+// 2026-07-26 widened the lookback to 5 years after a −3y window missed the
+// two oldest fixtures.
+export const SCAN_BACK_YEARS = 5;
+export const SCAN_FORWARD_YEARS = 3;
+
+// …but that full span CANNOT be asked for in one query. EventKit's
+// predicateForEvents silently returns NOTHING for a range this long:
+// measured 2026-07-31 on iOS 26.5, a −5y…+3y scan of a calendar holding
+// 1,790 tagged events returned 0, while the identical code on Android's
+// CalendarProvider returned all 964 of its own. Nothing errored — the
+// scan just came back empty, which the prune invariant reads as "no
+// orphans" and recovery reads as "no ledger to rebuild".
+//
+// So the span is split into windows the platform will honour and the
+// results concatenated. Same shape as the fixture query's 30-key chunks:
+// the ceiling is not negotiable, so ask within it repeatedly.
+export const SCAN_CHUNK_YEARS = 2;
+
+export interface ScanWindow {
+  start: Date;
+  end: Date;
+}
+
+function shiftYears(from: Date, years: number): Date {
+  const d = new Date(from);
+  d.setFullYear(d.getFullYear() + years);
+  return d;
+}
+
+// Contiguous windows covering [now − SCAN_BACK_YEARS, now + SCAN_FORWARD_YEARS],
+// none longer than SCAN_CHUNK_YEARS. Boundaries touch, so an event sitting
+// exactly on one can be returned twice — callers dedupe by event id.
+export function scanWindows(
+  now: Date = new Date(),
+  chunkYears: number = SCAN_CHUNK_YEARS,
+  backYears: number = SCAN_BACK_YEARS,
+  forwardYears: number = SCAN_FORWARD_YEARS,
+): ScanWindow[] {
+  const first = shiftYears(now, -backYears);
+  const last = shiftYears(now, forwardYears);
+  const windows: ScanWindow[] = [];
+  let start = first;
+  while (start < last) {
+    const end = shiftYears(start, chunkYears);
+    windows.push({ start, end: end > last ? last : end });
+    start = end;
+  }
+  return windows;
+}
+
 // Our tag, or null. Requires a usable fixture id: a bare tag with
 // nothing after it identifies no fixture, so it is not evidence that we
 // wrote the event and must not license deleting it.

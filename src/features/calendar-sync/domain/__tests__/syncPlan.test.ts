@@ -296,13 +296,19 @@ describe('sync horizon — the calendar is about upcoming games', () => {
   });
 });
 
-// ─── Bounded passes (Stage 1b item 2) ─────────────────────────────────
+// ─── Bounded passes (Stage 1b item 2, reworked in 1c item 5) ─────────
 //
-// Measured 2026-07-31: Android emulator writes 15 calendar ops/sec, so a
-// pass longer than ~2,700 ops outlives STALE_RUN_MS (180s) and a second
-// run starts on top of the first. These pin the budget that prevents it.
+// Measured 2026-07-31 against a DEVICE-LOCAL calendar: iOS ~150 ops/sec,
+// Android ~15. An order of magnitude apart, and neither is a cloud-backed
+// target — which is what calendarTarget.ts prefers for real users. So the
+// pass is bounded by TIME, not by a count tuned on one platform.
 
-import { capOps, MAX_OPS_PER_PASS } from '../syncPlan';
+import {
+  orderOps,
+  passBudgetMs,
+  PASS_BUDGET_FRACTION,
+  shouldStopPass,
+} from '../syncPlan';
 
 const createOp = (id: string): SyncOp => ({
   op: 'create',
@@ -325,62 +331,110 @@ const deleteOp = (id: string): SyncOp => ({
     title: 't',
   },
 });
+const updateOp = (id: string): SyncOp => ({
+  op: 'update',
+  fixture: fixture({ id }),
+  desired: {
+    title: 't2',
+    startUtc: '2026-12-25T15:00:00.000Z',
+    endUtc: '2026-12-25T17:00:00.000Z',
+    allDay: false,
+  },
+  entry: {
+    eventId: `ev-${id}`,
+    calendarId: 'c',
+    startUtc: '2026-12-25T15:00:00.000Z',
+    endUtc: '2026-12-25T17:00:00.000Z',
+    title: 't',
+  },
+});
 
-describe('capOps', () => {
-  test('a plan inside the budget is applied whole, nothing deferred', () => {
-    const ops = [createOp('a'), deleteOp('b')];
-    expect(capOps(ops)).toEqual({ apply: ops, deferred: 0 });
+describe('pass budget', () => {
+  test('is a fraction of the stale-run window, leaving room either side', () => {
+    // STALE_RUN_MS is 180s in the engine. The loop is bracketed by a fetch,
+    // a plan, a recovery scan and a prune pass, none of which are free.
+    expect(PASS_BUDGET_FRACTION).toBe(0.6);
+    expect(passBudgetMs(180_000)).toBe(108_000);
+    expect(passBudgetMs(180_000)).toBeLessThan(180_000);
   });
+});
 
-  test('an oversized plan is bounded and the remainder is COUNTED, not dropped', () => {
-    const ops = Array.from({ length: 4000 }, (_, i) => createOp(`f${i}`));
-    const { apply, deferred } = capOps(ops);
-    expect(apply).toHaveLength(MAX_OPS_PER_PASS);
-    expect(deferred).toBe(4000 - MAX_OPS_PER_PASS);
-    // Every op is accounted for: applied + deferred === planned.
-    expect(apply.length + deferred).toBe(ops.length);
-  });
-
-  test('deletes and updates are never the ops that get deferred', () => {
+describe('orderOps', () => {
+  test('corrections come before creates', () => {
     // A capped pass that deferred a delete would leave a cancelled fixture
     // sitting in the user's calendar until some later pass got to it.
-    const ops = [
-      ...Array.from({ length: 3000 }, (_, i) => createOp(`c${i}`)),
-      ...Array.from({ length: 20 }, (_, i) => deleteOp(`d${i}`)),
-    ];
-    const { apply } = capOps(ops);
-    expect(apply.filter((o) => o.op === 'delete')).toHaveLength(20);
-    expect(apply.slice(0, 20).every((o) => o.op === 'delete')).toBe(true);
+    const ordered = orderOps([
+      createOp('c1'),
+      deleteOp('d1'),
+      createOp('c2'),
+      updateOp('u1'),
+    ]);
+    expect(ordered.map((o) => o.op)).toEqual([
+      'delete',
+      'update',
+      'create',
+      'create',
+    ]);
   });
 
-  test('the budget holds even when corrections alone exceed it', () => {
-    const ops = Array.from({ length: 2000 }, (_, i) => deleteOp(`d${i}`));
-    const { apply, deferred } = capOps(ops);
-    expect(apply).toHaveLength(MAX_OPS_PER_PASS);
-    expect(deferred).toBe(500);
+  test('every op survives the reordering', () => {
+    const ops = [createOp('a'), deleteOp('b'), updateOp('c')];
+    expect(orderOps(ops)).toHaveLength(3);
+    expect(new Set(orderOps(ops))).toEqual(new Set(ops));
   });
 
-  test('the budget is under the measured stale-run ceiling on the slowest platform', () => {
-    // 15 ops/sec measured on the Android emulator; STALE_RUN_MS is 180s.
-    const SLOWEST_OPS_PER_SEC = 15;
-    const STALE_RUN_SECONDS = 180;
-    expect(MAX_OPS_PER_PASS / SLOWEST_OPS_PER_SEC).toBeLessThan(
-      STALE_RUN_SECONDS,
-    );
+  test('an empty plan orders to an empty plan', () => {
+    expect(orderOps([])).toEqual([]);
+  });
+});
+
+describe('shouldStopPass', () => {
+  test('runs on while inside the budget', () => {
+    expect(shouldStopPass(500, 10_000, 108_000)).toBe(false);
   });
 
-  test('progress is guaranteed: each pass applies a full budget', () => {
-    // Convergence argument — 5,160 creates (the all-competitions case)
-    // drains in a bounded number of passes rather than one long hang.
+  test('stops once the budget is spent', () => {
+    expect(shouldStopPass(500, 108_000, 108_000)).toBe(true);
+    expect(shouldStopPass(500, 120_000, 108_000)).toBe(true);
+  });
+
+  test('NEVER stops before applying anything — progress is guaranteed', () => {
+    // Without this a platform slow enough to blow the budget on its first
+    // write would apply zero ops per pass and re-queue forever.
+    expect(shouldStopPass(0, 999_999, 108_000)).toBe(false);
+  });
+
+  test('the slow platform still drains a large first sync in bounded passes', () => {
+    // 5,160 creates at the measured Android rate of 15 ops/sec.
+    const OPS_PER_SEC = 15;
     let remaining = 5160;
     let passes = 0;
     while (remaining > 0) {
-      const ops = Array.from({ length: remaining }, (_, i) => createOp(`f${i}`));
-      const { apply, deferred } = capOps(ops);
-      expect(apply.length).toBeGreaterThan(0); // never a zero-progress pass
-      remaining = deferred;
+      let applied = 0;
+      while (
+        applied < remaining &&
+        !shouldStopPass(applied, (applied / OPS_PER_SEC) * 1000, 108_000)
+      ) {
+        applied++;
+      }
+      expect(applied).toBeGreaterThan(0);
+      remaining -= applied;
       passes++;
+      expect(passes).toBeLessThan(20); // must terminate
     }
+    // ~1,620 ops per pass at 15/sec → four passes.
     expect(passes).toBe(4);
+  });
+
+  test('a fast platform finishes the same work in one pass', () => {
+    const OPS_PER_SEC = 150;
+    let applied = 0;
+    while (
+      applied < 5160 &&
+      !shouldStopPass(applied, (applied / OPS_PER_SEC) * 1000, 108_000)
+    ) {
+      applied++;
+    }
+    expect(applied).toBe(5160);
   });
 });
