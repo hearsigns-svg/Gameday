@@ -4,46 +4,17 @@
 import { err, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
-import {
-  ACTIVE_SEASON,
-  F1_SEASON,
-  MLB_SEASON,
-  NHL_SEASON_ID,
-  SOCCER_FD_SEASON,
-} from './domain/sportsConfig';
 import { Followable, loadFollowables, setFollowed } from './data/followStore';
+import { pollPathFor } from './domain/pollPaths';
 import { pinFollowKeys, pinPollPaths } from '../calendar-sync/data/pinStore';
-
-function pollPathFor(item: Followable): string {
-  if (item.pollPath) return item.pollPath;
-  const tail = item.key.split('-').pop() ?? '';
-  // Provider is encoded in the key prefix; legacy apisports-* follows
-  // keep their old (2023-window) routes until re-followed.
-  if (item.key.startsWith('fdorg-')) {
-    return item.type === 'competition'
-      ? `pollFdCompetition?code=${tail}&season=${SOCCER_FD_SEASON}`
-      : `pollFdTeam?teamId=${Number(tail)}&season=${SOCCER_FD_SEASON}`;
-  }
-  switch (item.sportKey) {
-    case 'baseball':
-      // Whole-league follow polls team-by-team server-side later (M6
-      // scheduler); interactively we poll the followed entity itself.
-      return `pollMlbTeam?teamId=${Number(tail)}&season=${MLB_SEASON}`;
-    case 'ice-hockey':
-      return `pollNhlTeam?abbrev=${tail}&season=${NHL_SEASON_ID}`;
-    case 'f1':
-      return `pollF1?season=${F1_SEASON}`;
-    default:
-      return item.type === 'competition'
-        ? `pollLeague?leagueId=${Number(tail)}&season=${ACTIVE_SEASON}`
-        : `pollTeam?teamId=${Number(tail)}&season=${ACTIVE_SEASON}`;
-  }
-}
 
 // Exported for the team-preview screen: seeing a team's fixtures
 // before following requires the same one-shot poll a follow performs.
 export async function ensurePolled(item: Followable): Promise<Result<true>> {
   const path = pollPathFor(item);
+  // Nothing to poll is not a failure. The follow still stands, and it
+  // still matches whatever is already in the cache.
+  if (path === null) return ok(true);
   try {
     // Labels the server-side run record: a follow warming the cache is a
     // different event from the scheduled sweep, and coverage reporting
@@ -72,7 +43,12 @@ export function collectFollowState(): {
   return {
     followKeys: [...new Set([...follows.map((f) => f.key), ...pinFollowKeys()])],
     pollPaths: [
-      ...new Set([...follows.map((f) => pollPathFor(f)), ...pinPollPaths()]),
+      ...new Set([
+        ...follows
+          .map((f) => pollPathFor(f))
+          .filter((p): p is string => p !== null),
+        ...pinPollPaths(),
+      ]),
     ],
   };
 }

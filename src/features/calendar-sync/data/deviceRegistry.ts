@@ -9,9 +9,28 @@ import * as Notifications from 'expo-notifications';
 import { doc, setDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { db, ensureSignedIn } from '../../../core/firebase';
+import { readJson, writeJson } from '../../../core/storage';
 import { collectFollowState } from '../../follows/followActions';
+import {
+  registryOverflow,
+  REGISTRY_KEY_LIMIT,
+} from '../domain/registryLimits';
+
+export { registryOverflow, REGISTRY_KEY_LIMIT };
+
+const REGISTRY_ERROR_KEY = 'deviceRegistry.lastError.v1';
 
 const STEP_TIMEOUT_MS = 15_000;
+
+// Surfaced by Preferences so the failure is visible rather than logged
+// into the void. Null when the last registration succeeded.
+export function lastRegistryError(): string | null {
+  return readJson<string | null>(REGISTRY_ERROR_KEY, null);
+}
+
+function setRegistryError(message: string | null): void {
+  writeJson(REGISTRY_ERROR_KEY, message);
+}
 
 function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
   return Promise.race([
@@ -47,6 +66,17 @@ export async function registerDevice(): Promise<void> {
     }
 
     const { followKeys, pollPaths } = collectFollowState();
+    const overflow = registryOverflow(followKeys, pollPaths);
+    if (overflow) {
+      // Fail loudly and STOP. Attempting the write would be rejected by
+      // rules anyway; the point is that the device now knows, and says so.
+      const message =
+        `Too many follows to keep in sync (${Math.max(overflow.followKeys, overflow.pollPaths)} of ${overflow.limit}). ` +
+        'Unfollow something and this will clear.';
+      console.error(`[kickoffcal] device registration blocked: ${message}`);
+      setRegistryError(message);
+      return;
+    }
     await withTimeout(
       setDoc(doc(db, 'devices', uid), {
         token,
@@ -58,12 +88,16 @@ export async function registerDevice(): Promise<void> {
       }),
       'registry write',
     );
+    setRegistryError(null);
     console.log(
       `[gameday] device registered: ${followKeys.length} follows, ${pollPaths.length} paths, token=${tokenType ?? 'none'}`,
     );
   } catch (e) {
     // Best-effort (the next app start retries) — but never silent: a
     // registry that stops working must be visible, not invisible.
-    console.warn('[gameday] device registration failed:', String(e));
+    console.error('[kickoffcal] device registration failed:', String(e));
+    setRegistryError(
+      'Your follows could not be registered for background updates — we will retry.',
+    );
   }
 }

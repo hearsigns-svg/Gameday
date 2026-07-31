@@ -11,6 +11,12 @@ export interface StaticCompetition {
   country: string;
   key: string;
   followOnly?: boolean; // no team drill-down
+  // False when the competition itself cannot be followed — only its teams
+  // can. NHL and MLB are served by TEAM pollers with no league-level
+  // route, so "Follow all" on those rows built pollNhlTeam?abbrev=1 and
+  // pollMlbTeam?teamId=1: a 400 and an empty 200 respectively. A missing
+  // button beats a broken one.
+  followable?: boolean;
   pollPath?: string; // functions path polled when this follow syncs
   teamPollPath?: string; // path attached to team-follows made inside it
 }
@@ -115,7 +121,13 @@ export const SPORTS: SportConfig[] = [
     browse: ['competition', 'team'],
     followTypes: ['team', 'competition'],
     staticCompetitions: [
-      { id: 1, name: 'NHL', country: 'North America', key: 'nhl-league-1' },
+      {
+        id: 1,
+        name: 'NHL',
+        country: 'North America',
+        key: 'nhl-league-1',
+        followable: false, // team-level only; see StaticCompetition
+      },
       {
         id: '4920',
         name: 'KHL',
@@ -199,7 +211,13 @@ export const SPORTS: SportConfig[] = [
     browse: ['competition', 'team'],
     followTypes: ['team', 'competition'],
     staticCompetitions: [
-      { id: 1, name: 'MLB', country: 'North America', key: 'mlb-league-1' },
+      {
+        id: 1,
+        name: 'MLB',
+        country: 'North America',
+        key: 'mlb-league-1',
+        followable: false, // team-level only; see StaticCompetition
+      },
       {
         id: '4591',
         name: 'NPB',
@@ -528,11 +546,18 @@ export const SPORTS: SportConfig[] = [
 export const sportByKey = (key: string): SportConfig | undefined =>
   SPORTS.find((s) => s.key === key);
 
-// Per-sport active seasons. Soccer runs on football-data.org's free
-// tier at CURRENT seasons (season = start year: 2026 → 2026-27).
-// ACTIVE_SEASON remains for legacy API-Sports follows only.
-export const SOCCER_FD_SEASON = 2026;
-export const ACTIVE_SEASON = 2023; // legacy apisports-* follows
+// Per-sport active seasons.
+//
+// Soccer no longer has one: football-data seasons are resolved
+// PER COMPETITION from the provider's own `currentSeason`, server-side and
+// cached (functions/src/fdSeasons.ts). One constant said 2026 for all
+// twelve while the Champions League was on 2025 and the European
+// Championship on 2024, which 404'd both.
+//
+// FD_ROUTE_SEASON only fills the season slot the sweep's route validator
+// requires; the server overrides it with the resolved season on every
+// call. It is a route shape, NOT a claim about which season is live.
+export const FD_ROUTE_SEASON = 2026;
 export const MLB_SEASON = 2026;
 export const NHL_SEASON_ID = '20262027';
 export const F1_SEASON = 2026;

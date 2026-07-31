@@ -13,6 +13,7 @@ import {
   calendarColour,
   setCalendarColour,
 } from '../calendar-sync/data/calendarDriver';
+import { lastRegistryError } from '../calendar-sync/data/deviceRegistry';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
@@ -186,6 +187,19 @@ export default function PreferencesScreen({
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         For series like Formula 1.
       </Text>
+
+      {/* A device over the 200-key rule limit is REJECTED wholesale by
+          Firestore, so it silently stops being swept. Say so. */}
+      {lastRegistryError() ? (
+        <Text
+          style={[
+            type.secondary,
+            { color: t.danger, marginTop: spacing.xl },
+          ]}
+        >
+          {lastRegistryError()}
+        </Text>
+      ) : null}
 
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}

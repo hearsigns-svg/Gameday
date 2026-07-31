@@ -59,8 +59,17 @@ export function seasonsToTry(
 }
 
 // Pick the season whose fixtures are actually useful: most UPCOMING
-// events wins; a season with none is only kept as a last resort so a
-// genuinely off-season league still caches something.
+// events wins. A season with NO upcoming events is never selected — not
+// even as a last resort.
+//
+// It used to be, and the cost was invisible: the FA Cup resolved to a
+// finished 2025-26 season and cached 873 fixtures nobody would ever see,
+// the NBA resolved to a completed 1,380-game season, and both looked
+// perfectly healthy at 200. Ingesting a dead season is worse than
+// ingesting nothing: it fills the cache with events the horizon rule will
+// never write, and from Stage 4 it gives the reaper a stale truth to
+// reconcile a live slice against. Returning null instead makes "there is
+// no live season" a fact the run record states out loud.
 export function bestSeason<T extends { startUtc: string }>(
   attempts: ReadonlyArray<{ season: string; fixtures: T[] }>,
   now: Date = new Date(),
@@ -74,7 +83,5 @@ export function bestSeason<T extends { startUtc: string }>(
   scored.sort(
     (a, b) => b.upcoming - a.upcoming || b.fixtures.length - a.fixtures.length,
   );
-  return scored[0].upcoming > 0 || scored[0].fixtures.length > 0
-    ? scored[0]
-    : null;
+  return scored[0].upcoming > 0 ? scored[0] : null;
 }

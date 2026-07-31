@@ -18,6 +18,14 @@ import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
+
+// A competition's team-poll route may be per-team (football-data supplies
+// `pollFdTeam?teamId={teamId}&season=…`) or league-wide (TheSportsDB polls
+// the whole league whichever team you followed). Substitute when asked,
+// pass through when not.
+function teamPollPathFor(template: string, teamId: number | string): string {
+  return template.replace('{teamId}', String(teamId));
+}
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { DirectoryTeam, fetchTeams } from '../data/directoryRepo';
@@ -62,7 +70,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
       sportKey: route.params.sportKey,
       type: 'team' as const,
       ...(route.params.teamPollPath
-        ? { pollPath: route.params.teamPollPath }
+        ? { pollPath: teamPollPathFor(route.params.teamPollPath, team.id) }
         : {}),
       ...(team.crestUrl ? { crestUrl: team.crestUrl } : {}),
       ...(brandColour ? { brandColour } : {}),
@@ -140,7 +148,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
                 name: item.name,
                 sportKey: route.params.sportKey,
                 ...(route.params.teamPollPath
-                  ? { pollPath: route.params.teamPollPath }
+                  ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
                   : {}),
                 ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                 ...(item.colours ? { colours: item.colours } : {}),

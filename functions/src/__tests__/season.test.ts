@@ -85,7 +85,13 @@ describe('bestSeason', () => {
     expect(pick?.season).toBe('2026-2027');
   });
 
-  it('falls back to a finished season rather than caching nothing', () => {
+  it('does NOT fall back to a finished season', () => {
+    // SUPERSEDED 2026-07-31. This previously asserted the opposite —
+    // caching a completed season rather than nothing — and the cost was
+    // invisible at HTTP 200: 873 dead FA Cup fixtures, 1,380 dead NBA
+    // games, none of which the horizon rule will ever write to a calendar,
+    // and all of which would give Stage 4's reaper a stale truth to
+    // reconcile a live slice against.
     const pick = bestSeason(
       [
         { season: '2026-2027', fixtures: [] },
@@ -93,12 +99,68 @@ describe('bestSeason', () => {
       ],
       now,
     );
-    expect(pick?.season).toBe('2025-2026');
+    expect(pick).toBeNull();
   });
 
   it('returns null when every candidate is empty', () => {
     expect(
       bestSeason([{ season: '2026', fixtures: [] }], now),
     ).toBeNull();
+  });
+});
+
+// ─── A dead season is never selected (Prompt 2) ───────────────────────
+//
+// bestSeason used to keep a season with zero upcoming events "as a last
+// resort so a genuinely off-season league still caches something". The
+// cost was invisible: the FA Cup resolved to a finished 2025-26 season and
+// cached 873 fixtures nobody would see, the NBA to a completed 1,380-game
+// season. Both looked healthy at HTTP 200.
+
+describe('bestSeason never selects a finished season', () => {
+  const NOW = new Date('2026-07-31T12:00:00.000Z');
+  const past = { startUtc: '2026-01-01T00:00:00.000Z' };
+  const future = { startUtc: '2026-12-01T00:00:00.000Z' };
+
+  test('every candidate finished → null, not a consolation prize', () => {
+    const r = bestSeason(
+      [
+        { season: '2025-2026', fixtures: [past, past, past] },
+        { season: '2026-2027', fixtures: [] },
+      ],
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  test('the FA Cup case: 873 past fixtures is still null', () => {
+    const fa = Array.from({ length: 873 }, () => past);
+    expect(bestSeason([{ season: '2025-2026', fixtures: fa }], NOW)).toBeNull();
+  });
+
+  test('a season with even one upcoming fixture still wins', () => {
+    const r = bestSeason(
+      [
+        { season: '2025-2026', fixtures: [past, past, past] },
+        { season: '2026-2027', fixtures: [future] },
+      ],
+      NOW,
+    );
+    expect(r?.season).toBe('2026-2027');
+  });
+
+  test('between two live seasons, the one with more upcoming wins', () => {
+    const r = bestSeason(
+      [
+        { season: 'a', fixtures: [future] },
+        { season: 'b', fixtures: [future, future] },
+      ],
+      NOW,
+    );
+    expect(r?.season).toBe('b');
+  });
+
+  test('no attempts at all is still null', () => {
+    expect(bestSeason([], NOW)).toBeNull();
   });
 });

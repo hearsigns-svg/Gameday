@@ -12,8 +12,9 @@ describe('canonicalisePollPath — accepts real routes', () => {
     'pollNhlTeam?abbrev=BOS&season=20262027',
     'pollF1?season=2026', // digit in the function name — regression pin
     'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5',
-    'pollTeam?teamId=40&season=2023',
-    'pollLeague?leagueId=39&season=2023',
+    // The County Championship, at 96 hours. A single-digit durationHours
+    // rule dropped this from every sweep since the day it was written.
+    'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96',
   ];
 
   test.each(real)('%s', (path) => {
@@ -36,8 +37,16 @@ describe('canonicalisePollPath — rejects everything else', () => {
     ['missing param', 'pollFdTeam?teamId=64'],
     ['duplicate param', 'pollF1?season=2026&season=2027'],
     ['bad value type', 'pollMlbTeam?teamId=abc&season=2026'],
-    ['oversized id', 'pollTeam?teamId=123456789&season=2026'],
+    ['oversized id', 'pollMlbTeam?teamId=123456789&season=2026'],
+    ['duration out of range', 'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=1000'],
     ['path traversal', 'pollF1?season=2026/../mutateFixture'],
+    // QUARANTINED 2026-07-31 — these two were ACCEPTED until API-Sports'
+    // account was suspended. Every call returns
+    // `{"access":"Your account is suspended"}` at HTTP 200, so allowlisting
+    // them spent a request and a 400ms delay per sweep on a route that
+    // cannot succeed. The endpoints stay deployed; nothing routes to them.
+    ['quarantined apisports team', 'pollTeam?teamId=40&season=2023'],
+    ['quarantined apisports league', 'pollLeague?leagueId=39&season=2023'],
     ['absolute url', 'https://evil.example/pollF1?season=2026'],
     ['no query', 'pollF1'],
     ['empty', ''],
@@ -108,5 +117,31 @@ describe('summariseSkipped', () => {
     const s = summariseSkipped(paths(30), 250, 0, true);
     expect(s.skippedByDeadline).toBe(30);
     expect(s.skippedByCap).toBe(0);
+  });
+});
+
+// ─── Skipped paths get an identity (F10) ──────────────────────────────
+
+import { sliceOfPollPath } from '../sweep';
+
+describe('sliceOfPollPath', () => {
+  test('every live route maps to the slice it covers', () => {
+    expect(sliceOfPollPath('pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5'))
+      .toEqual({ source: 'tsdb', sport: 'basketball', competitionId: 'tsdb-league-4387' });
+    expect(sliceOfPollPath('pollFdCompetition?code=PL&season=2026'))
+      .toEqual({ source: 'fdorg', sport: 'soccer', competitionId: 'fdorg-comp-PL' });
+    expect(sliceOfPollPath('pollFdTeam?teamId=64&season=2026'))
+      .toEqual({ source: 'fdorg', sport: 'soccer', competitionId: 'fdorg-team-64' });
+    expect(sliceOfPollPath('pollMlbTeam?teamId=147&season=2026'))
+      .toEqual({ source: 'mlb', sport: 'baseball', competitionId: 'mlb-team-147' });
+    expect(sliceOfPollPath('pollNhlTeam?abbrev=BOS&season=20262027'))
+      .toEqual({ source: 'nhl', sport: 'ice-hockey', competitionId: 'nhl-team-BOS' });
+    expect(sliceOfPollPath('pollF1?season=2026'))
+      .toEqual({ source: 'f1', sport: 'f1', competitionId: 'f1-series-1' });
+  });
+
+  test('an unknown route has no slice, so it records nothing', () => {
+    expect(sliceOfPollPath('pollEverything?season=2026')).toBeNull();
+    expect(sliceOfPollPath('pollTeam?teamId=40&season=2023')).toBeNull();
   });
 });

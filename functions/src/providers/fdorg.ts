@@ -80,11 +80,13 @@ async function fdGet(apiKey: string, path: string): Promise<unknown> {
 export async function fetchFdTeamSeasonFixtures(
   apiKey: string,
   teamId: number,
-  season: number, // season start year, e.g. 2026 for 2026-27
+  season?: number, // omit for the team's CURRENT season across all comps
 ): Promise<ProviderFetch> {
   const body = (await fdGet(
     apiKey,
-    `/teams/${teamId}/matches?season=${season}`,
+    season === undefined
+      ? `/teams/${teamId}/matches`
+      : `/teams/${teamId}/matches?season=${season}`,
   )) as { matches?: FdMatch[] };
   const now = new Date().toISOString();
   const matches = requireArray(body.matches, 'football-data', 'matches');

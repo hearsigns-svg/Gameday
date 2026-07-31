@@ -67,7 +67,16 @@ export interface RunOutcome {
   seasonsTried: string[];
   counts: RunCounts;
   error: string | null;
+  // Why a run yielded nothing when nothing went wrong. An error means the
+  // provider failed us; a reason means it answered honestly and the answer
+  // was "there is no live season" or "this run never happened".
+  reason?: RunReason;
 }
+
+export type RunReason =
+  | 'no_future_events'
+  | 'skipped_sweep_cap'
+  | 'skipped_sweep_deadline';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

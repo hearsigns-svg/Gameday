@@ -3,6 +3,7 @@
 
 import { getFirestore } from 'firebase-admin/firestore';
 import { ACTIVE_SEASON, CURATED_SOCCER_LEAGUES } from './config';
+import { FdSeason } from './fdSeasons';
 import { normaliseName } from './identity';
 import { fetchFdCompetitionTeams, FD_FREE_COMPETITIONS } from './providers/fdorg';
 import { fetchMlbTeams } from './providers/mlb';
@@ -23,6 +24,24 @@ export interface DirectoryTeam {
 }
 
 // Generic 24h write-through cache for team directories.
+//
+// The TTL was documented and never implemented: `cachedAt` was written and
+// never read, so a directory fetched once was served forever — promoted
+// and relegated clubs never appeared or disappeared, and the alias table
+// built from these documents could never improve.
+export const DIRECTORY_TTL_MS = 24 * 3_600_000;
+
+export function isDirectoryFresh(
+  cachedAt: string | undefined,
+  nowMs: number,
+  ttlMs: number = DIRECTORY_TTL_MS,
+): boolean {
+  if (!cachedAt) return false;
+  const at = Date.parse(cachedAt);
+  if (Number.isNaN(at)) return false;
+  return nowMs - at < ttlMs;
+}
+
 async function cachedTeams(
   cacheKey: string,
   load: () => Promise<DirectoryTeam[]>,
@@ -30,10 +49,25 @@ async function cachedTeams(
   const db = getFirestore();
   const ref = db.collection('teamDirectory').doc(cacheKey);
   const cached = await ref.get();
-  if (cached.exists) {
-    return (cached.data() as { teams: DirectoryTeam[] }).teams;
+  const data = cached.exists
+    ? (cached.data() as { teams?: DirectoryTeam[]; cachedAt?: string })
+    : undefined;
+  if (data?.teams && isDirectoryFresh(data.cachedAt, Date.now())) {
+    return data.teams;
   }
-  const teams = (await load()).sort((a, b) => a.name.localeCompare(b.name));
+  let teams: DirectoryTeam[];
+  try {
+    teams = (await load()).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e) {
+    // A refresh failure must not empty a directory the user can already
+    // browse. Serve the stale copy and say so; only fail when there is
+    // nothing to fall back to.
+    if (data?.teams) {
+      console.warn(`[kickoffcal] directory refresh failed for ${cacheKey}: ${e}`);
+      return data.teams;
+    }
+    throw e;
+  }
   await ref.set({ teams, cachedAt: new Date().toISOString() });
   return teams;
 }
@@ -42,14 +76,29 @@ async function cachedTeams(
 // + TSDB-backed cups plugging the free-tier cup gap. Cups are follow-
 // only (no team drill-down — TSDB team ids don't match fdorg follows).
 // The API-Sports curated list remains below for a paid upgrade path.
-export function listSoccerLeagues() {
+// Soccer browse. football-data competitions appear ONLY when the provider
+// says they have a current season that has not already ended — resolution
+// comes from fdSeasons.ts, one call a day for all of them. A competition
+// that cannot be resolved is omitted entirely rather than shown with a
+// Follow button that rolls back: the Champions League and the European
+// Championship both did exactly that, because one global season constant
+// said 2026 while their current seasons were 2025 and 2024.
+export function listSoccerLeagues(seasons: ReadonlyMap<string, FdSeason>) {
   return [
-    ...FD_FREE_COMPETITIONS.map((c) => ({
-      id: c.code,
-      name: c.name,
-      country: c.country,
-      key: `fdorg-comp-${c.code}`,
-    })),
+    ...FD_FREE_COMPETITIONS.filter((c) => seasons.has(c.code)).map((c) => {
+      const season = seasons.get(c.code)!.seasonYear;
+      return {
+        id: c.code,
+        name: c.name,
+        country: c.country,
+        key: `fdorg-comp-${c.code}`,
+        season,
+        pollPath: `pollFdCompetition?code=${c.code}&season=${season}`,
+        // {teamId} is substituted by the client when a team is followed
+        // from inside this competition.
+        teamPollPath: `pollFdTeam?teamId={teamId}&season=${season}`,
+      };
+    }),
     {
       id: '4482',
       name: 'FA Cup',
@@ -114,6 +163,8 @@ export async function listFdSoccerTeams(
   code: string,
   season: number,
 ): Promise<DirectoryTeam[]> {
+  // Cache key carries the season, so a season roll re-fetches rather than
+  // serving last year's squad forever.
   return cachedTeams(`soccer-fd-${code}-${season}`, async () =>
     (await fetchFdCompetitionTeams(apiKey, code, season)).map((t) => ({
       id: t.id,

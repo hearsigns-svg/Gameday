@@ -130,13 +130,19 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             }
             right={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
-                <FollowButton
-                  following={isFollowed(item.key)}
-                  subject={item.name}
-                  busy={busyKey === item.key}
-                  label="Follow all"
-                  onPress={() => void toggle(item)}
-                />
+                {/* A competition with no league-level poller offers no
+                    "Follow all": NHL and MLB are served team-by-team, and
+                    the button used to build a route that 400s or returns
+                    an empty 200. Browsing their teams still works. */}
+                {item.followable !== false ? (
+                  <FollowButton
+                    following={isFollowed(item.key)}
+                    subject={item.name}
+                    busy={busyKey === item.key}
+                    label="Follow all"
+                    onPress={() => void toggle(item)}
+                  />
+                ) : null}
                 {!item.followOnly ? (
                   <Pressable
                     accessibilityRole="button"

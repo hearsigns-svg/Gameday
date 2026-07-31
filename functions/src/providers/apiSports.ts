@@ -1,5 +1,15 @@
-// API-Sports (api-football v3) adapter: fetch + normalise into the
-// canonical Fixture. The only file that knows this provider's shapes.
+// API-Sports (api-football v3) adapter.
+//
+// QUARANTINED 2026-07-31. The account is suspended: every call returns
+// HTTP 200 with `{"errors":{"access":"Your account is suspended..."}}`,
+// and the free tier never covered current seasons anyway (2022-24 only).
+// Nothing routes here — pollTeam/pollLeague are out of the sweep's
+// allowlist and out of the client's pollPathFor — but the adapter, its
+// contract test and the two endpoints are KEPT: the shapes are correct,
+// and a paid tier would make this file live again unchanged.
+//
+// The 63 apisports-* fixtures already in the cache are left alone; they
+// are all in the past and the horizon rule freezes them.
 
 import { Fixture, FixtureStatus } from '../fixture';
 import { ProviderFetch, requireArray } from './fetchResult';

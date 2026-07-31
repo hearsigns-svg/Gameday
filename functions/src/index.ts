@@ -12,6 +12,7 @@ import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import { loadCoverage } from './coverage';
+import { loadFdSeasons } from './fdSeasons';
 import {
   countsFrom,
   EMPTY_COUNTS,
@@ -20,6 +21,7 @@ import {
   recordSourceRun,
   RunContext,
   RunCounts,
+  RunReason,
   RunTrigger,
   TRIGGER_HEADER,
   triggerOf,
@@ -147,6 +149,10 @@ interface PollWork {
   fixtures: Fixture[];
   followKey: string;
   seasonResolved: string | null;
+  // Set when a run legitimately yielded nothing: no live season, or the
+  // sweep never got to it. Distinct from an error, which means a provider
+  // failed us.
+  reason?: RunReason;
   body?: Record<string, unknown>; // extra response fields
 }
 
@@ -176,6 +182,7 @@ async function servePoll(
         seasonsTried: trace.seasonsTried,
         counts,
         error: null,
+        ...(w.reason ? { reason: w.reason } : {}),
       },
       startedAt,
     );
@@ -267,7 +274,14 @@ export const pollLeague = onRequest(async (req, res) => {
 });
 
 export const listLeagues = onRequest(async (_req, res) => {
-  res.json({ leagues: listSoccerLeagues() });
+  try {
+    const seasons = await loadFdSeasons(db, requireFdKey());
+    res.json({ leagues: listSoccerLeagues(seasons) });
+  } catch (e) {
+    // An empty league list would read as "soccer has no competitions".
+    // Fail loudly instead so the client shows an error it can retry.
+    res.status(502).json({ error: String(e) });
+  }
 });
 
 // Federated team search across everything followable (cached
@@ -338,9 +352,14 @@ export const listTeams = onRequest(async (req, res) => {
     }
     // Soccer: leagueId is a football-data competition code (PL, CL, …).
     const code = String(req.query.leagueId ?? '');
-    const season = Number(req.query.season ?? 2026);
     if (!/^[A-Z0-9]{2,4}$/.test(code)) {
       res.status(400).json({ error: 'leagueId (competition code) is required' });
+      return;
+    }
+    const seasons = await loadFdSeasons(db, requireFdKey());
+    const season = seasons.get(code)?.seasonYear;
+    if (season === undefined) {
+      res.status(404).json({ error: `no current season for ${code}` });
       return;
     }
     res.json({ teams: await listFdSoccerTeams(requireFdKey(), code, season) });
@@ -379,9 +398,13 @@ export const pollFdTeam = onRequest(async (req, res) => {
       seasonRequested: String(season),
     },
     async (trace) => {
-      trace.seasonsTried.push(String(season));
-      const r = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId, season);
-      return { ...r, followKey, seasonResolved: String(season) };
+      // Verified live: /teams/{id}/matches with NO season returns the
+      // team's current season across every competition the plan can see.
+      // A team spans competitions with different seasons, so there is no
+      // single correct value to pass — omitting it is the correct call.
+      trace.seasonsTried.push('current');
+      const r = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId);
+      return { ...r, followKey, seasonResolved: 'current' };
     },
   );
   res.status(out.status).json(out.body);
@@ -405,13 +428,37 @@ export const pollFdCompetition = onRequest(async (req, res) => {
       seasonRequested: String(season),
     },
     async (trace) => {
-      trace.seasonsTried.push(String(season));
+      // The season on the path is a HINT. Follows persist their pollPath
+      // at follow time, and one global constant was wrong for CL (2025)
+      // and EC (2024) from the day it was written — so the provider's own
+      // currentSeason wins, which also self-heals every stored follow.
+      const seasons = await loadFdSeasons(db, requireFdKey());
+      const resolved = seasons.get(code)?.seasonYear;
+      if (resolved === undefined) {
+        // Resolvable means "has a current season that has not ended".
+        // Nothing to poll, nothing wrong — say so rather than 404-ing.
+        trace.seasonsTried.push(String(season));
+        return {
+          rawCount: 0,
+          fixtures: [],
+          followKey,
+          seasonResolved: null,
+          reason: 'no_future_events' as const,
+          body: { season: null, reason: 'no_future_events' },
+        };
+      }
+      trace.seasonsTried.push(String(resolved));
       const r = await fetchFdCompetitionSeasonFixtures(
         requireFdKey(),
         code,
-        season,
+        resolved,
       );
-      return { ...r, followKey, seasonResolved: String(season) };
+      return {
+        ...r,
+        followKey,
+        seasonResolved: String(resolved),
+        body: { season: resolved },
+      };
     },
   );
   res.status(out.status).json(out.body);
@@ -472,17 +519,22 @@ export const pollTsdbLeague = onRequest(async (req, res) => {
       const chosen = best
         ? attempts.find((a) => a.season === best.season)
         : undefined;
-      // No candidate season had anything at all. Recorded as a real run
-      // with zero yield rather than an error — it is a true statement
-      // about the upstream, and the run doc is what makes it visible.
+      // bestSeason never selects a season with zero upcoming events, so a
+      // null here means every candidate is finished. Ingest NOTHING — a
+      // dead season fills the cache with events the horizon rule will
+      // never write, and gives Stage 4's reaper a stale truth to
+      // reconcile a live slice against. Recorded as a real run with a
+      // reason rather than an error: the provider answered honestly.
       return {
         rawCount: chosen?.rawCount ?? 0,
         fixtures: chosen?.fixtures ?? [],
         followKey,
         seasonResolved: best?.season ?? null,
+        ...(best ? {} : { reason: 'no_future_events' as const }),
         body: {
           season: best?.season ?? null,
           triedSeasons: attempts.map((a) => a.season),
+          ...(best ? {} : { reason: 'no_future_events' }),
         },
       };
     },

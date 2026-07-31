@@ -9,7 +9,13 @@ export interface DirectoryLeague {
   country: string;
   key: string;
   followOnly?: boolean;
+  // Explicit false = browse its teams, but the competition itself has no
+  // poller and must not offer "Follow all".
+  followable?: boolean;
+  season?: number;
   pollPath?: string;
+  // May contain the literal {teamId}, substituted when a team inside this
+  // competition is followed.
   teamPollPath?: string;
 }
 

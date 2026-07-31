@@ -11,7 +11,13 @@
 
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { TRIGGER_HEADER } from './sourceRuns';
+import {
+  buildSourceRun,
+  EMPTY_COUNTS,
+  RunContext,
+  RunReason,
+  TRIGGER_HEADER,
+} from './sourceRuns';
 
 const SELF_BASE =
   process.env.SELF_BASE ??
@@ -19,9 +25,13 @@ const SELF_BASE =
 
 // name → exact required params. Extra/missing params ⇒ route rejected,
 // which also kills cache-busting duplicates (…&x=1, …&x=2).
+// QUARANTINED 2026-07-31: pollTeam and pollLeague are gone from here.
+// They front API-Sports, whose account is suspended — every call returns
+// `{"access":"Your account is suspended"}` at HTTP 200. Leaving them
+// allowlisted meant every sweep spent a request and a 400ms delay on a
+// route that cannot succeed. The endpoints stay deployed so legacy
+// devices do not 404; nothing routes to them any more.
 const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
-  pollTeam: { teamId: /^\d{1,7}$/, season: /^\d{4}$/ },
-  pollLeague: { leagueId: /^\d{1,7}$/, season: /^\d{4}$/ },
   pollFdTeam: { teamId: /^\d{1,7}$/, season: /^\d{4}$/ },
   pollFdCompetition: { code: /^[A-Z0-9]{2,4}$/, season: /^\d{4}$/ },
   pollMlbTeam: { teamId: /^\d{1,7}$/, season: /^\d{4}$/ },
@@ -31,7 +41,10 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
     leagueId: /^\d{3,6}$/,
     season: /^[0-9-]{4,9}$/,
     sport: /^[a-z-]{2,20}$/,
-    durationHours: /^\d(\.\d)?$/,
+    // 1-3 digits: the County Championship is configured at 96 hours and
+    // a single-digit rule dropped its path from every sweep since the day
+    // it was written, silently, for months.
+    durationHours: /^\d{1,3}(\.\d)?$/,
   },
 };
 
@@ -101,6 +114,102 @@ export interface SweepResult {
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Which ingest slice a canonical poll path covers. Pure; used to give a
+// skipped path an identity in the coverage report.
+export function sliceOfPollPath(
+  path: string,
+): { source: string; sport: string; competitionId: string } | null {
+  const [name, query = ''] = path.split('?');
+  const p = Object.fromEntries(
+    query.split('&').filter(Boolean).map((kv) => {
+      const i = kv.indexOf('=');
+      return [kv.slice(0, i), kv.slice(i + 1)];
+    }),
+  );
+  switch (name) {
+    case 'pollTsdbLeague':
+      return {
+        source: 'tsdb',
+        sport: p.sport ?? '',
+        competitionId: `tsdb-league-${p.leagueId}`,
+      };
+    case 'pollFdCompetition':
+      return {
+        source: 'fdorg',
+        sport: 'soccer',
+        competitionId: `fdorg-comp-${p.code}`,
+      };
+    case 'pollFdTeam':
+      return {
+        source: 'fdorg',
+        sport: 'soccer',
+        competitionId: `fdorg-team-${p.teamId}`,
+      };
+    case 'pollMlbTeam':
+      return {
+        source: 'mlb',
+        sport: 'baseball',
+        competitionId: `mlb-team-${p.teamId}`,
+      };
+    case 'pollNhlTeam':
+      return {
+        source: 'nhl',
+        sport: 'ice-hockey',
+        competitionId: `nhl-team-${p.abbrev}`,
+      };
+    case 'pollF1':
+      return { source: 'f1', sport: 'f1', competitionId: 'f1-series-1' };
+    default:
+      return null;
+  }
+}
+
+// A path the sweep never got to is a slice that silently stopped being
+// refreshed — which is the whole failure this remediation exists to make
+// visible. It gets a run record so it shows up in coverageReport as a
+// slice with no successful run, rather than vanishing into a boolean.
+//
+// This is the ONE place the sweep writes sourceRuns. It is not a connector
+// invocation, which is why it carries a `reason` rather than an `error`.
+async function recordSkipped(
+  db: FirebaseFirestore.Firestore,
+  paths: readonly string[],
+  reason: RunReason,
+  startedAt: string,
+): Promise<void> {
+  for (const path of paths) {
+    const slice = sliceOfPollPath(path);
+    if (!slice) continue;
+    try {
+      const ref = db.collection('sourceRuns').doc();
+      const ctx: RunContext = {
+        trigger: 'sweep',
+        ...slice,
+        pollPath: path,
+        seasonRequested: null,
+      };
+      await ref.set(
+        buildSourceRun(
+          ref.id,
+          ctx,
+          {
+            httpStatus: null,
+            seasonResolved: null,
+            seasonsTried: [],
+            counts: EMPTY_COUNTS,
+            error: null,
+            reason,
+          },
+          startedAt,
+          Date.now(),
+        ),
+      );
+    } catch (e) {
+      console.error(`[kickoffcal] skipped-run write failed for ${path}: ${e}`);
+    }
+  }
+}
 
 export interface SkippedSummary {
   skippedByCap: number;
@@ -281,6 +390,26 @@ export async function sweepAll(): Promise<SweepResult> {
     }
   }
 
+  const skipped = summariseSkipped(
+    allPaths,
+    MAX_PATHS_PER_SWEEP,
+    attempted,
+    hitDeadline,
+  );
+  await recordSkipped(
+    db,
+    allPaths.slice(MAX_PATHS_PER_SWEEP),
+    'skipped_sweep_cap',
+    startedAt,
+  );
+  if (hitDeadline) {
+    await recordSkipped(
+      db,
+      allPaths.slice(attempted, Math.min(allPaths.length, MAX_PATHS_PER_SWEEP)),
+      'skipped_sweep_deadline',
+      startedAt,
+    );
+  }
   const summary: SweepResult = {
     paths: attempted,
     dropped,
@@ -291,7 +420,7 @@ export async function sweepAll(): Promise<SweepResult> {
     tokensPruned,
     truncated,
     pathsSeen: allPaths.length,
-    ...summariseSkipped(allPaths, MAX_PATHS_PER_SWEEP, attempted, hitDeadline),
+    ...skipped,
   };
   await db.collection('sweeps').doc(startedAt).set({
     ...summary,

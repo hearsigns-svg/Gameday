@@ -532,3 +532,40 @@ DONE:
 OWED (owner commands, see the Stage 1e report): deploy indexes, redeploy
 functions, optionally enable the `sweeps` TTL, cut the app build.
 
+### Prompt 2 — Acquisition foundation  [x]
+
+Prerequisites for adding any new sport. Deployment state verified first:
+the composite index is LIVE, TTL is on for both `sourceRuns` and `sweeps`,
+all 17 functions deployed, `sourceRuns` carrying real runs.
+
+- **durationHours regex** widened to `/^\d{1,3}(\.\d)?$/`. Replayed
+  `canonicalisePollPath` over all 50 configured paths: 50 accepted, ZERO
+  dropped. The County Championship (96h) is back in the sweep.
+- **API-Sports quarantined.** `pollTeam`/`pollLeague` out of `POLL_ROUTES`
+  and out of `pollPathFor`; the adapter, its contract test and the two
+  endpoints are kept (a paid tier revives them unchanged). No browse
+  surface produced an `apisports-*` follow — `listApiSportsLeagues` and
+  `listSoccerTeams` were already dead code (F6).
+- **football-data per-competition seasons.** `SOCCER_FD_SEASON` is gone.
+  `fdSeasons.ts` resolves every competition from the provider's own
+  `currentSeason` in ONE call a day for all of them, cached in Firestore.
+  A competition resolves only if its current season has not already ended
+  — determined from `endDate`, so it costs no extra request. CL and EC
+  stop 404-ing and start being hidden honestly.
+- **NHL/MLB "Follow all" removed** (`followable: false`). Both are served
+  team-by-team with no league route; the button built
+  `pollNhlTeam?abbrev=1` (400) and `pollMlbTeam?teamId=1` (empty 200).
+  Browsing their teams is unaffected.
+- **`bestSeason` never selects a dead season.** No candidate with upcoming
+  events ⇒ ingest nothing, record `reason: 'no_future_events'`.
+- **F4 fixed:** `cachedTeams` honours the documented 24h TTL, and a
+  refresh failure serves the stale copy rather than emptying a directory.
+- **F9 fixed:** `registerDevice` detects the 200-key rule ceiling BEFORE
+  writing, fails loudly, persists the reason and surfaces it in
+  Preferences.
+- **F10:** every path the sweep skips now gets a `sourceRuns` record with
+  `reason: 'skipped_sweep_cap'` or `'skipped_sweep_deadline'`, so a slice
+  that stopped being refreshed appears in `coverageReport` instead of
+  vanishing into a boolean. Drop order still uid-lexicographic, unchanged.
+- 441 tests green under UTC and America/Los_Angeles.
+

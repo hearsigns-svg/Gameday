@@ -517,3 +517,22 @@
   FIXTURE's pastness, deletion on the LEDGER ENTRY's. A fixture rescheduled
   to a new future date is live again by the first test and frozen by the
   second, which is exactly "move the event, never delete it".
+- 2026-07-31: football-data seasons are resolved PER COMPETITION from the
+  provider's `currentSeason`, cached 24h, one call for all of them. A
+  competition is servable only if that season has not already ended —
+  decided from its own endDate, so it costs no extra request. CL (2025),
+  EC (2024) and WC (ended 2026-07-19) are hidden rather than shown with a
+  Follow button that rolls back.
+- 2026-07-31: `bestSeason` never selects a season with zero upcoming
+  events, not even as a last resort. Caching a finished season fills the
+  cache with events the horizon rule will never write and hands Stage 4's
+  reaper a stale truth to reconcile a live slice against.
+- 2026-07-31: `pollPathFor` returns null rather than a broken route.
+  API-Sports follows and league-level keys for team-pollered sports have
+  no poller; a broken path cost twice — the follow rolled back on the 400,
+  and the sweep spent a request on it every cycle after.
+- 2026-07-31: Paths the sweep skips are written to `sourceRuns` with a
+  `reason`. This is the one place the sweep writes run records, and it is
+  deliberate: a skipped path is not a connector invocation, which is why it
+  carries a reason rather than an error — but a slice that silently stopped
+  being refreshed is exactly what this collection exists to surface.
