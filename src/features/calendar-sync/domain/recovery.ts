@@ -10,6 +10,7 @@
 // the check lives here — pure, and pinned by tests — instead of being an
 // incidental filter inside the driver.
 
+import { isEndPast } from '../../fixtures/domain/horizon';
 import { Ledger } from './syncPlan';
 
 export interface RecoveredEvent {
@@ -161,6 +162,29 @@ export function foreignEventCount(events: readonly ScannedEvent[]): number {
   return events.filter((e) => fixtureIdFromNotes(e.notes) === null).length;
 }
 
+// THE IMPOSSIBLE STATE. A scan that returns no tagged events while the
+// ledger holds entries cannot happen under correct operation: every
+// ledger entry names an event we wrote into this calendar. It means the
+// scan cannot SEE the calendar — which is the state F13 sat in undetected,
+// EventKit answering an over-long range with an empty list while 1,790 of
+// our events sat in the calendar.
+//
+// Both consumers of the scan misread that silence as fact: prune concludes
+// there are no orphans, and recovery concludes there is no ledger to
+// rebuild and lets the next follow re-create everything. Neither is
+// recoverable after the fact, so the pass has to stop instead.
+//
+// This is Stage 0's standing invariant — a read failure must never be
+// indistinguishable from an empty result — applied to the one surface that
+// was still exempt from it. It holds whatever Apple does to the ceiling
+// next, which a measured boundary would not.
+export function isScanAnomaly(
+  scannedTagged: number,
+  ledgerEntries: number,
+): boolean {
+  return scannedTagged === 0 && ledgerEntries > 0;
+}
+
 // Standing invariant: every tagged event in the calendar must be
 // referenced by the ledger. Anything else is an orphan (zombie dev runs,
 // scan-window misses, interrupted installs) and must be deleted.
@@ -175,12 +199,18 @@ export function orphanEventIds(
 export function entriesFromRecoveredEvents(
   events: readonly RecoveredEvent[],
   calendarId: string,
+  nowMs: number = Date.now(),
 ): { ledger: Ledger; surplusEventIds: string[] } {
   const ledger: Ledger = {};
   const surplusEventIds: string[] = [];
   for (const e of events) {
     if (ledger[e.fixtureId]) {
-      surplusEventIds.push(e.eventId);
+      // Surplus copies are removed only while the fixture is still LIVE.
+      // A duplicate of a finished game stays in the calendar permanently:
+      // the past-fixture rule forbids deleting a past event, and that
+      // takes precedence over tidiness. Owner's explicit decision —
+      // see docs/DECISIONS.md, 2026-07-31.
+      if (!isEndPast(e.endUtc, nowMs)) surplusEventIds.push(e.eventId);
       continue;
     }
     ledger[e.fixtureId] = {

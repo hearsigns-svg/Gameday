@@ -280,12 +280,16 @@ describe('sync horizon — the calendar is about upcoming games', () => {
     expect(planSync([past], ledger, [LIV], DEFAULT_PREFS, HORIZON)).toHaveLength(0);
   });
 
-  test('an aged, ledgered fixture still tracks corrections', () => {
+  test('an aged, ledgered fixture is FROZEN, not corrected', () => {
+    // SUPERSEDED 2026-07-31 by the owner's past-fixture rule. This test
+    // previously asserted that a finished fixture still tracked upstream
+    // corrections. It no longer does: a fixture that has finished gets no
+    // ops of any kind, because the event in the user's calendar is now a
+    // record of something that happened rather than a promise about
+    // something that will. See domain/horizon.ts.
     const ledger: Ledger = { 'past-1': entryFor(past) };
     const moved = fixture({ id: 'past-1', startUtc: '2026-06-01T17:00:00.000Z' });
-    const ops = planSync([moved], ledger, [LIV], DEFAULT_PREFS, HORIZON);
-    expect(ops).toHaveLength(1);
-    expect(ops[0].op).toBe('update');
+    expect(planSync([moved], ledger, [LIV], DEFAULT_PREFS, HORIZON)).toEqual([]);
   });
 
   test('lookback keeps a match that has already kicked off', () => {
@@ -436,5 +440,43 @@ describe('shouldStopPass', () => {
       applied++;
     }
     expect(applied).toBe(5160);
+  });
+});
+
+// ─── Lock liveness (Stage 1d item 4 / FINDINGS F15) ───────────────────
+
+import { isRunAbandoned } from '../syncPlan';
+
+describe('isRunAbandoned', () => {
+  const STALE = 180_000;
+
+  test('a pass that is slow but beating is NOT abandoned', () => {
+    // The F15 case: a 227s pass on Android, alive throughout. Under the
+    // old start-time rule this was taken over at 180s and a second run
+    // started on top of it.
+    const started = 0;
+    const nowAfter227s = 227_000;
+    const lastBeat = 226_000; // still writing, beat one second ago
+    expect(isRunAbandoned(lastBeat, nowAfter227s, STALE)).toBe(false);
+    // …whereas the start time alone would have condemned it.
+    expect(nowAfter227s - started).toBeGreaterThan(STALE);
+  });
+
+  test('a run that stopped beating IS abandoned', () => {
+    expect(isRunAbandoned(0, 180_000, STALE)).toBe(true);
+    expect(isRunAbandoned(0, 200_000, STALE)).toBe(true);
+  });
+
+  test('the boundary is inclusive, so a stuck run is always reclaimable', () => {
+    expect(isRunAbandoned(0, 179_999, STALE)).toBe(false);
+    expect(isRunAbandoned(0, 180_000, STALE)).toBe(true);
+  });
+
+  test('a single very slow op does not orphan its own run', () => {
+    // One native write blocked ~119s in the measured case. As long as the
+    // beat either side of it is recorded, the run holds its lock.
+    const beatBeforeSlowOp = 10_000;
+    const duringSlowOp = 10_000 + 119_000;
+    expect(isRunAbandoned(beatBeforeSlowOp, duringSlowOp, STALE)).toBe(false);
   });
 });

@@ -10,8 +10,18 @@
 // Placeholders sharpen back into timed events when a schedule lands —
 // same fixture id, so it is always an update, never a duplicate.
 
-import { Fixture, FIXTURE_DURATION_HOURS } from '../../fixtures/domain/fixture';
+import { Fixture } from '../../fixtures/domain/fixture';
+import {
+  eventEndUtc,
+  isBeyondRetention,
+  isEndPast,
+  isPast,
+} from '../../fixtures/domain/horizon';
 import { CalendarPrefs } from './prefs';
+
+// Re-exported so existing consumers keep their import site; the one
+// definition now lives with the fixture model, alongside isPast.
+export { eventEndUtc };
 
 export interface LedgerEntry {
   eventId: string;
@@ -40,18 +50,6 @@ export type SyncOp =
   | { op: 'create'; fixture: Fixture; desired: DesiredEvent }
   | { op: 'update'; fixture: Fixture; desired: DesiredEvent; entry: LedgerEntry }
   | { op: 'delete'; fixtureId: string; entry: LedgerEntry };
-
-export function eventEndUtc(
-  startUtc: string,
-  durationHours: number = FIXTURE_DURATION_HOURS,
-): string {
-  // Pure instant arithmetic. getMinutes/setMinutes are LOCAL-time
-  // accessors: adding a duration across a DST boundary with them lands
-  // an hour out (a 90-minute match on a clocks-change night ended at
-  // the wrong time), because the local wall clock is not monotonic.
-  const ms = new Date(startUtc).getTime();
-  return new Date(ms + Math.round(durationHours * 60) * 60_000).toISOString();
-}
 
 function dayStartUtc(iso: string): string {
   const d = new Date(iso);
@@ -145,6 +143,14 @@ export function horizonStartFrom(nowMs: number): string {
   return new Date(nowMs - HORIZON_LOOKBACK_HOURS * 3600_000).toISOString();
 }
 
+// The planner needs "now" to decide what has finished. It is derived from
+// the horizon rather than added as a parameter because there is exactly
+// one producer of that horizon (horizonStartFrom), so the two can never
+// disagree — and every existing caller keeps working unchanged.
+export function nowFromHorizon(horizonStartUtc: string): number {
+  return Date.parse(horizonStartUtc) + HORIZON_LOOKBACK_HOURS * 3600_000;
+}
+
 export function planSync(
   fixtures: readonly Fixture[],
   ledger: Ledger,
@@ -153,6 +159,7 @@ export function planSync(
   horizonStartUtc: string,
   excluded: ReadonlySet<string> = new Set(),
   pinned: ReadonlySet<string> = new Set(),
+  nowMs: number = nowFromHorizon(horizonStartUtc),
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
@@ -164,6 +171,10 @@ export function planSync(
     if (!pinned.has(f.id) && !f.followKeys.some((k) => followedKeys.includes(k))) {
       continue;
     }
+    // FROZEN: a fixture that has finished gets no ops at all — not an
+    // update, and not a create if its event has somehow gone. Its ledger
+    // entry is retained below so the prune sweep still sees it referenced.
+    if (isPast(f, nowMs)) continue;
     const desired = desiredEventFor(f, prefs);
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour
@@ -187,6 +198,19 @@ export function planSync(
   // Anything ledgered that we no longer want: cancelled, unfollowed, or
   // gone from the cache.
   for (const [fixtureId, entry] of Object.entries(ledger)) {
+    // A frozen entry is NOT a deletion candidate, whatever the fetch did
+    // or did not return. This is the whole point of keeping the freeze in
+    // the ledger rather than in the query: once a fixture crosses the
+    // horizon it leaves the fetch, and "absent from the fetch" must never
+    // again be read as "the user unfollowed it".
+    if (isEndPast(entry.endUtc, nowMs)) {
+      // …unless the user has explicitly opted into removing old events,
+      // and this one is past the retention window.
+      if (prefs.autoDeletePast && isBeyondRetention(entry.endUtc, nowMs)) {
+        ops.push({ op: 'delete', fixtureId, entry });
+      }
+      continue;
+    }
     if (!wanted.has(fixtureId)) ops.push({ op: 'delete', fixtureId, entry });
   }
 
@@ -225,6 +249,21 @@ export function orderOps(ops: readonly SyncOp[]): SyncOp[] {
     ...ops.filter((o) => o.op !== 'create'),
     ...ops.filter((o) => o.op === 'create'),
   ];
+}
+
+// Liveness, not age. A pass that is slow but ALIVE must never be treated
+// as abandoned: measured on Android, one native calendar write blocked for
+// ~119s and took its pass to 227s, past STALE_RUN_MS — at which point the
+// next trigger would have started a second run on top of it, which is the
+// zombie-run duplication this codebase already knows about. So the lock
+// records a HEARTBEAT the running pass refreshes, and staleness means "no
+// heartbeat since", not "started before".
+export function isRunAbandoned(
+  heartbeatAt: number,
+  nowMs: number,
+  staleMs: number,
+): boolean {
+  return nowMs - heartbeatAt >= staleMs;
 }
 
 // Stop when the budget is spent — but never before applying anything, or

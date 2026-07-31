@@ -11,6 +11,7 @@ const PREFS: CalendarPrefs = {
   reminderMinutes: null,
   eventStyle: 'timed',
   seriesSessions: 'all',
+  autoDeletePast: false,
 };
 
 const HORIZON = '2026-07-29T00:00:00.000Z';

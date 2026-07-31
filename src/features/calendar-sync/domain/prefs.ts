@@ -6,6 +6,10 @@ export interface CalendarPrefs {
   reminderMinutes: number | null; // null = no reminder
   eventStyle: 'timed' | 'all-day';
   seriesSessions: 'all' | 'race-only'; // F1-style series: include practice/quali?
+  // Opt-in removal of events for fixtures that finished more than
+  // PAST_RETENTION_DAYS ago. OFF unless the user turns it on: deleting
+  // somebody's record of games they went to is not a default.
+  autoDeletePast: boolean;
 }
 
 export const DEFAULT_PREFS: CalendarPrefs = {
@@ -15,6 +19,8 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   // events — opt INTO the flood, never discover it. Stored prefs are
   // untouched; this only shapes new installs.
   seriesSessions: 'race-only',
+  // Never on without an explicit opt-in.
+  autoDeletePast: false,
 };
 
 export const REMINDER_OPTIONS: Array<{ label: string; value: number | null }> = [

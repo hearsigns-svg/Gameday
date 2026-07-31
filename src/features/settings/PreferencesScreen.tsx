@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RootScreenProps } from '../../core/navigation';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
+import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
 import { CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import {
@@ -184,6 +185,33 @@ export default function PreferencesScreen({
       </View>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         For series like Formula 1.
+      </Text>
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Past games
+      </Text>
+      {/* Destructive and off by default. Finished games are normally left
+          alone forever — the event has stopped being a promise about the
+          future and become a record of something that happened. This is
+          the only way to opt out of keeping that record. */}
+      <View style={styles.group}>
+        <OptionRow
+          label="Keep past games in my calendar"
+          selected={!prefs.autoDeletePast}
+          onPress={() => apply({ ...prefs, autoDeletePast: false })}
+        />
+        <OptionRow
+          label={`Remove them ${PAST_RETENTION_DAYS} days after they finish`}
+          selected={prefs.autoDeletePast}
+          onPress={() => apply({ ...prefs, autoDeletePast: true })}
+        />
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        Only games KickOffCal added are ever removed, and only ones it still
+        has a record of. Switching back stops further removals — it does not
+        bring back anything already deleted.
       </Text>
 
       <Text

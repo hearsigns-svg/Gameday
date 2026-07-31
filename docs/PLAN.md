@@ -442,3 +442,54 @@ Root-caused and fixed. One defect, not two.
 - 371 tests green under UTC and America/Los_Angeles; typecheck and the
   functions build clean. App build still held pending checkpoint approval.
 
+### Stage 1d — F11 close-out  [x]
+
+- **Recovery trigger, confirmed:** `entriesFromRecoveredEvents` runs ONLY
+  when the ledger is empty (`syncEngine.ts`, guarded on
+  `Object.keys(loadLedger()).length === 0`), and it POPULATES rather than
+  replaces or merges — there is nothing to merge with by construction. So
+  F13's severity is "every reinstalling iOS user", not "every iOS user,
+  every sync". The 38 duplicates were a reproduction of F13 on a shared
+  dev simulator driven by the concurrent session, not production damage.
+- **Scan anomaly guard:** an empty scan against a populated ledger is
+  impossible under correct operation. `isScanAnomaly` detects it, the pass
+  records `scanAnomaly`/`scannedTagged`/`ledgerEntries` and FAILS before
+  planning, so no deletion can be planned on a calendar we cannot read.
+  This is Stage 0's standing invariant applied to the scan surface — the
+  one place it was still exempt — and it holds whatever Apple does to the
+  range ceiling next. Costs one extra scan per sync (FINDINGS F17).
+- **`surplusDeleted`** is now counted apart from `deleted`, so the one-time
+  corrective pass is distinguishable in the wild from an unfollow. Largest
+  measured surplus: 38 (iOS, Stage 1c).
+- **F15 fixed:** the lock is heartbeat-based. A slow-but-alive pass is
+  never taken over. No per-op timeout, deliberately.
+
+### Stage 1e — the future horizon  [~]
+
+Owner's product rule: KickOffCal only ever creates, updates or deletes
+events for fixtures that have NOT YET FINISHED. Supersedes the options in
+docs/QUERY_WINDOW.md.
+
+- `isPast` in `fixtures/domain/horizon.ts` is the one definition —
+  END-based, 6h grace. Consumers: (1) `planSync`'s wanted loop, which
+  freezes past fixtures; (2) `planSync`'s delete loop via `isEndPast` on
+  the ledger entry; (3) `entriesFromRecoveredEvents`, which no longer
+  collects surplus for finished fixtures; (4) `queryHorizonUtc`, ready for
+  the query filter. The reaper joins as a fifth from Stage 4.
+- The freeze is in the LEDGER, not the query — a crossing fixture leaves
+  the fetch and must not therefore be deleted. Pinned by a direct crossing
+  test: sync while future, advance the clock past `endUtc + grace`, re-sync
+  with the fixture absent, assert zero ops and the event still present.
+- **Query filter HELD** pending one Firestore composite index — see
+  FINDINGS F16. The saving once enabled: 40 teams 3,100 → 548 reads/sync
+  (82%), 10 competitions 7,112 → 3,384 (52%).
+- Opt-in removal of past events: off by default, fixed 30-day retention,
+  tagged-and-ledgered only, drains under the existing time budget.
+  Largest first-enable deletion constructible from live data: 2,324
+  (40 teams), 3,431 (10 competitions), 4,710 (all 43 competitions).
+- Past duplicates now stay permanently — owner's explicit decision,
+  recorded in DECISIONS.md so nobody "fixes" it later.
+- 402 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean. Android regression check: 1,656 events, 0
+  duplicates, 0 ops, guard silent. App build still held.
+

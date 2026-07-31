@@ -146,6 +146,14 @@ Cheap confirmation: narrow `eventWindow()` to under 4 years and re-run a
 sync; if `pruned: 38` appears, the hypothesis holds. NOT done here —
 `calendarDriver` is outside Stage 1b's five items.
 
+**CONFIRMED AND FIXED in Stage 1c. See F13.** Provenance, established in
+Stage 1d: the empty ledger at 10:15 was NOT my own reinstall — my first
+app run in this session wrote its outcome at 13:59 UTC, nearly four hours
+later. It was the concurrent session's dev builds, on a shared simulator.
+So the 38 are a REPRODUCTION of F13 in a development environment, not
+evidence of production users having hit it — though the mechanism would
+hit any iOS user on reinstall.
+
 ### F12 — CLOSED in Stage 1c. A mid-burst kill could not be staged on iOS; the write phase is too short
 748 creates take 5.0s on the iOS simulator. Two attempts to terminate the
 app inside that window both landed after the op loop had already completed
@@ -203,11 +211,16 @@ and cannot explain that. The creation-time forensics do:
 | Batch | Events | Reading |
 |---|---|---|
 | 07-30 22:33:48–49 | 117 | Liverpool follow |
-| 07-31 10:15:23 | 37 | duplicate batch |
-| 07-31 10:30:55–56, 10:31:09 | 343 | rest of the Premier League |
+| 07-31 10:15:23 | 37 | first sub-batch of the PL creation |
+| 07-31 10:30:55–56, 10:31:09 | 343 | rest of it |
 
-10:15 + 10:30 + 10:31 = **380 = a complete Premier League season created
-from scratch**, including the 38 Liverpool fixtures already in the ledger
+CORRECTED 2026-07-31 (Stage 1d): there was no discrete "37-event duplicate
+batch". 10:15 + 10:30 + 10:31 = **380 = a complete Premier League season
+created from scratch**, and the 38 duplicated ids are spread across it —
+37 landing in the 10:15:23 sub-batch and 1 in the 10:31:09 one. The
+count mismatch (37 vs 38) in the original table was the tell.
+
+The re-creation included the 38 Liverpool fixtures already in the ledger
 from the night before. The ledger was therefore empty when the PL follow
 ran — recovery had rebuilt it from a scan that returned nothing (F13).
 
@@ -222,7 +235,7 @@ wanted set, so they were not duplicated. Ruled out along the way:
   follow's intersection, and would not produce two clean single-second
   batches a day apart.
 
-### F15 — A pass is bounded by the budget PLUS one op, and one op can be very slow
+### F15 — FIXED in Stage 1d: a pass is bounded by the budget PLUS one op, and one op can be very slow
 Measured on Android, 2026-07-31, draining a 1,656-op plan:
 
 | Pass | opsApplied | passMs | rate |
@@ -238,8 +251,48 @@ and on a degraded emulator a single native calendar write blocked for
 roughly two minutes. The 60% fraction leaves 72 s of headroom, which was
 not enough here.
 
-Not fixed — the remedies are a lower fraction, a per-op timeout, or making
-the stale-run takeover heartbeat-based rather than start-time-based, and
-that last one is the sync lock, which Stage 1c was not authorised to
-restructure. Worth noting the emulator is running on an 8 GB host against
-a 16 GB recommendation, so this is a pathological rather than typical rate.
+FIXED 2026-07-31 by making the lock heartbeat-based: the running pass
+refreshes `syncHeartbeatAt` in every long loop, and `STALE_RUN_MS` now
+means "no heartbeat since" rather than "started before", so a slow-but-alive
+pass is never taken over. A per-op timeout was explicitly NOT added —
+abandoning a native calendar write leaves its commit state indeterminate,
+which is how untracked events get created in the first place. The pass can
+still overshoot its time budget by one slow op; that is now harmless
+because overshooting no longer costs it the lock. Worth noting the emulator
+runs on an 8 GB host against a 16 GB recommendation, so 0.6 ops/sec is a
+pathological rather than typical rate.
+
+---
+
+## Found during Stage 1d/1e
+
+### F16 — The query time-window needs one Firestore composite index, and is HELD
+Verified against production 2026-07-31: `array-contains-any` on
+`followKeys` combined with a `startUtc` range fails with
+`FAILED_PRECONDITION — The query requires an index`. It is **one** index
+for the whole query shape (`fixtures`: `followKeys` ARRAY_CONTAINS +
+`startUtc` ASC), **not one per chunk** — the 30-key chunks are the same
+shape with different values.
+
+Per the Stage 1e instruction to report before writing indexes, the index
+has NOT been created and the query filter is therefore NOT enabled. The
+freeze rule (which is the safety-critical half) is live and needs no index;
+only the read-volume saving is unrealised. Enabling the filter without the
+index first would break every fetch — safely (no deletions, since a failed
+fetch returns an error) but totally.
+
+Measured saving once enabled, against live data:
+
+| Follow set | reads/sync now | windowed | saving |
+|---|---|---|---|
+| 40 teams | 3,100 | 548 | 82% |
+| 10 competitions | 7,112 | 3,384 | 52% |
+
+### F17 — The scan-anomaly guard costs one extra calendar scan per sync
+`runSyncInner` now scans the calendar before planning, to detect the
+impossible state (empty scan, populated ledger). That is a second scan on
+every sync where the ledger is non-empty — and on iOS each scan is now
+four `listEvents` calls, one per window. The cost is real and was accepted
+deliberately: the alternative is reusing the pre-op scan for the post-op
+prune, which would report already-deleted events as orphans. Worth
+revisiting if sync latency becomes a complaint.

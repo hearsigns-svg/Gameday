@@ -97,3 +97,15 @@ source of truth for build state — never chat history.
 - `docs/DESIGN_SYSTEM.md` — semantic tokens, platform idioms, a11y rules
 - `docs/DECISIONS.md` — append-only decision log
 - `docs/PLAN.md` — dependency-ordered milestones + verification, current state
+
+## Concurrency against production
+
+A second Claude Code session (the owner's) also writes to the production
+Firestore. Confirmed 2026-07-31: 272 Premier League fixtures appeared
+mid-audit, off the sweep's schedule, from that session's app usage.
+
+From M-remediation Stage 4 onward this matters for correctness, not just
+for measurement: the reaper computes fetched-versus-stored per slice, and
+another process writing the same slice during that window can make a live
+fixture look absent. **Reaper dry-runs and executions require the other
+session to be idle against production.** Coordinate before running either.

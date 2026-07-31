@@ -29,6 +29,7 @@ import {
 } from './data/calendarDriver';
 import {
   entriesFromRecoveredEvents,
+  isScanAnomaly,
   orphanEventIds,
 } from './domain/recovery';
 import {
@@ -45,6 +46,7 @@ import {
 } from './data/ledger';
 import {
   horizonStartFrom,
+  isRunAbandoned,
   orderOps,
   passBudgetMs,
   planSync,
@@ -134,6 +136,18 @@ export interface SyncOutcome {
   // measure — becomes visible once this ships.
   opsApplied?: number;
   passMs?: number;
+  // Events deleted because recovery found MORE THAN ONE tagged event for
+  // the same fixture id. Counted apart from `deleted` so the one-time
+  // corrective pass — every iOS install carrying historical duplicates
+  // will run one — is distinguishable in the wild from an ordinary
+  // unfollow.
+  surplusDeleted?: number;
+  // The impossible state: a calendar scan returned no tagged events while
+  // the ledger holds entries. Recorded rather than acted on; see the guard
+  // in runSyncInner.
+  scanAnomaly?: boolean;
+  scannedTagged?: number;
+  ledgerEntries?: number;
   at: string;
 }
 
@@ -151,8 +165,18 @@ export function syncStalenessHours(): number | null {
 }
 
 let syncRunning = false;
-let syncStartedAt = 0;
+// Liveness, refreshed by the running pass. NOT the start time: a slow but
+// alive run must never be mistaken for an abandoned one.
+let syncHeartbeatAt = 0;
 let rerunQueued = false;
+
+// Called from every long-running loop so the lock can tell "still working"
+// from "died mid-flight". Deliberately NOT a per-op timeout: abandoning a
+// native calendar write leaves its commit state indeterminate, which is
+// precisely how untracked events get created.
+function beat(): void {
+  syncHeartbeatAt = Date.now();
+}
 
 // A run interrupted by backgrounding has its JS paused mid-flight: the
 // finally block never executes and the mutex would be held for the life
@@ -168,8 +192,8 @@ const STALE_RUN_MS = 3 * 60_000;
 async function withSyncLock<T>(
   run: () => Promise<Result<T>>,
 ): Promise<Result<T>> {
-  const heldFor = Date.now() - syncStartedAt;
-  if (syncRunning && heldFor < STALE_RUN_MS) {
+  const silentFor = Date.now() - syncHeartbeatAt;
+  if (syncRunning && !isRunAbandoned(syncHeartbeatAt, Date.now(), STALE_RUN_MS)) {
     // Coalesce: whatever changed (new follow, unfollow, pref) is picked
     // up by one queued re-run after the current run finishes. Without
     // this, an unfollow during a long sync silently never deletes.
@@ -178,11 +202,11 @@ async function withSyncLock<T>(
   }
   if (syncRunning) {
     console.warn(
-      `[gameday] taking over abandoned sync (held ${Math.round(heldFor / 1000)}s)`,
+      `[gameday] taking over abandoned sync (no heartbeat for ${Math.round(silentFor / 1000)}s)`,
     );
   }
   syncRunning = true;
-  syncStartedAt = Date.now();
+  beat();
   emit(true);
   try {
     const result = await run();
@@ -194,7 +218,7 @@ async function withSyncLock<T>(
     return err({ kind: 'unknown', message: `sync failed: ${e}` });
   } finally {
     syncRunning = false;
-    syncStartedAt = 0;
+    syncHeartbeatAt = 0;
     emit(false);
     if (rerunQueued) {
       rerunQueued = false;
@@ -353,6 +377,7 @@ async function migrateToTarget(
       if (entry) upsertLedgerEntry(step.fixtureId, clearedStray(entry));
     }
     moved++;
+    beat();
     onProgress?.({ moved, total: steps.length });
   }
   return ok(moved);
@@ -427,15 +452,22 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // updates instead of duplicating. Only OUR events are adopted: in a
     // user's calendar everything else is invisible to us.
     let recovered = 0;
+    let surplusDeleted = 0;
     if (Object.keys(loadLedger()).length === 0) {
       const scan = await listTaggedEvents(calendarId);
       if (scan.ok && scan.value.length > 0) {
-        const rebuilt = entriesFromRecoveredEvents(scan.value, calendarId);
+        const rebuilt = entriesFromRecoveredEvents(
+          scan.value,
+          calendarId,
+          Date.now(),
+        );
         for (const [fixtureId, entry] of Object.entries(rebuilt.ledger)) {
           upsertLedgerEntry(fixtureId, entry);
         }
         for (const eventId of rebuilt.surplusEventIds) {
           await deleteFixtureEvent(eventId);
+          surplusDeleted++;
+          beat();
         }
         recovered = Object.keys(rebuilt.ledger).length;
       }
@@ -461,6 +493,37 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     if (!fixtures.ok) return fixtures;
 
     const ledger = loadLedger();
+
+    // SCAN ANOMALY. A calendar scan that returns zero tagged events while
+    // the ledger holds entries is impossible under correct operation — it
+    // means the scan cannot see the calendar, not that the calendar is
+    // empty. That is exactly the state F13 sat in undetected: EventKit
+    // answered an over-long range with an empty list, prune concluded
+    // there were no orphans, and recovery concluded there was no ledger to
+    // rebuild. Fail the pass and let the next one retry; a scan that
+    // cannot read the calendar must never be allowed to conclude the
+    // calendar is empty. (Stage 0's standing invariant, applied to the one
+    // surface that was still exempt from it.)
+    const ledgerEntries = Object.keys(ledger).length;
+    if (ledgerEntries > 0) {
+      const guard = await listTaggedEvents(calendarId);
+      if (!guard.ok) return guard;
+      beat();
+      if (isScanAnomaly(guard.value.length, ledgerEntries)) {
+        const anomaly: SyncOutcome = {
+          created: 0,
+          updated: 0,
+          deleted: 0,
+          scanAnomaly: true,
+          scannedTagged: 0,
+          ledgerEntries,
+          at: new Date().toISOString(),
+        };
+        writeJson(LAST_SYNC_KEY, anomaly);
+        return err({ kind: 'scan-anomaly', scanned: 0, ledgerEntries });
+      }
+    }
+
     // Circuit breaker: active follows but zero fixtures against a
     // non-trivial ledger means an upstream/cache anomaly, not a real
     // "everything is cancelled". Never mass-delete on that signal.
@@ -505,6 +568,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 
     for (const op of ordered) {
       if (shouldStopPass(applied, Date.now() - passStartedAt, budgetMs)) break;
+      beat();
       if (op.op === 'create' || op.op === 'update') {
         const f = op.fixture;
         const d = op.desired;

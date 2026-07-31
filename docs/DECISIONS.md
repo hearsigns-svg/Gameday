@@ -478,3 +478,29 @@
   fixed count is wrong on one of them. Both figures are from a
   DEVICE-LOCAL calendar; a cloud-backed target is what real users get and
   its per-write cost remains unmeasured.
+- 2026-07-31: PAST FIXTURES ARE FROZEN. KickOffCal only ever creates,
+  updates or deletes calendar events for fixtures that have not yet
+  finished. `isPast` (fixtures/domain/horizon.ts) is the one definition,
+  and it is END-based with a 6h grace, not start-based: a 96h County
+  Championship match, a 5h golf round and an all-day "time TBC" banner are
+  all still live long after they begin, and a postponement announced
+  mid-event must still reach the calendar. Supersedes the three options in
+  docs/QUERY_WINDOW.md.
+- 2026-07-31: The freeze lives in the LEDGER, not the query. An event
+  synced while future will cross the horizon; if it simply fell out of the
+  fetch, the prune invariant would delete it — the exact opposite of the
+  intent. Frozen entries are retained, produce no ops of any kind, and
+  count as valid references for the calendar ⊆ ledger sweep.
+- 2026-07-31: Duplicate events for a fixture that has already finished are
+  NOT collected as recovery surplus. They stay in the user's calendar
+  permanently. The past-fixture rule outranks tidiness; this is the
+  owner's explicit decision and not an oversight — do not "fix" it.
+- 2026-07-31: Removing past events is opt-in, off by default, with a fixed
+  30-day retention and deliberately no picker. It deletes only tagged
+  events that still have a ledger entry, and turning it back off stops
+  further removal without restoring anything — which the UI says plainly.
+- 2026-07-31: The sync lock is heartbeat-based. STALE_RUN_MS means "no
+  heartbeat since", not "started before", so a slow-but-alive pass is never
+  taken over mid-write. No per-op timeout: abandoning a native calendar
+  write leaves its commit state indeterminate, which is how untracked
+  events get created.

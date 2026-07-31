@@ -40,7 +40,10 @@ describe('entriesFromRecoveredEvents', () => {
     expect(ledger['apisports-2'].allDay).toBe(true);
   });
 
-  test('duplicate events for one fixture: first kept, rest surplus', () => {
+  test('duplicate events for a LIVE fixture: first kept, rest surplus', () => {
+    // `event()` is 2023-dated, so "now" has to be before it for the
+    // fixture to still be live.
+    const beforeIt = Date.parse('2023-10-20T00:00:00.000Z');
     const { ledger, surplusEventIds } = entriesFromRecoveredEvents(
       [
         event(),
@@ -48,10 +51,28 @@ describe('entriesFromRecoveredEvents', () => {
         event({ eventId: 'evt-dup-b' }),
       ],
       'cal-1',
+      beforeIt,
     );
     expect(Object.keys(ledger)).toHaveLength(1);
     expect(ledger['apisports-1'].eventId).toBe('evt-1');
     expect(surplusEventIds).toEqual(['evt-dup-a', 'evt-dup-b']);
+  });
+
+  test('duplicate events for a FINISHED fixture are kept, not collected', () => {
+    // The past-fixture rule outranks tidiness: a duplicate of a game that
+    // has already been played stays in the calendar permanently, because
+    // deleting a past event is exactly what the rule forbids. Owner's
+    // explicit decision — see docs/DECISIONS.md 2026-07-31.
+    const longAfter = Date.parse('2026-01-01T00:00:00.000Z');
+    const { ledger, surplusEventIds } = entriesFromRecoveredEvents(
+      [event(), event({ eventId: 'evt-dup-a' })],
+      'cal-1',
+      longAfter,
+    );
+    // The fixture is still tracked — one entry, so prune sees a reference…
+    expect(Object.keys(ledger)).toHaveLength(1);
+    // …and the duplicate is left exactly where it is.
+    expect(surplusEventIds).toEqual([]);
   });
 
   test('empty scan rebuilds nothing', () => {
@@ -145,5 +166,72 @@ describe('scanWindows', () => {
     expect(fine[fine.length - 1].end.getTime()).toBe(
       coarse[coarse.length - 1].end.getTime(),
     );
+  });
+});
+
+// ─── Scan anomaly guard (Stage 1d item 2) ─────────────────────────────
+
+import { isScanAnomaly } from '../recovery';
+import { planSync } from '../syncPlan';
+import { DEFAULT_PREFS } from '../prefs';
+
+describe('isScanAnomaly', () => {
+  test('an empty scan against a populated ledger is the impossible state', () => {
+    // Exactly the F13 state: 1,790 of our events in the calendar, and the
+    // scan returns nothing.
+    expect(isScanAnomaly(0, 1752)).toBe(true);
+    expect(isScanAnomaly(0, 1)).toBe(true);
+  });
+
+  test('an empty scan against an EMPTY ledger is ordinary', () => {
+    // A fresh install with a fresh calendar. Nothing to contradict.
+    expect(isScanAnomaly(0, 0)).toBe(false);
+  });
+
+  test('any non-empty scan is not an anomaly, however incomplete', () => {
+    // The guard is deliberately narrow — it catches the total blackout,
+    // not partial truncation, because only the blackout is provably
+    // impossible rather than merely suspicious.
+    expect(isScanAnomaly(1, 1752)).toBe(false);
+    expect(isScanAnomaly(1752, 1752)).toBe(false);
+  });
+});
+
+describe('a blind scan must not be allowed to conclude anything', () => {
+  const entry = (id: string) => ({
+    eventId: `ev-${id}`,
+    calendarId: 'cal-1',
+    startUtc: '2026-12-25T15:00:00.000Z',
+    endUtc: '2026-12-25T17:00:00.000Z',
+    title: 'A v B',
+    allDay: false,
+  });
+  const ledger = { a: entry('a'), b: entry('b'), c: entry('c') };
+
+  test('the engine stops BEFORE planning, so no delete op is ever produced', () => {
+    // The guard runs between loading the ledger and calling planSync
+    // (syncEngine.ts). This pins what it is protecting: were the pass
+    // allowed to continue with an unreadable calendar and an empty fetch,
+    // the planner would delete every ledgered event.
+    expect(isScanAnomaly(0, Object.keys(ledger).length)).toBe(true);
+
+    const wouldHavePlanned = planSync(
+      [], // fetch returned nothing
+      ledger,
+      [], // and nothing is followed
+      DEFAULT_PREFS,
+      '2026-01-01T00:00:00.000Z',
+      new Set(),
+      new Set(),
+      Date.parse('2026-12-01T00:00:00.000Z'), // fixtures still in the future
+    );
+    expect(wouldHavePlanned.filter((o) => o.op === 'delete')).toHaveLength(3);
+  });
+
+  test('prune itself cannot over-delete on a blind scan — it under-collects', () => {
+    // Worth pinning so the guard is understood correctly: an empty scan
+    // makes prune do NOTHING, which is why the damage showed up as
+    // duplicates rather than as deletions.
+    expect(orphanEventIds([], ledger)).toEqual([]);
   });
 });
