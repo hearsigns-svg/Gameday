@@ -102,9 +102,42 @@ calendar choice, multi-device, kill-state resumption, undo-unfollow.
   oldest fixtures → 65 events. Window widened to -5y AND a standing
   PRUNE INVARIANT added: every sync deletes any tagged event the ledger
   does not reference (calendar ⊆ ledger) — verified 65→63 on-device.
-- "Calendar choice" is satisfied by decision: dedicated Gameday calendar
-  only (never user calendars); user-selectable target deferred unless
-  owner requests it.
+- "Calendar choice" was ONCE satisfied by decision (dedicated calendar
+  only, never user calendars). SUPERSEDED 2026-07-30 — that decision was
+  quietly costing the core promise on Android, where the dedicated
+  calendar was device-LOCAL and therefore invisible on the user's other
+  devices and gone with the phone. Built as the calendar-target feature;
+  see the M4-addendum below and docs/CALENDAR_TARGET.md.
+
+### M4 addendum 2026-07-30 — calendar target  [~]
+
+Fixtures now go to a CLOUD-backed calendar wherever one exists, with no
+setting to touch: iOS creates the dedicated KickOffCal calendar inside a
+writable cloud source, Android writes into the primary Google calendar
+(an app cannot create inside a `com.google` account, only write into
+one). Device-local remains the fallback and today's behaviour for anyone
+with no cloud account. Existing installs keep the calendar they already
+have — an existing calendar of ours always wins, so nobody's events move
+on upgrade.
+- Prune/recovery tightened to a pure, tested ownership gate now that the
+  target can be somebody's real calendar; calendar-level acts (rename,
+  recolour, delete) additionally require the calendar to be provably
+  ours. 35 new domain tests: foreign-event safety, and migration
+  convergence killed at every step of the move.
+- Preferences → Calendar (first row) states the target and its real
+  consequence; the picker groups every writable calendar by account and
+  offers "new KickOffCal calendar in <source>" on iOS.
+- DEVICE VERIFICATION STILL OWED (the simulator cannot prove it — no
+  iCloud account, only a local source):
+  - [ ] iOS real device with iCloud: calendar created in the iCloud
+        source, fixtures visible on a second Apple device.
+  - [ ] Android emulator/device signed into Google: fixtures land in the
+        Google calendar and appear at calendar.google.com.
+  - [ ] Switch target with ~100 events: count conserved, no duplicates
+        left in the old calendar.
+  - [ ] Measure the prune scan against a BUSY user calendar — it now
+        walks -5y…+3y of somebody's real primary calendar on every sync,
+        which was cheap when the calendar was only ours.
 
 ## M5 — Sport expansion  [~]
 

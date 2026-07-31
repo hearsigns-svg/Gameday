@@ -20,6 +20,11 @@ export interface LedgerEntry {
   endUtc: string;
   title: string;
   allDay?: boolean; // absent in pre-M2 ledgers → treated as false
+  // Set only while a target switch is in flight: the event this fixture
+  // used to occupy in the OLD calendar, still awaiting deletion. It
+  // rides IN the entry so repointing the ledger and recording the
+  // leftover are one atomic write — see domain/calendarMigration.ts.
+  strayEventId?: string;
 }
 
 export type Ledger = Record<string, LedgerEntry>; // keyed by fixture id

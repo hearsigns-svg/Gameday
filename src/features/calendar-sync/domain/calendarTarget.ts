@@ -53,13 +53,37 @@ export function accountLabelOf(cal: CalendarLike): string {
 // permission screen's old "your other calendars are never touched" was
 // not, once a user calendar can be the target.
 export function consequenceOf(cal: CalendarLike, ours: boolean): string {
-  const kind = sourceKindOf(cal);
-  if (kind === 'device') {
+  return consequenceForTarget({
+    sourceKind: sourceKindOf(cal),
+    accountLabel: accountLabelOf(cal),
+    ours,
+  });
+}
+
+// Same sentence, from the persisted target instead of a live calendar
+// object — Preferences renders before any native call has been made.
+// One implementation so the copy can never drift between the two.
+export interface TargetDescription {
+  sourceKind: SourceKind;
+  accountLabel: string;
+  ours: boolean;
+}
+
+export function consequenceForTarget(d: TargetDescription): string {
+  if (d.sourceKind === 'device') {
     return "On this device only — won't appear on your other devices";
   }
-  return ours
-    ? `${accountLabelOf(cal)} — syncs to your other devices`
-    : `${accountLabelOf(cal)} — fixtures appear alongside your own events`;
+  return d.ours
+    ? `${d.accountLabel} — syncs to your other devices`
+    : `${d.accountLabel} — fixtures appear alongside your own events`;
+}
+
+// "KickOffCal · iCloud — syncs to your other devices". The single line
+// the Preferences row and the picker header both show.
+export function targetSummary(
+  d: TargetDescription & { label: string },
+): string {
+  return `${d.label} · ${consequenceForTarget(d)}`;
 }
 
 export interface TargetChoice {
@@ -139,3 +163,36 @@ export function groupForPicker(
       return Number(bCloud) - Number(aCloud) || a.account.localeCompare(b.account);
     });
 }
+
+// iOS only: the sources we could create a fresh KickOffCal calendar in
+// ("Create a new KickOffCal calendar in iCloud"). Android cannot create
+// inside a Google account — only Google's own sync adapter can — so the
+// picker offers writing into an existing calendar there instead.
+export interface CreatableSource {
+  sourceId: string;
+  name: string;
+  kind: SourceKind;
+}
+
+export function creatableSources(
+  calendars: readonly CalendarLike[],
+): CreatableSource[] {
+  const seen = new Map<string, CreatableSource>();
+  for (const c of calendars) {
+    const kind = sourceKindOf(c);
+    if (kind === 'unwritable') continue;
+    const sourceId = c.source?.id;
+    if (!sourceId || seen.has(sourceId)) continue;
+    seen.set(sourceId, { sourceId, name: accountLabelOf(c), kind });
+  }
+  return [...seen.values()].sort(
+    (a, b) =>
+      Number(b.kind === 'cloud') - Number(a.kind === 'cloud') ||
+      a.name.localeCompare(b.name),
+  );
+}
+
+// Shown under an Android target that lives on the device only. Quiet,
+// and never a nag: the app already works, this is the upgrade.
+export const ANDROID_LOCAL_HINT =
+  'Using a Google calendar makes your fixtures appear on all your devices.';

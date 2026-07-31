@@ -20,8 +20,14 @@ import { runSync, upcomingFixtures } from '../syncEngine';
 
 type Props = RootScreenProps<'CalendarPriming'>;
 
+// Every line has to be true in all three target modes — our own calendar
+// in iCloud, the user's Google calendar, or a device-local fallback (see
+// docs/CALENDAR_TARGET.md). The old first line promised "your other
+// calendars are never touched", which stopped being true the moment a
+// calendar of the user's own could be the target. What IS always true is
+// the guarantee underneath it: we only ever touch events we added.
 const EXPLAINS = [
-  ['🗓️', 'KickOffCal creates its own calendar — your other calendars are never touched'],
+  ['🗓️', 'Fixtures go into a calendar you choose — we only ever touch events we added'],
   ['🔄', 'Events update themselves when times change or games move'],
   ['🧹', 'Unfollow and its fixtures disappear again'],
 ] as const;

@@ -1,8 +1,12 @@
 # Calendar target — where KickOffCal writes your fixtures
 
-**Status: SPEC, not built.** This is the execution brief for a new
-session. Everything below the verdict was verified against real devices
-and the installed SDK on 2026-07-30, not assumed.
+**Status: BUILT 2026-07-30.** Domain, driver, migration, picker and copy
+all landed; 291 tests green under UTC and America/Los_Angeles;
+`npx tsc --noEmit` clean. Simulator verification below. THREE real-device
+checks remain and are listed at the end — the simulator cannot do them.
+
+Everything below the verdict was verified against real devices and the
+installed SDK on 2026-07-30, not assumed.
 
 ## Why this exists
 
@@ -195,3 +199,78 @@ Device verification (both platforms, then update this doc):
 5. No event we did not create is ever modified or deleted — proven by
    test, not by inspection.
 6. Every user-facing string about calendars is true in all three modes.
+
+## What was built, and against which criterion
+
+- `domain/calendarTarget.ts` — the decision layer (already existed).
+  Extended, not rewritten: `consequenceForTarget` / `targetSummary` (the
+  same sentence from a STORED target, so Preferences and the picker
+  cannot drift), `creatableSources`, `ANDROID_LOCAL_HINT`.
+- `domain/recovery.ts` — now owns the OWNERSHIP GATE (§5). `NOTES_TAG`,
+  `fixtureIdFromNotes`, `ourEventsIn`, `foreignEventCount`. Recovery and
+  prune consume `ourEventsIn` and nothing else, so the driver can no
+  longer filter incidentally. The all-day read-back normalisation moved
+  here too — it was untestable inside the driver.
+- `domain/calendarMigration.ts` — the pure move plan (§4), with the
+  convergence argument written out where the code is.
+- `data/calendarTargetStore.ts` — the persisted target. `kind` is the
+  safety-critical field: 'ours' licenses rename/recolour/delete, 'user'
+  licenses none of them.
+- `data/calendarDriver.ts` — resolution, creation per platform, the
+  picker's inputs, and the calendar-level gate (`provablyOurs`: our
+  recorded id, or a title match holding ZERO foreign events).
+- `syncEngine.ts` — `switchCalendarTarget` (locked, with progress), plus
+  a stray drain and the same migration inside every ordinary sync, so an
+  abandoned switch or a target that changed underneath us repairs itself.
+- `settings/CalendarTargetScreen.tsx`, the Preferences first row, and
+  the priming copy (§6).
+
+### Departures from this brief, and why
+
+- **The target is sticky, including when resolved automatically.** The
+  brief implied re-deriving the default each time. That would drag every
+  ledgered event across the moment the inputs shifted — a second Google
+  account appearing is enough. Re-resolved only when the calendar is
+  gone or read-only, and never on an empty calendar list (which means
+  the store failed to answer, not that the target was deleted).
+- **Title alone no longer proves a calendar is ours.** The brief's
+  step 3 says "title matches CAL_TITLE/LEGACY_CAL_TITLES and it holds
+  only our tagged events". Enforced for adoption too, not just deletion:
+  otherwise a user's own calendar called "KickOffCal" would be renamed
+  and recoloured before we ever got to the delete question.
+- **The stray record lives inside the ledger entry.** The brief said
+  "create, then delete, updating the ledger per operation". Two separate
+  writes leave a window where the ledger has moved on but the old event
+  is unrecorded — stranded in a calendar prune never scans again. One
+  write closes it.
+- **Calendar colour is hidden, not disabled, under a user target.** A
+  colour belongs to the calendar; we do not restyle someone else's.
+
+## Verification
+
+VERIFIED on the iPhone 17 Pro simulator 2026-07-30, against the calendar
+store (`Calendar.sqlitedb`), not screenshots:
+- Automatic resolution with no cloud source: KickOffCal created locally,
+  Preferences row reads "On this device only — won't appear on your
+  other devices" (§3, §6 — this is the mode the old code hid).
+- Switch to a user calendar with 118 events in flight: 118 → 118, zero
+  duplicate fixture ids, and our now-empty calendar removed (§4).
+- A real user event ("Dentist appointment") added to the TARGET calendar
+  in the iOS Calendar app survived a full sync including the prune pass
+  (§5, live — the pure proof is eventOwnership.test.ts).
+- Switch back out to a new KickOffCal: all 118 moved, the user's
+  calendar left holding exactly their own event, and NOT deleted (§4,
+  §5). UK Holidays (100) and Birthdays (4) untouched throughout.
+- Colour swatches hidden under a user target, replaced by the honest
+  line about whose colour it is (§6).
+
+STILL OWED — the simulator cannot prove these (no iCloud account, and
+its only writable source is the local `Default`):
+- [ ] §1 iOS real device with iCloud: confirm the calendar is created in
+      the iCloud source and the fixtures appear on a second Apple device.
+- [ ] §2 Android emulator/device signed into Google: confirm fixtures
+      land in the Google calendar and show at calendar.google.com, and
+      that `isPrimary` picks the right one on a two-account device.
+- [ ] Prune cost against a BUSY real calendar. The pass walks -5y…+3y of
+      the target on every sync; that was cheap when the target was only
+      ever ours, and is untested against someone's real primary calendar.

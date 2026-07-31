@@ -288,3 +288,47 @@
   calendar in place; events, ids and ledger untouched, never duplicated.
   NOTES_TAG, MMKV id and storage keys stay 'gameday' — internal
   identifiers that recovery depends on must never chase branding.
+- 2026-07-30: CALENDAR TARGET — SUPERSEDES the M4 "dedicated calendar
+  only, never user calendars" line. That decision conflated two things
+  that are separable: isolation from the user's DATA (still absolute —
+  we only ever touch events carrying NOTES_TAG) and isolation from the
+  user's ACCOUNT (which was silently costing us the core promise). A
+  dedicated calendar CAN be cloud-synced. iOS: create KickOffCal in a
+  writable CLOUD source (preferring the default calendar's source when
+  that is already cloud), local only when no cloud source exists.
+  Android: an app cannot create a calendar inside a `com.google` account
+  — only Google's sync adapter can — but it CAN write into one, so the
+  default is the primary Google calendar, with the local calendar kept
+  as the zero-Google-account fallback. NO OAuth on either platform; the
+  one calendar permission still buys everything.
+- 2026-07-30: The target is STICKY once resolved, including when it was
+  resolved automatically. Re-deriving it every sync would drag every
+  ledgered event across the moment the inputs shifted (a second Google
+  account appearing is enough). It is re-resolved only when the calendar
+  is gone or has gone read-only — and never on an EMPTY calendar list,
+  which means the store failed to answer, not that the target was
+  deleted.
+- 2026-07-30: TWO GATES, not one. Calendar-level acts (rename, recolour,
+  delete) require the target to be provably OURS: the id we recorded, or
+  a title match that holds ZERO foreign events. Title alone is no longer
+  proof — a user's own calendar called "KickOffCal" must never be
+  hijacked. Event-level acts require the ownership tag, which is now a
+  pure, tested gate (ourEventsIn / fixtureIdFromNotes in domain/
+  recovery.ts) that both recovery and prune consume; the driver can no
+  longer filter incidentally. A bare tag with no fixture id claims
+  nothing.
+- 2026-07-30: Switching target MOVES events; it never orphans them. The
+  repoint-and-owe-a-delete is ONE ledger write (strayEventId rides in
+  the entry), because a split would strand an event in a calendar prune
+  never scans again. Two convergence paths: a crash before the ledger
+  write leaves a duplicate in the target that the standing prune
+  invariant removes; a crash after it leaves a stray that every sync
+  drains. Ordinary syncs run the same migration, so a target that
+  changed under us repairs itself. Known, accepted: a switch rebuilds
+  events, so reminders are re-applied from the CURRENT preference.
+- 2026-07-30: Calendar colour is hidden, not disabled, when the target
+  is the user's own calendar — a colour belongs to the calendar, and we
+  do not restyle theirs. Priming copy lost "your other calendars are
+  never touched" (false once a user calendar can be the target) for the
+  guarantee that is true in all three modes: we only ever touch events
+  we added.

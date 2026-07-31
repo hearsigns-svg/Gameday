@@ -1,7 +1,8 @@
 // Calendar preferences. Changes apply from the next sync; the event-
 // style switch flips every scheduled event's kind on that sync.
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RootScreenProps } from '../../core/navigation';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
@@ -11,6 +12,8 @@ import {
   calendarColour,
   setCalendarColour,
 } from '../calendar-sync/data/calendarDriver';
+import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
+import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
 import { showToast } from '../../core/toast';
 
@@ -59,14 +62,24 @@ export default function PreferencesScreen({
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
   const [colour, setColour] = useState<string>(calendarColour);
+  // Read from the persisted target so the row paints immediately, and
+  // refreshed on focus because a sync (or the picker) may have moved it.
+  const [target, setTarget] = useState(storedTarget);
+  useFocusEffect(
+    useCallback(() => {
+      setTarget(storedTarget());
+    }, []),
+  );
+  const ownCalendar = target === null || target.kind === 'ours';
 
   const pickColour = async (hex: string, name: string) => {
     setColour(hex);
-    const applied = await setCalendarColour(hex);
+    const outcome = await setCalendarColour(hex);
     showToast({
-      message: applied
-        ? `Calendar colour is now ${name.toLowerCase()}`
-        : 'Colour saved — applies when your calendar connects',
+      message:
+        outcome === 'applied'
+          ? `Calendar colour is now ${name.toLowerCase()}`
+          : 'Colour saved — applies when your calendar connects',
     });
   };
 
@@ -81,7 +94,42 @@ export default function PreferencesScreen({
       style={{ backgroundColor: t.bg }}
       contentContainerStyle={{ padding: spacing.l }}
     >
-      <Text style={[type.heading, { color: t.textPrimary }]}>Reminders</Text>
+      <Text style={[type.heading, { color: t.textPrimary }]}>Calendar</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={
+          target
+            ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
+            : 'Choose where fixtures are written'
+        }
+        onPress={() => navigation.navigate('CalendarTarget')}
+        style={[
+          styles.option,
+          { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
+        ]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[type.body, { color: t.textPrimary }]}>
+            {target ? target.label : 'Choose a calendar'}
+          </Text>
+          <Text style={[type.caption, { color: t.textSecondary }]}>
+            {target
+              ? consequenceForTarget({
+                  accountLabel: target.accountLabel,
+                  sourceKind: target.sourceKind,
+                  ours: target.kind === 'ours',
+                })
+              : 'Picked automatically when your calendar connects'}
+          </Text>
+        </View>
+        <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
+      </Pressable>
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Reminders
+      </Text>
       <View style={styles.group}>
         {REMINDER_OPTIONS.map((opt) => (
           <OptionRow
@@ -143,28 +191,46 @@ export default function PreferencesScreen({
       >
         Calendar colour
       </Text>
-      <View style={styles.swatches}>
-        {CALENDAR_COLOURS.map((c) => (
-          <Pressable
-            key={c.hex}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: colour === c.hex }}
-            accessibilityLabel={`Calendar colour ${c.name}`}
-            onPress={() => void pickColour(c.hex, c.name)}
-            style={[
-              styles.swatch,
-              { backgroundColor: c.hex },
-              colour === c.hex && {
-                borderWidth: 3,
-                borderColor: t.textPrimary,
-              },
-            ]}
-          />
-        ))}
-      </View>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        How KickOffCal events look inside your phone's calendar app.
-      </Text>
+      {/* A colour belongs to the CALENDAR, not to the events in it — so
+          this only ever applies to a calendar of ours. Offering swatches
+          over someone's own calendar would be a promise we refuse to
+          keep: we do not restyle a user's calendar. */}
+      {ownCalendar ? (
+        <>
+          <View style={styles.swatches}>
+            {CALENDAR_COLOURS.map((c) => (
+              <Pressable
+                key={c.hex}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: colour === c.hex }}
+                accessibilityLabel={`Calendar colour ${c.name}`}
+                onPress={() => void pickColour(c.hex, c.name)}
+                style={[
+                  styles.swatch,
+                  { backgroundColor: c.hex },
+                  colour === c.hex && {
+                    borderWidth: 3,
+                    borderColor: t.textPrimary,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          <Text
+            style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}
+          >
+            How KickOffCal events look inside your phone's calendar app.
+          </Text>
+        </>
+      ) : (
+        <Text
+          style={[type.caption, { color: t.textSecondary, marginTop: spacing.m }]}
+        >
+          Your fixtures take the colour of {target?.label ?? 'your calendar'},
+          which is yours to set in your calendar app. Switch to a KickOffCal
+          calendar above to colour them separately.
+        </Text>
+      )}
 
       <Pressable
         accessibilityRole="button"

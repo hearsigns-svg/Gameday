@@ -69,6 +69,25 @@ syncs (Google, Apple, Outlook) with one permission prompt and no OAuth —
 lowest possible friction, and it avoids Google's multi-week sensitive-
 scope verification. Server-side Google API write is a deferred milestone.
 
+**The calendar target** (docs/CALENDAR_TARGET.md) is which calendar that
+write lands in, resolved automatically on the first sync and sticky
+afterwards: a dedicated KickOffCal calendar created in a writable cloud
+source on iOS, the primary Google calendar on Android (where an app
+cannot create inside a `com.google` account, only write into one), and a
+device-local calendar as the fallback. The user can change it in
+Preferences → Calendar; switching MOVES every ledgered event rather than
+orphaning it, converging even if interrupted.
+
+Two independent gates keep that safe once the target may be a calendar
+the user owns:
+- **Event-level.** `domain/recovery.ts` is the only thing that decides an
+  event is ours (our `NOTES_TAG` plus a usable fixture id, in the target
+  calendar). Recovery and prune consume that list and nothing else, so a
+  user's own event cannot reach a delete call.
+- **Calendar-level.** Renaming, recolouring or deleting a calendar
+  requires it to be provably ours: the id we recorded, or a title match
+  holding zero foreign events.
+
 ## Auth & entitlements
 
 Firebase anonymous auth at first launch (server state, zero friction);

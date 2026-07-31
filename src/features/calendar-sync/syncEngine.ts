@@ -13,19 +13,31 @@ import { pinFollowKeys, pinnedIds, prunePinStore } from './data/pinStore';
 import { loadPrefs } from './data/prefsStore';
 import { CalendarPrefs } from './domain/prefs';
 import {
+  applyTargetRequest,
   createFixtureEvent,
   deleteFixtureEvent,
+  deleteVacatedCalendarIfOurs,
   ensureCalendarPermission,
   hasCalendarGrant,
-  ensureGamedayCalendar,
-  getGamedayCalendarObject,
+  ensureCalendarTarget,
+  EventInput,
+  getCalendarObject,
   listTaggedEvents,
+  ResolvedTarget,
+  TargetRequest,
   updateFixtureEvent,
 } from './data/calendarDriver';
 import {
   entriesFromRecoveredEvents,
   orphanEventIds,
 } from './domain/recovery';
+import {
+  clearedStray,
+  movedEntry,
+  planTargetMigration,
+  strayEventIds,
+  vacatedCalendarIds,
+} from './domain/calendarMigration';
 import {
   loadLedger,
   removeLedgerEntry,
@@ -100,6 +112,7 @@ export interface SyncOutcome {
   deleted: number;
   recovered?: number; // ledger entries rebuilt from calendar (reinstall)
   pruned?: number; // orphan tagged events deleted (ledger invariant)
+  moved?: number; // events relocated to a new calendar target
   calendarSkipped?: boolean; // fixtures refreshed, calendar not opted in
   at: string;
 }
@@ -129,7 +142,12 @@ let rerunQueued = false;
 // is idempotent, so a resumed zombie run finds nothing left to do.
 const STALE_RUN_MS = 3 * 60_000;
 
-export async function runSync(): Promise<Result<SyncOutcome>> {
+// One calendar-touching run at a time, whichever kind it is: an ordinary
+// sync and a target switch both rewrite the ledger, so they must never
+// interleave.
+async function withSyncLock<T>(
+  run: () => Promise<Result<T>>,
+): Promise<Result<T>> {
   const heldFor = Date.now() - syncStartedAt;
   if (syncRunning && heldFor < STALE_RUN_MS) {
     // Coalesce: whatever changed (new follow, unfollow, pref) is picked
@@ -147,7 +165,7 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
   syncStartedAt = Date.now();
   emit(true);
   try {
-    const result = await runSyncInner();
+    const result = await run();
     lastErrorMessage = result.ok ? null : messageOf(result.error);
     return result;
   } catch (e) {
@@ -163,6 +181,10 @@ export async function runSync(): Promise<Result<SyncOutcome>> {
       void runSync();
     }
   }
+}
+
+export function runSync(): Promise<Result<SyncOutcome>> {
+  return withSyncLock(runSyncInner);
 }
 
 // Shared by both sync paths: refresh the per-follow counts and the
@@ -239,6 +261,124 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
   return ok(outcome);
 }
 
+// ─── Calendar target migration ────────────────────────────────────────
+
+function inputFor(
+  fixtureId: string,
+  entry: { title: string; startUtc: string; endUtc: string; allDay?: boolean },
+  prefs: CalendarPrefs,
+): EventInput {
+  const allDay = entry.allDay ?? false;
+  return {
+    fixtureId,
+    title: entry.title,
+    startUtc: entry.startUtc,
+    endUtc: entry.endUtc,
+    allDay,
+    reminderMinutesBefore: allDay ? null : prefs.reminderMinutes,
+  };
+}
+
+// Leftovers from an interrupted switch: an event we already replaced in
+// the new calendar but never managed to delete from the old one. Drained
+// at the top of every sync, so an abandoned migration converges without
+// the user doing anything. The old calendar is not scanned by prune, so
+// this is the ONLY thing that can clean them up.
+async function drainStrays(): Promise<void> {
+  for (const { fixtureId, eventId } of strayEventIds(loadLedger())) {
+    const del = await deleteFixtureEvent(eventId);
+    if (!del.ok) continue; // try again next sync; never lose the record
+    const entry = loadLedger()[fixtureId];
+    if (entry) upsertLedgerEntry(fixtureId, clearedStray(entry));
+  }
+}
+
+export interface MoveProgress {
+  moved: number;
+  total: number;
+}
+
+// Move every ledgered fixture that still lives somewhere else into the
+// target: create in the new calendar, repoint the ledger, delete the
+// old. Idempotent — re-running after a kill picks up exactly what's
+// left (see domain/calendarMigration.ts for the convergence argument).
+async function migrateToTarget(
+  targetCalendarId: string,
+  calObj: Parameters<typeof createFixtureEvent>[0],
+  prefs: CalendarPrefs,
+  onProgress?: (p: MoveProgress) => void,
+): Promise<Result<number>> {
+  const steps = planTargetMigration(loadLedger(), targetCalendarId);
+  if (steps.length === 0) return ok(0);
+  let moved = 0;
+  onProgress?.({ moved, total: steps.length });
+  for (const step of steps) {
+    const created = await createFixtureEvent(
+      calObj,
+      inputFor(step.fixtureId, step.entry, prefs),
+    );
+    if (!created.ok) return created;
+    // ONE write: the ledger now points at the new event and owes the old
+    // one a delete. Splitting these would strand an event in a calendar
+    // nothing scans again.
+    upsertLedgerEntry(
+      step.fixtureId,
+      movedEntry(step.entry, created.value, targetCalendarId),
+    );
+    const del = await deleteFixtureEvent(step.entry.eventId);
+    if (del.ok) {
+      const entry = loadLedger()[step.fixtureId];
+      if (entry) upsertLedgerEntry(step.fixtureId, clearedStray(entry));
+    }
+    moved++;
+    onProgress?.({ moved, total: steps.length });
+  }
+  return ok(moved);
+}
+
+// Changing where fixtures are written. Everything already in a calendar
+// MOVES — never orphaned, never duplicated — and a calendar of ours that
+// we emptied on the way out is removed. A user's calendar never is.
+export async function switchCalendarTarget(
+  request: TargetRequest,
+  onProgress?: (p: MoveProgress) => void,
+): Promise<Result<{ target: ResolvedTarget; moved: number }>> {
+  return withSyncLock(async () => {
+    // The OS dialog may only ever follow the primed explainer, so this
+    // path never gets to be the thing that raises it. The picker routes
+    // an unconnected user to priming instead of calling us.
+    if (calendarChoice() !== 'enabled') {
+      return err({ kind: 'unknown', message: 'Connect your calendar first.' });
+    }
+    const perm = await ensureCalendarPermission();
+    if (!perm.ok) return perm;
+    const before = loadLedger();
+    const target = await applyTargetRequest(request);
+    if (!target.ok) return target;
+
+    const calObj = await getCalendarObject(target.value.calendarId);
+    if (!calObj.ok) return calObj;
+    await drainStrays();
+    const moved = await migrateToTarget(
+      target.value.calendarId,
+      calObj.value,
+      loadPrefs(),
+      onProgress,
+    );
+    if (!moved.ok) return moved;
+
+    // Bin what we left behind, but only ever our own empty calendar.
+    for (const id of vacatedCalendarIds(before, target.value.calendarId)) {
+      await deleteVacatedCalendarIfOurs(id);
+    }
+    // Reconcile the rest — prune in the new target catches any duplicate
+    // a previously interrupted attempt left there.
+    const sync = await runSyncInner();
+    if (!sync.ok) return sync;
+    return ok({ target: target.value, moved: moved.value });
+  });
+}
+
 async function runSyncInner(): Promise<Result<SyncOutcome>> {
   if (calendarChoice() !== 'enabled') {
     // Reinstall healing: storage loss wipes ledger AND choice together,
@@ -255,18 +395,20 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
   {
     const perm = await ensureCalendarPermission();
     if (!perm.ok) return perm;
-    const cal = await ensureGamedayCalendar();
-    if (!cal.ok) return cal;
+    const target = await ensureCalendarTarget();
+    if (!target.ok) return target;
+    const calendarId = target.value.calendarId;
 
     // Reinstall recovery: an empty ledger with tagged events already in
     // the calendar means the app's storage was lost (uninstall) — the
     // events are the durable record. Rebuild before planning so the sync
-    // updates instead of duplicating.
+    // updates instead of duplicating. Only OUR events are adopted: in a
+    // user's calendar everything else is invisible to us.
     let recovered = 0;
     if (Object.keys(loadLedger()).length === 0) {
-      const scan = await listTaggedEvents(cal.value);
+      const scan = await listTaggedEvents(calendarId);
       if (scan.ok && scan.value.length > 0) {
-        const rebuilt = entriesFromRecoveredEvents(scan.value, cal.value);
+        const rebuilt = entriesFromRecoveredEvents(scan.value, calendarId);
         for (const [fixtureId, entry] of Object.entries(rebuilt.ledger)) {
           upsertLedgerEntry(fixtureId, entry);
         }
@@ -276,11 +418,21 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         recovered = Object.keys(rebuilt.ledger).length;
       }
     }
-    const calObj = await getGamedayCalendarObject(cal.value);
+    const calObj = await getCalendarObject(calendarId);
     if (!calObj.ok) return calObj;
 
     const follows = loadFollowKeys();
     const prefs = loadPrefs();
+
+    // Self-healing target moves. An interrupted switch leaves strays; a
+    // target that changed under us (the chosen calendar was deleted in
+    // Google Calendar, say) leaves ledger entries pointing at a calendar
+    // we no longer write to. Both are repaired here, before planning, so
+    // the plan below only ever deals with events in the current target.
+    await drainStrays();
+    const moved = await migrateToTarget(calendarId, calObj.value, prefs);
+    if (!moved.ok) return moved;
+
     const fixtures = await fetchFixturesForFollows(
       [...new Set([...follows, ...pinFollowKeys()])],
     );
@@ -316,6 +468,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       updated: 0,
       deleted: 0,
       recovered,
+      ...(moved.value > 0 ? { moved: moved.value } : {}),
       at: new Date().toISOString(),
     };
 
@@ -347,7 +500,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         if (!r.ok) return r;
         upsertLedgerEntry(f.id, {
           eventId: r.value,
-          calendarId: cal.value,
+          calendarId,
           startUtc: input.startUtc,
           endUtc: input.endUtc,
           title: input.title,
@@ -366,7 +519,10 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Prune pass: delete any tagged event the ledger does not reference
     // (calendar ⊆ ledger invariant). Catches scan-window misses, zombie
     // dev runs, and anything else that slipped an event past the ledger.
-    const postScan = await listTaggedEvents(cal.value);
+    // listTaggedEvents is the ownership gate: in a user's calendar it
+    // returns ONLY events carrying our tag, so an appointment of theirs
+    // can never become an "orphan".
+    const postScan = await listTaggedEvents(calendarId);
     if (postScan.ok) {
       for (const eventId of orphanEventIds(postScan.value, loadLedger())) {
         await deleteFixtureEvent(eventId);

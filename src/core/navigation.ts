@@ -33,6 +33,7 @@ export type RootStackParamList = {
     colours?: string;
   };
   Preferences: undefined;
+  CalendarTarget: undefined; // which calendar fixtures are written to
   Credits: undefined;
   ThemeGallery: undefined; // dev-only design QA screen
 };

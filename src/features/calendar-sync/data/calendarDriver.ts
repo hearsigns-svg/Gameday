@@ -1,21 +1,66 @@
-// expo-calendar driver (SDK 57 "Calendar Next" object API). Gameday
-// writes ONLY into its own dedicated "Gameday" calendar, and ONLY events
-// it ledgered — never a user event. Every event's notes carry a NOTES_TAG
-// line with the fixture id for reinstall recovery.
+// expo-calendar driver (SDK 57 "Calendar Next" object API).
+//
+// KickOffCal writes fixtures into the CALENDAR TARGET — see
+// docs/CALENDAR_TARGET.md. That is a dedicated "KickOffCal" calendar
+// wherever we can create one in a cloud account (iOS/iCloud, or local as
+// the fallback), and the user's own Google calendar on Android, where an
+// app cannot create inside a `com.google` account — only write into one.
+//
+// Everything we do to a calendar AS A WHOLE — rename, recolour, delete —
+// is gated on the target being one WE created. Everything we do to an
+// EVENT is gated on the ownership tag (domain/recovery.ts): we only ever
+// touch events carrying our NOTES_TAG. Those two gates are what make it
+// safe to write into somebody's real calendar.
 
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import { AppError, err, ok, Result } from '../../../core/result';
 import { palette } from '../../../core/tokens';
-import { readJson, writeJson } from '../../../core/storage';
-import { RecoveredEvent } from '../domain/recovery';
+import { readJson, writeJson, removeKey } from '../../../core/storage';
+import {
+  CalendarLike,
+  CreatableSource,
+  chooseDefaultTarget,
+  creatableSources,
+  isWritable,
+  sourceKindOf,
+  accountLabelOf,
+  SourceKind,
+} from '../domain/calendarTarget';
+import {
+  fixtureIdFromNotes,
+  foreignEventCount,
+  NOTES_TAG,
+  ourEventsIn,
+  RecoveredEvent,
+  ScannedEvent,
+} from '../domain/recovery';
+import {
+  CalendarTarget,
+  clearTarget,
+  saveTarget,
+  storedTarget,
+  TargetKind,
+} from './calendarTargetStore';
 
-export const NOTES_TAG = 'gameday-fixture:';
+export { NOTES_TAG };
+
+// The id of the calendar WE created, when one exists. Kept separate from
+// the target: after a switch to a user calendar our own calendar may
+// still be around, and it stays identifiable as ours.
 const CAL_KEY = 'gamedayCalendarId.v1';
 const CAL_TITLE = 'KickOffCal';
 // Calendars created before the rename — matched during resolution and
 // renamed in place (never duplicated, never orphaned).
 const LEGACY_CAL_TITLES = ['Gameday'];
+
+export interface ResolvedTarget {
+  calendarId: string;
+  kind: TargetKind;
+  label: string;
+  accountLabel: string;
+  sourceKind: SourceKind;
+}
 
 // Non-prompting probe: reports the existing grant WITHOUT ever showing
 // the OS dialog. Used as reinstall evidence — an existing grant means
@@ -51,47 +96,33 @@ function eventWindow(): { start: Date; end: Date } {
   return { start, end };
 }
 
-function toIso(d: string | Date): string {
-  return new Date(d).toISOString();
+// Platform events → the minimal shape the pure ownership gate consumes.
+function toScanned(e: Calendar.ExpoCalendarEvent): ScannedEvent {
+  return {
+    id: e.id,
+    calendarId: e.calendarId,
+    notes: e.notes,
+    title: e.title,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    allDay: e.allDay,
+  };
 }
 
-// Normalise a platform-reported all-day boundary to the UTC day the
-// planner wrote. Two read-back shapes exist: an exact UTC boundary
-// (kept as-is), or device-local midnight — whose LOCAL calendar date IS
-// the intended day. A round-to-nearest cannot cover both: inhabited
-// offsets span −11…+14 (25h > 24h), so UTC+13/+14 devices would snap a
-// day early.
-function nearestUtcDay(input: string | Date): string {
-  const d = new Date(input);
-  if (d.getTime() % 86_400_000 === 0) return d.toISOString();
-  return new Date(
-    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()),
-  ).toISOString();
+interface CalendarScan {
+  ours: RecoveredEvent[];
+  foreign: number;
 }
 
-async function taggedEventsOf(
+async function scanCalendar(
   calendar: Calendar.ExpoCalendar,
-): Promise<RecoveredEvent[]> {
+): Promise<CalendarScan> {
   const { start, end } = eventWindow();
-  const events = await calendar.listEvents(start, end);
-  return events
-    .filter((e) => e.notes?.startsWith(NOTES_TAG))
-    .map((e) => {
-      const allDay = e.allDay ?? false;
-      return {
-        fixtureId: (e.notes ?? '').slice(NOTES_TAG.length).trim(),
-        eventId: e.id,
-        title: e.title ?? '',
-        // All-day reads must be normalised to the UTC day boundary the
-        // planner writes (platforms may report local midnight instead).
-        // Without this, a recovered placeholder never matches its
-        // desired shape and is pointlessly rewritten on every sync
-        // after a reinstall.
-        startUtc: allDay ? nearestUtcDay(e.startDate) : toIso(e.startDate),
-        endUtc: allDay ? nearestUtcDay(e.endDate) : toIso(e.endDate),
-        allDay,
-      };
-    });
+  const events = (await calendar.listEvents(start, end)).map(toScanned);
+  return {
+    ours: ourEventsIn(events, calendar.id),
+    foreign: foreignEventCount(events),
+  };
 }
 
 export async function listTaggedEvents(
@@ -99,130 +130,397 @@ export async function listTaggedEvents(
 ): Promise<Result<RecoveredEvent[]>> {
   try {
     const calendar = await Calendar.ExpoCalendar.get(calendarId);
-    return ok(await taggedEventsOf(calendar));
+    return ok((await scanCalendar(calendar)).ours);
   } catch (e) {
     return err({ kind: 'unknown', message: `event scan failed: ${e}` });
   }
 }
 
-// If duplicate "Gameday" calendars exist (zombie dev runs, interrupted
-// installs), keep the one holding the most tagged events and delete the
-// rest — they are ours by construction (title + local account).
-async function resolveGamedayCalendar(): Promise<Calendar.ExpoCalendar | null> {
-  const cached = readJson<string | null>(CAL_KEY, null);
-  const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
-  // A legacy-titled calendar is only OURS if it actually holds our
-  // tagged events (or is the cached id). Adopting on title alone would
-  // hijack — and rename — a user's own calendar that happens to be
-  // called "Gameday".
-  const candidates = calendars.filter(
-    (c) =>
-      c.title === CAL_TITLE ||
-      LEGACY_CAL_TITLES.includes(c.title ?? '') ||
-      c.id === cached,
-  );
-  const ours: Calendar.ExpoCalendar[] = [];
-  for (const c of candidates) {
-    if (c.title === CAL_TITLE || c.id === cached) {
-      ours.push(c);
-      continue;
-    }
-    try {
-      if ((await taggedEventsOf(c)).length > 0) ours.push(c);
-    } catch {
-      // unreadable → not provably ours; leave it alone
-    }
-  }
-  if (ours.length === 0) return null;
-  if (ours.length === 1) return ours[0];
-  const counted = await Promise.all(
-    ours.map(async (c) => ({ c, n: (await taggedEventsOf(c)).length })),
-  );
-  counted.sort((a, b) => b.n - a.n);
-  const [keep, ...drop] = counted;
-  for (const { c } of drop) {
-    try {
-      await c.delete();
-    } catch {
-      // A calendar we cannot delete stays; it no longer matches the
-      // cached id, so it will not be written to again.
-    }
-  }
-  return keep.c;
-}
-
-// The user's chosen calendar colour (how Gameday events appear in the
+// The user's chosen calendar colour (how KickOffCal events appear in the
 // OS calendar). Stored even before the calendar exists — creation and
-// later changes both read it.
+// later changes both read it. Only ever applied to a calendar of ours:
+// recolouring a user's own calendar would be vandalism.
 const CAL_COLOUR_KEY = 'calendarColour.v1';
 
 export function calendarColour(): string {
   return readJson<string>(CAL_COLOUR_KEY, palette.light.primary);
 }
 
-// Persists the choice always; applies it live when the calendar already
-// exists. Returns whether it was applied now (false = saved for when
-// the calendar is created/connected).
-export async function setCalendarColour(hex: string): Promise<boolean> {
+export type ColourOutcome = 'applied' | 'saved' | 'not-ours';
+
+export async function setCalendarColour(hex: string): Promise<ColourOutcome> {
   writeJson(CAL_COLOUR_KEY, hex);
-  const id = readJson<string | null>(CAL_KEY, null);
-  if (!id) return false;
+  const target = storedTarget();
+  if (target && target.kind === 'user') return 'not-ours';
+  const id = target?.calendarId ?? readJson<string | null>(CAL_KEY, null);
+  if (!id) return 'saved';
   try {
     const cal = await Calendar.ExpoCalendar.get(id);
     await cal.update({ color: hex });
-    return true;
+    return 'applied';
   } catch {
-    return false; // no permission / calendar gone — applies on next create
+    return 'saved'; // no permission / calendar gone — applies on next create
   }
 }
 
-export async function ensureGamedayCalendar(): Promise<Result<string>> {
+// ─── Target resolution ────────────────────────────────────────────────
+
+function defaultCalendarId(): string | null {
+  // iOS only; Android exposes no system-wide default calendar. Used to
+  // mark the default's source as preferred, so a new KickOffCal calendar
+  // lands in the account the user already lives in.
+  if (Platform.OS !== 'ios') return null;
   try {
-    const existing = await resolveGamedayCalendar();
-    if (existing) {
-      writeJson(CAL_KEY, existing.id);
-      // Rename migration: a pre-rename 'Gameday' calendar becomes
-      // 'KickOffCal' in place — events, ids and ledger all untouched.
-      if (existing.title !== CAL_TITLE) {
-        try {
-          await existing.update({ title: CAL_TITLE });
-        } catch {
-          // keep serving under the old title rather than fail the sync
-        }
-      }
-      // A colour picked before the calendar connected must still land —
-      // creation applies it, so resolution has to as well. Cosmetic:
-      // never let it fail the sync.
-      const want = calendarColour();
-      if ((existing.color ?? '').slice(0, 7).toLowerCase() !== want.toLowerCase()) {
-        try {
-          await existing.update({ color: want });
-        } catch {
-          // keep the platform's colour
-        }
-      }
-      return ok(existing.id);
-    }
-    const details: NonNullable<Parameters<typeof Calendar.createCalendar>[0]> = {
-      title: CAL_TITLE,
-      color: calendarColour(),
-      entityType: Calendar.EntityTypes.EVENT,
-      name: CAL_TITLE,
-    };
-    if (Platform.OS === 'ios') {
-      details.sourceId = Calendar.getDefaultCalendarSync().source.id;
-    } else {
-      details.source = { isLocalAccount: true, name: CAL_TITLE, type: 'LOCAL' };
-      details.ownerAccount = CAL_TITLE;
-      details.accessLevel = Calendar.CalendarAccessLevel.OWNER;
-    }
-    const created = await Calendar.createCalendar(details);
-    writeJson(CAL_KEY, created.id);
-    return ok(created.id);
-  } catch (e) {
-    return err({ kind: 'unknown', message: `calendar create failed: ${e}` });
+    return Calendar.getDefaultCalendarSync().id;
+  } catch {
+    return null;
   }
 }
+
+// Platform calendars → the pure decision layer's shape. On Android the
+// account IS the source (`source.name` = ACCOUNT_NAME, `source.type` =
+// ACCOUNT_TYPE, e.g. `com.google`), which is how a Google calendar gets
+// classified as cloud despite carrying no iOS SourceType.
+function toCalendarLike(
+  c: Calendar.ExpoCalendar,
+  defaultId: string | null,
+): CalendarLike {
+  const type = c.source?.type === undefined ? '' : String(c.source.type);
+  return {
+    id: c.id,
+    title: c.title ?? '',
+    allowsModifications: c.allowsModifications,
+    // iOS reports no isPrimary; the DEFAULT calendar is the equivalent
+    // signal, and the decision layer prefers its source when that source
+    // is already cloud.
+    isPrimary: Platform.OS === 'ios' ? c.id === defaultId : c.isPrimary,
+    source: { id: c.source?.id, name: c.source?.name, type },
+    ...(Platform.OS === 'android'
+      ? { accountName: c.source?.name, accountType: type }
+      : {}),
+  };
+}
+
+function ourCachedId(): string | null {
+  const stored = storedTarget();
+  if (stored?.kind === 'ours') return stored.calendarId;
+  return readJson<string | null>(CAL_KEY, null);
+}
+
+// A calendar may only be adopted (and therefore renamed, recoloured or
+// deleted) when it is PROVABLY ours. Title alone is not proof once a
+// user calendar can be the target — someone's own "KickOffCal" full of
+// their appointments must never be hijacked.
+//
+// `scan` is null when ownership came from the stored record and no scan
+// was needed: resolution runs on EVERY sync, and a speculative 8-year
+// listEvents over the target on top of the prune pass is pure cost.
+interface Ownership {
+  scan: CalendarScan | null;
+}
+
+async function provablyOurs(
+  c: Calendar.ExpoCalendar,
+  cachedId: string | null,
+): Promise<Ownership | null> {
+  if (c.id === cachedId) return { scan: null }; // ours by our own record
+  const title = c.title ?? '';
+  const legacy = LEGACY_CAL_TITLES.includes(title);
+  if (title !== CAL_TITLE && !legacy) return null;
+  let scan: CalendarScan;
+  try {
+    scan = await scanCalendar(c);
+  } catch {
+    return null; // unreadable → not provably ours; leave it alone
+  }
+  // Any foreign event means this is somebody's calendar, not ours.
+  if (scan.foreign > 0) return null;
+  // A legacy title has to carry our events to count: an empty calendar
+  // called "Gameday" is more plausibly the user's than ours.
+  if (legacy && scan.ours.length === 0) return null;
+  return { scan };
+}
+
+// If duplicate KickOffCal calendars exist (zombie dev runs, interrupted
+// installs), keep the one holding the most tagged events and delete the
+// rest — each one provably ours and provably free of foreign events.
+async function resolveOurCalendar(
+  calendars: readonly Calendar.ExpoCalendar[],
+): Promise<Calendar.ExpoCalendar | null> {
+  const cachedId = ourCachedId();
+  const ours: Array<{ c: Calendar.ExpoCalendar; scan: CalendarScan | null }> =
+    [];
+  for (const c of calendars) {
+    const owned = await provablyOurs(c, cachedId);
+    if (owned) ours.push({ c, scan: owned.scan });
+  }
+  if (ours.length === 0) return null;
+  if (ours.length === 1) return ours[0].c;
+  // Only a duplicate situation needs the counts, so only it pays for the
+  // scans it skipped above.
+  const counted = await Promise.all(
+    ours.map(async ({ c, scan }) => {
+      if (scan) return { c, scan };
+      try {
+        return { c, scan: await scanCalendar(c) };
+      } catch {
+        return { c, scan: { ours: [], foreign: 1 } as CalendarScan };
+      }
+    }),
+  );
+  // The one we are already writing to wins the tie-break; otherwise the
+  // one holding the most events. Keeping the target stable matters more
+  // than the count — a switch of keeper would drag every event with it.
+  counted.sort(
+    (a, b) =>
+      Number(b.c.id === cachedId) - Number(a.c.id === cachedId) ||
+      b.scan.ours.length - a.scan.ours.length,
+  );
+  const [keep, ...drop] = counted;
+  for (const { c, scan } of drop) {
+    // Never bin a calendar holding anything that is not ours, even one
+    // that passed the title test — a scan failure lands here as foreign.
+    if (scan.foreign > 0) continue;
+    try {
+      await c.delete();
+    } catch {
+      // A calendar we cannot delete stays; it is no longer the target,
+      // so nothing will be written to it again.
+    }
+  }
+  return keep.c;
+}
+
+// Rename + recolour, ours only. Both are cosmetic: never fail a sync.
+async function conformOurCalendar(c: Calendar.ExpoCalendar): Promise<void> {
+  if ((c.title ?? '') !== CAL_TITLE) {
+    try {
+      await c.update({ title: CAL_TITLE });
+    } catch {
+      // keep serving under the old title rather than fail the sync
+    }
+  }
+  const want = calendarColour();
+  if ((c.color ?? '').slice(0, 7).toLowerCase() !== want.toLowerCase()) {
+    try {
+      await c.update({ color: want });
+    } catch {
+      // keep the platform's colour
+    }
+  }
+}
+
+function targetFrom(cal: CalendarLike, kind: TargetKind): ResolvedTarget {
+  return {
+    calendarId: cal.id,
+    kind,
+    label: cal.title,
+    accountLabel: accountLabelOf(cal),
+    sourceKind: sourceKindOf(cal),
+  };
+}
+
+function remember(target: ResolvedTarget, chosen: boolean): ResolvedTarget {
+  const stored: CalendarTarget = { ...target, chosen };
+  saveTarget(stored);
+  if (target.kind === 'ours') writeJson(CAL_KEY, target.calendarId);
+  return target;
+}
+
+async function createOurCalendar(
+  sourceId: string | undefined,
+): Promise<Calendar.ExpoCalendar> {
+  const details: NonNullable<Parameters<typeof Calendar.createCalendar>[0]> = {
+    title: CAL_TITLE,
+    color: calendarColour(),
+    entityType: Calendar.EntityTypes.EVENT,
+    name: CAL_TITLE,
+  };
+  if (Platform.OS === 'ios') {
+    // A cloud source when the device has one — that is the whole point
+    // of the feature. Falls back to the default calendar's source.
+    details.sourceId = sourceId ?? Calendar.getDefaultCalendarSync().source.id;
+  } else {
+    // Android cannot create inside a `com.google` account; a local
+    // calendar is the isolation fallback.
+    details.source = { isLocalAccount: true, name: CAL_TITLE, type: 'LOCAL' };
+    details.ownerAccount = CAL_TITLE;
+    details.accessLevel = Calendar.CalendarAccessLevel.OWNER;
+  }
+  return Calendar.createCalendar(details);
+}
+
+// MINIMUM FRICTION: this runs on every sync and must land on a working
+// target without the user ever opening a setting.
+export async function ensureCalendarTarget(): Promise<Result<ResolvedTarget>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    // Circuit breaker. An empty list is not "this device has no
+    // calendars" — every device has at least one — it is the store
+    // failing to answer. Re-resolving on that signal would conclude the
+    // target had been deleted and drag every event into a calendar we
+    // then created. Better to skip this sync and try again.
+    if (calendars.length === 0) {
+      return err({ kind: 'unknown', message: 'No calendars available yet.' });
+    }
+    const defaultId = defaultCalendarId();
+    const likes = calendars.map((c) => toCalendarLike(c, defaultId));
+
+    // 1. Our own calendar, resolved first so duplicates are consolidated
+    // and a pre-rename "Gameday" is adopted, whatever the target is.
+    const existing = await resolveOurCalendar(calendars);
+
+    // 2. The target we are ALREADY writing to wins. Stickiness is not a
+    // nicety: every ledgered event lives in that calendar, and re-deriving
+    // the target each sync would drag all of them across the moment the
+    // inputs shifted — a second Google account appearing, say. The only
+    // reasons to re-resolve are that the calendar is gone or has become
+    // read-only.
+    const stored = storedTarget();
+    if (stored) {
+      const match = likes.find((c) => c.id === stored.calendarId);
+      const stale = stored.kind === 'ours' && existing?.id !== stored.calendarId;
+      if (match && isWritable(match) && !stale) {
+        if (stored.kind === 'ours' && existing) await conformOurCalendar(existing);
+        return ok(
+          remember(targetFrom(match, stored.kind), stored.chosen === true),
+        );
+      }
+      // Gone, read-only, or superseded (the duplicate consolidation kept
+      // a different calendar of ours). Re-resolve rather than fail every
+      // sync forever; the ledger's own repair moves the events across.
+      clearTarget();
+    }
+
+    // 3. A calendar of ours that already exists always wins — never
+    // strand the events already in it.
+    if (existing) {
+      await conformOurCalendar(existing);
+      const like =
+        likes.find((c) => c.id === existing.id) ??
+        toCalendarLike(existing, defaultId);
+      return ok(remember({ ...targetFrom(like, 'ours'), label: CAL_TITLE }, false));
+    }
+
+    // 4. Automatic default, per platform (docs/CALENDAR_TARGET.md).
+    const pick = chooseDefaultTarget(
+      likes,
+      [CAL_TITLE, ...LEGACY_CAL_TITLES],
+      Platform.OS === 'ios' ? 'ios' : 'android',
+    );
+    if (pick.calendarId) {
+      // Android: write into their Google calendar. We create nothing,
+      // rename nothing, recolour nothing.
+      const cal = likes.find((c) => c.id === pick.calendarId);
+      if (cal) return ok(remember(targetFrom(cal, 'user'), false));
+    }
+    const created = await createOurCalendar(pick.createInSourceId);
+    const like = toCalendarLike(created, defaultId);
+    return ok(remember({ ...targetFrom(like, 'ours'), label: CAL_TITLE }, false));
+  } catch (e) {
+    return err({ kind: 'unknown', message: `calendar target failed: ${e}` });
+  }
+}
+
+// ─── The picker ───────────────────────────────────────────────────────
+
+export type TargetRequest =
+  | { kind: 'existing'; calendarId: string }
+  | { kind: 'create'; sourceId?: string };
+
+export interface TargetOptions {
+  calendars: CalendarLike[];
+  sources: CreatableSource[]; // iOS only — Android cannot create in an account
+  ourCalendarId: string | null;
+  ourSourceId: string | null; // so the picker never offers a second one there
+}
+
+export async function listTargetOptions(): Promise<Result<TargetOptions>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    const defaultId = defaultCalendarId();
+    const likes = calendars.map((c) => toCalendarLike(c, defaultId));
+    const existing = await resolveOurCalendar(calendars);
+    const ourLike = existing
+      ? likes.find((c) => c.id === existing.id) ?? null
+      : null;
+    return ok({
+      calendars: likes.filter(isWritable),
+      sources: Platform.OS === 'ios' ? creatableSources(likes) : [],
+      ourCalendarId: ourLike?.id ?? null,
+      ourSourceId: ourLike?.source?.id ?? null,
+    });
+  } catch (e) {
+    return err({ kind: 'unknown', message: `calendar list failed: ${e}` });
+  }
+}
+
+// Records an explicit choice and returns the resolved target. Creating
+// happens here; MOVING the existing events is the engine's job
+// (switchCalendarTarget) because it owns the ledger.
+export async function applyTargetRequest(
+  req: TargetRequest,
+): Promise<Result<ResolvedTarget>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    const defaultId = defaultCalendarId();
+    if (req.kind === 'create') {
+      // Never make a second one: a calendar of ours already in the
+      // requested source IS the answer to "create one there".
+      const existing = await resolveOurCalendar(calendars);
+      const reusable =
+        existing &&
+        (req.sourceId === undefined || existing.source?.id === req.sourceId)
+          ? existing
+          : null;
+      const cal = reusable ?? (await createOurCalendar(req.sourceId));
+      if (reusable) await conformOurCalendar(cal);
+      const like = toCalendarLike(cal, defaultId);
+      return ok(
+        remember({ ...targetFrom(like, 'ours'), label: CAL_TITLE }, true),
+      );
+    }
+    const obj = calendars.find((c) => c.id === req.calendarId);
+    if (!obj) return err({ kind: 'not-found', what: 'that calendar' });
+    const like = toCalendarLike(obj, defaultId);
+    if (!isWritable(like)) {
+      return err({ kind: 'unknown', message: 'That calendar is read-only.' });
+    }
+    // Picking our own calendar back keeps its 'ours' powers; anything
+    // else is the user's and is treated as untouchable.
+    const kind: TargetKind =
+      (await provablyOurs(obj, ourCachedId())) !== null ? 'ours' : 'user';
+    if (kind === 'ours') await conformOurCalendar(obj);
+    return ok(remember(targetFrom(like, kind), true));
+  } catch (e) {
+    return err({ kind: 'unknown', message: `calendar switch failed: ${e}` });
+  }
+}
+
+// After a switch: bin the calendar we left behind, but ONLY when it is
+// ours and nothing remains in it. Never a user's calendar, never one
+// still holding events.
+export async function deleteVacatedCalendarIfOurs(
+  calendarId: string,
+): Promise<boolean> {
+  try {
+    const cal = await Calendar.ExpoCalendar.get(calendarId);
+    if ((await provablyOurs(cal, ourCachedId())) === null) return false;
+    // Emptiness is checked for real here, never inferred: a calendar
+    // still holding events — ours or anyone's — is not disposable.
+    const scan = await scanCalendar(cal);
+    if (scan.ours.length > 0 || scan.foreign > 0) return false;
+    await cal.delete();
+    if (readJson<string | null>(CAL_KEY, null) === calendarId) {
+      removeKey(CAL_KEY);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Events ───────────────────────────────────────────────────────────
 
 export interface EventInput {
   fixtureId: string;
@@ -266,7 +564,7 @@ function toEventDetails(input: EventInput) {
 
 // One shared calendar object per sync run — instantiating a native
 // shared object per event exhausts bridge handles and hangs mid-run.
-export async function getGamedayCalendarObject(
+export async function getCalendarObject(
   calendarId: string,
 ): Promise<Result<Calendar.ExpoCalendar>> {
   try {
@@ -304,6 +602,19 @@ export async function updateFixtureEvent(
 export async function deleteFixtureEvent(eventId: string): Promise<Result<true>> {
   try {
     const event = await Calendar.ExpoCalendarEvent.get(eventId);
+    // Last line of defence before an irreversible act. Callers only ever
+    // pass ids that came from the ledger or from ourEventsIn(), so
+    // reaching this branch with somebody else's event would mean a bug —
+    // and that bug must not cost a user their appointment.
+    // Deliberately asymmetric: notes we can READ and that lack our tag
+    // prove the event is not ours and the delete is refused; absent
+    // notes prove nothing, and refusing there would brick syncing on any
+    // platform that stops reporting them.
+    if (typeof event.notes === 'string' && event.notes.length > 0) {
+      if (fixtureIdFromNotes(event.notes) === null) {
+        return err({ kind: 'unknown', message: 'refused: not our event' });
+      }
+    }
     await event.delete();
     return ok(true);
   } catch (e) {
