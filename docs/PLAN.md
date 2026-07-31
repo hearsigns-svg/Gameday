@@ -569,3 +569,39 @@ all 17 functions deployed, `sourceRuns` carrying real runs.
   vanishing into a boolean. Drop order still uid-lexicographic, unchanged.
 - 441 tests green under UTC and America/Los_Angeles.
 
+### Prompt 3 — Time and confidence model  [x]
+
+The schema the next three sports depend on. Deployment verified first:
+Prompt 2 is live (listLeagues returns 20 leagues carrying a resolved
+season; CL/EC/WC hidden).
+
+- **`timePrecision: 'exact' | 'nominal' | 'date_only'`** added, separate
+  from `status`. `tbd` conflated "no time" with "time not settled" and
+  startUtc carried a midnight sentinel meaning either.
+- **`confidence` populated in all six adapters** (it was 0% populated
+  across 10,483 docs while two code paths branched on it).
+- **`nominal` renders as a TIMED event** at the nominal time, with the
+  uncertainty in the event DESCRIPTION and `confidence: 'provisional'`.
+  All-day is reserved for `date_only` and for postponements.
+- Measured on identical fresh payloads: **all-day drops from 3,203 to
+  192**, a 94% reduction. Premier League 380 → 0, Championship 552 → 0,
+  La Liga 380 → 0, Serie A 380 → 0. The 3,011 fixtures that changed all
+  gain a kick-off time AND a reminder, which an all-day banner never had.
+- **The 45 midnight-UTC-but-scheduled fixtures** are now explicitly
+  `exact`: strTimeLocal proved the time real, so they are no longer a
+  sentinel that merely looks like one.
+- **`venueTz` is honest.** Optional now, populated only where the provider
+  supplies a real IANA zone (NHL's `venueTimezone`, API-Sports' non-UTC
+  timezone). TheSportsDB gives a venue-local TIME but no zone name, and an
+  offset is not an IANA zone — so it is omitted rather than recorded as
+  the literal 'UTC', which it was on 10,395 of 10,483 documents.
+- **Cross-fill** implemented as a ranking in `mergeCluster`: precision
+  joins confidence ahead of freshness, so a settled kick-off beats a
+  placeholder that polled later. MEASURED IMPACT TODAY: **0 fixtures**.
+  football-data and TheSportsDB cover disjoint competitions in the current
+  config, so there is nothing to cross-fill until they overlap. The
+  mechanism is in place and tested for when they do.
+- Three superseded tests updated in place, not deleted: fd SCHEDULED→tbd,
+  the provisional→all-day rule, and bestSeason's dead-season fallback.
+- 460 tests green under UTC and America/Los_Angeles.
+

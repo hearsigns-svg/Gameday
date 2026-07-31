@@ -72,9 +72,16 @@ export function normaliseNhlGame(g: NhlGame, updatedAt: string): Fixture {
       'nhl-league-1',
     ],
     startUtc: new Date(g.startTimeUTC).toISOString(),
-    venueTz: g.venueTimezone || 'UTC',
+    // api-web is the only provider that hands us a real IANA zone.
+    ...(g.venueTimezone ? { venueTz: g.venueTimezone } : {}),
     status: nhlStatus(g.gameState, g.gameScheduleState),
     durationHours: 2.5,
+    // gameScheduleState TBD means the date is set and the time is not.
+    timePrecision: g.gameScheduleState === 'TBD' ? 'date_only' : 'exact',
+    confidence:
+      g.gameScheduleState === 'TBD' || g.gameScheduleState === 'PPD'
+        ? 'provisional'
+        : 'confirmed',
     updatedAt,
   };
 }

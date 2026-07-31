@@ -535,6 +535,7 @@ export interface EventInput {
   endUtc: string;
   allDay: boolean;
   reminderMinutesBefore: number | null;
+  note?: string;
 }
 
 function toEventDetails(input: EventInput) {
@@ -560,7 +561,13 @@ function toEventDetails(input: EventInput) {
     // in Los Angeles). Timed events must NOT be pinned — they are true
     // instants and have to render in the viewer's own zone.
     ...(input.allDay ? { timeZone: 'UTC' } : {}),
-    notes: `${NOTES_TAG}${input.fixtureId}`,
+    // The tag MUST stay on the first line and start the string:
+    // fixtureIdFromNotes anchors on it and reads to the first newline, and
+    // it is the only thing standing between a sync bug and somebody's real
+    // appointments. Anything we want to say to the user goes below it.
+    notes: input.note
+      ? `${NOTES_TAG}${input.fixtureId}\n\n${input.note}`
+      : `${NOTES_TAG}${input.fixtureId}`,
     alarms:
       input.reminderMinutesBefore === null
         ? []

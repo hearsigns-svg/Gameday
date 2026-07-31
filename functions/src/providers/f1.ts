@@ -58,11 +58,13 @@ function sessionFixture(
     title: `${race.raceName} — ${label}`,
     followKeys: ['f1-series-1'],
     startUtc,
-    venueTz: 'UTC',
-    // No published time yet → placeholder machinery takes over.
+    // Jolpica publishes session times in UTC with no venue zone.
+    // No published time yet → the day is all we have.
     status: hasTime ? 'scheduled' : 'tbd',
     durationHours,
     sessionKind: kind,
+    timePrecision: hasTime ? 'exact' : 'date_only',
+    confidence: hasTime ? 'confirmed' : 'provisional',
     updatedAt,
   };
 }

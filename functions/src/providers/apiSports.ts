@@ -114,11 +114,17 @@ export function normaliseRow(row: ApiFixtureRow, updatedAt: string): Fixture {
       competitionId,
     ],
     startUtc: new Date(row.fixture.date).toISOString(),
-    venueTz:
-      row.fixture.timezone && row.fixture.timezone !== 'UTC'
-        ? row.fixture.timezone
-        : 'UTC',
+    // Only recorded when the provider names a zone that is not the default.
+    ...(row.fixture.timezone && row.fixture.timezone !== 'UTC'
+      ? { venueTz: row.fixture.timezone }
+      : {}),
     status: STATUS_MAP[row.fixture.status.short] ?? 'scheduled',
+    timePrecision: row.fixture.status.short === 'TBD' ? 'date_only' : 'exact',
+    confidence:
+      row.fixture.status.short === 'TBD' ||
+      row.fixture.status.short === 'PST'
+        ? 'provisional'
+        : 'confirmed',
     updatedAt,
   };
 }

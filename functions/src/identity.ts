@@ -8,7 +8,7 @@
 // match on WHO and roughly WHEN, then keep the id that is already in
 // people's calendars and correct its data in place.
 
-import { Fixture } from './fixture';
+import { Fixture, TimePrecision } from './fixture';
 
 // Dates drift between sources (timezone rounding, provisional listings),
 // so identity ignores the exact instant and compares within a window.
@@ -109,6 +109,21 @@ export function confidenceOf(f: Fixture): number {
   return CONFIDENCE_RANK[f.confidence ?? 'confirmed'] ?? 1;
 }
 
+// THE CROSS-FILL. When two providers describe one fixture and one of them
+// knows the settled kick-off, that is the time the user should get — even
+// if the other record is fresher. A football-data SCHEDULED placeholder
+// must never overwrite a TheSportsDB exact time just because it polled
+// last; that is the same failure as the noon-placeholder bug, one layer up.
+const PRECISION_RANK: Record<TimePrecision, number> = {
+  exact: 3,
+  nominal: 2,
+  date_only: 1,
+};
+
+export function precisionOf(f: Fixture): number {
+  return PRECISION_RANK[f.timePrecision ?? 'exact'] ?? 1;
+}
+
 export interface MergeDecision {
   keepId: string; // the id that stays in calendars
   data: Fixture; // the record whose values win
@@ -137,11 +152,15 @@ export function mergeCluster(cluster: readonly Fixture[]): MergeDecision {
   // polled last (a downgrade that delete+recreated the event and
   // destroyed the user's reminder).
   const SENTINELS = new Set(['tbd', 'postponed', 'cancelled']);
-  const precisionOf = (f: Fixture): number => (SENTINELS.has(f.status) ? 0 : 1);
+  const sentinelPrecisionOf = (f: Fixture): number =>
+    SENTINELS.has(f.status) ? 0 : 1;
   const byTrust = [...cluster].sort((a, b) => {
     const c = confidenceOf(b) - confidenceOf(a);
     if (c !== 0) return c;
-    const p = precisionOf(b) - precisionOf(a);
+    // A settled time beats an unsettled one, whatever the status says.
+    const tp = precisionOf(b) - precisionOf(a);
+    if (tp !== 0) return tp;
+    const p = sentinelPrecisionOf(b) - sentinelPrecisionOf(a);
     if (p !== 0) return p;
     return b.updatedAt.localeCompare(a.updatedAt);
   });

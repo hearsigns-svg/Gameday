@@ -40,6 +40,12 @@ function tsdbStatus(e: TsdbEvent, startUtc: string, hasTime: boolean): FixtureSt
   return 'scheduled';
 }
 
+// Sports whose published event time is the CARD or BROADCAST start, not
+// the moment the thing you care about happens. A boxing undercard can run
+// long and the main event ringwalk drifts with it, so the time is real but
+// nominal — a timed event that says so beats a confident wrong minute.
+const CARD_TIME_SPORTS = new Set(['boxing', 'ufc']);
+
 export function normaliseTsdbEvent(
   e: TsdbEvent,
   sport: string,
@@ -82,9 +88,21 @@ export function normaliseTsdbEvent(
     ...(e.strAwayTeam ? { awayTeam: e.strAwayTeam } : {}),
     followKeys,
     startUtc,
-    venueTz: 'UTC',
+    // TheSportsDB gives a venue-local TIME (strTimeLocal) but never a zone
+    // name, and an offset is not an IANA zone. Omitted rather than guessed.
     status: tsdbStatus(e, startUtc, hasTime),
     durationHours,
+    // The 45 midnight-UTC-but-scheduled fixtures land here explicitly:
+    // strTimeLocal proved the time is real, so they are `exact` rather
+    // than a sentinel that merely looks like one.
+    timePrecision: !hasTime
+      ? 'date_only'
+      : CARD_TIME_SPORTS.has(sport)
+        ? 'nominal'
+        : 'exact',
+    confidence: !hasTime || CARD_TIME_SPORTS.has(sport)
+      ? 'provisional'
+      : 'confirmed',
     updatedAt,
   };
 }

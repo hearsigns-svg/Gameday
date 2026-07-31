@@ -53,9 +53,13 @@ export function normaliseMlbGame(g: MlbGame, updatedAt: string): Fixture {
     awayTeam: away.name,
     followKeys: [`mlb-team-${home.id}`, `mlb-team-${away.id}`, 'mlb-league-1'],
     startUtc: new Date(g.gameDate).toISOString(),
-    venueTz: 'UTC',
+    // statsapi publishes no venue timezone on the schedule endpoint.
     status: mlbStatus(g),
     durationHours: 3,
+    // startTimeTBD is the provider saying the day is set and the first
+    // pitch is not.
+    timePrecision: g.status.startTimeTBD ? 'date_only' : 'exact',
+    confidence: g.status.startTimeTBD ? 'provisional' : 'confirmed',
     updatedAt,
   };
 }

@@ -319,3 +319,73 @@ describe('regression: merges that would destroy real fixtures', () => {
     expect(clusterFixtures([a, b])).toHaveLength(1);
   });
 });
+
+// ─── Cross-fill: a settled time beats an unsettled one ────────────────
+
+import { precisionOf } from '../identity';
+
+describe('merge prefers the provider that knows the real time', () => {
+  const at = (id: string, over: Partial<Fixture> = {}): Fixture => ({
+    id,
+    sport: 'soccer',
+    competition: 'Premier League',
+    competitionId: 'x',
+    title: 'Arsenal v Liverpool',
+    homeTeam: 'Arsenal',
+    awayTeam: 'Liverpool',
+    followKeys: [],
+    startUtc: '2026-08-21T12:00:00.000Z',
+    status: 'scheduled',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+    ...over,
+  });
+
+  test('precision ranks exact above nominal above date_only', () => {
+    expect(precisionOf(at('a', { timePrecision: 'exact' }))).toBeGreaterThan(
+      precisionOf(at('b', { timePrecision: 'nominal' })),
+    );
+    expect(precisionOf(at('b', { timePrecision: 'nominal' }))).toBeGreaterThan(
+      precisionOf(at('c', { timePrecision: 'date_only' })),
+    );
+  });
+
+  test('a record with no precision is treated as exact, as before', () => {
+    expect(precisionOf(at('a'))).toBe(precisionOf(at('b', { timePrecision: 'exact' })));
+  });
+
+  test('a FRESHER nominal placeholder cannot overwrite an exact kick-off', () => {
+    // The noon-placeholder bug, one layer up: football-data polls last and
+    // its 12:00 placeholder would win on freshness alone.
+    const exact = at('tsdb-1', {
+      timePrecision: 'exact',
+      confidence: 'confirmed',
+      startUtc: '2026-08-21T19:00:00.000Z',
+      updatedAt: '2026-07-01T00:00:00.000Z',
+    });
+    const nominal = at('fdorg-1', {
+      timePrecision: 'nominal',
+      confidence: 'confirmed',
+      startUtc: '2026-08-21T12:00:00.000Z',
+      updatedAt: '2026-07-31T00:00:00.000Z', // fresher
+    });
+    const decision = mergeCluster([exact, nominal]);
+    expect(decision.data.startUtc).toBe('2026-08-21T19:00:00.000Z');
+  });
+
+  test('the surviving id is still the one users already have', () => {
+    // Precision decides the DATA; first-seen decides the ID, so the
+    // correction updates the calendar event instead of replacing it.
+    const older = at('fdorg-1', {
+      timePrecision: 'nominal',
+      firstSeenAt: '2026-06-01T00:00:00.000Z',
+    });
+    const better = at('tsdb-1', {
+      timePrecision: 'exact',
+      firstSeenAt: '2026-07-01T00:00:00.000Z',
+      startUtc: '2026-08-21T19:00:00.000Z',
+    });
+    const decision = mergeCluster([older, better]);
+    expect(decision.keepId).toBe('fdorg-1');
+    expect(decision.data.startUtc).toBe('2026-08-21T19:00:00.000Z');
+  });
+});

@@ -536,3 +536,25 @@
   deliberate: a skipped path is not a connector invocation, which is why it
   carries a reason rather than an error — but a slice that silently stopped
   being refreshed is exactly what this collection exists to surface.
+- 2026-07-31: `timePrecision` is separate from `status`. exact = a settled
+  kick-off; nominal = a real instant that is not the settled one
+  (football-data SCHEDULED, a combat card's broadcast start); date_only =
+  a day sentinel. Status was carrying all three meanings and startUtc was
+  carrying two.
+- 2026-07-31: A nominal time renders as a TIMED event with the caveat in
+  the DESCRIPTION, not the title. All-day is reserved for date_only. A
+  banner is what you write when you genuinely do not know the time; using
+  it for a time that merely is not settled cost 3,011 fixtures their
+  kick-off and every one of them its reminder. The title is read at a
+  glance fifty times; the description once, when it matters.
+- 2026-07-31: `confidence` no longer implies a day sentinel. Once every
+  football-data SCHEDULED fixture became provisional, treating provisional
+  as date-only would have turned all 3,011 back into banners.
+- 2026-07-31: `venueTz` is optional and populated only where a provider
+  supplies a real IANA zone. It was the literal 'UTC' on 10,395 of 10,483
+  documents — a claim, not a default. TheSportsDB's strTimeLocal is a time
+  without a zone name, and an offset is not an IANA zone, so it is omitted.
+- 2026-07-31: Cross-fill is a RANKING in mergeCluster, not new machinery:
+  precision sits with confidence ahead of freshness, so a settled kick-off
+  beats a placeholder that polled later. It changes 0 fixtures today
+  because fd.org and TheSportsDB cover disjoint competitions here.

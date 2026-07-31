@@ -591,6 +591,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           // No reminder on placeholders/all-day — an alert for an
           // unknown time is noise; timed events get the pref reminder.
           reminderMinutesBefore: d.allDay ? null : prefs.reminderMinutes,
+          ...(d.note ? { note: d.note } : {}),
         };
         // EventKit half-applies all-day ↔ timed conversions on update
         // (flag flips, dates don't). A kind change is always delete +

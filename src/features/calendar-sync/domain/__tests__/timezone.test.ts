@@ -56,13 +56,27 @@ it.each(['tbd', 'postponed'] as const)(
   },
 );
 
-it('a provisional record becomes a UTC-anchored all-day placeholder too', () => {
+it('a date_only record becomes a UTC-anchored all-day placeholder', () => {
+  // SUPERSEDED 2026-07-31: this keyed off `confidence: 'provisional'`,
+  // which no longer implies a day sentinel. Provisional means the time
+  // may MOVE; date_only means there is no time. Once football-data
+  // SCHEDULED became provisional-but-nominal, the old rule would have
+  // turned 3,011 real kick-offs back into all-day banners.
   const d = desiredEventFor(
-    fixture({ confidence: 'provisional' }),
+    fixture({ timePrecision: 'date_only', confidence: 'provisional' }),
     DEFAULT_PREFS,
   );
   expect(d!.allDay).toBe(true);
   expect(d!.startUtc).toMatch(/T00:00:00\.000Z$/);
+});
+
+it('a provisional but NOMINAL record stays a timed event', () => {
+  const d = desiredEventFor(
+    fixture({ timePrecision: 'nominal', confidence: 'provisional' }),
+    DEFAULT_PREFS,
+  );
+  expect(d!.allDay).toBe(false);
+  expect(d!.note).toBeTruthy(); // the uncertainty is said, not shouted
 });
 
 it('DST-crossing instants survive the round trip', () => {

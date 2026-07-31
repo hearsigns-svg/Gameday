@@ -10,7 +10,7 @@
 // property of the fixture, and because calendar-sync may import from here
 // but not the other way round.
 
-import { Fixture, FIXTURE_DURATION_HOURS } from './fixture';
+import { Fixture, FIXTURE_DURATION_HOURS, TimePrecision } from './fixture';
 
 export function eventEndUtc(
   startUtc: string,
@@ -24,15 +24,26 @@ export function eventEndUtc(
   return new Date(ms + Math.round(durationHours * 60) * 60_000).toISOString();
 }
 
-// Statuses whose startUtc is a DAY SENTINEL rather than a kick-off. Their
-// event is an all-day banner, so it does not finish until the day does.
-const DATE_ONLY = new Set(['tbd', 'postponed']);
+// Statuses whose startUtc is a DAY SENTINEL rather than a kick-off.
+const DATE_ONLY_STATUS = new Set(['tbd', 'postponed']);
 
+// How precisely this fixture's start is known. `timePrecision` is
+// authoritative when present; records written before the field existed
+// fall back to their status, which is what it was overloaded to mean.
+//
+// NOTE the deliberate omission: `confidence` no longer implies a day
+// sentinel. Once football-data SCHEDULED became provisional-but-nominal,
+// treating provisional as date-only would have turned 3,011 real
+// kick-offs back into all-day banners — the exact bug this replaces.
+export function timePrecisionOf(f: Fixture): TimePrecision {
+  if (f.timePrecision) return f.timePrecision;
+  return DATE_ONLY_STATUS.has(f.status) ? 'date_only' : 'exact';
+}
+
+// A day sentinel, not an instant — so the event spans the day and does not
+// finish until the day does.
 export function isDateOnlyFixture(f: Fixture): boolean {
-  return (
-    DATE_ONLY.has(f.status) ||
-    (f.confidence === 'provisional' && f.status !== 'cancelled')
-  );
+  return timePrecisionOf(f) === 'date_only' || f.status === 'postponed';
 }
 
 // When this fixture is over. PAST MEANS FINISHED, NOT STARTED: a 96-hour

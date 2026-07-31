@@ -16,6 +16,7 @@ import {
   isBeyondRetention,
   isEndPast,
   isPast,
+  timePrecisionOf,
 } from '../../fixtures/domain/horizon';
 import { CalendarPrefs } from './prefs';
 
@@ -44,7 +45,17 @@ export interface DesiredEvent {
   startUtc: string;
   endUtc: string;
   allDay: boolean;
+  // Goes in the event's description, below the tag line. Used to say a
+  // time is not settled yet WITHOUT putting it in the title, where it
+  // would shout on every glance at the calendar.
+  note?: string;
 }
+
+// What a nominal time means, in the user's words. Deliberately promises
+// the correction rather than just warning: the app's whole claim is that
+// the calendar keeps itself right.
+export const NOMINAL_TIME_NOTE =
+  'Start time is not confirmed yet — this will update automatically.';
 
 export type SyncOp =
   | { op: 'create'; fixture: Fixture; desired: DesiredEvent }
@@ -73,58 +84,43 @@ export function desiredEventFor(
     return null;
   }
   const matchTitle = f.title;
-  // A provisional record's time is not trustworthy enough to write as a
-  // precise event — show the day, say so, and let a confirmed source
-  // sharpen it later. Better an honest all-day entry than a confident
-  // wrong time in someone's calendar.
-  if (f.confidence === 'provisional' && f.status !== 'cancelled') {
+  if (f.status === 'cancelled') return null;
+
+  const allDayFor = (suffix: string): DesiredEvent => {
     const day = dayStartUtc(f.startUtc);
     return {
-      title: `${matchTitle} — date TBC`,
+      title: suffix ? `${matchTitle} — ${suffix}` : matchTitle,
       startUtc: day,
       endUtc: nextDayUtc(day),
       allDay: true,
     };
-  }
-  switch (f.status) {
-    case 'cancelled':
-      return null;
-    case 'tbd': {
-      const day = dayStartUtc(f.startUtc);
-      return {
-        title: `${matchTitle} — time TBC`,
-        startUtc: day,
-        endUtc: nextDayUtc(day),
-        allDay: true,
-      };
-    }
-    case 'postponed': {
-      const day = dayStartUtc(f.startUtc);
-      return {
-        title: `${matchTitle} — postponed`,
-        startUtc: day,
-        endUtc: nextDayUtc(day),
-        allDay: true,
-      };
-    }
-    default: {
-      if (prefs.eventStyle === 'all-day') {
-        const day = dayStartUtc(f.startUtc);
-        return {
-          title: matchTitle,
-          startUtc: day,
-          endUtc: nextDayUtc(day),
-          allDay: true,
-        };
-      }
-      return {
-        title: matchTitle,
-        startUtc: f.startUtc,
-        endUtc: eventEndUtc(f.startUtc, f.durationHours),
-        allDay: false,
-      };
-    }
-  }
+  };
+
+  // A postponement carries the OLD day and no new time. The day is the
+  // only honest thing left to show.
+  if (f.status === 'postponed') return allDayFor('postponed');
+
+  const precision = timePrecisionOf(f);
+
+  // ALL-DAY IS RESERVED FOR date_only. A banner is what you write when you
+  // genuinely do not know the time; using it for a time that merely is not
+  // settled cost 3,011 fixtures their kick-off, including 380 of 380 in
+  // the Premier League, and cost every one of them its reminder.
+  if (precision === 'date_only') return allDayFor('time TBC');
+
+  // The user asked for all-day events regardless.
+  if (prefs.eventStyle === 'all-day') return allDayFor('');
+
+  return {
+    title: matchTitle,
+    startUtc: f.startUtc,
+    endUtc: eventEndUtc(f.startUtc, f.durationHours),
+    allDay: false,
+    // Nominal: a real instant, but not the settled one. Said in the
+    // description rather than the title — the title is read at a glance
+    // fifty times, the description once when it matters.
+    ...(precision === 'nominal' ? { note: NOMINAL_TIME_NOTE } : {}),
+  };
 }
 
 function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {

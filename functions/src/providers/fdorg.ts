@@ -2,9 +2,13 @@
 // (12 TIER_ONE competitions; cups are paid tiers — known gap, see
 // docs/PROVIDERS.md). The only file that knows this provider's shapes.
 //
-// Status semantics that matter for the calendar: SCHEDULED = date known,
-// TIME NOT CONFIRMED (placeholder kickoffs like 12:00) → tbd, so the
-// placeholder machinery renders an all-day entry until TIMED lands.
+// Status semantics that matter for the calendar: SCHEDULED means the
+// provider has a date and a PLACEHOLDER kick-off, TIMED means the kick-off
+// is settled. SCHEDULED used to map to `tbd`, which rendered an all-day
+// banner — 380 of 380 Premier League fixtures, and 3,011 across the free
+// tier. It is not an absent time, it is an unconfirmed one, so it is now
+// `nominal`: written as a timed event that says so, and sharpened in place
+// when TIMED lands.
 
 import { Fixture, FixtureStatus } from '../fixture';
 import { ProviderFetch, requireArray } from './fetchResult';
@@ -27,7 +31,7 @@ export interface FdMatch {
 }
 
 const STATUS_MAP: Record<string, FixtureStatus> = {
-  SCHEDULED: 'tbd',
+  SCHEDULED: 'scheduled',
   TIMED: 'scheduled',
   IN_PLAY: 'in_play',
   PAUSED: 'in_play',
@@ -60,9 +64,22 @@ export function normaliseFdMatch(m: FdMatch, updatedAt: string): Fixture {
       competitionId,
     ],
     startUtc: new Date(m.utcDate).toISOString(),
-    venueTz: 'UTC',
+    // football-data publishes no venue timezone.
     status: STATUS_MAP[m.status] ?? 'scheduled',
     durationHours: 2,
+    // POSTPONED carries the OLD date and no new time, so its day is all
+    // that is meaningful. Everything else has a real instant; whether it
+    // is the settled one is what SCHEDULED vs TIMED tells us.
+    timePrecision:
+      m.status === 'POSTPONED'
+        ? 'date_only'
+        : m.status === 'SCHEDULED'
+          ? 'nominal'
+          : 'exact',
+    confidence:
+      m.status === 'SCHEDULED' || m.status === 'POSTPONED'
+        ? 'provisional'
+        : 'confirmed',
     updatedAt,
   };
 }
