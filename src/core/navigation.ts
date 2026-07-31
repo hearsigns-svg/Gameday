@@ -13,7 +13,10 @@ export type TabParamList = {
 
 export type RootStackParamList = {
   Welcome: undefined; // first run only
-  CalendarPriming: undefined; // primed explainer before the OS dialog
+  // Primed explainer before the OS dialog. `onboarding` makes it a STEP
+  // in the first run (welcome → calendar → pick teams) rather than the
+  // in-context modal; it is still skippable either way.
+  CalendarPriming: { onboarding?: boolean } | undefined;
   Tabs: NavigatorScreenParams<TabParamList>;
   Search: undefined;
   SportPicker: undefined;

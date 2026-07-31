@@ -208,7 +208,10 @@ listings, screenshots, name availability check.
   dev ThemeGallery pinned to worst-case identities.
 - DONE 2026-07-29 (step 4): onboarding = choosing favourites (Welcome →
   sport pills → first follow → PRIMED calendar ask, one primary action
-  per screen); calendarChoice unset/deferred/enabled gates the engine —
+  per screen). STEP ORDER SUPERSEDED 2026-07-31 by the owner ruling —
+  the calendar now comes FIRST (Welcome → calendar → pick teams), still
+  skippable, still primed. Everything else in this entry stands;
+  calendarChoice unset/deferred/enabled gates the engine —
   fixtures-only sync keeps Home/Schedule live with zero calendar
   permission, and the OS dialog can only ever follow the primed screen;
   calendar-off banner + chip/footer copy stays honest in every state;

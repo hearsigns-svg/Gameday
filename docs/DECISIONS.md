@@ -332,3 +332,23 @@
   never touched" (false once a user calendar can be the target) for the
   guarantee that is true in all three modes: we only ever touch events
   we added.
+- 2026-07-31: ONBOARDING ORDER REVERSED (owner ruling) — SUPERSEDES the
+  2026-07-29 "onboarding = choosing favourites" step order. The flow is
+  now Welcome → CALENDAR (connect + confirm which one) → pick teams →
+  background sync, asking nothing further. Connecting the calendar you
+  already use IS the product, so it comes first; making it the thing you
+  stumble into after a follow framed it as an afterthought.
+  Deliberately UNCHANGED: the OS dialog can still only ever follow the
+  primed explainer, the step is still skippable ("Not now" continues
+  straight to the sports picker), and calendarChoice still gates the
+  engine — a refused permission must never block the app.
+  The priming screen has two lives now: a pushed first-run STEP (Welcome
+  REPLACES itself, so there is no back button) and the in-context modal
+  reached later from the calendar-off banner. Its header stays on in
+  both — nothing in this app carries its own safe-area inset, so
+  headerShown:false puts the title under the status bar.
+- 2026-07-31: The in-app Schedule is a VIEWER, not a destination. Its
+  job is curation: remove individual fixtures from a follow you
+  otherwise want. Confirms the existing rule that a removed fixture
+  stays visible and greyed with a restore affordance — it is the only
+  route back, so silent disappearance would make removal one-way.

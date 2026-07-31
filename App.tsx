@@ -151,10 +151,20 @@ export default function App() {
           component={WelcomeScreen}
           options={{ headerShown: false, gestureEnabled: false }}
         />
+        {/* Two lives: a first-run STEP (pushed, not modal — Welcome
+            REPLACES itself, so there is no back button and the screen's
+            own "Not now" is the only exit), and the in-context modal
+            reached later from a banner or a follow. The header stays on
+            in both: nothing in this app carries its own safe-area
+            inset, so removing it puts the title under the status bar. */}
         <Stack.Screen
           name="CalendarPriming"
           component={CalendarPrimingScreen}
-          options={{ presentation: 'modal', title: 'Your calendar' }}
+          options={({ route }) =>
+            route.params?.onboarding
+              ? { title: 'Your calendar', gestureEnabled: false }
+              : { presentation: 'modal', title: 'Your calendar' }
+          }
         />
         <Stack.Screen
           name="Tabs"

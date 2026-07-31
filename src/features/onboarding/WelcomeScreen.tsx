@@ -1,6 +1,7 @@
-// First run: one screen, one promise, one action. Onboarding is
-// choosing favourites — the CTA lands on Home's sport pills, and the
-// calendar step happens in context after the first follow.
+// First run: one screen, one promise, one action. The CTA leads to the
+// CALENDAR step, not straight to browsing — connecting the calendar you
+// already use is the product, so it comes before picking teams. It is
+// still skippable: refusing a permission must never block the app.
 
 import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native';
@@ -47,15 +48,15 @@ export default function WelcomeScreen({ navigation }: Props) {
       <View style={{ flex: 1 }} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Choose your sports"
+        accessibilityLabel="Get started"
         onPress={() => {
           markWelcomeSeen();
-          navigation.replace('Tabs', { screen: 'Home' });
+          navigation.replace('CalendarPriming', { onboarding: true });
         }}
         style={[styles.cta, { backgroundColor: t.primary }]}
       >
         <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
-          Choose your sports
+          Get started
         </Text>
       </Pressable>
     </View>

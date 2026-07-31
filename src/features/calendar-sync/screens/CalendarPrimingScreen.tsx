@@ -3,7 +3,8 @@
 // context — after the first follow, from the calendar-off banner, or
 // from a toast — never as a cold gate.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Linking,
   Pressable,
@@ -16,6 +17,11 @@ import { messageOf } from '../../../core/result';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { calendarChoice, setCalendarChoice } from '../data/calendarChoice';
+import {
+  CalendarTarget,
+  storedTarget,
+} from '../data/calendarTargetStore';
+import { targetSummary } from '../domain/calendarTarget';
 import { runSync, upcomingFixtures } from '../syncEngine';
 
 type Props = RootScreenProps<'CalendarPriming'>;
@@ -37,11 +43,19 @@ const MAX_RETRIES = 20; // ~15s of an in-flight sync before giving up
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export default function CalendarPrimingScreen({ navigation }: Props) {
+export default function CalendarPrimingScreen({ navigation, route }: Props) {
   const t = useTheme();
+  const onboarding = route.params?.onboarding === true;
   const [busy, setBusy] = useState(false);
   const [denied, setDenied] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  // Set once connected during onboarding: which calendar we landed on.
+  // Confirming it IS the "choose your calendar" step — the automatic
+  // target is right for almost everybody, so the choice is presented as
+  // something to change rather than something to make.
+  const [target, setTarget] = useState<CalendarTarget | null>(null);
+
+  const onwards = () => navigation.replace('Tabs', { screen: 'Home' });
 
   // A swipe-dismissed ask counts as "not now" — otherwise the
   // full-screen ask re-fires on every follow, which is nagging.
@@ -50,6 +64,13 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
       if (calendarChoice() === 'unset') setCalendarChoice('deferred');
     };
   }, []);
+
+  // Returning from the picker: show what they actually chose.
+  useFocusEffect(
+    useCallback(() => {
+      setTarget((prev) => (prev ? storedTarget() : prev));
+    }, []),
+  );
 
   // Counts come from the snapshot — the same desiredEventFor-filtered
   // set the calendar would actually receive (race-only excluded etc.),
@@ -85,6 +106,13 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
     }
     setBusy(false);
     if (r.ok) {
+      if (onboarding) {
+        // Stay put and show where fixtures will go. At this point they
+        // have followed nothing, so a toast about "0 fixtures added"
+        // would be noise — the useful information is the calendar.
+        setTarget(storedTarget());
+        return;
+      }
       navigation.goBack();
       showToast({
         message:
@@ -103,6 +131,57 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
       setFailure(`${messageOf(r.error)} Try again in a moment.`);
     }
   };
+
+  // Connected, mid-onboarding: confirm the calendar, then go and follow
+  // things. From here on the app asks nothing — sync runs in the
+  // background.
+  if (onboarding && target) {
+    return (
+      <View style={[styles.screen, { backgroundColor: t.bg }]}>
+        <Text style={[type.title, { color: t.textPrimary }]}>
+          Your calendar is connected
+        </Text>
+        <Text
+          style={[type.body, { color: t.textPrimary, marginTop: spacing.xl }]}
+        >
+          {targetSummary({
+            label: target.label,
+            accountLabel: target.accountLabel,
+            sourceKind: target.sourceKind,
+            ours: target.kind === 'ours',
+          })}
+        </Text>
+        <Text
+          style={[type.secondary, { color: t.textSecondary, marginTop: spacing.l }]}
+        >
+          Follow a team and its fixtures appear there on their own — times
+          firm up, postponements move, cancellations disappear. Nothing else
+          to set up.
+        </Text>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Choose your sports"
+          onPress={onwards}
+          style={[styles.cta, { backgroundColor: t.primary }]}
+        >
+          <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
+            Choose your sports
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Use a different calendar"
+          onPress={() => navigation.navigate('CalendarTarget')}
+          style={styles.skip}
+        >
+          <Text style={[type.body, { color: t.textSecondary }]}>
+            Use a different calendar
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
@@ -163,7 +242,11 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
           ]}
         >
           <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
-            {busy ? 'Adding…' : 'Add to my calendar'}
+            {busy
+              ? 'Connecting…'
+              : total > 0
+                ? 'Add to my calendar'
+                : 'Connect my calendar'}
           </Text>
         </Pressable>
       )}
@@ -172,7 +255,10 @@ export default function CalendarPrimingScreen({ navigation }: Props) {
         accessibilityLabel="Not now"
         onPress={() => {
           setCalendarChoice('deferred');
-          navigation.goBack();
+          // Skipping is allowed to cost nothing: onboarding continues to
+          // the sports picker, and the app works without a calendar.
+          if (onboarding) onwards();
+          else navigation.goBack();
         }}
         style={styles.skip}
       >
