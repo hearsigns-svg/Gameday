@@ -3,16 +3,25 @@
     {
       "source": "functions",
       "runtime": "nodejs22",
-      "predeploy": ["npm --prefix functions run build"]
+      "predeploy": [
+        "npm --prefix functions run build"
+      ]
     }
   ],
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "emulators": {
-    "firestore": { "port": 8180 },
-    "functions": { "port": 5101 },
-    "ui": { "enabled": false },
+    "firestore": {
+      "port": 8180
+    },
+    "functions": {
+      "port": 5101
+    },
+    "ui": {
+      "enabled": false
+    },
     "singleProjectMode": true
   }
 }

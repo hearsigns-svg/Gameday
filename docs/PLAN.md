@@ -493,3 +493,42 @@ docs/QUERY_WINDOW.md.
   functions build clean. Android regression check: 1,656 events, 0
   duplicates, 0 ops, guard silent. App build still held.
 
+### Stage 1e completion + deployment audit  [~]
+
+DEPLOYMENT GROUND TRUTH, established from the live project 2026-07-31T21:01Z
+(not from this file):
+- All 17 Cloud Functions in the working tree are deployed, including
+  `coverageReport` — Stage 0 IS live. Whether the Stage 1b function-side
+  changes (sweep truncation fields, requireArray hardening) are included
+  cannot be determined from outside; the fix is a redeploy, which is
+  idempotent and needed anyway.
+- Composite indexes: NONE. `firestore.indexes.json` did not exist.
+- TTL: ENABLED on `sourceRuns.expiresAt`; NOT enabled on `sweeps.expiresAt`.
+- `sourceRuns` populated: 17 runs, 2026-07-31T16:20:10Z → 19:59:55Z (the
+  first scheduled sweep after deploy, plus device-driven follows). The dead
+  API-Sports account is already visible in coverage as a slice that has
+  never succeeded.
+- No app build has been cut since 166bfdd — debug/simulator artifacts only,
+  no EAS config, no release APK.
+
+DONE:
+- `firestore.indexes.json` written: the one composite index the windowed
+  query needs, plus the existing `sourceRuns` TTL override preserved
+  verbatim so deploying indexes cannot clobber it.
+- Query filter ENABLED (`fixturesRepo.ts`), gated on that index existing.
+- Circuit breaker now counts LIVE ledger entries. The filter made an
+  out-of-season follow fetch legitimately zero documents against a ledger
+  full of frozen events; the old breaker would have failed every sync for
+  a hockey fan in July.
+- POSTPONEMENT ACROSS THE HORIZON: works, no exemption needed. The freeze
+  is asymmetric — the wanted loop keys on the FIXTURE's pastness (new date
+  → live → update emitted) while the delete loop keys on the LEDGER
+  ENTRY's (old date → frozen → no delete) — so a rescheduled fixture moves
+  its event while a genuinely finished one stays put. Now pinned by five
+  tests including the all-day banner variant and the cancellation
+  counterpart.
+- 409 tests green under UTC and America/Los_Angeles.
+
+OWED (owner commands, see the Stage 1e report): deploy indexes, redeploy
+functions, optionally enable the `sweeps` TTL, cut the app build.
+

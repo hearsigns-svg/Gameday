@@ -13,15 +13,30 @@ import { db, functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 import { Fixture } from '../domain/fixture';
 import { fetchInChunks } from '../domain/fixtureQuery';
+import { queryHorizonUtc } from '../domain/horizon';
 
 // One `array-contains-any` window. Retries, chunking and the
 // all-or-nothing rule live in domain/fixtureQuery.ts, which is pure and
 // tested; this closure is the only part that knows about Firestore.
+//
+// The startUtc lower bound is the horizon rule at the query: 52% of the
+// store is fixtures that have already finished, and the app is never
+// allowed to touch their events again, so fetching them was pure cost —
+// 3,100 documents per sync for a 40-team follow set, of which 548 could
+// possibly matter. Anything the bound excludes is provably finished (see
+// queryHorizonUtc), and the ledger — not the query — is what keeps a
+// crossing fixture's event safe from the prune invariant.
+//
+// REQUIRES the composite index in firestore.indexes.json
+// (fixtures: followKeys CONTAINS + startUtc ASC). Without it every fetch
+// fails FAILED_PRECONDITION — safely, since a failed fetch plans nothing,
+// but totally.
 async function queryChunk(keys: readonly string[]): Promise<Fixture[]> {
   const snap = await getDocsFromServer(
     query(
       collection(db, 'fixtures'),
       where('followKeys', 'array-contains-any', [...keys]),
+      where('startUtc', '>=', queryHorizonUtc(Date.now())),
     ),
   );
   return snap.docs.map((d) => d.data() as Fixture);

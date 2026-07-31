@@ -268,3 +268,124 @@ describe('isEndPast agrees with isPast', () => {
     expect(isBeyondRetention(end, justFrozen)).toBe(false);
   });
 });
+
+// ─── Postponement across the horizon ──────────────────────────────────
+//
+// The one correction that MUST survive the freeze. A fixture is synced
+// while future, then moved to a new future date — and by the time the move
+// is announced, its ORIGINAL start has already gone past. The ledger entry
+// is therefore frozen while the fixture is not. The user must still get the
+// new event.
+
+describe('a postponement must cross the horizon', () => {
+  const HORIZON = '2026-01-01T00:00:00.000Z';
+  // Synced when the match was scheduled for 1 August.
+  const originalEntry = {
+    eventId: 'ev-1',
+    calendarId: 'cal-1',
+    startUtc: '2026-08-01T15:00:00.000Z',
+    endUtc: '2026-08-01T17:00:00.000Z',
+    title: 'A v B',
+    allDay: false,
+  };
+  // Five days later: the original date is long past.
+  const NOW = AT('2026-08-06T12:00:00.000Z');
+
+  test('rescheduled to a new future date → the event MOVES', () => {
+    const rescheduled = fx({ startUtc: '2026-09-01T15:00:00.000Z' });
+    const ledger: Ledger = { f1: originalEntry };
+    const ops = planSync(
+      [rescheduled], ledger, ['fdorg-comp-PL'], DEFAULT_PREFS, HORIZON,
+      new Set(), new Set(), NOW,
+    );
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
+    if (ops[0].op === 'update') {
+      expect(ops[0].desired.startUtc).toBe('2026-09-01T15:00:00.000Z');
+    }
+  });
+
+  test('the frozen ORIGINAL entry does not also trigger a delete', () => {
+    // Both loops see this fixture: the wanted loop by its new (live) date,
+    // the delete loop by its old (frozen) entry. They must not disagree.
+    const rescheduled = fx({ startUtc: '2026-09-01T15:00:00.000Z' });
+    const ops = planSync(
+      [rescheduled], { f1: originalEntry }, ['fdorg-comp-PL'], DEFAULT_PREFS,
+      HORIZON, new Set(), new Set(), NOW,
+    );
+    expect(ops.filter((o) => o.op === 'delete')).toHaveLength(0);
+  });
+
+  test('postponed with a new date, arriving as an all-day banner', () => {
+    // status postponed keeps a day sentinel; the banner must still move.
+    const ppd = fx({ status: 'postponed', startUtc: '2026-09-01T00:00:00.000Z' });
+    const ops = planSync(
+      [ppd], { f1: originalEntry }, ['fdorg-comp-PL'], DEFAULT_PREFS, HORIZON,
+      new Set(), new Set(), NOW,
+    );
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
+    if (ops[0].op === 'update') {
+      expect(ops[0].desired.allDay).toBe(true);
+      expect(ops[0].desired.title).toContain('postponed');
+      expect(ops[0].desired.startUtc).toBe('2026-09-01T00:00:00.000Z');
+    }
+  });
+
+  test('a cancellation after the original date is NOT actioned', () => {
+    // The counterpart, and deliberately different: cancelling gives no new
+    // date, so there is nothing in the future to move to. The fixture is
+    // past, stays frozen, and the user keeps the record of a game that was
+    // in their calendar. Deleting it would be the horizon rule inverted.
+    const cancelled = fx({ status: 'cancelled' });
+    const ops = planSync(
+      [cancelled], { f1: originalEntry }, ['fdorg-comp-PL'], DEFAULT_PREFS,
+      HORIZON, new Set(), new Set(), NOW,
+    );
+    expect(ops).toEqual([]);
+  });
+
+  test('the new date must be inside the query window to arrive at all', () => {
+    // planSync can only move what the fetch returned. A future date is
+    // always inside the lower bound, so the move can always reach it.
+    expect('2026-09-01T15:00:00.000Z' >= queryHorizonUtc(NOW)).toBe(true);
+  });
+});
+
+// ─── The breaker must not fire on an out-of-season follow ─────────────
+//
+// The query gained a startUtc lower bound, so a user whose follows have
+// nothing upcoming now fetches ZERO documents while holding a ledger full
+// of frozen past events. The engine's circuit breaker counts LIVE entries
+// for exactly this reason; this pins the arithmetic it depends on.
+
+describe('frozen entries do not look like an anomaly', () => {
+  const entry = (endUtc: string) => ({
+    eventId: 'ev',
+    calendarId: 'c',
+    startUtc: endUtc,
+    endUtc,
+    title: 't',
+    allDay: false,
+  });
+
+  test('a ledger of only-past events has zero live entries', () => {
+    const ledger = {
+      a: entry('2026-05-01T17:00:00.000Z'),
+      b: entry('2026-06-01T17:00:00.000Z'),
+    };
+    const now = AT('2026-07-31T12:00:00.000Z');
+    const live = Object.values(ledger).filter((e) => !isEndPast(e.endUtc, now));
+    expect(live).toHaveLength(0); // → breaker stays silent, sync proceeds
+  });
+
+  test('one upcoming fixture is enough to arm the breaker again', () => {
+    const ledger = {
+      a: entry('2026-05-01T17:00:00.000Z'),
+      b: entry('2026-09-01T17:00:00.000Z'),
+    };
+    const now = AT('2026-07-31T12:00:00.000Z');
+    const live = Object.values(ledger).filter((e) => !isEndPast(e.endUtc, now));
+    expect(live).toHaveLength(1); // → an empty fetch here IS suspicious
+  });
+});

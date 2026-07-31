@@ -32,6 +32,7 @@ import {
   isScanAnomaly,
   orphanEventIds,
 } from './domain/recovery';
+import { isEndPast } from '../fixtures/domain/horizon';
 import {
   clearedStray,
   movedEntry,
@@ -527,10 +528,19 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Circuit breaker: active follows but zero fixtures against a
     // non-trivial ledger means an upstream/cache anomaly, not a real
     // "everything is cancelled". Never mass-delete on that signal.
+    //
+    // Counted against LIVE entries only, since the query gained its
+    // startUtc lower bound. A user whose follows are all out of season
+    // legitimately fetches nothing while holding a ledger full of frozen
+    // past events — that is an ordinary July for a hockey fan, not an
+    // anomaly, and firing here would fail their every sync.
+    const liveLedgerEntries = Object.values(ledger).filter(
+      (e) => !isEndPast(e.endUtc, Date.now()),
+    ).length;
     if (
       follows.length > 0 &&
       fixtures.value.fixtures.length === 0 &&
-      Object.keys(ledger).length > 0
+      liveLedgerEntries > 0
     ) {
       return err({ kind: 'suspect-empty' });
     }

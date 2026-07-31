@@ -98,6 +98,32 @@ source of truth for build state — never chat history.
 - `docs/DECISIONS.md` — append-only decision log
 - `docs/PLAN.md` — dependency-ordered milestones + verification, current state
 
+## Standing conventions (owner, 2026-07-31)
+
+These apply to every stage. They do not need restating in a brief.
+
+1. **Commands are the owner's to run.** Anything the owner needs to run
+   goes in its own fenced block, complete and pasteable — no placeholders,
+   no `<your-project-id>`, one command per block — grouped under a
+   `## Run these` heading at the end of the report. NEVER run a deploy or
+   any outward-facing production change yourself.
+2. **Internal gates, not external checkpoints.** Each brief names the
+   specific conditions under which to stop and ask. Outside those
+   conditions, keep going: do not stop after each sub-item for approval.
+3. **Verify deployment state at the START of every stage.** Establish it
+   from the live project — `firebase functions:list`,
+   `firebase firestore:indexes`, a `coverageReport` call — never from
+   PLAN.md or from what a previous stage said it would do. Do not assume
+   the previous stage's commands were ever run.
+4. **Standing invariant:** a read failure must never be indistinguishable
+   from an empty result. No `?? []` on a response shape, no treating a 2xx
+   as success, no scan returning empty being read as "nothing there".
+5. **Horizon rule:** only fixtures that have NOT YET FINISHED are ever
+   created, updated or deleted in a calendar. `isPast`
+   (`src/features/fixtures/domain/horizon.ts`) is the one definition.
+6. The other Claude Code session must be idle against production during
+   any reaper run.
+
 ## Concurrency against production
 
 A second Claude Code session (the owner's) also writes to the production

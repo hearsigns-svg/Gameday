@@ -504,3 +504,16 @@
   taken over mid-write. No per-op timeout: abandoning a native calendar
   write leaves its commit state indeterminate, which is how untracked
   events get created.
+- 2026-07-31: `firestore.indexes.json` carries the existing `sourceRuns`
+  TTL fieldOverride verbatim alongside the new composite index. Deploying
+  indexes reconciles the whole file against the project, so omitting an
+  override that is already live would offer to delete it.
+- 2026-07-31: The suspect-empty circuit breaker counts LIVE ledger entries,
+  not all of them. Once the query gained its startUtc lower bound, a user
+  whose follows are all out of season fetches zero documents while holding
+  a ledger full of frozen past events — ordinary, not anomalous.
+- 2026-07-31: A postponement crosses the horizon without an exemption. The
+  freeze is deliberately asymmetric: creation/update is gated on the
+  FIXTURE's pastness, deletion on the LEDGER ENTRY's. A fixture rescheduled
+  to a new future date is live again by the first test and frozen by the
+  second, which is exactly "move the event, never delete it".
