@@ -939,54 +939,119 @@ export const decideReview = onRequest(async (req, res) => {
   res.json({ id, status: item.status, published: null });
 });
 
-// The simplest thing that is genuinely an admin view: one page, no build
-// step, no dependency. Key-guarded like everything else here.
-export const reviewAdmin = onRequest(async (req, res) => {
-  if (!reviewAuthed(req)) {
-    res.status(403).send('forbidden');
-    return;
-  }
-  const items = await listReviewItems(db);
-  const esc = (v: unknown): string =>
-    String(v ?? '').replace(/[&<>"]/g, (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string,
-    );
-  const rows = items
-    .map(
-      (i) => `<tr class="${esc(i.status)}">
-      <td>${esc(i.status)}</td>
-      <td>${esc(i.startUtc)}</td>
-      <td><strong>${esc(i.title)}</strong><br><small>${esc(i.promoter)}${i.venue ? ' — ' + esc(i.venue) : ''}</small></td>
-      <td>${i.bouts.map((b) => `${esc(b.first)} v ${esc(b.second)} <small>(${esc(b.cardPosition)}${b.titleOnTheLine ? ', ' + esc(b.titleOnTheLine) : ''})</small>`).join('<br>')}</td>
-      <td><a href="${esc(i.sourceUrl)}" rel="noreferrer noopener">source</a></td>
-      <td>
-        <button onclick="decide('${esc(i.id)}','confirmed')">approve</button>
-        <button onclick="decide('${esc(i.id)}','cancelled')">reject</button>
-      </td>
-    </tr>`,
-    )
-    .join('');
+// The admin view. Served WITHOUT the key, deliberately: a browser cannot
+// put a custom header on a top-level navigation, so guarding this page the
+// way the data endpoints are guarded made it unreachable — 403 for
+// everyone, including whoever holds the key.
+//
+// So the page carries NO DATA. It is markup and script: it asks for the
+// operator key, keeps it in sessionStorage for the tab, and calls
+// listReview/decideReview with the header. Every byte of queue content
+// still comes from a guarded endpoint. Serving an empty shell reveals
+// only that a review queue exists.
+export const reviewAdmin = onRequest(async (_req, res) => {
   res.set('Content-Type', 'text/html; charset=utf-8').send(
     `<!doctype html><meta charset="utf-8"><title>KickOffCal review queue</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
- body{font:14px/1.5 system-ui,sans-serif;margin:2rem;max-width:1100px}
- table{border-collapse:collapse;width:100%} td,th{border-bottom:1px solid #ddd;padding:.5rem;vertical-align:top;text-align:left}
+ body{font:14px/1.55 system-ui,-apple-system,sans-serif;margin:2rem auto;max-width:1100px;padding:0 1rem;color:#111}
+ table{border-collapse:collapse;width:100%;margin-top:1rem}
+ td,th{border-bottom:1px solid #e5e5e5;padding:.55rem;vertical-align:top;text-align:left}
  tr.provisional{background:#fffbea} tr.cancelled{opacity:.45} tr.confirmed{background:#f0fdf4}
- button{margin-right:.4rem;padding:.3rem .6rem;cursor:pointer}
- small{color:#666}
+ button{margin-right:.4rem;padding:.3rem .7rem;cursor:pointer;border:1px solid #bbb;background:#fff;border-radius:4px}
+ button.approve{border-color:#15803d;color:#15803d} button.reject{border-color:#b91c1c;color:#b91c1c}
+ small{color:#666} .bar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+ .err{color:#b91c1c;margin:1rem 0} code{background:#f4f4f4;padding:.1rem .3rem;border-radius:3px}
+ @media(prefers-color-scheme:dark){
+   body{background:#111;color:#eee} td,th{border-color:#333}
+   tr.provisional{background:#2a2410} tr.confirmed{background:#0f2417}
+   button{background:#1c1c1c;color:#eee;border-color:#444} code{background:#222}
+ }
 </style>
-<h1>Review queue <small>${items.length} items</small></h1>
-<p><small>Nothing here reaches a calendar until it is approved. Every row
+<h1>Review queue</h1>
+<p><small>Nothing here reaches a calendar until it is approved, and every row
 carries the source it was extracted from — check the claim against it.</small></p>
-<table><tr><th>status</th><th>starts</th><th>card</th><th>bouts</th><th></th><th></th></tr>${rows}</table>
+<div class="bar">
+  <label>show
+    <select id="filter">
+      <option value="">everything</option>
+      <option value="provisional" selected>provisional</option>
+      <option value="confirmed">confirmed</option>
+      <option value="cancelled">cancelled</option>
+    </select>
+  </label>
+  <button onclick="forgetKey()">forget key</button>
+  <span id="count"></span>
+</div>
+<div id="out"><p><small>loading…</small></p></div>
 <script>
-async function decide(id, decision){
-  const key = sessionStorage.getItem('k') || prompt('operator key');
-  sessionStorage.setItem('k', key);
-  const r = await fetch('decideReview?id='+encodeURIComponent(id)+'&decision='+decision,
-    {method:'POST', headers:{'x-sweep-key':key,'Content-Type':'application/json'}, body:'{}'});
-  if (r.ok) location.reload(); else alert(await r.text());
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Resolve sibling endpoints from THIS page's path, so the page works
+// whether it was opened as /reviewAdmin or /reviewAdmin/ — a bare
+// relative URL resolves differently in those two cases.
+const BASE = location.pathname.replace(/\\/reviewAdmin\\/?$/, '');
+const api = p => BASE + '/' + p;
+function key(){
+  let k = sessionStorage.getItem('kocKey');
+  if (!k) { k = prompt('Operator key (SWEEP_KEY)'); if (k) sessionStorage.setItem('kocKey', k); }
+  return k;
 }
+function forgetKey(){ sessionStorage.removeItem('kocKey'); location.reload(); }
+async function load(){
+  const k = key();
+  if (!k) { document.getElementById('out').innerHTML =
+    '<p class="err">No key entered. Reload to try again.</p>'; return; }
+  const status = document.getElementById('filter').value;
+  const r = await fetch(api('listReview') + (status ? '?status=' + status : ''),
+    { headers: { 'x-sweep-key': k } });
+  if (r.status === 403) {
+    sessionStorage.removeItem('kocKey');
+    document.getElementById('out').innerHTML =
+      '<p class="err">That key was rejected. Reload to try again.</p>';
+    return;
+  }
+  if (!r.ok) {
+    document.getElementById('out').innerHTML =
+      '<p class="err">Could not load the queue (HTTP ' + r.status + ').</p>';
+    return;
+  }
+  const { items } = await r.json();
+  document.getElementById('count').textContent = items.length + ' item(s)';
+  if (!items.length) {
+    document.getElementById('out').innerHTML =
+      '<p><small>Nothing here yet. Submit a card with ' +
+      '<code>POST /submitReview</code> — see docs/PLAN.md for the schema.</small></p>';
+    return;
+  }
+  document.getElementById('out').innerHTML =
+    '<table><tr><th>status</th><th>starts</th><th>card</th><th>bouts</th>' +
+    '<th>source</th><th></th></tr>' + items.map(i => \`
+      <tr class="\${esc(i.status)}">
+        <td>\${esc(i.status)}</td>
+        <td>\${esc(i.startUtc)}</td>
+        <td><strong>\${esc(i.title)}</strong><br><small>\${esc(i.promoter)}\${
+          i.venue ? ' — ' + esc(i.venue) : ''}\${
+          i.broadcaster ? ' · ' + esc(i.broadcaster) : ''}</small></td>
+        <td>\${(i.bouts || []).map(b => esc(b.first) + ' v ' + esc(b.second) +
+          ' <small>(' + esc(b.cardPosition) +
+          (b.titleOnTheLine ? ', ' + esc(b.titleOnTheLine) : '') + ')</small>').join('<br>')}</td>
+        <td><a href="\${esc(i.sourceUrl)}" rel="noreferrer noopener" target="_blank">source</a></td>
+        <td>
+          <button class="approve" onclick="decide('\${esc(i.id)}','confirmed')">approve</button>
+          <button class="reject" onclick="decide('\${esc(i.id)}','cancelled')">reject</button>
+        </td>
+      </tr>\`).join('') + '</table>';
+}
+async function decide(id, decision){
+  const k = key();
+  if (!k) return;
+  const r = await fetch(api('decideReview') + '?id=' + encodeURIComponent(id) + '&decision=' + decision,
+    { method: 'POST', headers: { 'x-sweep-key': k, 'Content-Type': 'application/json' }, body: '{}' });
+  if (r.ok) load(); else alert('Failed (HTTP ' + r.status + '): ' + await r.text());
+}
+document.getElementById('filter').addEventListener('change', load);
+load();
 </script>`,
   );
 });

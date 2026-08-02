@@ -192,8 +192,15 @@ export async function listReviewItems(
   db: Firestore,
   status?: ReviewStatus,
 ): Promise<ReviewItem[]> {
-  let q = db.collection('reviewQueue').orderBy('submittedAt', 'desc').limit(200);
-  if (status) q = q.where('status', '==', status) as typeof q;
-  const snap = await q.get();
-  return snap.docs.map((d) => d.data() as ReviewItem);
+  // Ordered only, then filtered in memory. A `where('status')` alongside
+  // `orderBy('submittedAt')` needs a composite index, and the queue is
+  // bounded at 200 — an index is not worth owning for a filter over a
+  // list that small.
+  const snap = await db
+    .collection('reviewQueue')
+    .orderBy('submittedAt', 'desc')
+    .limit(200)
+    .get();
+  const items = snap.docs.map((d) => d.data() as ReviewItem);
+  return status ? items.filter((i) => i.status === status) : items;
 }

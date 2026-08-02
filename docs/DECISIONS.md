@@ -599,3 +599,14 @@
   2026", 1 January to 31 December — not a tournament calendar. The list is
   in HTML only, so building it would mean the HTML parser the ruling above
   just declined. Reported rather than quietly built.
+- 2026-08-02: The review admin PAGE is served unauthenticated; its DATA is
+  not. Guarding the page with the same `x-sweep-key` header as the data
+  endpoints made it unreachable: a browser cannot attach a custom header to
+  a top-level navigation, so it returned 403 to everyone including the key
+  holder. The page now carries no queue content — it asks for the key, keeps
+  it in sessionStorage for the tab, and calls listReview/decideReview with
+  the header. Serving an empty shell reveals only that a review queue exists.
+- 2026-08-02: listReviewItems orders and then filters IN MEMORY. A
+  `where('status')` beside `orderBy('submittedAt')` needs a composite index,
+  and the queue is capped at 200 — not an index worth owning, and it would
+  have failed at runtime the first time anyone used the status filter.
