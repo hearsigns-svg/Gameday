@@ -9,6 +9,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    // Data-freshness summary the sweep maintains — public sports
+    // metadata, same posture as fixtures: world-readable, server-only
+    // writes.
+    match /status/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
     match /fixtureChanges/{changeId} {
       allow read: if true;
       allow write: if false;

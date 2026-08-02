@@ -640,18 +640,30 @@ function relative(atIso: string): string {
   return days === 1 ? 'yesterday' : `${days} days ago`;
 }
 
+// Past this, "your calendar synced" stops being the whole truth — the
+// SOURCE side has been quiet too long to keep saying up to date.
+export const DATA_STALE_HOURS = 48;
+
 export function SyncStatusChip(props: {
   running: boolean;
   lastAt: string | null;
   changed: number; // created + updated + deleted on the last run
   error?: string | null;
   calendarOff?: boolean; // fixtures fresh, calendar not opted in
+  // Hours since the oldest followed SOURCE last succeeded upstream —
+  // device sync age and data age are different facts, and a device
+  // syncing perfectly against a dead source must not show green.
+  dataStaleHours?: number | null;
 }) {
   const t = useTheme();
+  const dataStale =
+    props.dataStaleHours != null && props.dataStaleHours > DATA_STALE_HOURS;
   let text: string;
   if (props.running)
     text = props.calendarOff ? 'Checking for fixtures…' : 'Updating your calendar…';
   else if (props.error) text = props.error;
+  else if (dataStale)
+    text = `Fixture sources quiet for ${Math.round(props.dataStaleHours! / 24)}d — data may be behind`;
   else if (props.calendarOff)
     text =
       props.lastAt === null
@@ -675,11 +687,14 @@ export function SyncStatusChip(props: {
         <Text
           style={[
             type.caption,
-            { color: props.error ? t.danger : t.accent, fontWeight: '700' },
+            {
+              color: props.error || dataStale ? t.danger : t.accent,
+              fontWeight: '700',
+            },
           ]}
           accessible={false}
         >
-          {props.error ? '!' : '✓'}
+          {props.error || dataStale ? '!' : '✓'}
         </Text>
       )}
       <Text style={[type.caption, { color: t.textSecondary, flexShrink: 1 }]}>

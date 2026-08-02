@@ -57,6 +57,14 @@ export function reapCandidates(
   incoming: readonly Fixture[],
   source: string,
   nowIso: string,
+  // The REQUEST WINDOW's end, for fetches that are complete only up to
+  // a date boundary (athletics' rolling 120 days, WTA's 180): the
+  // envelope must never extend past what the fetch actually asked for.
+  // Without this cap the first armed athletics run would have cancelled
+  // twenty real meetings sitting a few days past the window edge —
+  // window-clipped, not withdrawn (live-verified against production by
+  // the Prompt 7 review). Whole-season fetches pass nothing.
+  windowEndUtc?: string,
 ): ReapDecision {
   if (incoming.length === 0) {
     return { candidates: [], liveCount: 0, guardTripped: false };
@@ -70,9 +78,11 @@ export function reapCandidates(
   // config: a soccer summer break, ~6 weeks — four times the pad.)
   const pad = 7 * 86_400_000;
   const envelopeMin = new Date(Date.parse(starts[0]) - pad).toISOString();
-  const envelopeMax = new Date(
+  const paddedMax = new Date(
     Date.parse(starts[starts.length - 1]) + pad,
   ).toISOString();
+  const envelopeMax =
+    windowEndUtc && windowEndUtc < paddedMax ? windowEndUtc : paddedMax;
   // The measured population is the IN-ENVELOPE live docs — what this
   // fetch can actually testify about. Dividing by the whole slice
   // diluted the ceiling whenever two seasons' future docs coexisted

@@ -19,6 +19,10 @@ import { teamTheme } from '../../../core/teamTheme';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
+import {
+  dataStaleness,
+  refreshDataFreshness,
+} from '../../fixtures/data/freshnessRepo';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { headlineParticipant } from '../../follows/domain/participants';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
@@ -68,6 +72,19 @@ export default function ScheduleScreen({ navigation }: Props) {
   const [running, setRunning] = useState(false);
   const [last, setLast] = useState(lastSync);
   const [syncError, setSyncError] = useState<string | null>(lastSyncError);
+  const [dataStaleHours, setDataStaleHours] = useState<number | null>(null);
+
+  // Data age is the SOURCE's, not the device's: refresh the freshness
+  // summary the sweep maintains, then judge the followed sources by it.
+  // Failure leaves it null — unknown renders as nothing claimed, never
+  // as green.
+  useEffect(() => {
+    void (async () => {
+      await refreshDataFreshness();
+      const s = dataStaleness(loadFollowables());
+      setDataStaleHours(s?.worstHours ?? null);
+    })();
+  }, [fixtures]);
 
   useEffect(() => {
     const refresh = () => {
@@ -198,6 +215,7 @@ export default function ScheduleScreen({ navigation }: Props) {
             changed={changed}
             error={syncError}
             calendarOff={calendarOff}
+            dataStaleHours={dataStaleHours}
           />
         </View>
         <View style={[styles.segments, { backgroundColor: t.surface }]}>

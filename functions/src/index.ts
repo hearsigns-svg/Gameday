@@ -120,6 +120,7 @@ async function ingest(
   rawIncoming: Fixture[],
   followKey: string,
   reapSource?: string,
+  reapWindowEndUtc?: string,
 ): Promise<{
   fixtures: number;
   changes: number;
@@ -196,6 +197,7 @@ async function ingest(
       incoming,
       reapSource,
       at,
+      reapWindowEndUtc,
     );
     // CASCADE: a withdrawn card never yields again, so retirement can
     // never fire for its bouts — a reaped parent's live appearances
@@ -402,6 +404,10 @@ interface PollWork {
   // a capped fetch (athletics' page budget, PBC's card cap) proves
   // absence of nothing and must leave it disarmed.
   sliceComplete?: boolean;
+  // For window-clipped complete fetches: the request window's end, so
+  // the reaper's envelope cannot reach past what was actually asked
+  // for (see reaper.ts).
+  reapWindowEndUtc?: string;
   body?: Record<string, unknown>; // extra response fields
 }
 
@@ -421,6 +427,7 @@ async function servePoll(
       w.fixtures,
       w.followKey,
       w.sliceComplete ? runCtx.source : undefined,
+      w.reapWindowEndUtc,
     );
     const counts = countsFrom(
       { fetched: w.rawCount, ...ingested.counts },
@@ -1197,6 +1204,7 @@ export const pollWtaTennis = onRequest(
           fixtures: r.fixtures,
           followKey: 'tennis-wta',
           seasonResolved: 'current',
+          reapWindowEndUtc: `${to}T00:00:00.000Z`,
           // Always attached, zero yield included — same rule as every
           // appearance slice: a run that parsed nothing is recorded.
           appearances: {
@@ -1218,13 +1226,17 @@ export const pollWtaTennis = onRequest(
 export const pollAthletics = onRequest(
   { timeoutSeconds: 300 },
   async (req, res) => {
-    // A rolling window: everything from a week ago to a year out. The
-    // calendar carries ~1,250 meetings for five months, so the page cap
-    // in the adapter bounds the work per run.
+    // A rolling window: a week back to 120 DAYS out (Prompt 7 — was a
+    // year). The narrower window plus the 14-page budget makes the
+    // fetch COMPLETE in ordinary months (~850–1,300 meetings), which is
+    // what lets this slice arm the reaper at all; meetings beyond 120
+    // days enter as the window reaches them. Peak weeks can still
+    // outgrow the budget — then `complete` is false and the run is
+    // honestly unreapable.
     const from = new Date(Date.now() - 7 * 86_400_000)
       .toISOString()
       .slice(0, 10);
-    const to = new Date(Date.now() + 365 * 86_400_000)
+    const to = new Date(Date.now() + 120 * 86_400_000)
       .toISOString()
       .slice(0, 10);
     const out = await servePoll(
@@ -1239,7 +1251,22 @@ export const pollAthletics = onRequest(
       async (trace) => {
         trace.seasonsTried.push(`${from}..${to}`);
         const r = await fetchWorldAthletics(from, to);
-        return { ...r, followKey: 'wa-calendar', seasonResolved: 'current' };
+        return {
+          rawCount: r.rawCount,
+          fixtures: r.fixtures,
+          followKey: 'wa-calendar',
+          seasonResolved: 'current',
+          // MEASURED completeness arms the reaper per run — the arming
+          // rule ("only a complete fetch testifies to absence") is
+          // unchanged; whether THIS fetch was complete is now a fact it
+          // reports about itself. PBC cannot make the same claim: its
+          // undated-slug allowance (the guard against URL-shape
+          // changes) means an upcoming card can always be hiding in an
+          // unfetched slug, so pbc-cards stays permanently unreapable.
+          sliceComplete: r.complete,
+          reapWindowEndUtc: `${to}T00:00:00.000Z`,
+          body: { windowComplete: r.complete },
+        };
       },
     );
     res.status(out.status).json(out.body);

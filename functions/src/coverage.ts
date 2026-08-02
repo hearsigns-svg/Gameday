@@ -29,6 +29,9 @@ export interface CoverageRow {
   hoursSinceLastSuccess: number | null;
   hoursSinceLastNonZeroYield: number | null;
   lastError: string | null; // error of the most recent run, if it failed
+  // The most recent run's honest-empty reason (no_future_events, sweep
+  // skips) — alerting must never page on a season that simply ended.
+  lastReason: string | null;
   lastSeasonResolved: string | null;
 }
 
@@ -110,7 +113,17 @@ export function buildCoverageReport(
       a.startedAt.localeCompare(b.startedAt),
     );
     const latest = mine.at(-1) ?? null;
-    const lastSuccess = [...mine].reverse().find((r) => r.error === null) ?? null;
+    // A SKIP record is not a success: it says the sweep never reached
+    // the slice. Counting it as one refreshed lastSuccessAt every run
+    // and silently masked no_success_24h for a slice that was being
+    // skipped to death. Honest empties (no_future_events) remain
+    // successes — the provider answered.
+    const lastSuccess =
+      [...mine]
+        .reverse()
+        .find(
+          (r) => r.error === null && !String(r.reason ?? '').startsWith('skipped'),
+        ) ?? null;
     const lastYield = [...mine].reverse().find((r) => !r.zeroYield) ?? null;
     const slice = stored.bySlice.get(key);
     rows.push({
@@ -129,6 +142,7 @@ export function buildCoverageReport(
         nowMs,
       ),
       lastError: latest?.error ?? null,
+      lastReason: latest?.reason ?? null,
       lastSeasonResolved: lastSuccess?.seasonResolved ?? null,
     });
   }

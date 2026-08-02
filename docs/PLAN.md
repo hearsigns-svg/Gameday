@@ -910,3 +910,87 @@ behind); main fast-forwarded to e55d287, work continues on main.
 - 578 tests green under UTC and America/Los_Angeles; both typechecks
   and the functions build clean; iOS compiles with RNFB.
 
+### Prompt 7 — catalogue and observability  [x]
+
+The original defect, closed: nothing was polled unless a registered
+device already followed it — a sport nobody follows was never fetched,
+a league froze when its last follower left, browse could offer a
+competition with no data behind it.
+
+- **THE CATALOGUE** (`catalogue.ts` + collection + seed script):
+  57 entries = every competition/series row browse offers. Tier 1
+  (18, every sweep): big-five soccer + UCL, NBA, NFL, NHL, MLB, F1,
+  UFC, both boxing routes, both tennis tours, athletics, IPL. Tier 2
+  (39, daily 00–06 UTC sweep): the rest of browse. Teams are NEVER
+  catalogued — the unbounded, follower-driven set. Entries are
+  ops-editable, allowlist-validated, idempotently seeded with
+  `enabled` preserved. The sweep unions device + catalogue paths with
+  PRIORITY drop order (device → tier 1 → tier 2; F10 CLOSED), and
+  consecutive fd.org requests are spaced 6.5s (13 fd routes on the
+  daily sweep vs a 10/min licence).
+- **PROJECTED VOLUME** (net of the 9 already-device-followed slices):
+  ~84 added route invocations/day — TSDB ~42/day (vs a 100/req-MINUTE
+  premium rate; sweep bursts ≤2.5/sec), fd.org ≤13/sweep spaced
+  inside 10/min, WTA ~4 invocations (~44 API calls), WA 4×≤14 pages,
+  PBC 4. Firestore ≈ +20–30k reads/day (slice diffs; ~45k when NBA
+  26-27 lands), writes near-zero at steady state. Comfortably inside
+  every quota; the binding constraint was fd.org's rate, handled by
+  spacing. The daily sweep's wall time ≈ 4–6 min of the 8-min
+  deadline.
+- **RUNTIME COMPLETENESS**: athletics narrowed to a 120-day window
+  with a 14-page budget and now MEASURES whether its pages covered
+  every meeting the feed claimed — only a complete run arms the
+  reaper (rule unchanged; completeness became a per-run fact). PBC
+  stays permanently unreapable — the undated-slug allowance means an
+  upcoming card can always hide in an unfetched slug — stated, not
+  papered over.
+- **ALERTING** (`alerts.ts`, sweep-evaluated): no_success_24h on
+  demanded slices; yield_died (succeeding runs, nothing future-dated
+  for 72h, no honest-empty reason — the exact PBC/athletics shape).
+  State in opsAlerts with open/resolve transitions; a stable-prefix
+  console.error per open alert per sweep for Cloud Error Reporting to
+  group and notify on. OWNER STEP, once: verify Error Reporting
+  notifications are enabled for the project. Off-season slices
+  (reason no_future_events) can never page.
+- **FRESHNESS IN THE APP**: the sweep maintains world-readable
+  status/coverage (path → last confirmed success; rules block added);
+  the client's chip now distinguishes device-sync age from DATA age
+  (sources quiet >48h → the chip stops being green), a freshness read
+  failure renders unknown-never-fresh, and Preferences gained a Sync
+  health line wiring syncStalenessHours (device) beside source age.
+  Per-sport coverageNote labels render on browse (tennis ATP/WTA
+  asymmetry, athletics' absent athlete level, combat broadcast-start
+  times, golf/cricket bounds).
+- **ADVERSARIAL REVIEW ROUND on the 7 diff** (three lenses, refuting
+  verifiers, live probes against prod where needed): 16 confirmed, 2
+  refuted, all confirmed findings fixed in-round. The two big ones,
+  both probe-proven: (1) the sweep's 20s fetch timeout could never
+  accommodate the 14-page athletics crawl it now triggers (live: 23.8s
+  in season) — crawl-style routes (athletics, PBC) now get a 120s
+  budget, so freshness can actually confirm them; (2) the reaper's
+  envelope did not know a window-clipped fetch's boundary — a live
+  prod replay showed the first armed athletics run soft-cancelling 20
+  REAL December meetings just past the 120-day edge at 9.9%, silently
+  under the guard. The request window's end now caps the envelope
+  (athletics AND the WTA 180-day window). Also fixed: alert
+  RESOLUTION now requires the same evidence as opening (a sweep that
+  never demanded a slice proves nothing — tier-2 alerts were flapping
+  open/resolved daily); sweep-skip records no longer count as
+  successes in coverage (they were refreshing lastSuccessAt and
+  masking no_success_24h for slices being skipped to death); alert
+  logs are Error objects (a bare string may never reach Cloud Error
+  Reporting on gen-2); a catalogue read failure degrades to a
+  device-only sweep instead of killing polling and fan-out; a
+  deadline-truncated sweep no longer pages about paths it never
+  reached; the client freshness fetch is throttled to hourly. Known
+  bounds accepted and stated: yield_died self-extinguishes past the
+  5,000-run coverage window (~5 weeks — after five weeks of paging);
+  appearance slices are not alert-demanded (parents are); UNKNOWN
+  freshness is quiet on the chip and explicit in Preferences — chip
+  nagging every user on the summary doc's first day would be worse,
+  and dead-source detection lives server-side where the evidence is.
+  Alert evaluation adds a loadCoverage scan per sweep (~10k reads/
+  sweep at today's store, ~40k/day — cents, included in projections).
+- 595 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean.
+

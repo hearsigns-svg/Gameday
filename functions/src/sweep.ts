@@ -11,6 +11,13 @@
 
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { evaluateAlerts } from './alerts';
+import {
+  CatalogueEntry,
+  orderSweepPaths,
+  tierPollsThisSweep,
+} from './catalogue';
+import { loadCoverage } from './coverage';
 import {
   buildSourceRun,
   EMPTY_COUNTS,
@@ -57,6 +64,15 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
 const MAX_PATHS_PER_SWEEP = 250; // wall-clock guard, see POLL_DELAY_MS
 const POLL_DELAY_MS = 400;
 const FETCH_TIMEOUT_MS = 20_000;
+// Crawl-style routes cannot answer in 20s BY DESIGN: athletics walks up
+// to 14 pages with 1s politeness waits (live-probed 24s in season) and
+// PBC honours a 10s crawl delay per card page. Aborting them counted a
+// pollError every sweep while the function completed server-side — and
+// kept them out of the freshness map forever. They get the budget their
+// own declared timeouts imply.
+const SLOW_ROUTE_TIMEOUT_MS = 120_000;
+const isSlowRoute = (p: string): boolean =>
+  p.startsWith('pollAthletics') || p.startsWith('pollPbc');
 const FCM_BATCH = 450; // sendEachForMulticast hard-caps at 500
 const DEADLINE_MS = 480_000; // leave headroom inside the 540s timeout
 
@@ -117,6 +133,7 @@ export interface SweepResult {
   skippedPaths: string[]; // up to MAX_SKIPPED_NAMED of them
   skippedPathsNamed: number; // how many of the skipped are listed above
   truncationReason: 'cap' | 'deadline' | 'cap+deadline' | null;
+  alertsOpen: number; // coverage alerts open after this sweep
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -266,9 +283,12 @@ export function summariseSkipped(
 const asStringList = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 
-async function fetchWithTimeout(url: string): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     // The poller, not the sweep, writes the per-run record (the sweep only
     // ever sees an aggregate 2xx). It tells the poller who asked, so a
@@ -281,6 +301,37 @@ async function fetchWithTimeout(url: string): Promise<Response> {
     clearTimeout(timer);
   }
 }
+
+// The catalogue collection, validated exactly like device submissions:
+// entries are ops-editable data, and a typo must be dropped, never
+// fetched. Returns canonical paths in seed order (tier 1 before 2 the
+// seed keeps that order; Firestore doc order is by id, so we re-sort by
+// tier then label for determinism).
+async function loadCataloguePaths(
+  db: FirebaseFirestore.Firestore,
+  sweepUtcHour: number,
+): Promise<{ paths: string[]; dropped: number }> {
+  const snap = await db.collection('catalogue').get();
+  const entries = snap.docs
+    .map((d) => d.data() as CatalogueEntry)
+    .filter((e) => e.enabled && tierPollsThisSweep(e.tier, sweepUtcHour))
+    .sort((a, b) => a.tier - b.tier || a.label.localeCompare(b.label));
+  const paths: string[] = [];
+  let dropped = 0;
+  for (const e of entries) {
+    const ok = canonicalisePollPath(String(e.pollPath ?? ''));
+    if (ok) paths.push(ok);
+    else dropped++;
+  }
+  return { paths, dropped };
+}
+
+// football-data.org's free tier allows 10 requests/minute. Device paths
+// alone never came close; a daily catalogue sweep carries 13 fd routes,
+// so consecutive fd requests are spaced to stay inside the licence —
+// politeness to fd.org is what keeps soccer coverage existing at all.
+const FD_MIN_SPACING_MS = 6_500;
+const isFdPath = (p: string): boolean => p.startsWith('pollFd');
 
 export async function sweepAll(): Promise<SweepResult> {
   const db = getFirestore();
@@ -314,35 +365,84 @@ export async function sweepAll(): Promise<SweepResult> {
       else dropped++;
     }
   }
-  // DROP ORDER IS ARBITRARY. `canonical` is a Set in first-insertion
-  // order, and insertion follows the device scan — Firestore's natural
-  // document order (anonymous uid, ascending) — then each device's own
-  // pollPaths array order. So what survives the cap is decided by uid
-  // lexicography, not by how many users follow a competition or how stale
-  // it is. Left as-is deliberately; see docs/PLAN.md Stage 1b item 5.
-  const allPaths = [...canonical];
-  const paths = allPaths.slice(0, MAX_PATHS_PER_SWEEP);
+  // DROP ORDER IS PRIORITY-BASED since Prompt 7 (closes F10): device
+  // paths first — a real follower's slice is never starved by a warming
+  // entry — then catalogue tier 1, then tier 2. Within each band the
+  // incoming order is preserved (for devices, the same uid-scan order
+  // as before, now the last tiebreak rather than the whole rule).
+  // A catalogue read failure must degrade to a device-only sweep, not
+  // take polling and fan-out down with it.
+  let catalogue: { paths: string[]; dropped: number };
+  try {
+    catalogue = await loadCataloguePaths(
+      db,
+      new Date(startedAtMs).getUTCHours(),
+    );
+  } catch (e) {
+    console.error(`[kickoffcal] catalogue load failed: ${e}`);
+    catalogue = { paths: [], dropped: 0 };
+  }
+  dropped += catalogue.dropped;
+  const ordered = orderSweepPaths(
+    [...canonical],
+    catalogue.paths,
+    MAX_PATHS_PER_SWEEP,
+  );
+  const allPaths = [...ordered.paths, ...ordered.skippedByCap];
+  const paths = ordered.paths;
 
   let polled = 0;
   let pollErrors = 0;
   let attempted = 0;
   let hitDeadline = false;
-  let truncated = allPaths.length > paths.length;
+  let truncated = ordered.skippedByCap.length > 0;
+  let lastFdAt = 0;
+  const succeededPaths: string[] = [];
   for (const path of paths) {
     if (Date.now() - startedAtMs > DEADLINE_MS) {
       truncated = true;
       hitDeadline = true;
       break; // never let polling eat the fan-out
     }
+    if (isFdPath(path)) {
+      const sinceFd = Date.now() - lastFdAt;
+      if (sinceFd < FD_MIN_SPACING_MS) await wait(FD_MIN_SPACING_MS - sinceFd);
+      lastFdAt = Date.now();
+    }
     attempted++;
     try {
-      const res = await fetchWithTimeout(`${SELF_BASE}/${path}`);
-      if (res.ok) polled++;
-      else pollErrors++;
+      const res = await fetchWithTimeout(
+        `${SELF_BASE}/${path}`,
+        isSlowRoute(path) ? SLOW_ROUTE_TIMEOUT_MS : FETCH_TIMEOUT_MS,
+      );
+      if (res.ok) {
+        polled++;
+        succeededPaths.push(path);
+      } else pollErrors++;
     } catch {
       pollErrors++;
     }
     await wait(POLL_DELAY_MS); // stay polite to providers
+  }
+
+  // DATA FRESHNESS for the client: one world-readable doc mapping each
+  // canonical poll path to its last sweep-confirmed success. The app
+  // reads this to distinguish "my device synced" from "the source is
+  // alive" — a device syncing perfectly against a source that died a
+  // month ago must stop showing green. Merge keeps paths this sweep
+  // did not touch.
+  try {
+    const freshness = Object.fromEntries(
+      succeededPaths.map((p) => [p.replace(/[./]/g, '_'), startedAt]),
+    );
+    if (succeededPaths.length > 0) {
+      await db
+        .collection('status')
+        .doc('coverage')
+        .set({ paths: freshness, updatedAt: startedAt }, { merge: true });
+    }
+  } catch (e) {
+    console.error(`[kickoffcal] freshness write failed: ${e}`);
   }
 
   const changesSnap = await db
@@ -424,6 +524,72 @@ export async function sweepAll(): Promise<SweepResult> {
       startedAt,
     );
   }
+  // ALERTS — evaluated from the same coverage rows the report serves,
+  // against the slices THIS sweep demanded. Transitions persist in
+  // opsAlerts; every sweep an alert stays open logs a structured
+  // console.error that Cloud Error Reporting groups and notifies on.
+  let alertsOpen = 0;
+  try {
+    // Only slices this sweep actually REACHED: a deadline-truncated run
+    // must not page about paths it never polled.
+    const demanded = new Set<string>();
+    for (const p of paths.slice(0, attempted)) {
+      const slice = sliceOfPollPath(p);
+      if (slice) demanded.add(`${slice.source}|${slice.competitionId}`);
+    }
+    const coverage = await loadCoverage(db, Date.now());
+    const active = evaluateAlerts(coverage.rows, demanded, Date.now());
+    alertsOpen = active.length;
+    const activeIds = new Set(
+      active.map((a) => `${a.sliceKey}--${a.condition}`.replace(/[/|]/g, '_')),
+    );
+    for (const a of active) {
+      const id = `${a.sliceKey}--${a.condition}`.replace(/[/|]/g, '_');
+      const ref = db.collection('opsAlerts').doc(id);
+      const existing = await ref.get();
+      const wasOpen = existing.exists && !existing.data()?.resolvedAt;
+      await ref.set(
+        {
+          sliceKey: a.sliceKey,
+          condition: a.condition,
+          detail: a.detail,
+          lastSeenAt: startedAt,
+          resolvedAt: null,
+          ...(wasOpen ? {} : { openedAt: startedAt }),
+        },
+        { merge: true },
+      );
+      // An ERROR OBJECT, not a bare string: Cloud Error Reporting on
+      // gen-2 functions ingests stack-shaped logs; a template string
+      // alone may never reach it. Stable message prefix so recurrences
+      // group; the stack is noise but the price of admission.
+      console.error(
+        new Error(
+          `[kickoffcal-alert] ${a.condition} ${a.sliceKey}: ${a.detail}`,
+        ),
+      );
+    }
+    const openSnap = await db
+      .collection('opsAlerts')
+      .where('resolvedAt', '==', null)
+      .get();
+    for (const doc of openSnap.docs) {
+      if (activeIds.has(doc.id)) continue;
+      // Resolution needs EVIDENCE, exactly like opening: a sweep that
+      // never demanded a slice (tier 2 off-hours, deadline-truncated)
+      // proves nothing about it — without this check every tier-2
+      // alert flapped resolved/open across the day's four sweeps.
+      if (!demanded.has(doc.data().sliceKey)) continue;
+      await doc.ref.set({ resolvedAt: startedAt }, { merge: true });
+      console.log(
+        `[kickoffcal-alert] RESOLVED ${doc.data().condition} ${doc.data().sliceKey}`,
+      );
+    }
+  } catch (e) {
+    // Alerting must never fail the sweep it is watching.
+    console.error(`[kickoffcal] alert evaluation failed: ${e}`);
+  }
+
   const summary: SweepResult = {
     paths: attempted,
     dropped,
@@ -434,6 +600,7 @@ export async function sweepAll(): Promise<SweepResult> {
     tokensPruned,
     truncated,
     pathsSeen: allPaths.length,
+    alertsOpen,
     ...skipped,
   };
   await db.collection('sweeps').doc(startedAt).set({

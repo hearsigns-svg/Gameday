@@ -107,6 +107,23 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           {error}
         </Text>
       ) : null}
+      {/* The coverage note: what this sport's data honestly is, said up
+          front. A user should read that athlete-level athletics is
+          absent, not discover it. */}
+      {sport?.coverageNote ? (
+        <Text
+          style={[
+            type.caption,
+            {
+              color: t.textSecondary,
+              paddingHorizontal: spacing.l,
+              paddingBottom: spacing.s,
+            },
+          ]}
+        >
+          {sport.coverageNote}
+        </Text>
+      ) : null}
       <FlatList
         data={leagues}
         keyExtractor={(l) => l.key}

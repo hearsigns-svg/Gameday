@@ -14,6 +14,9 @@ import {
   setCalendarColour,
 } from '../calendar-sync/data/calendarDriver';
 import { lastRegistryError } from '../calendar-sync/data/deviceRegistry';
+import { syncStalenessHours } from '../calendar-sync/syncEngine';
+import { dataStaleness } from '../fixtures/data/freshnessRepo';
+import { loadFollowables } from '../follows/data/followStore';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
@@ -186,6 +189,35 @@ export default function PreferencesScreen({
       </View>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         For series like Formula 1.
+      </Text>
+
+      {/* Sync health, both halves of it: the DEVICE's last successful
+          sync (syncStalenessHours) and the SOURCES' last confirmed
+          activity upstream (dataStaleness). They are different facts —
+          a perfectly syncing device against a dead source was showing
+          green until Prompt 7. Unknown renders as unknown. */}
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Sync health
+      </Text>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        {(() => {
+          const device = syncStalenessHours();
+          const data = dataStaleness(loadFollowables());
+          const fmt = (h: number) =>
+            h < 1 ? 'under an hour ago' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`;
+          const deviceLine =
+            device === null ? 'This device: not synced yet' : `This device last synced ${fmt(device)}`;
+          const followCount = loadFollowables().length;
+          const dataLine =
+            followCount === 0
+              ? 'Fixture sources: nothing followed yet'
+              : data === null || data.worstHours === null
+                ? 'Fixture sources: freshness unknown'
+                : `Fixture sources last confirmed ${fmt(data.worstHours)}`;
+          return `${deviceLine} · ${dataLine}`;
+        })()}
       </Text>
 
       {/* A device over the 200-key rule limit is REJECTED wholesale by

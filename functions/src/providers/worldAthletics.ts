@@ -138,11 +138,22 @@ export function tailOffsets(hits: number, maxPages: number): number[] {
   return out;
 }
 
+export interface WaFetch extends ProviderFetch {
+  // TRUE when the fetched pages covered EVERY meeting the feed reported
+  // for the window (ceil(hits/100) pages within the budget) — measured
+  // per run, never assumed. This is what lets pollAthletics arm the
+  // reaper without relaxing its rule: the rule stays "only a complete
+  // fetch testifies to absence"; completeness became a fact the fetch
+  // itself establishes. When a peak-season window outgrows the budget
+  // the run is honestly incomplete and the slice is unreapable that day.
+  complete: boolean;
+}
+
 export async function fetchWorldAthletics(
   startDate: string,
   endDate: string,
-  maxPages = 4,
-): Promise<ProviderFetch> {
+  maxPages = 14,
+): Promise<WaFetch> {
   const now = new Date().toISOString();
   const fixtures: Fixture[] = [];
   const fetchPage = async (
@@ -173,5 +184,6 @@ export async function fetchWorldAthletics(
     // empty page means hits shrank since page 0 — the LOWER offsets
     // still hold the nearest meetings, which are the whole point.
   }
-  return { rawCount: raw, fixtures };
+  const complete = Math.ceil(first.hits / 100) <= maxPages;
+  return { rawCount: raw, fixtures, complete };
 }

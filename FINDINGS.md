@@ -116,7 +116,7 @@ its follows are never re-polled and its fixtures go stale forever. The
 same class of bug as the one Stage 1 fixed, one layer up, with a worse
 failure mode (nothing is written at all rather than a truncated read).
 
-### F10 — `MAX_PATHS_PER_SWEEP = 250` is a coverage ceiling across ALL users
+### F10 — CLOSED in Prompt 7: `MAX_PATHS_PER_SWEEP = 250` is a coverage ceiling across ALL users
 `functions/src/sweep.ts:37`. The sweep unions poll paths across every
 registered device and then takes the first 250. Beyond that, paths are
 dropped for that run — recorded as `truncated: true` in the `sweeps` doc
@@ -125,7 +125,15 @@ followed competitions would simply stop being refreshed, arbitrarily and
 invisibly. The `sourceRuns`/`coverageReport` work from Stage 0 would now
 make the consequence visible (those slices stop having runs), but the
 truncation itself is unaddressed. Relevant to Stage 7's catalogue design,
-which changes what the sweep is driven by.
+which changes what the sweep is driven by. **CLOSED 2026-08-02
+(Prompt 7): the sweep now runs the union of device and catalogue paths
+with PRIORITY drop order — device paths first (a real follower's slice
+is never starved by a warming entry), then catalogue tier 1, then
+tier 2; uid lexicography is only the within-band tiebreak. The full
+catalogue (57) plus every registered device path (10) uses 67 of the
+250 slots; the ceiling now needs ~190 distinct device-followed slices
+before it can bite, and what it drops first is the catalogue's tail,
+recorded per-path in sourceRuns as before.**
 
 ---
 

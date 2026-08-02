@@ -41,6 +41,12 @@ export interface SportConfig {
   // Series sports (F1, UFC): the one followable, followed straight from
   // the sport row.
   seriesFollowable?: { key: string; label: string; pollPath?: string };
+  // What this sport's coverage honestly IS, said before a user has to
+  // discover it (Prompt 7): where athlete-level data is absent, where
+  // times arrive late, where a whole tour is missing. Shown on the
+  // sport's browse screen. Absence of a note means full fixture-level
+  // coverage with settled times.
+  coverageNote?: string;
 }
 
 export const SPORTS: SportConfig[] = [
@@ -56,6 +62,8 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'cricket',
     label: 'Cricket',
+    coverageNote:
+      'White-ball internationals and leading leagues; Test series beyond the County Championship are not covered.',
     accent: '#0D9488',
     glyph: '🏏',
     enabled: true,
@@ -161,6 +169,8 @@ export const SPORTS: SportConfig[] = [
     ],
   },
   { key: 'tennis', label: 'Tennis',
+    coverageNote:
+      'ATP is tournament-level only — no draws or match times. WTA includes draws and match schedules, with players followable from search.',
     accent: '#65A30D',
     glyph: '🎾',
     enabled: true,
@@ -193,6 +203,8 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'athletics',
     label: 'Athletics',
+    coverageNote:
+      'Meeting-level coverage. Individual athletes and event slots are not available yet — start lists arrive when federations publish them.',
     accent: '#0369A1',
     glyph: '🏃',
     enabled: true,
@@ -462,6 +474,8 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'golf',
     label: 'Golf',
+    coverageNote:
+      'Round-level events; tee times are not tracked.',
     accent: '#047857',
     glyph: '⛳',
     enabled: true,
@@ -519,6 +533,8 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'boxing',
     label: 'Boxing',
+    coverageNote:
+      'Card times are the broadcast start, not ringwalks. Fighters on announced cards are followable from search.',
     accent: '#BE123C',
     glyph: '🥊',
     enabled: true,
@@ -555,6 +571,8 @@ export const SPORTS: SportConfig[] = [
   },
   {
     key: 'ufc',
+    coverageNote:
+      'Card-level coverage. Bout times are not published in advance; fighters become followable when full names are announced.',
     // Was a UFC-only series row; promotions beyond the UFC carry real
     // upcoming cards, so this became a browse level. Card-follows plus
     // athlete-follows via APPEARANCES where a card title names full

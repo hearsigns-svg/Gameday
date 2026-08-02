@@ -835,3 +835,57 @@
   expo-notifications path — one platform's fix must not risk the
   other's proven behaviour. APNs key upload + physical-device delivery
   proof are owner steps.
+
+## Prompt 7 decisions (2026-08-02)
+
+- 2026-08-02: THE CATALOGUE IS COMPETITIONS, NEVER TEAMS. What browse
+  offers as a competition or series row is warmed independently of
+  followers (57 entries — the app's promise, kept even at zero users);
+  team-level paths stay follower-driven because teams are the
+  unbounded set and the sweep cap must keep meaning something. Tier 1
+  (every sweep, 18 entries) is where schedules move inside a day;
+  tier 2 (the daily 00–06 UTC sweep, 39 entries) keeps the rest of
+  browse honest and catches season rollovers within a day. Entries are
+  ops-editable data validated against the SAME route allowlist as
+  device submissions — a catalogue typo is unfetchable by
+  construction. Seeding is explicit and idempotent; `enabled: false`
+  survives re-seeding.
+- 2026-08-02: SWEEP DROP ORDER IS PRIORITY, closing F10 — device paths,
+  then catalogue tier 1, then tier 2; uid lexicography is demoted to
+  the within-band tiebreak. A follower's slice can never be displaced
+  by a warming entry.
+- 2026-08-02: CONSECUTIVE football-data REQUESTS ARE SPACED 6.5s in the
+  sweep. The free tier allows 10/minute; the daily catalogue sweep
+  carries 13 fd routes. Politeness to fd.org is what keeps soccer
+  coverage existing at all.
+- 2026-08-02: ATHLETICS COMPLETENESS IS MEASURED, NOT ASSUMED. The
+  window narrowed to 120 days and the page budget rose to 14; the
+  fetch reports whether its pages covered every meeting the feed
+  claimed, and ONLY a run that did arms the reaper. The arming rule is
+  unchanged — completeness became a fact the fetch establishes about
+  itself. PBC remains permanently unreapable: its undated-slug
+  allowance (the guard against URL-shape changes) means an upcoming
+  card can always be hiding in an unfetched slug, and that honesty is
+  worth more than a reapable slice.
+- 2026-08-02: ALERTS ARE PUSHED, NOT HOSTED. The sweep evaluates two
+  rules over the same coverage rows the report serves — no successful
+  run in 24h on a demanded slice; runs succeeding but nothing
+  future-dated for 72h without an honest-empty reason — with state in
+  opsAlerts (open/resolve transitions) and a stable-prefix
+  console.error per open alert per sweep, which Cloud Error Reporting
+  groups and notifies on. An honest off-season (reason
+  no_future_events) never pages. The two-connector lesson behind it:
+  clean runs and dead coverage looked identical for weeks in a report
+  nobody opened.
+- 2026-08-02: DEVICE SYNC AGE AND DATA AGE ARE DIFFERENT FACTS. The
+  sweep maintains a world-readable status/coverage doc (canonical poll
+  path → last confirmed success); the client judges its follows
+  against it and the chip stops showing green when the oldest followed
+  source has been quiet past 48h. A freshness read failure renders as
+  UNKNOWN, never as fresh. syncStalenessHours (device-side) and the
+  data-side staleness are shown together in Preferences → Sync health.
+- 2026-08-02: COVERAGE LIMITS ARE SAID UP FRONT. Sports carry an
+  honest coverageNote rendered on their browse screen — tennis's
+  ATP/WTA asymmetry, athletics' missing athlete level, combat sports'
+  broadcast-start times. A user should read what coverage is, not
+  discover it.
