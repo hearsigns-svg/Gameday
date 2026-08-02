@@ -21,6 +21,17 @@ describe('canonicalisePollPath — accepts real routes', () => {
     expect(canonicalisePollPath(path)).toBe(path);
   });
 
+  // The parameterless family — each has exactly one feed. Their
+  // canonical form carries the trailing '?' (name + empty ordered
+  // query); both spellings must stay accepted.
+  test.each(['pollPbc', 'pollTennis', 'pollWtaTennis', 'pollAthletics'])(
+    '%s canonicalises to its ?-suffixed form',
+    (name) => {
+      expect(canonicalisePollPath(name)).toBe(`${name}?`);
+      expect(canonicalisePollPath(`${name}?`)).toBe(`${name}?`);
+    },
+  );
+
   test('param order does not create duplicate work', () => {
     expect(canonicalisePollPath('pollFdTeam?season=2026&teamId=64')).toBe(
       'pollFdTeam?teamId=64&season=2026',

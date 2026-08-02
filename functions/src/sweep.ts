@@ -41,6 +41,7 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
   // server-side from the clock rather than baked into a stored follow.
   pollPbc: {},
   pollTennis: {},
+  pollWtaTennis: {},
   pollAthletics: {},
   pollTsdbLeague: {
     leagueId: /^\d{3,6}$/,
@@ -169,6 +170,8 @@ export function sliceOfPollPath(
       return { source: 'pbc', sport: 'boxing', competitionId: 'pbc-cards' };
     case 'pollTennis':
       return { source: 'tennis', sport: 'tennis', competitionId: 'tennis-atp' };
+    case 'pollWtaTennis':
+      return { source: 'wta', sport: 'tennis', competitionId: 'tennis-wta' };
     case 'pollAthletics':
       return { source: 'wa', sport: 'athletics', competitionId: 'wa-calendar' };
     default:

@@ -732,3 +732,85 @@ live, the composite index live, both TTLs on.
   No new indexes, no rules changes, no new routes (POLL_ROUTES
   unchanged — appearances ride existing polls).
 
+### Prompt 5b — rulings, WTA draws/OOP, funnel verification  [x]
+
+Rulings recorded in DECISIONS.md: api.wtatennis.com APPROVED (does not
+reopen atptour.com); ufc.com HTML DECLINED (A/B/C stay open).
+
+- **FUNNEL VERIFIED against prod** (post-redeploy, 2026-08-02 ~17:20Z):
+  `tsdb-league-4445-appearances` live with 10 future-dated appearance
+  docs; athlete keys SHED from 78 carrier cards down to 3 (all on
+  slices no device follows — F29 class). The verification then caught a
+  real coverage bug the instrumentation exists to catch:
+  `pbc-cards-appearances` ran twice with fetched-15-parsed-15-stored-15
+  but futureDated 0 — **the August 22 card had NEVER been fetched**.
+  The sitemap carries 19 undated URLs ahead of the one dated upcoming
+  card, and `slice(0, maxCards)` took the first 12 in document order:
+  twelve past cards, upcoming card starved, since the day the connector
+  shipped. FIXED: `candidateOrder` puts dated upcoming cards (soonest
+  first) before undated slugs, and appearances are only derived for
+  cards inside the window (the 15 stored past-bout appearance docs are
+  inert clutter — past-dated, never fetched by clients). Live-verified
+  post-fix: the card is candidate #1 and its 4 bouts mint with the
+  exact ids the contract test pins. Regression-pinned.
+- **THE 172 WIDENED BANNERS verified against prod data**: all 172
+  future multi-day date_only fixtures (78 tennis, 64 athletics, 30
+  cricket) replayed through the REAL client planner under both UTC and
+  America/Los_Angeles — every one plans as a full-width all-day span
+  (34×2d … 49×7d … 4×15d), no TBC suffix on spans, freeze end equal to
+  the planner's end, day-boundary starts. NOT device-verified this
+  round: the on-device write is the engine's ordinary update path; the
+  replay verifies the data and the plan, not EventKit itself.
+- **WTA TENNIS BUILT** (`providers/wtaTennis.ts`, `pollWtaTennis`,
+  slice `tennis-wta` + `tennis-wta-appearances`): tournament parents
+  `wta-<id>-<year>` (date_only spans; 49 ingested-shape live including
+  the US Open — slam coverage without touching usopen.org), draws from
+  the matches feed (full names; still-in = named in an undecided
+  singles match; Winner '0' is the only undecided value observed),
+  order of play from the /oop feed (venue-local times with explicit
+  offsets; follow-on matches carry a day but no time and become
+  CONFIRMED date_only — never an invented instant). One rolling
+  appearance per player per tournament: provisional parent window →
+  confirmed slot updating in place on the same id — the
+  appearanceLifecycle mechanism, now fed by real data and pinned by a
+  contract test on banked real payloads (timed final, ATP skeletons at
+  joint events, dict-shaped single-match courts, empty-time qualifying
+  rounds). SINGLES ONLY; doubles are a different churn model. Active
+  tournaments capped at 5 fetches/poll with the skip count REPORTED.
+  Live end-to-end: 49 parents, 6 active (1 skipped), 145 draw records
+  → 30 appearances (24 provisional, 6 confirmed timed).
+- **ATHLETICS STAYS NOT IMPLEMENTED** (F27 updated, per the ruling's
+  "wait for real data"): 0 of 593 meetings scanned (2026-08-02→09-15)
+  carry hasStartlist:true; the flag is TRANSIENT and appears reserved
+  for World Athletics Series championships (the completed World Indoors
+  shows false post-event with hasResults true; Diamond League legs
+  never show it at all). The entry-list SURFACE shape was captured —
+  day-paged, a first-class `startList: null` slot beside `results` on
+  every race, competitor shape verbatim — and no per-discipline times
+  exist on that surface at all. The populated startList row remains
+  unseen; the parser waits for the next WA Series meeting's live week.
+- **ADVERSARIAL REVIEW ROUND on the 5b diff** (three lenses + refuting
+  verifiers, every confirmed finding probe-executed): 7 confirmed, 9
+  refuted. Fixed in-round: (1) HIGH — slot liveness was START-based, so
+  a confirmed match demoted to a week-long provisional banner mid-match
+  and a played morning slot shadowed the same payload's evening final;
+  now END-based (timed start+3h, day-only sentinel+36h for venue-local
+  days, 6h feed-lag grace), regression-pinned. (2) HIGH — appearance
+  RETIREMENT's future-only guard could never retire an eliminated
+  player's week-long provisional doc after day 1 (its startUtc is the
+  parent's first day); now end-based on the same freeze boundary as the
+  client ledger. (3) isActive treated status 'past' tournaments as
+  active (a finished draw occupied a fetch slot while Warsaw, starting
+  the next day, was starved every poll); actives now exclude 'past' and
+  sort newest-start-first under the cap. (4) Tournament pagination:
+  page 0 was trusted alone; now accumulates pages against
+  pageInfo.numEntries with id-dedup and a no-progress stop. (5) A
+  Schedule missing its Day KEY now throws (shape rot ≠ empty schedule).
+  Recorded, not fixed: F34 — name-collision athlete identity (needs the
+  canonical-identity work of ruling 2; WTA numeric ids banked as
+  input).
+- 566 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean.
+- OWED: redeploy functions (again — includes the PBC fix and
+  pollWtaTennis, a NEW function).
+

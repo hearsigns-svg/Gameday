@@ -165,11 +165,13 @@ export const SPORTS: SportConfig[] = [
     glyph: '🎾',
     enabled: true,
     browse: ['competition'],
-    followTypes: ['competition'],
-    // TOURNAMENT level only — one event per tournament, spanning its days.
-    // Draws and order of play are a later stage. ATP comes from the ICS
-    // feed Tennis TV publishes for subscription; atptour.com itself
-    // refuses this agent and is permanently excluded (docs/DECISIONS.md).
+    followTypes: ['competition', 'athlete'],
+    // ATP: TOURNAMENT level from the ICS feed Tennis TV publishes for
+    // subscription — atptour.com itself refuses this agent and is
+    // permanently excluded (docs/DECISIONS.md). WTA: tournaments PLUS
+    // draws and order of play from the WTA's own API (owner ruling
+    // 2026-08-02) — following a player rides APPEARANCE docs, reached
+    // through global search.
     staticCompetitions: [
       {
         id: 'atp',
@@ -178,6 +180,14 @@ export const SPORTS: SportConfig[] = [
         key: 'tennis-atp',
         followOnly: true,
         pollPath: 'pollTennis',
+      },
+      {
+        id: 'wta',
+        name: 'WTA Tour',
+        country: 'World',
+        key: 'tennis-wta',
+        followOnly: true,
+        pollPath: 'pollWtaTennis',
       },
     ] },
   {

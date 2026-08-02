@@ -64,6 +64,7 @@ import { fetchF1SeasonFixtures } from './providers/f1';
 import { fetchPbcCards } from './providers/pbc';
 import { fetchTennisTournaments } from './providers/tennisIcs';
 import { fetchWorldAthletics } from './providers/worldAthletics';
+import { fetchWtaTennis } from './providers/wtaTennis';
 import {
   listFdSoccerTeams,
   listMlbTeams,
@@ -1056,6 +1057,54 @@ export const pollTennis = onRequest(async (req, res) => {
   );
   res.status(out.status).json(out.body);
 });
+
+// WTA tournaments + draws + order of play (owner ruling 2026-08-02:
+// api.wtatennis.com approved; conditions live in the provider header).
+// Women's tennis coverage exists because of this route — the ICS is
+// ATP-only.
+export const pollWtaTennis = onRequest(
+  { timeoutSeconds: 120 },
+  async (req, res) => {
+    const from = new Date(Date.now() - 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const to = new Date(Date.now() + 180 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const out = await servePoll(
+      triggerOf(req.get(TRIGGER_HEADER)),
+      {
+        source: 'wta',
+        sport: 'tennis',
+        competitionId: 'tennis-wta',
+        pollPath: 'pollWtaTennis',
+        seasonRequested: null,
+      },
+      async (trace) => {
+        trace.seasonsTried.push(`${from}..${to}`);
+        const r = await fetchWtaTennis(from, to);
+        return {
+          rawCount: r.rawCount,
+          fixtures: r.fixtures,
+          followKey: 'tennis-wta',
+          seasonResolved: 'current',
+          // Always attached, zero yield included — same rule as every
+          // appearance slice: a run that parsed nothing is recorded.
+          appearances: {
+            followKey: appearanceSliceKey('tennis-wta'),
+            rawCount: r.appearanceRawCount,
+            fixtures: r.appearances,
+          },
+          body: {
+            activeTournaments: r.activeTournaments,
+            activeSkipped: r.activeSkipped,
+          },
+        };
+      },
+    );
+    res.status(out.status).json(out.body);
+  },
+);
 
 export const pollAthletics = onRequest(
   { timeoutSeconds: 300 },

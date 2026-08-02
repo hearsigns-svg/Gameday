@@ -11,6 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  candidateOrder,
   cardAppearances,
   cardToFixture,
   extractLdJson,
@@ -19,6 +20,27 @@ import {
 const html = readFileSync(join(__dirname, 'fixtures', 'pbc-sample.html'), 'utf8');
 const URL = 'https://www.premierboxingchampions.com/fight-night-august-22-2026';
 const AT = '2026-08-02T00:00:00.000Z';
+
+test('REGRESSION: undated slugs can never starve a dated upcoming card under the cap', () => {
+  // Live 2026-08-02: nineteen undated URLs sat ahead of the one dated
+  // upcoming card in sitemap order, so slice(0, 12) fetched twelve past
+  // cards and the August 22 card never entered the cache.
+  const base = 'https://www.premierboxingchampions.com';
+  const urls = [
+    ...Array.from({ length: 19 }, (_, i) => `${base}/some-named-card-${i}`),
+    `${base}/fight-night-august-22-2026`,
+    `${base}/fight-night-july-12-2026`, // dated but before the window
+    `${base}/fight-night-september-05-2026`,
+  ];
+  const ordered = candidateOrder(urls, '2026-07-26');
+  // Dated upcoming first, soonest first; undated after; pre-window
+  // dated cards excluded entirely.
+  expect(ordered[0]).toBe(`${base}/fight-night-august-22-2026`);
+  expect(ordered[1]).toBe(`${base}/fight-night-september-05-2026`);
+  expect(ordered).toHaveLength(21);
+  expect(ordered.slice(0, 12)).toContain(`${base}/fight-night-august-22-2026`);
+  expect(ordered).not.toContain(`${base}/fight-night-july-12-2026`);
+});
 
 test('the page carries one SportsEvent node per bout, main event first', () => {
   const events = extractLdJson(html).filter((e) => e['@type'] === 'SportsEvent');

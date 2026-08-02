@@ -727,3 +727,65 @@
   an unseen payload is the exact mistake F22 recorded. One 2-request
   probe near a meeting day closes it; until then athletics appearances
   are model-only, honestly.
+
+## Prompt 5b rulings (owner, 2026-08-02)
+
+- 2026-08-02: api.wtatennis.com IS APPROVED. Same publisher, same
+  permissive robots posture as wtatennis.com (blanket allow): it is the
+  WTA's own API serving the WTA's own site — not a third-party
+  aggregator, and not a route around anyone's refusal. Conditions, the
+  same as every source: honest user-agent, polite rate limit, facts
+  only, no auth bypass — and if it turns out to require a key or a
+  token lifted from the site's own client, the work STOPS pending a
+  separate ruling. THIS DOES NOT REOPEN atptour.com, which named
+  ClaudeBot in robots.txt and stays permanently excluded; ATP
+  tournament coverage continues to come from the Tennis TV ICS, and
+  usopen.org (which resets connections before robots.txt can be served)
+  is left alone.
+- 2026-08-02: ufc.com HTML IS DECLINED — no one-host exception to the
+  HTML-soup ruling. BEM-stable markup today is not a commitment, and —
+  the reason that matters — full names for one promotion leave the
+  surname ambiguity untouched everywhere else. The 141 surname-only
+  cards need canonical fighter identity with a disambiguation source
+  behind it, done once, properly. PROMPT5_INPUT categories A/B/C stay
+  open and are not folded into any stage sideways.
+- 2026-08-02: THE WTA CONNECTOR IS SINGLES-ONLY, ONE ROLLING APPEARANCE
+  PER PLAYER PER TOURNAMENT. Still-in-the-draw means named in a singles
+  match whose Winner is '0' — the only undecided value the live feed
+  shows ('2'/'3' are winner sides, '5' a walkover). A scheduled slot
+  from the order of play confirms the SAME appearance id in place:
+  timed when NotBeforeISOTime gives a venue-local instant
+  ("13:30-0400"), CONFIRMED date_only when a follow-on match carries
+  only its day — a time is never invented. Qualifying singles (RS)
+  count; doubles (·D) do not (pair churn is a different model); ATP
+  entries in the joint-event OOP are skeletons and are skipped — ATP
+  stays with the ICS. Draw and OOP join on full player names, the same
+  names both feeds carry (verified identical in the banked payloads).
+  Active tournaments (live/inProgress or starting within 3 days, never
+  status 'past') are capped at 5 detail-fetches per poll, NEWEST start
+  first, with the skip count REPORTED — a bound on requests, not
+  coverage: parents always ingest.
+- 2026-08-02: SLOT LIVENESS IS END-BASED, mirroring the horizon rule.
+  The slot to show is the soonest whose window is still OPEN (timed:
+  start + 3h; day-only: the day sentinel + 36h, because ISODate is the
+  venue-local day while the sentinel is UTC midnight); when none is
+  open, the most recent within a 6h grace bridges the feed catching up.
+  The first cut compared start instants against the poll time, which
+  the adversarial review proved wrong three ways at once: a confirmed
+  match demoted to a week-long provisional banner MID-RALLY, a played
+  morning slot shadowed the same payload's evening final, and a
+  today-scheduled follow-on was "past" from one minute after midnight.
+  Appearance RETIREMENT freezes on the same boundary — an event that
+  has ended (plus grace) is history and stays; one still running is
+  retirable — because the startUtc-based freeze could never retire an
+  eliminated player's week-long provisional doc after day 1 of her
+  tournament.
+- 2026-08-02: PBC CANDIDATES ARE ORDERED, NOT TAKEN IN SITEMAP ORDER —
+  dated upcoming cards (soonest first) before undated slugs, under the
+  existing maxCards cap. Found by the appearance-funnel verification:
+  19 undated URLs sat ahead of the one dated upcoming card, so
+  slice(0, 12) had fetched twelve past cards on every run and the
+  August 22 card had NEVER entered the cache. Undated slugs are still
+  probed with the remaining budget (a changed URL shape must not go
+  silently unfetched), and appearances derive only for cards inside the
+  window — an undated slug resolving to a 2016 card mints nothing.

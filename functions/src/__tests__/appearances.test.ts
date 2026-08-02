@@ -308,6 +308,42 @@ describe('retirement — the yield proves a bout gone', () => {
       [],
     );
   });
+
+  test('REGRESSION: the freeze is END-based — a mid-tournament elimination retires the week-long provisional doc', () => {
+    // A WTA provisional appearance carries the PARENT window: day-1
+    // startUtc, a week of durationHours, date_only. From day 2 onward a
+    // startUtc-based freeze could never retire it, so an eliminated
+    // player's "scheduled" event sat in followers' calendars through
+    // the final. The event has not ENDED, so it must be retirable.
+    const slam = card({
+      id: 'wta-1045-2026',
+      sport: 'tennis',
+      competitionId: 'tennis-wta',
+      followKeys: ['tennis-wta'],
+      startUtc: '2026-07-27T00:00:00.000Z',
+      durationHours: 7 * 24,
+      timePrecision: 'date_only',
+    });
+    const linette = appearanceFor(slam, {
+      athletes: ['Magda Linette'],
+      title: 'Magda Linette — Mubadala DC Open',
+      updatedAt: '2026-07-26T00:00:00.000Z',
+    })!;
+    const survivor = appearanceFor(slam, {
+      athletes: ['Alexandra Eala'],
+      title: 'Alexandra Eala — Mubadala DC Open',
+      updatedAt: '2026-07-28T12:00:00.000Z',
+    })!;
+    // Lost R1 on the 27th; polled mid-tournament on the 28th: retired.
+    expect(
+      retiredAppearanceIds([linette], [survivor], '2026-07-28T12:00:00.000Z'),
+    ).toEqual([linette.id]);
+    // After the window (plus grace) has closed, the same doc is frozen
+    // history — never cancelled out of anyone's calendar.
+    expect(
+      retiredAppearanceIds([linette], [survivor], '2026-08-03T12:00:00.000Z'),
+    ).toEqual([]);
+  });
 });
 
 describe('the parent card no longer carries athlete keys', () => {

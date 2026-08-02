@@ -1,0 +1,150 @@
+{
+ "pageInfo": {
+  "page": 0,
+  "numPages": 0,
+  "pageSize": 20,
+  "numEntries": 46
+ },
+ "content": [
+  {
+   "tournamentGroup": {
+    "id": 1045,
+    "name": "WASHINGTON DC",
+    "level": "WTA 500",
+    "metadata": {}
+   },
+   "year": 2026,
+   "title": "Mubadala DC Open - Washington, DC, USA",
+   "startDate": "2026-07-27",
+   "endDate": "2026-08-02",
+   "surface": "Hard",
+   "inOutdoor": "O",
+   "city": "WASHINGTON DC",
+   "country": "USA",
+   "singlesDrawSize": 28,
+   "doublesDrawSize": 16,
+   "prizeMoney": 1637982,
+   "prizeMoneyCurrency": "USD",
+   "liveScoringId": "1045",
+   "winners": [],
+   "status": "live",
+   "level": "WTA 500",
+   "announcements": {
+    "players": null,
+    "draws": null
+   }
+  },
+  {
+   "tournamentGroup": {
+    "id": 806,
+    "name": "MONTREAL",
+    "level": "WTA 1000",
+    "metadata": {}
+   },
+   "year": 2026,
+   "title": "National Bank Open presented by Rogers - Toronto, CAN",
+   "startDate": "2026-08-02",
+   "endDate": "2026-08-13",
+   "surface": "Hard",
+   "inOutdoor": "O",
+   "city": "TORONTO",
+   "country": "CAN",
+   "singlesDrawSize": 96,
+   "doublesDrawSize": 32,
+   "prizeMoney": 7433076,
+   "prizeMoneyCurrency": "USD",
+   "liveScoringId": "806",
+   "winners": [],
+   "status": "inProgress",
+   "level": "WTA 1000",
+   "announcements": {
+    "players": null,
+    "draws": null
+   }
+  },
+  {
+   "tournamentGroup": {
+    "id": 1017,
+    "name": "CINCINNATI",
+    "level": "WTA 1000",
+    "metadata": {}
+   },
+   "year": 2026,
+   "title": "Cincinnati Open - Cincinnati, OH, USA",
+   "startDate": "2026-08-13",
+   "endDate": "2026-08-23",
+   "surface": "Hard",
+   "inOutdoor": "O",
+   "city": "CINCINNATI",
+   "country": "USA",
+   "singlesDrawSize": 96,
+   "doublesDrawSize": 32,
+   "prizeMoney": 7433076,
+   "prizeMoneyCurrency": "USD",
+   "liveScoringId": "1017",
+   "winners": [],
+   "status": "future",
+   "level": "WTA 1000",
+   "announcements": {
+    "players": null,
+    "draws": null
+   }
+  },
+  {
+   "tournamentGroup": {
+    "id": 905,
+    "name": "US OPEN",
+    "level": "Grand Slam",
+    "metadata": {}
+   },
+   "year": 2026,
+   "title": "US Open - New York, NY, USA",
+   "startDate": "2026-08-30",
+   "endDate": "2026-09-13",
+   "surface": "Hard",
+   "inOutdoor": "O",
+   "city": "NEW YORK",
+   "country": "USA",
+   "singlesDrawSize": 128,
+   "doublesDrawSize": 64,
+   "prizeMoney": 0,
+   "prizeMoneyCurrency": "USD",
+   "liveScoringId": "905",
+   "winners": [],
+   "status": "future",
+   "level": "Grand Slam",
+   "announcements": {
+    "players": null,
+    "draws": null
+   }
+  },
+  {
+   "tournamentGroup": {
+    "id": 2064,
+    "name": "VANCOUVER 125",
+    "level": "WTA 125",
+    "metadata": {}
+   },
+   "year": 2026,
+   "title": "Odlum Brown VanOpen - Vancouver, CAN",
+   "startDate": "2026-07-26",
+   "endDate": "2026-08-01",
+   "surface": "Hard",
+   "inOutdoor": "O",
+   "city": "VANCOUVER",
+   "country": "CAN",
+   "singlesDrawSize": 32,
+   "doublesDrawSize": 16,
+   "prizeMoney": 225000,
+   "prizeMoneyCurrency": "USD",
+   "liveScoringId": "2064",
+   "winners": [],
+   "status": "past",
+   "level": "WTA 125",
+   "announcements": {
+    "players": null,
+    "draws": null
+   }
+  }
+ ]
+}

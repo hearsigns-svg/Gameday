@@ -388,7 +388,7 @@ is the argument for the review queue rather than against the connector.
 
 ## Found during Prompt 5 (individual appearances, 2026-08-02)
 
-### F25 — Tennis draws/order-of-play have no approved source
+### F25 — RESOLVED in Prompt 5b: WTA draws/order-of-play now flow from the WTA's own API
 usopen.org (the next slam, and the creator-class candidate) resets an
 honest client's TCP stream after the request is sent — three attempts
 (HTTP/2 and HTTP/1.1, genuine DigiCert USTA cert, request fully written)
@@ -398,8 +398,12 @@ nothing to honour, nothing to circumvent. wtatennis.com permits crawling
 (blanket allow) but its HTML carries no draw or schedule data — only a
 live-scores JSON-LD snapshot with no startDate. The one concrete lead is
 `api.wtatennis.com` (the Pulselive API the WTA site itself runs on),
-which was NOT probed — using it needs an owner ruling first. Until one
-lands, tennis appearances are model-only.
+which was NOT probed — using it needs an owner ruling first.
+**RULED AND BUILT 2026-08-02 (Prompt 5b): api.wtatennis.com approved and
+verified open (no key, no auth); tournaments + draws + order of play live
+via `providers/wtaTennis.ts`. usopen.org stays untouched; atptour.com
+stays excluded — ATP remains tournament-level from the ICS (see F33 for
+what that asymmetry costs).**
 
 ### F26 — ufc.com has full bout data; the standing HTML-soup ruling walls it off
 Every UFC event page server-renders the complete card — full
@@ -430,6 +434,19 @@ captured, and F22's lesson is that building against an unseen payload is
 how connectors get invented rather than written. Needs one 2-request
 probe in the days before a hasStartlist:true meeting; then the athletics
 consumer can be wired to the appearance model that already handles it.
+**UPDATED 2026-08-02 (Prompt 5b probe, 10 requests): 0 of 593 meetings in
+the 2026-08-02→09-15 window carry hasStartlist:true. The flag is
+TRANSIENT (the completed World Indoor Championships shows false
+post-event while hasResults is true) and appears reserved for World
+Athletics Series championships — Diamond League legs and national champs
+never show it, even with results present. The entry-list SURFACE was
+captured from the World Indoors: day-paged pageProps, 28 disciplines, a
+first-class `startList: null` slot beside `results` on every race, and a
+verbatim competitor shape (id, name "Jordan ANTHONY", urlSlug,
+birthDate) — and NO per-discipline times anywhere on that surface, so
+even a built entries layer stays date_only. The populated startList row
+shape remains unseen. Per the owner's Prompt 5b ruling: stays NOT
+IMPLEMENTED until a WA Series meeting's live week supplies real data.**
 
 ### F28 — Cross-source combat appearances would not deduplicate
 `isSameFixture` requires the same competition string; a PBC bout
@@ -488,3 +505,35 @@ open MED item from the timezone audit; this widens its one-time cost,
 not its class. The athleteDirectory's `nextStartUtc` is also
 last-write-wins per poll: a multi-promoter athlete's entry reflects
 whichever source polled last — ordering noise in search, nothing more.
+
+
+### F33 — Joint ATP/WTA events are two parents, and men's tennis has no appearances
+The WTA API carries first-class tournament records for joint events the
+Tennis TV ICS already serves (US Open, Cincinnati, Toronto). Their
+parents cannot merge: the ICS fixture (`tennis-<uid>`) and the WTA
+fixture (`wta-<id>-<year>`) share no participants, so `isSameFixture`'s
+empty-participants guard keeps them apart — a user following BOTH tours
+gets two tournament events for a joint event. And the asymmetry runs
+deeper: WTA players get draws and order of play, while ATP players get
+nothing (the ICS is fields-only by ruling, and the ATP entries inside
+the WTA order-of-play feed are skeletons with no player detail) — men's
+tennis remains tournament-level only, with atptour.com permanently
+excluded. Both are structural facts of the approved sources, not bugs.
+
+
+### F34 — Two players with one rendered name collapse into one appearance
+The whole athlete layer keys identity by normalised display name —
+`athleteKey(name)`, appearance ids, the WTA draw↔OOP join — so two
+distinct players whose romanised names render identically (a realistic
+event in a 128-player qualifying draw) become ONE appearance doc: one
+player's slot wins, the other's schedule is never represented, and a
+follower of the shared `athlete-<slug>` key gets whichever survived.
+Verified by probe against the WTA pipeline with two synthetic players
+sharing a name. The WTA feeds carry numeric player ids in BOTH the draw
+(PlayerIDA/B) and the order of play (Player.id) that would disambiguate
+— but the followable key itself is name-built, so an internal id fix
+alone still merges the two for followers. This is the same class as the
+141 surname-only cards: it needs the canonical athlete identity the
+owner ruled must be done once, properly (Prompt 5b, ruling 2), and the
+WTA ids are recorded here as an input to that work, not papered over
+per-connector now.

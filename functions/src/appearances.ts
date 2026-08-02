@@ -60,8 +60,12 @@ export function appearanceId(
 }
 
 export interface AppearanceSlot {
-  startUtc: string; // the confirmed instant
+  startUtc: string; // the confirmed instant, or a day sentinel
   durationHours?: number;
+  // A slot can be known to the DAY without a time: tennis order of play
+  // lists follow-on matches ("after previous") with a date and court but
+  // no instant. That is a confirmed date_only, never an invented time.
+  dayOnly?: boolean;
 }
 
 // Build one appearance from its parent. Returns null when no participant
@@ -104,7 +108,7 @@ export function appearanceFor(
   if (opts.slot) {
     return {
       ...base,
-      timePrecision: 'exact',
+      timePrecision: opts.slot.dayOnly ? 'date_only' : 'exact',
       confidence: 'confirmed',
       ...(opts.slot.durationHours !== undefined
         ? { durationHours: opts.slot.durationHours }
@@ -145,6 +149,32 @@ export function boutAppearance(
   });
 }
 
+// When a stored appearance's event is over — the server-side mirror of
+// the client's fixtureEndUtc + grace (horizon.ts): end-based, date_only
+// spans its real days, postponed collapses to one, 6h grace. Kept in
+// sync by hand, like the Fixture model itself.
+const PAST_GRACE_MS = 6 * 3_600_000;
+
+export function appearanceEndMs(f: Fixture): number {
+  const dateOnly =
+    f.timePrecision === 'date_only' ||
+    (!f.timePrecision && (f.status === 'tbd' || f.status === 'postponed'));
+  if (dateOnly || f.status === 'postponed') {
+    const d = new Date(f.startUtc);
+    const dayStart = Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
+    );
+    const days =
+      f.status === 'postponed'
+        ? 1
+        : Math.max(1, Math.round((f.durationHours ?? 2) / 24));
+    return dayStart + days * 86_400_000;
+  }
+  return Date.parse(f.startUtc) + (f.durationHours ?? 2) * 3_600_000;
+}
+
 // Which previously-stored appearances a fresh yield RETIRES. A bout is
 // scratched or an opponent replaced routinely in combat sports; because
 // the appearance id embeds the names, the replacement arrives under a
@@ -160,11 +190,20 @@ export function boutAppearance(
 // one-bout card empty is not caught. Retired docs are CANCELLED, not
 // deleted — cancellation is the status the whole pipeline already
 // propagates as event deletion for followers.
+//
+// The freeze is END-based, the same boundary the client ledger uses. It
+// was startUtc-based at first, which a WTA provisional appearance broke
+// on day 2 of its tournament: it carries the PARENT window's day-1
+// startUtc, so an eliminated player's week-long event could never be
+// retired mid-tournament — while her event was still LIVE in every
+// follower's calendar, implying she was still playing. An event that
+// has not yet ended (plus grace) is retirable; an ended one is frozen.
 export function retiredAppearanceIds(
   existing: readonly Fixture[], // current docs of the appearance slice
   incoming: readonly Fixture[], // this run's appearance yield
   nowIso: string,
 ): string[] {
+  const nowMs = Date.parse(nowIso);
   const byParent = new Map<string, Set<string>>();
   for (const f of incoming) {
     if (!f.parentFixtureId) continue;
@@ -179,7 +218,7 @@ export function retiredAppearanceIds(
         byParent.has(e.parentFixtureId) &&
         !byParent.get(e.parentFixtureId)!.has(e.id) &&
         e.status !== 'cancelled' &&
-        e.startUtc >= nowIso, // the past is frozen, here as everywhere
+        appearanceEndMs(e) + PAST_GRACE_MS > nowMs, // ended ⇒ frozen
     )
     .map((e) => e.id);
 }

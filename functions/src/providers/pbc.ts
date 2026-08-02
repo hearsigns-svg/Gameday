@@ -82,6 +82,30 @@ export function parseSitemapUrls(xml: string): string[] {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
 }
 
+// Which card pages to fetch, in which order, under the cap. DATED
+// upcoming cards first (soonest first), undated slugs after — the cap
+// must never let undated slugs starve a card we KNOW is upcoming.
+// Found live 2026-08-02 by the appearance-funnel instrumentation: the
+// sitemap carried 19 undated URLs ahead of the one dated upcoming card
+// in document order, so `slice(0, 12)` fetched twelve past cards and
+// the August 22 card had never entered the cache at all.
+export function candidateOrder(urls: string[], fromDate: string): string[] {
+  const dated: Array<{ url: string; date: string }> = [];
+  const undated: string[] = [];
+  for (const u of urls) {
+    const d = cardDateFromUrl(u);
+    if (d === null) {
+      // Kept: better one wasted fetch than a silently skipped card
+      // because PBC changed its URL shape.
+      undated.push(u);
+    } else if (d >= fromDate) {
+      dated.push({ url: u, date: d });
+    }
+  }
+  dated.sort((a, b) => a.date.localeCompare(b.date));
+  return [...dated.map((d) => d.url), ...undated];
+}
+
 // Every JSON-LD block on a page, flattened — PBC emits arrays.
 export function extractLdJson(html: string): LdSportsEvent[] {
   const out: LdSportsEvent[] = [];
@@ -203,12 +227,7 @@ export async function fetchPbcCards(
   if (urls.length === 0) {
     throw new Error('pbc: sitemap contained no <loc> entries');
   }
-  // Undated slugs are kept: better one wasted fetch than a silently
-  // skipped card because PBC changed its URL shape.
-  const candidates = urls.filter((u) => {
-    const d = cardDateFromUrl(u);
-    return d === null || d >= fromDate;
-  });
+  const candidates = candidateOrder(urls, fromDate);
   const now = new Date().toISOString();
   const fixtures: Fixture[] = [];
   const appearances: Fixture[] = [];
@@ -220,11 +239,17 @@ export async function fetchPbcCards(
       const f = cardToFixture(url, html, now);
       if (f) {
         fixtures.push(f);
-        const boutNodes = extractLdJson(html).filter(
-          (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
-        ).length;
-        appearanceRawCount += boutNodes;
-        appearances.push(...cardAppearances(f, html, now));
+        // Appearances only for cards inside the window — an undated
+        // slug can resolve to a page for a long-finished card, and a
+        // finished bout needs no appearance doc (same gate as the TSDB
+        // derivation window).
+        if (f.startUtc >= fromDate) {
+          const boutNodes = extractLdJson(html).filter(
+            (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
+          ).length;
+          appearanceRawCount += boutNodes;
+          appearances.push(...cardAppearances(f, html, now));
+        }
       }
     }
     await wait(PBC_CRAWL_DELAY_MS);
