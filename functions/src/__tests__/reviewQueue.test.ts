@@ -5,6 +5,7 @@
 
 import {
   promoterKey,
+  reviewItemToAppearances,
   reviewItemToFixture,
   ReviewItem,
   validateSubmission,
@@ -139,5 +140,31 @@ describe('nothing unapproved reaches a calendar', () => {
 
   test('promoter keys are stable across spellings', () => {
     expect(promoterKey('Matchroom Boxing')).toBe(promoterKey('matchroom  boxing'));
+  });
+
+  test('every approved bout — undercard included — becomes an appearance', () => {
+    const apps = reviewItemToAppearances(
+      item('confirmed'),
+      '2026-08-02T00:00:00.000Z',
+    );
+    expect(apps).toHaveLength(2);
+    expect(apps.map((a) => a.title)).toEqual([
+      'Mauricio Lara vs Jose Ornelas',
+      'Someone Else vs Another Person',
+    ]);
+    for (const a of apps) {
+      expect(a.parentFixtureId).toBe('review-abc123');
+      expect(a.id.split('-')[0]).toBe('review'); // source attribution holds
+      expect(a.startUtc).toBe('2026-09-12T19:00:00.000Z'); // parent window
+      expect(a.confidence).toBe('provisional');
+      expect(a.followKeys[0]).toBe('review-matchroom-boxing-appearances');
+    }
+    // The undercard fighter is followable — the point of the exercise.
+    expect(apps[1].followKeys).toContain('athlete-another-person');
+  });
+
+  test('unapproved bouts produce no appearances', () => {
+    expect(reviewItemToAppearances(item('provisional'), 'now')).toHaveLength(0);
+    expect(reviewItemToAppearances(item('cancelled'), 'now')).toHaveLength(0);
   });
 });

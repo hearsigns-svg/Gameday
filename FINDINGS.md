@@ -383,3 +383,108 @@ until a connector was actually pointed at them.
 319 sitemap URLs, 300 with a parseable date in the slug, and **one** dated
 today or later. The connector is correct and the coverage is thin — which
 is the argument for the review queue rather than against the connector.
+
+---
+
+## Found during Prompt 5 (individual appearances, 2026-08-02)
+
+### F25 — Tennis draws/order-of-play have no approved source
+usopen.org (the next slam, and the creator-class candidate) resets an
+honest client's TCP stream after the request is sent — three attempts
+(HTTP/2 and HTTP/1.1, genuine DigiCert USTA cert, request fully written)
+produced zero bytes and no status, while a control fetch confirmed the
+network was fine. Its robots.txt is therefore UNKNOWABLE to this client:
+nothing to honour, nothing to circumvent. wtatennis.com permits crawling
+(blanket allow) but its HTML carries no draw or schedule data — only a
+live-scores JSON-LD snapshot with no startDate. The one concrete lead is
+`api.wtatennis.com` (the Pulselive API the WTA site itself runs on),
+which was NOT probed — using it needs an owner ruling first. Until one
+lands, tennis appearances are model-only.
+
+### F26 — ufc.com has full bout data; the standing HTML-soup ruling walls it off
+Every UFC event page server-renders the complete card — full
+given+family names (`c-listing-fight__corner-given-name` /
+`corner-family-name`), per-bout weight class, athlete-page URLs, and
+prelims/main-card timestamps as `data-timestamp` attributes — at a
+15-second crawl-delay with no bot challenge. But there is ZERO
+structured payload: no JSON-LD, no __NEXT_DATA__, no bout data in
+drupal-settings-json. Parsing it means the CSS-class HTML-soup the
+boxing ruling declined, so the 141 surname-only cards (UFC-dominated)
+cannot be fed from ufc.com under current rules despite the data visibly
+existing. Reversing the ruling for this one host (the markup is
+BEM-stable) is an owner decision. bkfc.com: robots.txt permits us but
+sets `Crawl-delay: 86400` — one request per DAY — so its content shape
+is unverified and a compliant connector impractical.
+
+### F27 — World Athletics start-list/timetable payload shapes are unverified
+The routes exist and join our own ids: the calendar payload the
+connector already fetches carries per-meeting `hasStartlist` /
+`hasResults` flags (free discovery), `/competition/calendar-results/
+<id>/entry-list` is a first-class __NEXT_DATA__ route on the same id our
+`wa-<id>` fixtures embed, and championship timetable pages carry
+`eventTimetable` plus real UTC datetimes and a `venueTimezone` the
+calendar lacks. But every meeting reachable during the probe had
+hasStartlist:false and the one in-window championship's timetable was
+unpublished — the POPULATED per-athlete/per-slot shapes were never
+captured, and F22's lesson is that building against an unseen payload is
+how connectors get invented rather than written. Needs one 2-request
+probe in the days before a hasStartlist:true meeting; then the athletics
+consumer can be wired to the appearance model that already handles it.
+
+### F28 — Cross-source combat appearances would not deduplicate
+`isSameFixture` requires the same competition string; a PBC bout
+appearance (`competition: 'Premier Boxing Champions'`) and a
+review-queue bout for the same real fight (`competition: <promoter>`)
+would not merge, so an athlete follower could get two events if both
+sources ever covered one card. Today the overlap is empty by
+construction (PBC cards are not submitted to review), so this is
+recorded rather than engineered around.
+
+### F29 — Stale athlete keys persist on past cards outside re-poll windows
+Prompt 5 moves athlete followKeys from cards to appearances as each
+slice re-polls, but past PBC cards are never re-fetched (the connector's
+7-day lookback) and dead-season TSDB cards are never re-ingested — 78
+cards carried athlete keys at migration time, 10 of them upcoming. The
+stale keys are harmless: the planner's horizon gate never creates events
+for past-start fixtures, frozen ledger entries are never deleted, and
+the cards age out of the 510-hour query lookback on their own. Noted so
+nobody reads the residue as the migration having failed.
+
+### F30 — Appearance retirement's chosen misses
+Retirement (cancel bouts the fresh yield proves gone) is deliberately
+evidence-guarded: a parent retires old appearances only when its fresh
+yield carries ≥1 appearance for that parent. Three gaps follow. (a) A
+withdrawal that empties a one-bout card is never caught — the empty
+yield is indistinguishable from a shape failure, and the guard chooses
+the safe reading. (b) Only parents inside the current fetch window can
+retire (PBC: now−7d forward, ≤12 cards; TSDB: the derivation window) —
+a bout scratched from a card that has left the window keeps its doc.
+(c) Cross-source: a PBC bout and a review-queue bout for the same real
+fight never merge (different competition strings — recorded at F28), so
+retirement on one source cannot touch the other's doc. The systemic
+answer to all three remains Stage 4's reaper. Also noted in passing: a
+decideReview decision of 'cancelled' on a PREVIOUSLY-CONFIRMED item
+publishes nothing and leaves the earlier card fixture scheduled —
+pre-existing, not introduced by Prompt 5.
+
+### F31 — isFollowableName is a word-count proxy, and compound surnames defeat it
+"Machado Garry" is one fighter's compound surname in a UFC title, but
+two words pass `isFollowableName` and mint `athlete-machado-garry` —
+a followable key built from surname-only information, now surfaced in
+search rather than latent on card docs. Fixing it needs name knowledge
+(the fighter-directory work the brief explicitly kept out of this
+stage); until then the conservatism rule has this known hole, inherited
+from Prompt 4 unchanged.
+
+### F32 — One-time rewrites after reinstall and the endUtc compare
+entryMatches now compares endUtc, so ledger entries whose stored end
+differs from the freshly derived one produce one update op each: the
+172 widening multi-day banners (intended), any fixture whose duration
+data changed since its event was created (intended), and — after an iOS
+reinstall — recovered all-day entries whose ends read back in platform
+conventions (unintended but convergent: one rewrite, then the ledger
+holds canonical values). The recovery all-day read-back is the existing
+open MED item from the timezone audit; this widens its one-time cost,
+not its class. The athleteDirectory's `nextStartUtc` is also
+last-write-wins per poll: a multi-promoter athlete's entry reflects
+whichever source polled last — ordering noise in search, nothing more.

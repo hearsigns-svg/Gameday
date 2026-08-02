@@ -37,6 +37,20 @@ export interface SearchTeamHit {
   pollPath?: string;
 }
 
+export interface SearchAthleteHit {
+  key: string; // athlete-<slug> follow key
+  name: string;
+  sportKey: string;
+  // Absent for review-sourced athletes: their fixtures refresh when an
+  // operator decides, not on a poll route.
+  pollPath?: string;
+}
+
+export interface SearchHits {
+  teams: SearchTeamHit[];
+  athletes: SearchAthleteHit[];
+}
+
 async function getJson<T>(path: string): Promise<Result<T>> {
   try {
     const res = await fetch(`${functionsBaseUrl}/${path}`);
@@ -64,18 +78,25 @@ export async function fetchTeams(
   return r.ok ? ok(r.value.teams) : r;
 }
 
-// Federated team search — server-filtered to leagues we actually serve.
-export async function searchTeams(
+// Federated search — teams server-filtered to leagues we actually
+// serve, athletes from the appearance-fed directory.
+export async function searchEntities(
   query: string,
-): Promise<Result<SearchTeamHit[]>> {
-  const r = await getJson<{ teams: SearchTeamHit[] }>(
-    `searchEntities?q=${encodeURIComponent(query)}`,
-  );
-  // A 404 means the route isn't deployed (yet) — degrade to "no team
+): Promise<Result<SearchHits>> {
+  const r = await getJson<{
+    teams: SearchTeamHit[];
+    athletes?: SearchAthleteHit[];
+  }>(`searchEntities?q=${encodeURIComponent(query)}`);
+  // A 404 means the route isn't deployed (yet) — degrade to "no server
   // results" so local sports/competitions keep working; real provider
   // failures and offline stay visible.
   if (!r.ok && r.error.kind === 'provider' && r.error.status === 404) {
-    return ok([]);
+    return ok({ teams: [], athletes: [] });
   }
-  return r.ok ? ok(r.value.teams) : r;
+  // `athletes` may be absent from a server still running the pre-Prompt-5
+  // build; an absent GROUP is a deploy-skew fact, not an empty result
+  // being faked from a failure (the failure path is above and stays loud).
+  return r.ok
+    ? ok({ teams: r.value.teams, athletes: r.value.athletes ?? [] })
+    : r;
 }

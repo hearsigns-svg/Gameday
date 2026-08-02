@@ -44,6 +44,17 @@ export interface Fixture {
   // precision: a nominal time is a real instant we expect to move.
   // Absent ⇒ confirmed.
   confidence?: 'confirmed' | 'provisional';
+  // APPEARANCE fields (Prompt 5). An appearance is a named athlete (or a
+  // bout of two) competing WITHIN a parent event: an undercard bout on a
+  // card, a player in a draw, an athlete on a start list. It is an
+  // ordinary fixture — same id namespace, same ledger path, its own
+  // calendar event — whose id embeds the parent's. While the exact slot
+  // is unknown the appearance carries the PARENT's window with
+  // confidence 'provisional'; a confirmed slot arrives as new
+  // startUtc/timePrecision on the SAME id, so the calendar entry
+  // updates in place instead of duplicating.
+  parentFixtureId?: string; // present ⇒ this fixture is an appearance
+  athletes?: string[]; // display names, first-named first
   firstSeenAt?: string;
   updatedAt: string; // ISO 8601, server write time
 }

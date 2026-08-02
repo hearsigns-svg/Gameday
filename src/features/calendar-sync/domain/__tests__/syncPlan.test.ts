@@ -218,6 +218,53 @@ describe('planSync', () => {
     expect(d?.endUtc).toBe('2023-10-21T14:30:00.000Z');
   });
 
+  test('a duration-ONLY change is an update — endUtc is part of the entry compare', () => {
+    // Same start, same title, same kind, longer event. Before Prompt 5
+    // this produced no op and the calendar kept the stale end forever —
+    // which would also have swallowed a confirmed appearance slot landing
+    // at the same instant as its provisional window.
+    const before = fixture();
+    const after = fixture({ durationHours: 3 });
+    const ledger = { [before.id]: entryFor(before) };
+    const ops = planSync([after], ledger, [LIV], DEFAULT_PREFS, PAST_HORIZON);
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
+    expect(planSync([after], applied(ledger, ops), [LIV], DEFAULT_PREFS, PAST_HORIZON)).toHaveLength(0);
+  });
+
+  test("the all-day pref spans a multi-day TIMED fixture to its real final day", () => {
+    // 96h from 11:30 runs into a fifth calendar day; a banner counted
+    // in day-multiples from midnight stopped a day short.
+    const d = desiredEventFor(
+      fixture({ durationHours: 96 }),
+      { ...DEFAULT_PREFS, eventStyle: 'all-day' },
+    );
+    expect(d).toEqual({
+      title: 'Liverpool v Everton',
+      startUtc: '2023-10-21T00:00:00.000Z',
+      endUtc: '2023-10-26T00:00:00.000Z',
+      allDay: true,
+    });
+  });
+
+  test('a multi-day date_only fixture is a full-width banner without the TBC suffix', () => {
+    const d = desiredEventFor(
+      fixture({
+        timePrecision: 'date_only',
+        startUtc: '2023-07-01T00:00:00.000Z',
+        durationHours: 96,
+        title: 'Surrey v Yorkshire',
+      }),
+      DEFAULT_PREFS,
+    );
+    expect(d).toEqual({
+      title: 'Surrey v Yorkshire',
+      startUtc: '2023-07-01T00:00:00.000Z',
+      endUtc: '2023-07-05T00:00:00.000Z',
+      allDay: true,
+    });
+  });
+
   test('pre-M2 ledger entries (no allDay field) stay idempotent', () => {
     const f = fixture();
     const legacy: LedgerEntry = {

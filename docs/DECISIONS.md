@@ -610,3 +610,120 @@
   `where('status')` beside `orderBy('submittedAt')` needs a composite index,
   and the queue is capped at 200 — not an index worth owning, and it would
   have failed at runtime the first time anyone used the status filter.
+
+## Prompt 5 rulings and decisions (2026-08-02)
+
+- 2026-08-02: AN APPEARANCE IS AN ORDINARY FIXTURE DOC, not a new
+  collection or a new keying scheme. Its id embeds the parent's
+  (`<parentId>-app-<athlete-slugs>`) and is BORN FINAL, so provisional →
+  confirmed reaches the calendar as an in-place update of the same
+  ledger entry — the exact mechanism placeholder-sharpening already
+  uses. Keeping the parent's provider prefix in segment one preserves
+  the two contracts hung on `id.split('-')[0]`: the reconcile
+  same-provider guard (an appearance can never merge with its parent or
+  a sibling) and coverage source attribution.
+- 2026-08-02: ATHLETE KEYS LIVE ONLY ON APPEARANCES. Cards keep their
+  parsed participants for display and identity, but
+  `enrichBoutParticipants` no longer mints follow keys onto them — a
+  fighter's follower must get the BOUT event, not the bout AND the card.
+  A bout is ONE appearance doc carrying both fighters' keys (following
+  either or both yields exactly one event). The full-name rule stands
+  unchanged: surname-only participants are display-only, and a bout with
+  no followable name mints no doc at all. Surname disambiguation is NOT
+  solved by this stage and is not claimed to be.
+- 2026-08-02: APPEARANCE SLICES are `<parent competitionId>-appearances`
+  — carried in followKeys (so ingest's array-contains diff and the
+  coverage join work unchanged) but never offered as a followable. Every
+  combat/PBC poll writes a SECOND sourceRuns record under that slice,
+  ZERO YIELD INCLUDED — a run that parsed nothing must be recorded as
+  such, or the funnel goes dark exactly when the parse dies (PBC's
+  performer array rotting away would have been invisible; instead it
+  reads fetched-N-parsed-0). A failed appearance ingest records against
+  the appearance slice and fails the invocation loudly; the card
+  slice's success record stands, because it is true. The athlete
+  directory write is a SEARCH cache, not fixture truth: its failure is
+  logged and surfaced in the response, never allowed to fail a poll or
+  double-record a slice.
+- 2026-08-02: PBC BOUT NAMES COME FROM performer givenName+familyName,
+  never from the SportsEvent node name and never from the Person `name`.
+  Evidence in the banked capture: node name "Victor Santillan vs Antonio
+  Russell", performer "Gary Antonio Russell" (the node abbreviates), and
+  Person.name embeds nicknames in quotes including an empty `""`. PBC
+  bouts all share the card's start time, so PBC appearances stay
+  PROVISIONAL at the card window — there is no per-bout slot to confirm
+  from this source, and pretending otherwise would be invention.
+- 2026-08-02: date_only FIXTURES SPAN THEIR REAL DAYS. The one-day
+  collapse froze the US Open six hours after day one and banished its
+  remaining fortnight from calendar and query alike. Multi-day banners
+  drop the "— time TBC" suffix (a span is not claiming a missing
+  kick-off; it IS the event's shape). POSTPONED keeps a ONE-day banner
+  on the announced day, but its FREEZE keeps the full span — the freeze
+  end may outlive the event it wrote, never undercut it. The first cut
+  collapsed both, and adversarial review caught the consequence before
+  commit: mid-span postponement made isPast true while the ledgered
+  span entry was not yet end-past, and planSync planned a DELETE of a
+  live tournament's banner — the exact act the horizon rule forbids.
+  Pinned by a regression test. On iOS the all-day end maps to
+  exclusive-end − 24h + 1h — inside the LAST day, clamped to never
+  precede the start — which is the same start+1h it always was for
+  one-day banners.
+- 2026-08-02: AN ALL-DAY SPAN IS JUDGED BY ITS END, both at the create
+  gate and in the snapshot. The planner's never-create-the-past gate
+  keyed on the day-one sentinel, which made a live fortnight tournament
+  uncreatable for anyone who followed (or reinstalled) after day one,
+  and upcomingSnapshot's start-based filter hid it from Home/Schedule
+  for everyone. Both now use the fixture's END — the same rule the
+  freeze already uses: upcoming means not yet finished.
+- 2026-08-02: APPEARANCES THE FRESH YIELD PROVES GONE ARE RETIRED — set
+  to 'cancelled' (the status the pipeline already propagates to
+  followers as event removal, with change records fanning the push
+  out), never deleted. THE EVIDENCE GUARD: a parent may only retire its
+  old appearances when its fresh yield carries at least one appearance
+  for that same parent — an empty yield proves nothing, because a
+  provider shape failure must never be read as "every bout was
+  scratched". The accepted miss: a withdrawal that empties a one-bout
+  card is not caught (recorded as F30).
+- 2026-08-02: ATHLETE FOLLOWS NEVER FIRE THE ONE-SHOT PREVIEW/FOLLOW
+  POLL. Their appearance docs exist by construction (search only offers
+  athletes with a future appearance already in the cache), and the
+  pollPath they carry can be a whole-source crawl — pollPbc walks card
+  pages at a 10-second crawl delay, which must not run because somebody
+  opened a fighter's page. The path still registers with the device so
+  the sweep keeps the slice fresh. Directory pollPaths are also passed
+  through canonicalisePollPath before being stored, so a season-less
+  manual poll can never seed devices with a route the sweep would
+  silently drop.
+- 2026-08-02: entryMatches COMPARES endUtc. A duration-only change —
+  a widened tournament span, a confirmed slot at the same instant as its
+  provisional window — produced NO op before this, and the calendar kept
+  the stale end forever. Cost: a one-time update op per ledgered event
+  whose stored end differs from the newly-derived one (the 172 widening
+  banners, plus any duration corrections since creation).
+- 2026-08-02: TENNIS DRAWS/ORDER-OF-PLAY HAVE NO APPROVED SOURCE.
+  usopen.org resets an honest client's connection at the network edge
+  before robots.txt can even be served — its policy is unknowable to us,
+  so there is nothing to honour or circumvent, and we walk away.
+  api.wtatennis.com (the Pulselive API wtatennis.com itself runs on; the
+  site's robots.txt is a blanket allow) is the one concrete candidate
+  and NEEDS AN OWNER RULING before anyone probes it. The appearance
+  model for tennis ships tested against synthetic draws; the connector
+  waits.
+- 2026-08-02: ufc.com IS NOT PARSED despite carrying full bout data with
+  full names — it is served exclusively as CSS-classed HTML (zero
+  JSON-LD, zero embedded JSON), which is the HTML-soup class the boxing
+  ruling declined. Reversing that for this one host is an owner call,
+  not an engineering one. bkfc.com robots.txt sets `Crawl-delay: 86400`
+  — one request per day — so its content shape is UNVERIFIED and a
+  compliant connector is impractical; honoured literally, same as PBC's.
+- 2026-08-02: WORLD ATHLETICS START LISTS ARE NOT PARSED YET. The routes
+  exist and are keyed by the same id our `wa-<id>` fixtures already
+  carry (`/competition/calendar-results/<id>/entry-list`, plus
+  championship timetable pages whose microsite events expose real UTC
+  datetimes and a venueTimezone), robots is a blanket allow, and the
+  calendar payload we already fetch carries per-meeting
+  hasStartlist/hasTimetable discovery flags for free. But every meeting
+  reachable during investigation had them false, so the POPULATED
+  per-athlete shapes were never captured — and building a parser against
+  an unseen payload is the exact mistake F22 recorded. One 2-request
+  probe near a meeting day closes it; until then athletics appearances
+  are model-only, honestly.

@@ -12,7 +12,9 @@
 
 import { Fixture } from '../../fixtures/domain/fixture';
 import {
+  dateOnlySpanDays,
   eventEndUtc,
+  fixtureEndUtc,
   isBeyondRetention,
   isEndPast,
   isPast,
@@ -69,9 +71,9 @@ function dayStartUtc(iso: string): string {
   ).toISOString();
 }
 
-function nextDayUtc(dayIso: string): string {
+function addDaysUtc(dayIso: string, days: number): string {
   const d = new Date(dayIso);
-  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString();
 }
 
@@ -86,18 +88,19 @@ export function desiredEventFor(
   const matchTitle = f.title;
   if (f.status === 'cancelled') return null;
 
-  const allDayFor = (suffix: string): DesiredEvent => {
+  const allDayFor = (suffix: string, days = 1): DesiredEvent => {
     const day = dayStartUtc(f.startUtc);
     return {
       title: suffix ? `${matchTitle} — ${suffix}` : matchTitle,
       startUtc: day,
-      endUtc: nextDayUtc(day),
+      endUtc: addDaysUtc(day, days),
       allDay: true,
     };
   };
 
   // A postponement carries the OLD day and no new time. The day is the
-  // only honest thing left to show.
+  // only honest thing left to show — deliberately ONE day, whatever the
+  // fixture's normal span.
   if (f.status === 'postponed') return allDayFor('postponed');
 
   const precision = timePrecisionOf(f);
@@ -106,10 +109,33 @@ export function desiredEventFor(
   // genuinely do not know the time; using it for a time that merely is not
   // settled cost 3,011 fixtures their kick-off, including 380 of 380 in
   // the Premier League, and cost every one of them its reminder.
-  if (precision === 'date_only') return allDayFor('time TBC');
+  //
+  // A date_only fixture spans its real days (a 15-day tournament is a
+  // 15-day banner, not a banner on day one). Multi-day spans drop the
+  // "time TBC" suffix: a span is not claiming a missing kick-off, it IS
+  // the event's honest shape.
+  if (precision === 'date_only') {
+    const days = dateOnlySpanDays(f.durationHours);
+    return allDayFor(days > 1 ? '' : 'time TBC', days);
+  }
 
-  // The user asked for all-day events regardless.
-  if (prefs.eventStyle === 'all-day') return allDayFor('');
+  // The user asked for all-day events regardless; span multi-day
+  // fixtures here too. Days are counted from the fixture's REAL timed
+  // end, not from a midnight-based day count — a 96h match starting at
+  // 10:00 runs into a fifth calendar day, and a banner that stops a day
+  // short is wrong on the day it matters most.
+  if (prefs.eventStyle === 'all-day') {
+    const day = dayStartUtc(f.startUtc);
+    const days = Math.max(
+      1,
+      Math.ceil(
+        (Date.parse(eventEndUtc(f.startUtc, f.durationHours)) -
+          Date.parse(day)) /
+          86_400_000,
+      ),
+    );
+    return allDayFor('', days);
+  }
 
   return {
     title: matchTitle,
@@ -126,6 +152,11 @@ export function desiredEventFor(
 function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
   return (
     entry.startUtc === desired.startUtc &&
+    // endUtc joined the compare in Prompt 5: without it a change ONLY to
+    // an event's duration — a confirmed appearance slot at the same
+    // instant as its provisional window, a widened tournament span —
+    // produced no op and the calendar kept the stale end forever.
+    entry.endUtc === desired.endUtc &&
     entry.title === desired.title &&
     (entry.allDay ?? false) === desired.allDay
   );
@@ -176,8 +207,12 @@ export function planSync(
     // The product is upcoming games: a finished season must never pour
     // hundreds of past fixtures into the calendar. Events we already
     // created stay put as they age — erasing someone's history would be
-    // worse than leaving it.
-    if (desired.startUtc < horizonStartUtc && !ledger[f.id]) continue;
+    // worse than leaving it. An all-day SPAN is judged by its end, not
+    // its first day: a fortnight tournament followed on day five is
+    // live, not history, and keying on the day-one sentinel made it
+    // uncreatable for anyone who followed (or reinstalled) mid-event.
+    const createCutoff = desired.allDay ? desired.endUtc : desired.startUtc;
+    if (createCutoff < horizonStartUtc && !ledger[f.id]) continue;
     wanted.set(f.id, { fixture: f, desired });
   }
 
@@ -303,7 +338,13 @@ export function upcomingSnapshot(
   return fixtures
     .filter(
       (f) =>
-        f.startUtc >= horizonStartUtc && desiredEventFor(f, prefs) !== null,
+        // "Upcoming" means NOT YET FINISHED — the same end-based rule as
+        // the freeze, so day five of a Slam does not vanish from Home
+        // while its calendar banner spans the fortnight. (For a 2h match
+        // this differs from the old start-based cut by minutes; for a
+        // multi-day span it is the difference between present and gone.)
+        fixtureEndUtc(f) > horizonStartUtc &&
+        desiredEventFor(f, prefs) !== null,
     )
     .sort((a, b) => a.startUtc.localeCompare(b.startUtc))
     .slice(0, cap)

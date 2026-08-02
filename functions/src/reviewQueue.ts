@@ -24,6 +24,7 @@
 // docs/PLAN.md.
 
 import { Firestore } from 'firebase-admin/firestore';
+import { boutAppearance } from './appearances';
 import { Fixture } from './fixture';
 import { normaliseName } from './identity';
 
@@ -170,6 +171,23 @@ export function reviewItemToFixture(
     confidence: 'provisional',
     updatedAt,
   };
+}
+
+// Every bout on a CONFIRMED card — main, co-main and undercard alike —
+// becomes an appearance doc, which is the whole point of collecting
+// bouts in the queue: a fighter on the prelims is followable the same
+// way the headliner is. Bouts whose fighters are both surname-only
+// yield nothing (no followable name, no doc), matching the standing
+// conservatism rule.
+export function reviewItemToAppearances(
+  item: ReviewItem,
+  updatedAt: string,
+): Fixture[] {
+  const parent = reviewItemToFixture(item, updatedAt);
+  if (!parent) return [];
+  return item.bouts
+    .map((b) => boutAppearance(parent, b, updatedAt))
+    .filter((a): a is Fixture => a !== null);
 }
 
 export async function submitReviewItem(

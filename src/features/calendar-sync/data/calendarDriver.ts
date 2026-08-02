@@ -543,11 +543,24 @@ function toEventDetails(input: EventInput) {
   // CalendarContract convention). EventKit treats the end date's DAY as
   // INCLUSIVE — passing next-midnight made every one-day placeholder
   // render as a two-day banner on iOS (verified in the sim's calendar
-  // store: 00:00 → next day 23:59:59). On iOS the end must stay inside
-  // the SAME day; EventKit snaps it to end-of-day itself.
+  // store: 00:00 → next day 23:59:59). On iOS the end must land inside
+  // the LAST day of the span (exclusive end − 24h, plus an hour so it is
+  // unambiguously within the day); EventKit snaps it to end-of-day
+  // itself. For a one-day span this is the same start+1h it always was;
+  // multi-day date_only spans (Prompt 5: tournaments, meetings, the
+  // provisional appearance window) keep their full width on both
+  // platforms.
+  // Clamped to start+1h: a recovered ledger entry can carry a
+  // degenerate endUtc (recovery reads all-day ends back in platform
+  // conventions), and end-before-start must never reach a native write.
   const allDayEnd =
     Platform.OS === 'ios'
-      ? new Date(new Date(input.startUtc).getTime() + 3_600_000)
+      ? new Date(
+          Math.max(
+            new Date(input.endUtc).getTime() - 86_400_000 + 3_600_000,
+            new Date(input.startUtc).getTime() + 3_600_000,
+          ),
+        )
       : new Date(input.endUtc);
   return {
     title: input.title,

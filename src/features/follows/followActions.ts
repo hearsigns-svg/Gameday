@@ -11,6 +11,14 @@ import { pinFollowKeys, pinPollPaths } from '../calendar-sync/data/pinStore';
 // Exported for the team-preview screen: seeing a team's fixtures
 // before following requires the same one-shot poll a follow performs.
 export async function ensurePolled(item: Followable): Promise<Result<true>> {
+  // Athlete follows never fire the one-shot poll. Their appearance docs
+  // already exist by construction — search only offers athletes with a
+  // future appearance in the cache — and the pollPath they carry can be
+  // a whole-source crawl (pollPbc walks card pages at a 10s crawl
+  // delay), which must not run because somebody opened a fighter's
+  // page. The path still registers with the device so the sweep keeps
+  // the slice fresh.
+  if (item.type === 'athlete') return ok(true);
   const path = pollPathFor(item);
   // Nothing to poll is not a failure. The follow still stands, and it
   // still matches whatever is already in the cache.

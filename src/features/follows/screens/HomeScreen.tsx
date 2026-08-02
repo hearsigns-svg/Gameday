@@ -184,7 +184,7 @@ export default function HomeScreen({ navigation }: Props) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Search teams, competitions and sports"
+        accessibilityLabel="Search teams, athletes, competitions and sports"
         onPress={() => navigation.navigate('Search')}
         style={({ pressed }) => [
           styles.searchBar,
@@ -193,7 +193,7 @@ export default function HomeScreen({ navigation }: Props) {
         ]}
       >
         <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
-          🔍  Team, competition or sport
+          🔍  Team, athlete, competition or sport
         </Text>
       </Pressable>
 

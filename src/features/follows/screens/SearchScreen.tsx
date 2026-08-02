@@ -29,7 +29,8 @@ import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   fetchLeagues,
-  searchTeams,
+  searchEntities,
+  SearchAthleteHit,
   SearchTeamHit,
 } from '../data/directoryRepo';
 import { isFollowed, Followable } from '../data/followStore';
@@ -41,7 +42,7 @@ type Props = RootScreenProps<'Search'>;
 const DEBOUNCE_MS = 350;
 
 interface Row {
-  kind: 'sport' | 'competition' | 'team';
+  kind: 'sport' | 'competition' | 'team' | 'athlete';
   key: string;
   title: string;
   caption: string;
@@ -102,6 +103,7 @@ export default function SearchScreen({ navigation }: Props) {
   const [query, setQuery] = useState('');
   const [soccerLeagues, setSoccerLeagues] = useState<DirectoryLeague[]>([]);
   const [teams, setTeams] = useState<SearchTeamHit[]>([]);
+  const [athletes, setAthletes] = useState<SearchAthleteHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -124,6 +126,7 @@ export default function SearchScreen({ navigation }: Props) {
     if (q.length < 2) {
       requestSeq.current++; // invalidate any in-flight search
       setTeams([]);
+      setAthletes([]);
       setSearching(false);
       setError(null);
       return;
@@ -132,14 +135,16 @@ export default function SearchScreen({ navigation }: Props) {
     const seq = ++requestSeq.current;
     const timer = setTimeout(() => {
       void (async () => {
-        const r = await searchTeams(q);
+        const r = await searchEntities(q);
         if (seq !== requestSeq.current) return; // stale response
         setSearching(false);
         if (r.ok) {
-          setTeams(r.value);
+          setTeams(r.value.teams);
+          setAthletes(r.value.athletes);
           setError(null);
         } else {
           setTeams([]);
+          setAthletes([]);
           setError(messageOf(r.error));
         }
       })();
@@ -188,6 +193,20 @@ export default function SearchScreen({ navigation }: Props) {
           : {}),
       },
     }));
+    const athleteRows: Row[] = athletes.map((hit) => ({
+      kind: 'athlete',
+      key: hit.key,
+      title: hit.name,
+      caption: `Athlete · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
+      sportKey: hit.sportKey,
+      followable: {
+        key: hit.key,
+        label: hit.name,
+        sportKey: hit.sportKey,
+        type: 'athlete' as const,
+        ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
+      },
+    }));
     // Competition dedupe: config cups also appear in the soccer
     // directory under the same key.
     const seen = new Set<string>();
@@ -196,10 +215,11 @@ export default function SearchScreen({ navigation }: Props) {
     );
     return [
       { title: 'Teams', data: teamRows },
+      { title: 'Athletes', data: athleteRows },
       { title: 'Competitions', data: compRows },
       { title: 'Sports', data: sports },
     ].filter((s) => s.data.length > 0);
-  }, [query, teams, soccerLeagues]);
+  }, [query, teams, athletes, soccerLeagues]);
 
   const toggle = useCallback(
     async (row: Row) => {
@@ -228,8 +248,8 @@ export default function SearchScreen({ navigation }: Props) {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <TextInput
-        accessibilityLabel="Search teams, competitions and sports"
-        placeholder="Team, competition or sport"
+        accessibilityLabel="Search teams, athletes, competitions and sports"
+        placeholder="Team, athlete, competition or sport"
         placeholderTextColor={t.textSecondary}
         value={query}
         onChangeText={setQuery}
@@ -283,12 +303,19 @@ export default function SearchScreen({ navigation }: Props) {
                 crestUrl={item.crestUrl}
                 accessibilityLabel={`${item.title}, ${item.caption}`}
                 onPress={
-                  item.kind === 'team' && item.followable
+                  (item.kind === 'team' || item.kind === 'athlete') &&
+                  item.followable
                     ? () =>
                         navigation.navigate('Team', {
                           teamKey: item.followable!.key,
                           name: item.title,
                           sportKey: item.sportKey,
+                          // An athlete opened from search must stay an
+                          // athlete through re-follow — TeamScreen
+                          // defaults the type to 'team' otherwise.
+                          ...(item.kind === 'athlete'
+                            ? { followType: 'athlete' as const }
+                            : {}),
                           ...(item.followable!.pollPath
                             ? { pollPath: item.followable!.pollPath }
                             : {}),

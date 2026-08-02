@@ -1,18 +1,30 @@
 // Premier Boxing Champions — the one boxing promoter with structured data.
 //
 // PBC publishes JSON-LD `SportsEvent` on every card page, and a sitemap
-// enumerating all of them. Verified live 2026-07-31: 319 card URLs, and
-// the August 22 card carries four SportsEvent blocks — ONE PER BOUT, all
-// sharing the card's start time.
+// enumerating all of them. Verified live 2026-07-31 and re-verified
+// 2026-08-02 (payload banked in __tests__/fixtures/pbc-sample.html): the
+// August 22 card carries four SportsEvent nodes — ONE PER BOUT, main
+// event first, all sharing the card's start time, each with a
+// `performer` array of two Person nodes carrying givenName/familyName.
 //
-// We take the CARD, not the bouts. Bout-level granularity is Prompt 5's
-// problem; a card is one thing a person attends or watches, and four
-// calendar entries at the same time for one night of boxing is noise.
-// The main event is the first block and gives the card its title.
+// The CARD is still the fixture a promoter-follower gets — four calendar
+// entries at the same time for one night of boxing is noise. Since
+// Prompt 5 the OTHER nodes stop being discarded: every bout becomes an
+// APPEARANCE doc (appearances.ts), which is how a fighter on the prelims
+// stops being invisible. No extra requests — the bouts ride the page we
+// already fetch.
+//
+// Names come from performer givenName+familyName, NOT the node's `name`:
+// the captured card's third bout is named "Victor Santillan vs Antonio
+// Russell" while its performer is "Gary Antonio Russell" — the node name
+// abbreviates, the Person record does not. (The Person `name` field
+// itself embeds nicknames in quotes, including an empty `""` when the
+// fighter has none, so it is not used either.)
 //
 // robots.txt allows every path we touch and asks for `Crawl-delay: 10`,
 // which we honour — see PBC_CRAWL_DELAY_MS.
 
+import { appearanceFor } from '../appearances';
 import { Fixture } from '../fixture';
 import { ProviderFetch } from './fetchResult';
 
@@ -27,6 +39,13 @@ export const PBC_CRAWL_DELAY_MS = 10_000;
 export const USER_AGENT =
   'KickOffCal/1.0 (+https://kickoffcal.app; calendar sync; contact hearsigns@gmail.com)';
 
+export interface LdPerson {
+  '@type'?: string;
+  name?: string; // embeds the nickname in quotes — do not use
+  givenName?: string;
+  familyName?: string;
+}
+
 export interface LdSportsEvent {
   '@type'?: string;
   name?: string;
@@ -35,6 +54,7 @@ export interface LdSportsEvent {
   url?: string;
   eventStatus?: string;
   location?: { name?: string } | string;
+  performer?: LdPerson[];
 }
 
 // Card URLs carry their date in the slug: `fight-night-august-22-2026`.
@@ -123,14 +143,60 @@ export function cardToFixture(
   };
 }
 
+// One fighter's name from a performer node. givenName+familyName is the
+// authoritative pair (see header); a node missing either is unusable.
+function performerName(p: LdPerson): string | null {
+  const given = p.givenName?.trim();
+  const family = p.familyName?.trim();
+  return given && family ? `${given} ${family}` : null;
+}
+
+// Every bout on a card page → appearance docs against the card fixture.
+// One SportsEvent node per bout, main event first; a node whose
+// performers cannot both be named contributes nothing (no invented
+// names, no half-parsed bouts).
+export function cardAppearances(
+  card: Fixture,
+  html: string,
+  updatedAt: string,
+): Fixture[] {
+  const events = extractLdJson(html).filter(
+    (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
+  );
+  const out: Fixture[] = [];
+  for (const e of events) {
+    const performers = (e.performer ?? []).map(performerName);
+    if (performers.length !== 2 || performers.some((n) => n === null)) {
+      continue;
+    }
+    const [first, second] = performers as [string, string];
+    const a = appearanceFor(card, {
+      athletes: [first, second],
+      title: `${first} vs ${second}`,
+      updatedAt,
+    });
+    if (a) out.push(a);
+  }
+  return out;
+}
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export interface PbcFetch extends ProviderFetch {
+  // Bout-level appearance docs, built from the SAME page fetches as the
+  // cards — ingested under their own slice by the caller.
+  appearances: Fixture[];
+  // Funnel stage A for the appearance slice: bout nodes seen on fetched
+  // pages, before the both-fighters-named and followable-name gates.
+  appearanceRawCount: number;
+}
 
 // Fetch the sitemap, then only the cards that have not already happened.
 // Honours the crawl delay between page fetches.
 export async function fetchPbcCards(
   fromDate: string, // ISO date; cards before this are not fetched
   maxCards = 12,
-): Promise<ProviderFetch> {
+): Promise<PbcFetch> {
   const res = await fetch(SITEMAP, { headers: { 'User-Agent': USER_AGENT } });
   if (!res.ok) throw new Error(`pbc http ${res.status}`);
   const urls = parseSitemapUrls(await res.text());
@@ -145,13 +211,23 @@ export async function fetchPbcCards(
   });
   const now = new Date().toISOString();
   const fixtures: Fixture[] = [];
+  const appearances: Fixture[] = [];
+  let appearanceRawCount = 0;
   for (const url of candidates.slice(0, maxCards)) {
     const page = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
     if (page.ok) {
-      const f = cardToFixture(url, await page.text(), now);
-      if (f) fixtures.push(f);
+      const html = await page.text();
+      const f = cardToFixture(url, html, now);
+      if (f) {
+        fixtures.push(f);
+        const boutNodes = extractLdJson(html).filter(
+          (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
+        ).length;
+        appearanceRawCount += boutNodes;
+        appearances.push(...cardAppearances(f, html, now));
+      }
     }
     await wait(PBC_CRAWL_DELAY_MS);
   }
-  return { rawCount: candidates.length, fixtures };
+  return { rawCount: candidates.length, fixtures, appearances, appearanceRawCount };
 }

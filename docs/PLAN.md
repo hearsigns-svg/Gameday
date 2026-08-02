@@ -644,3 +644,91 @@ an LLM provider key and a budget decision — not made here.
 
 501 tests green under UTC and America/Los_Angeles.
 
+### Prompt 5 — Individual appearances  [x]
+
+One model, three consumers. Deployment verified first: all 24 functions
+live, the composite index live, both TTLs on.
+
+- **The appearance model** (`functions/src/appearances.ts`): a named
+  athlete competing within a parent event, as an ORDINARY fixtures doc.
+  Id = `<parentId>-app-<athlete-slugs>` — born final, so provisional →
+  confirmed is always an in-place update against the same ledger entry;
+  first id segment stays the parent's provider, which keeps the
+  reconcile same-provider guard and coverage source attribution for
+  free. Athlete followKeys (`athlete-<slug>`, full names only) live ONLY
+  on appearances; combat cards keep parsed participants but SHED their
+  athlete keys — a fighter's follower gets the bout, never bout + card.
+  Each appearance slice ingests under `<competitionId>-appearances`
+  (non-followable, rides followKeys so the slice diff and coverage join
+  work unchanged) and writes its own sourceRuns record.
+- **Boxing** — PBC card pages already carried one JSON-LD SportsEvent
+  PER BOUT (four on the banked Aug 22 card); every bout is now an
+  appearance, named from `performer` givenName+familyName (the node
+  name abbreviates: "Antonio Russell" vs performer "Gary Antonio
+  Russell" — caught by the banked capture). Zero extra requests. The
+  review queue converts every APPROVED bout — undercard included — via
+  `reviewItemToAppearances`. TSDB combat slices derive the headline
+  bout from full-named titles (UFC's surname titles honestly yield
+  nothing), windowed to now−7d forward so season re-polls never mint
+  appearances for finished bouts. PBC contract test now exists, pinned
+  to the banked capture (a Prompt 4 gap).
+- **Tennis and athletics** — the MODEL is live and tested for both
+  (provisional parent-window banner → confirmed exact slot); live
+  acquisition is NOT IMPLEMENTED: tennis draws/order-of-play have NO
+  approved source (F25 — usopen.org drops honest clients at the TCP
+  edge; api.wtatennis.com is the candidate, needs an owner ruling), and
+  World Athletics start-list/timetable ROUTES exist keyed by our own
+  `wa-<id>` but their populated payload shapes are unverified (F27 —
+  building the parser blind is the exact F22 mistake; one 2-request
+  probe near a meeting day closes it).
+- **Multi-day date_only fixtures now span their real days.** Before
+  this stage `fixtureEndUtc` collapsed every day sentinel to ONE day:
+  a 15-day US Open froze (and left the query window) six hours after
+  day one ended. Now the banner spans the window (multi-day spans drop
+  the "— time TBC" suffix — a span is not claiming a missing kick-off),
+  `entryMatches` gained endUtc (duration-only changes propagate; they
+  silently never did), and the iOS all-day end maps to the last day of
+  the span. Postponed stays a one-day banner, and `fixtureEndUtc`
+  matches the planner's end in every case (pinned). 172 future-dated
+  banners widen on next sync (78 tennis, 64 athletics, 30 cricket).
+- **Athlete follows exist in the UI**: `searchEntities` gained an
+  athletes group backed by an `athleteDirectory` collection written
+  through at appearance ingest (server-only, filtered to athletes with
+  a future appearance); SearchScreen shows an Athletes section and
+  opens/creates `type: 'athlete'` follows carrying the parent slice's
+  pollPath. Zero athlete follows existed before this stage (the type
+  was declared, unpopulated), so the card→appearance key migration
+  strands nobody.
+- MEASURED against production 2026-08-02T16:07Z, read-only: 234 combat
+  cards (42 upcoming), 78 cards carrying 141 distinct athlete keys that
+  will shed to appearances as each slice re-polls, 0 appearance docs
+  yet, 5,642 future-dated fixtures. Past PBC cards outside the 7-day
+  fetch window keep their stale athlete keys until they age out of the
+  510h query lookback — harmless (horizon gates), noted.
+- ADVERSARIAL REVIEW ROUND (pre-commit, 7 lenses / 27 findings / all
+  verified): caught one genuine horizon-rule violation the first cut
+  introduced — collapsing a POSTPONED fixture's freeze to one day while
+  its ledger entry spanned the window made planSync DELETE a live
+  tournament's banner on a mid-span postponement flip. Fixed (freeze
+  keeps the span; banner stays one day; regression-pinned) along with:
+  the create gate and Home/Schedule snapshot now judge all-day spans by
+  their END (a mid-span follow creates the live tournament; day five of
+  a Slam no longer vanishes from Home); appearances the fresh yield
+  proves gone are RETIRED to 'cancelled' with change records fanning
+  the push (evidence-guarded — an empty yield proves nothing; misses
+  recorded as F30); zero-yield appearance polls now write their run
+  record (fetched-N-parsed-0 is how PBC performer-array rot stays
+  visible); cancelled bouts no longer feed the athlete directory;
+  directory pollPaths are canonicalised (a season-less manual poll
+  could seed a sweep-rejected route); athlete follows never fire the
+  one-shot preview poll (opening a fighter's page must not launch a
+  2-minute PBC crawl); the iOS all-day end is clamped ≥ start+1h
+  (degenerate recovered entries); the all-day pref spans multi-day
+  TIMED fixtures to their real final day; Home's search copy includes
+  athletes.
+- 548 tests green under UTC and America/Los_Angeles; typecheck and the
+  functions build clean.
+- OWED (owner commands, see the Prompt 5 report): redeploy functions.
+  No new indexes, no rules changes, no new routes (POLL_ROUTES
+  unchanged — appearances ride existing polls).
+

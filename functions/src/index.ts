@@ -3,11 +3,22 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { sweepAll } from './sweep';
+import { canonicalisePollPath, sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
-import { enrichBoutParticipants } from './participants';
-import { searchTeams } from './search';
+import {
+  appearanceSliceKey,
+  deriveBoutAppearances,
+  retiredAppearanceIds,
+} from './appearances';
+import { normaliseName } from './identity';
+import {
+  athleteKey,
+  enrichBoutParticipants,
+  isFollowableName,
+  namesPeople,
+} from './participants';
+import { searchAthletes, searchTeams } from './search';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
@@ -17,6 +28,7 @@ import { loadFdSeasons } from './fdSeasons';
 import {
   listReviewItems,
   ReviewItem,
+  reviewItemToAppearances,
   reviewItemToFixture,
   ReviewStatus,
   submitReviewItem,
@@ -156,6 +168,116 @@ async function ingest(
   };
 }
 
+// The athlete directory search reads: one doc per followable athlete,
+// written through whenever a poll ingests appearances. `nextStartUtc` is
+// the soonest FUTURE appearance seen for the athlete this poll — search
+// filters on it, so an athlete with nothing upcoming stops being
+// offered rather than becoming a follow that matches nothing.
+async function upsertAthleteDirectory(
+  appearances: Fixture[],
+  // Review-sourced appearances have no poll route — they refresh only
+  // when an operator decides — so the directory entry carries no path.
+  pollPath: string | null,
+): Promise<void> {
+  const at = new Date().toISOString();
+  const byKey = new Map<
+    string,
+    { name: string; sportKey: string; nextStartUtc: string }
+  >();
+  for (const f of appearances) {
+    if (f.startUtc < at) continue;
+    // A cancelled bout is not an upcoming appearance — search must not
+    // offer an athlete whose follow would deliver nothing.
+    if (f.status === 'cancelled' || f.status === 'postponed') continue;
+    for (const name of f.athletes ?? []) {
+      if (!isFollowableName(name)) continue;
+      const key = athleteKey(name);
+      const prev = byKey.get(key);
+      if (!prev || f.startUtc < prev.nextStartUtc) {
+        byKey.set(key, { name, sportKey: f.sport, nextStartUtc: f.startUtc });
+      }
+    }
+  }
+  if (byKey.size === 0) return;
+  // Only a sweep-valid path may reach the directory: a search hit's
+  // pollPath becomes a device-registered route, and the sweep silently
+  // DROPS routes the allowlist rejects (a season-less manual poll echoes
+  // `season=` into runCtx.pollPath, which the allowlist refuses).
+  const canonicalPath = pollPath ? canonicalisePollPath(pollPath) : null;
+  let batch = db.batch();
+  let pending = 0;
+  for (const [key, v] of byKey) {
+    batch.set(
+      db.collection('athleteDirectory').doc(key),
+      {
+        key,
+        name: v.name,
+        sportKey: v.sportKey,
+        searchName: normaliseName(v.name),
+        ...(canonicalPath ? { pollPath: canonicalPath } : {}),
+        nextStartUtc: v.nextStartUtc,
+        updatedAt: at,
+      },
+      { merge: true },
+    );
+    if (++pending >= 450) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  }
+  if (pending > 0) await batch.commit();
+}
+
+// Cancel previously-stored appearances that this yield proves gone
+// (opponent replaced, bout scratched) — see retiredAppearanceIds for the
+// evidence guard that keeps a provider shape failure from cancelling
+// real bouts. Cancellation, not deletion: 'cancelled' is the status the
+// pipeline already propagates to followers as event removal, and the
+// change records written here are what fan the push out to them.
+async function retireAppearances(
+  sliceKey: string,
+  incoming: Fixture[],
+): Promise<number> {
+  const snap = await db
+    .collection('fixtures')
+    .where('followKeys', 'array-contains', sliceKey)
+    .get();
+  const existing = snap.docs.map((d) => d.data() as Fixture);
+  const at = new Date().toISOString();
+  const ids = retiredAppearanceIds(existing, incoming, at);
+  if (ids.length === 0) return 0;
+  const byId = new Map(existing.map((f) => [f.id, f]));
+  let batch = db.batch();
+  let pending = 0;
+  const flush = async () => {
+    if (pending > 0) {
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    }
+  };
+  for (const id of ids) {
+    const prev = byId.get(id)!;
+    batch.update(db.collection('fixtures').doc(id), {
+      status: 'cancelled',
+      updatedAt: at,
+    });
+    if (++pending >= 450) await flush();
+    batch.set(db.collection('fixtureChanges').doc(), {
+      kind: 'status_changed',
+      fixtureId: id,
+      prevStatus: prev.status,
+      newStatus: 'cancelled',
+      at,
+      followKeys: prev.followKeys ?? [],
+    });
+    if (++pending >= 450) await flush();
+  }
+  await flush();
+  return ids.length;
+}
+
 // One connector invocation, instrumented. Every exit — success, provider
 // failure, or an honest empty season — writes exactly one sourceRuns doc,
 // so "it ran and found nothing" and "it never ran" stop looking alike.
@@ -171,6 +293,12 @@ interface PollWork {
   // sweep never got to it. Distinct from an error, which means a provider
   // failed us.
   reason?: RunReason;
+  // Appearance docs riding the same connector invocation, ingested under
+  // their own slice key so (a) promoter/series followers are never
+  // flooded with per-bout events, and (b) coverage reports the
+  // appearance funnel separately from the card funnel. One extra
+  // sourceRuns doc per invocation that carries appearances.
+  appearances?: { followKey: string; rawCount: number; fixtures: Fixture[] };
   body?: Record<string, unknown>; // extra response fields
 }
 
@@ -204,6 +332,68 @@ async function servePoll(
       },
       startedAt,
     );
+    // Appearances are a SECOND slice of the same invocation: their own
+    // ingest diff, their own run record, retirement of bouts the fresh
+    // yield proves gone, and a write-through to the athlete directory
+    // that search reads. The record is written EVEN ON ZERO YIELD —
+    // "ran and parsed nothing" going unrecorded is exactly how the PBC
+    // performer array could rot away invisibly (fetched N, parsed 0 is
+    // the funnel saying so). A failure here is recorded against the
+    // APPEARANCE slice — the card slice genuinely succeeded and its
+    // record already says so — and fails the invocation loudly so the
+    // sweep retries it.
+    let appearanceBody: Record<string, unknown> = {};
+    if (w.appearances) {
+      const a = w.appearances;
+      try {
+        const aIngested = await ingest(a.fixtures, a.followKey);
+        const aCounts = countsFrom(
+          { fetched: a.rawCount, ...aIngested.counts },
+          a.fixtures,
+          startedAt,
+        );
+        await recordSourceRun(
+          { ...runCtx, competitionId: a.followKey },
+          {
+            httpStatus: 200,
+            seasonResolved: w.seasonResolved,
+            seasonsTried: trace.seasonsTried,
+            counts: aCounts,
+            error: null,
+          },
+          startedAt,
+        );
+        const retired = await retireAppearances(a.followKey, a.fixtures);
+        appearanceBody = {
+          appearances: aIngested.fixtures,
+          appearanceChanges: aIngested.changes,
+          appearanceRetired: retired,
+        };
+      } catch (e) {
+        await recordSourceRun(
+          { ...runCtx, competitionId: a.followKey },
+          {
+            httpStatus: httpStatusFromError(e),
+            seasonResolved: w.seasonResolved,
+            seasonsTried: trace.seasonsTried,
+            counts: EMPTY_COUNTS,
+            error: String(e),
+          },
+          startedAt,
+        );
+        return { status: 502, body: { error: `appearances: ${String(e)}` } };
+      }
+      // The directory is a SEARCH cache, not fixture truth: its failure
+      // is logged loudly and surfaced, never allowed to fail a poll
+      // whose fixtures are already safely stored — and never allowed to
+      // double-record the slice it follows.
+      try {
+        await upsertAthleteDirectory(a.fixtures, runCtx.pollPath);
+      } catch (e) {
+        console.error(`athleteDirectory upsert failed for ${a.followKey}:`, e);
+        appearanceBody = { ...appearanceBody, athleteDirectoryError: String(e) };
+      }
+    }
     return {
       status: 200,
       body: {
@@ -211,6 +401,7 @@ async function servePoll(
         changes: ingested.changes,
         counts,
         zeroYield: isZeroYield(counts),
+        ...appearanceBody,
         ...(w.body ?? {}),
       },
     };
@@ -302,17 +493,20 @@ export const listLeagues = onRequest(async (_req, res) => {
   }
 });
 
-// Federated team search across everything followable (cached
-// directories + live TSDB filtered to served leagues).
+// Federated search across everything followable (cached directories +
+// live TSDB filtered to served leagues, plus the athlete directory the
+// appearance ingest maintains).
 export const searchEntities = onRequest(async (req, res) => {
   try {
     const q = String(req.query.q ?? '').trim();
     if (q.length < 2) {
-      res.json({ teams: [] });
+      res.json({ teams: [], athletes: [] });
       return;
     }
+    const store = getFirestore();
     res.json({
-      teams: await searchTeams(getFirestore(), requireTsdbKey(), q),
+      teams: await searchTeams(store, requireTsdbKey(), q),
+      athletes: await searchAthletes(store, q),
     });
   } catch (e) {
     res.status(502).json({ error: String(e) });
@@ -562,12 +756,43 @@ export const pollTsdbLeague = onRequest(async (req, res) => {
       // never write, and gives Stage 4's reaper a stale truth to
       // reconcile a live slice against. Recorded as a real run with a
       // reason rather than an error: the provider answered honestly.
+      const chosenFixtures = chosen?.fixtures ?? [];
+      // Combat leagues: the headline bout parsed from each card title
+      // becomes an appearance (deriveBoutAppearances is a no-op for
+      // sports whose titles do not name people). TheSportsDB publishes
+      // no bout structure, so the headline is all a card here can give.
+      // Only cards from the last week forward — a season poll carries
+      // its finished cards too, and a finished bout needs no appearance
+      // doc (the same 7-day lookback the PBC window uses).
+      const nowIso = new Date().toISOString();
+      const appearanceFrom = new Date(Date.now() - 7 * 86_400_000)
+        .toISOString();
+      const derived = deriveBoutAppearances(
+        chosenFixtures.filter((f) => f.startUtc >= appearanceFrom),
+        nowIso,
+      );
       return {
         rawCount: chosen?.rawCount ?? 0,
-        fixtures: chosen?.fixtures ?? [],
+        fixtures: chosenFixtures,
         followKey,
         seasonResolved: best?.season ?? null,
         ...(best ? {} : { reason: 'no_future_events' as const }),
+        // Combat sports ALWAYS carry the appearance slice, zero yield
+        // included — a run that parsed nothing must be recorded as such,
+        // or the funnel goes dark exactly when the parse dies.
+        ...(namesPeople(sport)
+          ? {
+              appearances: {
+                followKey: appearanceSliceKey(followKey),
+                // Funnel stage A for this slice: cards inside the
+                // derivation window, before the parse and name gates.
+                rawCount: chosenFixtures.filter(
+                  (f) => f.startUtc >= appearanceFrom,
+                ).length,
+                fixtures: derived,
+              },
+            }
+          : {}),
         body: {
           season: best?.season ?? null,
           triedSeasons: attempts.map((a) => a.season),
@@ -794,7 +1019,19 @@ export const pollPbc = onRequest(
       async (trace) => {
         trace.seasonsTried.push('current');
         const r = await fetchPbcCards(from);
-        return { ...r, followKey: 'pbc-cards', seasonResolved: 'current' };
+        return {
+          rawCount: r.rawCount,
+          fixtures: r.fixtures,
+          followKey: 'pbc-cards',
+          seasonResolved: 'current',
+          // Always attached, zero yield included: fetched-N-parsed-0 is
+          // the funnel's way of saying the performer array rotted.
+          appearances: {
+            followKey: appearanceSliceKey('pbc-cards'),
+            rawCount: r.appearanceRawCount,
+            fixtures: r.appearances,
+          },
+        };
       },
     );
     res.status(out.status).json(out.body);
@@ -933,7 +1170,31 @@ export const decideReview = onRequest(async (req, res) => {
   const fixture = reviewItemToFixture(item, now);
   if (fixture) {
     await ingest([fixture], fixture.followKeys[0]);
-    res.json({ id, status: item.status, published: fixture.id });
+    // Every approved bout — undercard included — becomes an appearance
+    // under its own slice, which is what makes a prelim fighter
+    // followable at all. A re-decide with corrected names retires the
+    // appearances the fresh set no longer contains (same evidence guard
+    // as the polls). No poll route refreshes review slices, so the
+    // directory entries carry no pollPath.
+    const appearances = reviewItemToAppearances(item, now);
+    let retired = 0;
+    if (appearances.length > 0) {
+      const sliceKey = appearanceSliceKey(fixture.competitionId);
+      await ingest(appearances, sliceKey);
+      retired = await retireAppearances(sliceKey, appearances);
+      try {
+        await upsertAthleteDirectory(appearances, null);
+      } catch (e) {
+        console.error('athleteDirectory upsert failed for review slice:', e);
+      }
+    }
+    res.json({
+      id,
+      status: item.status,
+      published: fixture.id,
+      appearances: appearances.map((a) => a.id),
+      appearancesRetired: retired,
+    });
     return;
   }
   res.json({ id, status: item.status, published: null });

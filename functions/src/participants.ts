@@ -95,7 +95,13 @@ export function parseBout(title: string, sport: string): Bout | null {
 
 // Fill in participants for combat-sport cards, which arrive with a title
 // and nothing else. Fixtures we cannot parse confidently are returned
-// untouched — no invented names, no invented follow keys.
+// untouched — no invented names.
+//
+// SINCE PROMPT 5 this no longer mints athlete follow keys onto the CARD.
+// Athlete keys live on APPEARANCE docs (appearances.ts) — one per bout,
+// undercard included — so that following a fighter matches the bout
+// wherever it sits on the card, and a fighter's follower is never handed
+// both the card event and the bout event for the same night.
 export function enrichBoutParticipants(
   fixtures: readonly Fixture[],
 ): Fixture[] {
@@ -104,9 +110,6 @@ export function enrichBoutParticipants(
     if (f.homeTeam || f.awayTeam) return f; // provider already told us
     const bout = parseBout(f.title, f.sport);
     if (!bout) return f;
-    const keys = [bout.first, bout.second]
-      .filter(isFollowableName)
-      .map(athleteKey);
     return {
       ...f,
       // For a bout these mean FIRST-NAMED and SECOND-NAMED; there is no
@@ -115,7 +118,6 @@ export function enrichBoutParticipants(
       // participants for free.
       homeTeam: bout.first,
       awayTeam: bout.second,
-      followKeys: [...new Set([...keys, ...f.followKeys])],
     };
   });
 }

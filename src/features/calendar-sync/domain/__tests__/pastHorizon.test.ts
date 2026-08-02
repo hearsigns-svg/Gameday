@@ -80,19 +80,145 @@ describe('past means FINISHED, not started', () => {
     expect(isPast(ppd, AT('2026-08-01T18:00:00.000Z'))).toBe(false);
   });
 
-  test('the end the rule uses is the end the planner writes', () => {
-    // One definition: if these ever diverge, a frozen fixture and its
-    // frozen event would disagree about when they finished.
+  test('a date_only tournament spans its real days — the US Open must not freeze after day one', () => {
+    const slam = fx({
+      timePrecision: 'date_only',
+      startUtc: '2026-08-31T00:00:00.000Z',
+      durationHours: 15 * 24,
+    });
+    expect(fixtureEndUtc(slam)).toBe('2026-09-15T00:00:00.000Z');
+    // Day 5, mid-tournament: live. Before Prompt 5 this froze at
+    // Sep 1, 06:00 and banished the fortnight from the calendar.
+    expect(isPast(slam, AT('2026-09-04T12:00:00.000Z'))).toBe(false);
+    expect(isPast(slam, AT('2026-09-15T05:59:00.000Z'))).toBe(false);
+    expect(isPast(slam, AT('2026-09-15T06:00:00.000Z'))).toBe(true);
+  });
+
+  test('a POSTPONED multi-day fixture keeps its span for the FREEZE even though its banner is one day', () => {
+    // The freeze may outlive the event it wrote — never undercut it.
+    // Collapsing the freeze along with the banner made isPast go true
+    // mid-span while the ledgered span entry was not yet end-past, and
+    // planSync then DELETED a live tournament's banner (adversarial
+    // review, 2026-08-02). The event side stays a one-day banner; the
+    // fixture side stays live for the whole original span.
+    const ppd = fx({
+      status: 'postponed',
+      timePrecision: 'date_only',
+      startUtc: '2026-08-01T00:00:00.000Z',
+      durationHours: 96,
+    });
+    expect(fixtureEndUtc(ppd)).toBe('2026-08-05T00:00:00.000Z');
+    expect(desiredEventFor(ppd, DEFAULT_PREFS)!.endUtc).toBe(
+      '2026-08-02T00:00:00.000Z',
+    );
+  });
+
+  test('the freeze end never undercuts the end the planner writes', () => {
+    // One definition, one direction: the fixture may stay live LONGER
+    // than its event (postponed spans), but must never freeze while the
+    // written event still runs — that is how a live event gets deleted.
     for (const f of [
       fx(),
       fx({ status: 'tbd', startUtc: '2026-08-01T00:00:00.000Z' }),
       fx({ status: 'postponed', startUtc: '2026-08-01T00:00:00.000Z' }),
       fx({ durationHours: 96 }),
+      fx({
+        timePrecision: 'date_only',
+        startUtc: '2026-08-31T00:00:00.000Z',
+        durationHours: 15 * 24,
+      }),
+      fx({
+        status: 'postponed',
+        timePrecision: 'date_only',
+        startUtc: '2026-08-01T00:00:00.000Z',
+        durationHours: 96,
+      }),
     ]) {
       const desired = desiredEventFor(f, DEFAULT_PREFS);
       expect(desired).not.toBeNull();
-      expect(desired!.endUtc).toBe(fixtureEndUtc(f));
+      expect(Date.parse(fixtureEndUtc(f))).toBeGreaterThanOrEqual(
+        Date.parse(desired!.endUtc),
+      );
+      // Equality holds everywhere except the postponed multi-day case,
+      // whose banner deliberately collapses to the announced day.
+      if (f.status !== 'postponed') {
+        expect(desired!.endUtc).toBe(fixtureEndUtc(f));
+      }
     }
+  });
+
+  test('REGRESSION: a mid-span postponement UPDATES the wide banner — it must never plan a delete', () => {
+    // Ledgered as a 15-day banner; on day 5 the provider flips the
+    // fixture to postponed, keeping the old day sentinel. The one
+    // correct answer is a single update to the one-day postponed banner.
+    const live = fx({
+      timePrecision: 'date_only',
+      startUtc: '2026-08-31T00:00:00.000Z',
+      durationHours: 15 * 24,
+    });
+    const wideEntry = {
+      eventId: 'evt-1',
+      calendarId: 'cal-1',
+      startUtc: '2026-08-31T00:00:00.000Z',
+      endUtc: '2026-09-15T00:00:00.000Z',
+      title: live.title,
+      allDay: true,
+    };
+    const postponed = fx({
+      ...live,
+      status: 'postponed' as const,
+    });
+    const nowMs = Date.parse('2026-09-04T12:00:00.000Z');
+    const ops = planSync(
+      [postponed],
+      { [postponed.id]: wideEntry },
+      postponed.followKeys,
+      DEFAULT_PREFS,
+      '2026-09-04T06:00:00.000Z',
+      new Set(),
+      new Set(),
+      nowMs,
+    );
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('update');
+    if (ops[0].op === 'update') {
+      expect(ops[0].desired.title).toBe(`${live.title} — postponed`);
+      expect(ops[0].desired.endUtc).toBe('2026-09-01T00:00:00.000Z');
+    }
+  });
+
+  test('a follow made mid-span CREATES the live tournament banner', () => {
+    // The create gate judges an all-day span by its END: day five of a
+    // Slam is live, not history, for a brand-new follower too.
+    const live = fx({
+      timePrecision: 'date_only',
+      startUtc: '2026-08-31T00:00:00.000Z',
+      durationHours: 15 * 24,
+    });
+    const ops = planSync(
+      [live],
+      {},
+      live.followKeys,
+      DEFAULT_PREFS,
+      '2026-09-04T06:00:00.000Z',
+      new Set(),
+      new Set(),
+      Date.parse('2026-09-04T12:00:00.000Z'),
+    );
+    expect(ops).toHaveLength(1);
+    expect(ops[0].op).toBe('create');
+    // A genuinely FINISHED span is still never created.
+    const finished = planSync(
+      [live],
+      {},
+      live.followKeys,
+      DEFAULT_PREFS,
+      '2026-09-20T06:00:00.000Z',
+      new Set(),
+      new Set(),
+      Date.parse('2026-09-20T12:00:00.000Z'),
+    );
+    expect(finished).toHaveLength(0);
   });
 });
 

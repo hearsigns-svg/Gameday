@@ -515,6 +515,9 @@ export const SPORTS: SportConfig[] = [
     // Card-follow: one follow covers the fight cards. Times published are
     // the CARD start, not the main-event ringwalk, so they arrive nominal
     // and say so rather than pretending to a minute they do not know.
+    // Athlete follows attach to APPEARANCE docs (every PBC bout,
+    // undercard included; the headline bout elsewhere) and are reached
+    // through global search, not browse.
     browse: ['competition'],
     followTypes: ['competition', 'athlete'],
     staticCompetitions: [
@@ -543,14 +546,17 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'ufc',
     // Was a UFC-only series row; promotions beyond the UFC carry real
-    // upcoming cards, so this became a browse level. Card-follows, not
-    // athlete-follows — no provider publishes bout-level fixtures.
+    // upcoming cards, so this became a browse level. Card-follows plus
+    // athlete-follows via APPEARANCES where a card title names full
+    // names (fighters surface in global search, never in browse — the
+    // provider publishes no bout structure, and UFC's surname-only
+    // titles honestly yield nothing).
     label: 'MMA',
     accent: '#6D28D9',
     glyph: '🥋',
     enabled: true,
     browse: ['competition'],
-    followTypes: ['competition'],
+    followTypes: ['competition', 'athlete'],
     staticCompetitions: [
       {
         id: '4443',

@@ -46,6 +46,18 @@ export function isDateOnlyFixture(f: Fixture): boolean {
   return timePrecisionOf(f) === 'date_only' || f.status === 'postponed';
 }
 
+// How many whole days a date_only fixture spans. A day sentinel with
+// durationHours 360 is a 15-day tournament, not a one-day banner — until
+// Prompt 5 this was collapsed to a single day, which froze the US Open
+// (and every multi-day meeting) six hours after its FIRST day ended and
+// banished it from the calendar for its remaining fortnight.
+export function dateOnlySpanDays(durationHours?: number): number {
+  return Math.max(
+    1,
+    Math.round((durationHours ?? FIXTURE_DURATION_HOURS) / 24),
+  );
+}
+
 // When this fixture is over. PAST MEANS FINISHED, NOT STARTED: a 96-hour
 // County Championship match, a 5-hour golf round and an all-day "time TBC"
 // banner are all still live long after they begin, and a postponement
@@ -54,7 +66,17 @@ export function fixtureEndUtc(f: Fixture): string {
   if (isDateOnlyFixture(f)) {
     const d = new Date(f.startUtc);
     const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-    return new Date(dayStart + 86_400_000).toISOString();
+    // The span applies to POSTPONED fixtures too, even though their
+    // BANNER collapses to one day: the freeze end may outlive the event
+    // it wrote, never undercut it. Collapsing the freeze as well made
+    // isPast go true mid-span while the ledger entry (spanning the full
+    // window) was not yet end-past — and planSync then DELETED a live
+    // tournament's banner, the exact act the horizon rule forbids.
+    // Caught by adversarial review before commit; pinned in
+    // pastHorizon.test.ts.
+    return new Date(
+      dayStart + dateOnlySpanDays(f.durationHours) * 86_400_000,
+    ).toISOString();
   }
   return eventEndUtc(f.startUtc, f.durationHours);
 }

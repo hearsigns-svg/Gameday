@@ -16,7 +16,7 @@ cache; polls scale with competitions, not users).
 | NFL | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | 2026 (321 games incl. preseason) | Round-18 times TBD → placeholders. |
 | Rugby | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | Six Nations 2027 + NRL/Super League current; Prem 26-27 ~Aug | Sky scraping rejected; world.rugby API = internationals candidate |
 | Cricket | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | IPL + ODI/T20I + T20 WC 2026 | Test cricket dead upstream; internationals white-ball only. |
-| Tennis | — DEFERRED | blocked | — | — | TSDB results-only even premium (zero forward fixtures); needs a different provider. |
+| Tennis | Tennis TV ICS (tournament level) | LIVE in app | Free | Current ✓ (78 upcoming ATP events) | Fields-only by ruling. Draws/order-of-play: NO approved source (F25); WTA/ITF unavailable (F22/F23). |
 | Golf | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | PGA/DP World/LPGA 2026 | Per-round events; future rounds tbd→sharpen. |
 | UFC | TheSportsDB (existing sub) | LIVE in app | covered by $9 TSDB sub | 2026 cards (38) | Event-card follow; no bout/athlete data upstream. |
 

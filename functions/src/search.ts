@@ -166,3 +166,96 @@ export async function searchTeams(
     })
     .slice(0, cap);
 }
+
+// ─── Athletes ─────────────────────────────────────────────────────────
+
+export interface SearchAthleteHit {
+  key: string; // athlete-<slug> follow key
+  name: string;
+  sportKey: string;
+  pollPath?: string; // absent for review-sourced athletes (no poll route)
+}
+
+interface AthleteDirectoryDoc {
+  key?: string;
+  name?: string;
+  sportKey?: string;
+  searchName?: string;
+  pollPath?: string;
+  nextStartUtc?: string;
+}
+
+// The directory is written through by appearance ingest and bounded by
+// "athletes with a future-dated appearance", which today is tens of
+// docs. The scan is capped and the cap is REPORTED via the truncated
+// flag on the cache rather than silently shrinking the search space.
+const ATHLETE_SCAN_CAP = 1000;
+const ATHLETE_CACHE_MS = 60_000;
+let athleteCache: {
+  at: number;
+  docs: AthleteDirectoryDoc[];
+  truncated: boolean;
+} | null = null;
+
+async function loadAthletes(
+  db: Firestore,
+): Promise<{ docs: AthleteDirectoryDoc[]; truncated: boolean }> {
+  if (athleteCache && Date.now() - athleteCache.at < ATHLETE_CACHE_MS) {
+    return athleteCache;
+  }
+  // Soonest upcoming first, so if the cap ever bites it drops the
+  // athletes furthest from mattering.
+  const snap = await db
+    .collection('athleteDirectory')
+    .orderBy('nextStartUtc', 'asc')
+    .limit(ATHLETE_SCAN_CAP)
+    .get();
+  const docs = snap.docs.map((d) => d.data() as AthleteDirectoryDoc);
+  athleteCache = {
+    at: Date.now(),
+    docs,
+    truncated: snap.size >= ATHLETE_SCAN_CAP,
+  };
+  if (athleteCache.truncated) {
+    console.warn(
+      `athleteDirectory scan hit its ${ATHLETE_SCAN_CAP}-doc cap — athlete search is no longer complete`,
+    );
+  }
+  return athleteCache;
+}
+
+// An athlete is offered only while something upcoming exists for them —
+// search must not promise fixtures we cannot deliver. Substring match on
+// the normalised name, same as team search, so "nurmagomedov" finds
+// "Usman Nurmagomedov".
+export async function searchAthletes(
+  db: Firestore,
+  rawQuery: string,
+  cap = 10,
+): Promise<SearchAthleteHit[]> {
+  const q = normaliseName(rawQuery);
+  if (q.length < 2) return [];
+  const nowIso = new Date().toISOString();
+  const { docs } = await loadAthletes(db);
+  return docs
+    .filter(
+      (d) =>
+        d.key &&
+        d.name &&
+        d.sportKey &&
+        (d.nextStartUtc ?? '') >= nowIso &&
+        (d.searchName ?? normaliseName(d.name)).includes(q),
+    )
+    .sort((a, b) => {
+      const ap = (a.searchName ?? '').startsWith(q) ? 0 : 1;
+      const bp = (b.searchName ?? '').startsWith(q) ? 0 : 1;
+      return ap - bp || (a.nextStartUtc ?? '').localeCompare(b.nextStartUtc ?? '');
+    })
+    .slice(0, cap)
+    .map((d) => ({
+      key: d.key!,
+      name: d.name!,
+      sportKey: d.sportKey!,
+      ...(d.pollPath ? { pollPath: d.pollPath } : {}),
+    }));
+}
