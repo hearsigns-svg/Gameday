@@ -789,3 +789,49 @@
   probed with the remaining budget (a changed URL shape must not go
   silently unfetched), and appearances derive only for cards inside the
   window — an undated slug resolving to a 2016 card mints nothing.
+
+## Prompt 6 decisions (2026-08-02)
+
+- 2026-08-02: THE REAPER IS ARMED BY COMPLETENESS, NOT BY ROUTE
+  EXISTENCE. Only a fetch that returns a slice's WHOLE current truth
+  (`PollWork.sliceComplete`) may testify to absence; a capped fetch
+  (athletics' page budget, PBC's card cap) proves nothing — its gaps
+  are budget, not withdrawal. Season scoping is the fetched date
+  envelope ±7 days, because fixtures carry no season field and the
+  smallest real inter-season gap in the served config (a soccer summer
+  break, ~6 weeks) is four times the pad while a season-edge
+  withdrawal sits within days. The 20% ceiling is STRICT and per-run —
+  a broken-fetch detector, accepting that a slice of five docs can
+  never reap a lone withdrawal. Soft-cancel only, with change records,
+  so a race-condition reap self-heals on the next fetch that returns
+  the doc. Appearances are never judged by absence from a reap-armed
+  fetch — retirement owns that evidence — but a reaped PARENT cascades
+  to its future appearances, because a withdrawn card never yields
+  again and retirement alone could never clear its bouts. Dry-run by
+  default: sourceRuns carries every would-reap decision; nothing
+  applies until REAPER_ENABLED=true.
+- 2026-08-02: EVERY FIXED SLICE MUST STATE ITS ORDERING. The PBC
+  candidate starvation and the athletics descending-calendar miss were
+  the same defect: `slice(0, N)` over a list whose order nobody had
+  established. Athletics now spends its page budget tail-first
+  (nearest meetings live at the HIGHEST offsets of the descending
+  feed); the audit inventory lives in the Prompt 6 report.
+- 2026-08-02: F1 IDS ARE CIRCUIT-KEYED (`f1-<season>-<circuitId>-
+  <session>`). Rounds renumber when the calendar changes (F3's four
+  orphans); circuits do not. A race with no circuitId THROWS — a
+  silent fallback to round ids would reintroduce the bug on the day
+  Jolpica hiccups. Old-scheme future docs are cleared by owner-run
+  migration AFTER deploy; events replace through the ledger path,
+  reminders on them do not carry.
+- 2026-08-02: A PROVIDER-PUBLISHED WINDOW BEATS THE PER-LEAGUE
+  CONSTANT. PBC cards now carry startDate–endDate as durationHours
+  (fallback 4h when absent or incoherent). No other served provider
+  publishes end times today; their constants stay.
+- 2026-08-02: iOS PUSH TOKENS COME FROM RNFB MESSAGING. expo-
+  notifications hands iOS a raw APNs token the Admin SDK cannot send
+  to (F1 — push was Android-only from M6 to here). The require is
+  guarded and lazy so a JS refresh on a pre-RNFB binary registers
+  honestly tokenless instead of crashing. Android keeps its working
+  expo-notifications path — one platform's fix must not risk the
+  other's proven behaviour. APNs key upload + physical-device delivery
+  proof are owner steps.

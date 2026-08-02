@@ -71,6 +71,18 @@ export interface RunOutcome {
   // provider failed us; a reason means it answered honestly and the answer
   // was "there is no live season" or "this run never happened".
   reason?: RunReason;
+  // What the reaper decided for this slice (Prompt 6). Present whenever
+  // a successful non-empty fetch was measured against the stored slice —
+  // dry runs record candidates with applied 0, so the would-reap list is
+  // visible in the run history before the reaper is ever enabled.
+  reap?: {
+    candidates: number;
+    cascade: number; // reaped parents' future appearances, dry runs too
+    applied: number;
+    liveCount: number;
+    guardTripped: boolean;
+    sampleIds: string[]; // capped, for the ops eye — never the full list
+  };
 }
 
 export type RunReason =

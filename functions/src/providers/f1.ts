@@ -15,6 +15,7 @@ interface SessionTime {
 export interface F1Race extends SessionTime {
   round: string;
   raceName: string;
+  Circuit?: { circuitId?: string };
   FirstPractice?: SessionTime;
   SecondPractice?: SessionTime;
   ThirdPractice?: SessionTime;
@@ -39,6 +40,7 @@ const SESSION_DEFS: Array<{
 function sessionFixture(
   season: string,
   race: F1Race,
+  circuitKey: string,
   slug: string,
   label: string,
   at: SessionTime,
@@ -51,7 +53,7 @@ function sessionFixture(
     `${at.date}T${at.time ?? '00:00:00Z'}`,
   ).toISOString();
   return {
-    id: `f1-${season}-r${race.round}-${slug}`,
+    id: `f1-${season}-${circuitKey}-${slug}`,
     sport: 'f1',
     competition: 'Formula 1',
     competitionId: 'f1-series-1',
@@ -75,17 +77,34 @@ export function racesToFixtures(
   updatedAt: string,
 ): Fixture[] {
   const fixtures: Fixture[] = [];
+  // The CIRCUIT, not the round number, is the stable identity (F3):
+  // when Jolpica inserted a new round 16 into 2026, every later round
+  // renumbered and the old ids became orphans still carrying the old
+  // race names. circuitId ("albert_park") survives renumbering; a race
+  // missing it is shape rot and must fail loudly, not silently mint
+  // round-based ids again. DOUBLE-HEADERS (2020: red_bull_ring twice,
+  // silverstone twice, bahrain twice) get an occurrence suffix on the
+  // second visit — occurrence ORDER among same-circuit visits is stable
+  // under the renumbering that breaks round ids.
+  const circuitVisits = new Map<string, number>();
   for (const race of races) {
+    const circuitId = race.Circuit?.circuitId;
+    if (!circuitId) {
+      throw new Error(`f1: race round ${race.round} has no Circuit.circuitId`);
+    }
+    const visit = (circuitVisits.get(circuitId) ?? 0) + 1;
+    circuitVisits.set(circuitId, visit);
+    const circuitKey = visit === 1 ? circuitId : `${circuitId}-${visit}`;
     for (const def of SESSION_DEFS) {
       const at = race[def.field] as SessionTime | undefined;
       if (at?.date) {
         fixtures.push(
-          sessionFixture(season, race, def.slug, def.label, at, 'support', 1, updatedAt),
+          sessionFixture(season, race, circuitKey, def.slug, def.label, at, 'support', 1, updatedAt),
         );
       }
     }
     fixtures.push(
-      sessionFixture(season, race, 'race', 'Race', race, 'race', 2, updatedAt),
+      sessionFixture(season, race, circuitKey, 'race', 'Race', race, 'race', 2, updatedAt),
     );
   }
   return fixtures;

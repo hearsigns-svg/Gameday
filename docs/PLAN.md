@@ -812,5 +812,101 @@ reopen atptour.com); ufc.com HTML DECLINED (A/B/C stay open).
 - 566 tests green under UTC and America/Los_Angeles; typecheck and the
   functions build clean.
 - OWED: redeploy functions (again — includes the PBC fix and
-  pollWtaTennis, a NEW function).
+  pollWtaTennis, a NEW function). DONE by owner 2026-08-02 (deployed
+  and seeded).
+
+### Prompt 6 — hygiene  [x]
+
+Branch state settled first: every stage since 2026-07-30 had landed on
+`calendar-target` (main froze at the calendar-target spec, 17 commits
+behind); main fast-forwarded to e55d287, work continues on main.
+
+- **SLICE-CLASS AUDIT** (any connector taking a fixed slice of an
+  unordered candidate list) — found the PBC bug's twin, WORSE:
+  worldAthletics walked offsets 0..3 of a calendar that sorts
+  DESCENDING by date, so a year-long window stored the FURTHEST-future
+  400 meetings and nothing near today. Production held 406 athletics
+  fixtures with ZERO inside 30 days (soonest Oct 17) — in peak outdoor
+  season, clean runs throughout. FIXED: `tailOffsets` spends the page
+  budget on the tail, highest offset first; live-verified 71 meetings
+  inside 30 days (was 0). Full inventory in the Prompt 6 report: every
+  other cap is either deliberately ordered (PBC dated-first since 5b,
+  WTA newest-first actives, review/coverage/athlete-search orderBy) or
+  not binding (WTA pagination 300 vs 49; sweep union 250 vs 10 paths,
+  the F10 lexicographic drop unchanged, Stage 7's catalogue).
+- **THE REAPER** (`reaper.ts` + ingest integration): per
+  (source, competitionId, season) — source-scoped by id prefix (a
+  cross-provider merged doc is never a candidate), season-scoped by the
+  fetched date envelope ±7d (fixtures carry no season field; adjacent
+  seasons sit months apart, a season-edge withdrawal days), armed ONLY
+  by routes whose fetch is the slice's complete truth
+  (`PollWork.sliceComplete` — capped fetches like athletics/PBC prove
+  absence of nothing), soft-cancel with change records for push
+  fan-out, strict 20% ceiling as broken-fetch detector (consequence: a
+  slice of ≤5 live docs can never reap a single withdrawal), and
+  appearances untouched by absence (retirement owns them) but CASCADED
+  when their parent reaps — a withdrawn card never yields again, so
+  retirement alone could never clear its bouts. DRY-RUN BY DEFAULT:
+  every successful fetch records candidates/guardTripped/sampleIds in
+  sourceRuns; nothing applies until REAPER_ENABLED=true is deployed.
+  DRY-RUN AGAINST PRODUCTION (twice, ~25min apart, intersected —
+  identical): across all 11 armed slices the ONLY candidates anywhere
+  were the four F3 orphan F1 docs. Zero guard trips. F30's systemic
+  half closed.
+- **BAD DATA CLEARED** (executed 2026-08-02 ~20:50Z, measured first,
+  re-checked at execution): 63 apisports-legacy + 1,380 stale NBA +
+  873 dead FA Cup (26-27 NOT yet populated — verified zero future) +
+  15 inert PBC past-bout appearances = 2,331 docs deleted, all
+  past-dated, zero future-dated members in any group, zero calendar
+  impact (frozen ledger entries are untouchable). Store 11,665 → 9,334.
+  The 4 F1 orphans ride the id migration below instead.
+- **F1 STABLE IDS** (F3): `f1-<season>-<circuitId>-<session>` —
+  albert_park survives renumbering; missing circuitId throws (shape
+  rot, never a silent fallback to round ids). Impact measured before
+  changing: 3 devices follow f1-series-1 × 64 future old-scheme
+  session docs; events are REPLACED through the ordinary ledger path
+  (delete + create on the next sync), never orphaned — the stop-gate
+  does not trip; user-set reminders on those events do not carry.
+  Migration = `functions/scripts/clear-f1-legacy.mjs` (dry-run default,
+  --apply), owner-run AFTER deploy or the next poll re-mints old ids.
+- **PER-FIXTURE DURATIONS**: PBC now uses the card's published
+  startDate–endDate window (2h on the banked Aug 22 card) instead of a
+  hardcoded 4h; appearances inherit it. Survey: tennis/WA/WTA spans
+  already real; fdorg/TSDB/MLB/NHL/Jolpica publish no end times —
+  their per-league constants stay, honestly.
+- **iOS PUSH FIXED IN CODE** (F1): iOS now obtains a real FCM
+  registration token via @react-native-firebase/messaging (guarded
+  lazy require — a JS refresh on a pre-RNFB binary degrades to the
+  honest no-token registration; Android path unchanged), RNFB app +
+  expo-build-properties (static frameworks) plugins added, prebuild +
+  pod install clean, iOS compile verified. The sweep needs no change —
+  tokenType 'fcm' flows through the existing fan-out. OWED: owner
+  uploads an APNs auth key (Firebase console → Cloud Messaging), and
+  the delivery proof needs a PHYSICAL device — simulators cannot fire
+  silent push (M6 lore). Registry self-heals: next app launch on a
+  rebuilt binary re-registers with the FCM token.
+- **ADVERSARIAL REVIEW ROUND on the 6 diff** (three lenses, refuting
+  verifiers, every finding probe-executed): 9 confirmed, 0 refuted,
+  all fixed in-round. The big one: the iOS FCM fix was DEAD CODE —
+  RNFB v26 is modular-only, `.default` was undefined, the TypeError
+  swallowed by the simulator catch, the device registered token-null
+  and the compile proved nothing (rewritten to getMessaging/getToken;
+  plus an onTokenRefresh re-registration subscribed BEFORE the token
+  attempt, closing the APNs cold-start race, and a background message
+  handler releasing RNFB's 25-second completion hold per silent push).
+  Also fixed: the reap ceiling's denominator was the whole slice
+  rather than the in-envelope docs the fetch can testify about (a
+  truncated F1 fetch beside pre-announced 2027 docs read 10% missing
+  when it was 93%); the appearance cascade was invisible to dry runs
+  and uncounted in `applied` (now enumerated before the apply
+  decision); F1 circuit ids collided on double-header weekends (2020:
+  85 fixtures, 70 distinct ids — second visits now take an occurrence
+  suffix); the athletics tail walk inherited a break-on-empty that
+  aborted the NEAREST pages when hits shrank mid-walk; `hits` was
+  unvalidated (NaN → silent one-page walk — the exact quiet
+  starvation just recovered from, now a named throw); PBC durations
+  accepted any endDate after start (a year-typo would mint a
+  year-long un-freezable event; now clamped 0.5–24h else 4).
+- 578 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean; iOS compiles with RNFB.
 

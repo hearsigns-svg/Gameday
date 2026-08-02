@@ -8,10 +8,33 @@
 import * as BackgroundTask from 'expo-background-task';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
+import { Platform } from 'react-native';
 import { runSync, shouldAutoSync } from './syncEngine';
 
 const REFRESH_TASK = 'gameday-refresh';
 const PUSH_SYNC_TASK = 'gameday-push-sync';
+
+// RNFB messaging (which iOS carries for its FCM token since Prompt 6)
+// swizzles the remote-notification delegate and holds the system
+// completion handler for a FULL 25 SECONDS per silent push when no
+// background message handler is registered — pressing against iOS's
+// ~30s silent-push budget on every sweep fan-out, with an error log
+// each time. Registering a handler releases the completion as soon as
+// it resolves; the actual sync work stays with the expo-notifications
+// task below, so the handler only needs to exist. Guarded lazy require,
+// same rule as deviceRegistry: a pre-RNFB binary must not crash.
+if (Platform.OS === 'ios') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getMessaging, setBackgroundMessageHandler } =
+      require('@react-native-firebase/messaging');
+    setBackgroundMessageHandler(getMessaging(), async () => {
+      console.log('[gameday] fcm background message received');
+    });
+  } catch (e) {
+    console.warn('[gameday] fcm background handler unavailable:', String(e));
+  }
+}
 
 TaskManager.defineTask(REFRESH_TASK, async () => {
   console.log('[gameday] background refresh task fired');

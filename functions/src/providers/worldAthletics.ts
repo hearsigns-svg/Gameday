@@ -51,7 +51,17 @@ export function eventsFromNextData(data: unknown): {
   if (!Array.isArray(results)) {
     throw new Error('worldathletics: initialEvents.results is not an array');
   }
-  return { hits: Number(initial.hits ?? results.length), results };
+  const hits = Number(initial.hits ?? results.length);
+  // The tail-first walk STEERS BY hits — an unparseable value must be
+  // shape rot that fails loudly, never a silent walk that fetches
+  // offset 0 alone with clean run records (the exact quiet starvation
+  // this connector just recovered from).
+  if (!Number.isFinite(hits) || hits < 0) {
+    throw new Error(
+      `worldathletics: initialEvents.hits is not a number (got ${JSON.stringify(initial.hits)})`,
+    );
+  }
+  return { hits, results };
 }
 
 // A stable follow key per competition GROUP. The calendar carries 1,247
@@ -110,6 +120,24 @@ export function meetingToFixture(
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Which offsets to fetch, given the feed's total and our page budget.
+// THE CALENDAR SORTS DESCENDING BY DATE, so offset 0 is the FURTHEST
+// future — walking 0,100,200,… captured the far tail of a year-long
+// window and NOTHING near today. Found by the Prompt 6 slice audit:
+// 406 stored athletics fixtures, zero inside 30 days, soonest
+// October 17 — in peak outdoor season, with clean runs throughout
+// (the PBC candidate-order bug's exact shape, one connector over).
+// The NEAREST meetings live at the HIGHEST offsets, so page 0 is
+// fetched for the total, then the tail pages, highest offset first.
+export function tailOffsets(hits: number, maxPages: number): number[] {
+  const last = Math.max(0, Math.floor((hits - 1) / 100) * 100);
+  const out: number[] = [];
+  for (let o = last; o > 0 && out.length < maxPages - 1; o -= 100) {
+    out.push(o);
+  }
+  return out;
+}
+
 export async function fetchWorldAthletics(
   startDate: string,
   endDate: string,
@@ -117,21 +145,33 @@ export async function fetchWorldAthletics(
 ): Promise<ProviderFetch> {
   const now = new Date().toISOString();
   const fixtures: Fixture[] = [];
-  let raw = 0;
-  for (let page = 0; page < maxPages; page++) {
-    const url = `${BASE}?startDate=${startDate}&endDate=${endDate}&offset=${page * 100}`;
+  const fetchPage = async (
+    offset: number,
+  ): Promise<{ hits: number; results: WaEvent[] }> => {
+    const url = `${BASE}?startDate=${startDate}&endDate=${endDate}&offset=${offset}`;
     const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
     if (!res.ok) throw new Error(`worldathletics http ${res.status}`);
-    const { hits, results } = eventsFromNextData(
-      extractNextData(await res.text()),
-    );
-    raw += results.length;
-    for (const r of results) {
+    return eventsFromNextData(extractNextData(await res.text()));
+  };
+  // Page 0 answers "how many" (and carries the furthest-future 100,
+  // which still count — they are real meetings in the window).
+  const first = await fetchPage(0);
+  let raw = first.results.length;
+  for (const r of first.results) {
+    const f = meetingToFixture(r, now);
+    if (f) fixtures.push(f);
+  }
+  for (const offset of tailOffsets(first.hits, maxPages)) {
+    await wait(1_000); // no crawl-delay published; be polite anyway
+    const page = await fetchPage(offset);
+    raw += page.results.length;
+    for (const r of page.results) {
       const f = meetingToFixture(r, now);
       if (f) fixtures.push(f);
     }
-    if (results.length === 0 || (page + 1) * 100 >= hits) break;
-    await wait(1_000); // no crawl-delay published; be polite anyway
+    // NO break on an empty page: the walk runs HIGH offset → low, so an
+    // empty page means hits shrank since page 0 — the LOWER offsets
+    // still hold the nearest meetings, which are the whole point.
   }
   return { rawCount: raw, fixtures };
 }

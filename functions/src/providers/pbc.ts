@@ -147,6 +147,21 @@ export function cardToFixture(
     : POSTPONED.test(main.eventStatus ?? '')
       ? 'postponed'
       : 'scheduled';
+  // The provider publishes the card's own window (startDate–endDate);
+  // use it when it is coherent, keep the 4h assumption when it is not.
+  // Coherent means a PLAUSIBLE card window — between half an hour and a
+  // day. The JSON-LD is hand-fed marketing data: a year-typo endDate
+  // would otherwise mint a year-long timed event that isPast keeps
+  // un-frozen for a year, and a 2-minute one rounds to a zero-length
+  // event that freezes at its own start.
+  // (Prompt 6: durationHours stops being a per-league constant wherever
+  // a provider supplies the real thing.)
+  const end = main.endDate ? new Date(main.endDate) : null;
+  const rawHours = end ? (end.getTime() - start.getTime()) / 3_600_000 : NaN;
+  const durationHours =
+    Number.isFinite(rawHours) && rawHours >= 0.5 && rawHours <= 24
+      ? Math.round(rawHours * 10) / 10
+      : 4;
   return {
     id: `pbc-${url.replace(/\/$/, '').split('/').pop()}`,
     sport: 'boxing',
@@ -156,8 +171,7 @@ export function cardToFixture(
     followKeys: ['pbc-cards'],
     startUtc: start.toISOString(),
     status,
-    // A card runs several hours; the bouts all share the card's start.
-    durationHours: 4,
+    durationHours,
     // The published time is the CARD start (first bell / broadcast), not
     // the main-event ringwalk, which drifts with the undercard. Real
     // instant, unsettled — exactly what nominal is for.

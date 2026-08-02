@@ -123,7 +123,17 @@ describe('F1 adapter against real payload', () => {
     // Real 2026 opener carries FP1-3 + Qualifying + Race = 5 sessions.
     expect(fixtures).toHaveLength(5);
     const race = fixtures.find((f) => f.sessionKind === 'race');
-    expect(race?.id).toBe('f1-2026-r1-race');
+    // CIRCUIT id, not round number (F3): rounds renumber when the
+    // calendar changes; albert_park does not.
+    expect(race?.id).toBe('f1-2026-albert_park-race');
+    // DOUBLE-HEADERS: a second visit to the same circuit (2020 ran
+    // red_bull_ring, silverstone and bahrain twice each) must not mint
+    // colliding ids — the second visit takes an occurrence suffix.
+    const doubled = racesToFixtures('2026', [races[0], races[0]], NOW);
+    const ids = doubled.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain('f1-2026-albert_park-race');
+    expect(ids).toContain('f1-2026-albert_park-2-race');
     expect(race?.title).toMatch(/— Race$/);
     expect(race?.durationHours).toBe(2);
     expect(race?.followKeys).toEqual(['f1-series-1']);

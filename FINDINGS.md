@@ -8,14 +8,21 @@ Each entry names where it was found and what it would cost to leave.
 
 ## From the coverage audit (2026-07-31), deferred by the remediation brief
 
-### F1 — iOS silent push is skipped entirely
+### F1 — RESOLVED in Prompt 6: iOS silent push is skipped entirely
 `functions/src/sweep.ts:164-173`. Only FCM registration tokens are sendable
 by the Admin SDK; iOS devices register raw APNs tokens
 (`deviceRegistry.ts:42` records `tokenType: 'apns'`) and are filtered out of
 the fan-out. Push propagation is therefore **Android-only**. Explicitly out
 of scope for this remediation (it is a propagation problem, not a coverage
 one), but it is real and severe: an iOS user's calendar only corrects itself
-on foreground sync or background refresh.
+on foreground sync or background refresh. **RESOLVED 2026-08-02
+(Prompt 6): iOS now obtains a real FCM registration token via React
+Native Firebase messaging (guarded lazy require — a JS refresh on a
+pre-RNFB binary degrades to the honest no-token registration), so the
+sweep's existing fan-out covers it. OWED: the owner uploads an APNs auth
+key to Firebase console (Cloud Messaging settings) and the delivery
+proof needs a physical device — simulators cannot fire silent push (M6
+lore).**
 
 ### F2 — `venueTz` is the literal string `'UTC'` on 10,395 of 10,483 docs
 Only the NHL adapter supplies a real IANA zone (`nhl.ts:74`). Every other
@@ -23,14 +30,22 @@ adapter hardcodes `'UTC'`. The field is vestigial: nothing reads it. NHL's
 `venueTimezone` and TheSportsDB's `strTimeLocal` are both free and would
 allow "2:00 AM (7:00 PM in Los Angeles)". Stage 5 notes it; nothing fixes it.
 
-### F3 — F1 fixture ids bake in the round number
+### F3 — RESOLVED in Prompt 6: F1 fixture ids bake in the round number
 `functions/src/providers/f1.ts:53` — `f1-${season}-r${race.round}-${slug}`.
 When Jolpica inserted a new round 16 into the 2026 calendar, Singapore
 shifted 16→17 and the US GP 17→18; because ingest never deletes, four
 documents survive under their old ids still carrying the old race names.
 The id scheme is the root cause and a circuit ID or a stable race slug
 would fix it, but changing it rewrites every user's ledger key, so it is
-deliberately NOT part of Stage 4 (which only reaps the orphans).
+deliberately NOT part of Stage 4 (which only reaps the orphans). **RESOLVED
+2026-08-02 (Prompt 6): ids are now `f1-<season>-<circuitId>-<session>`
+(albert_park survives renumbering; a race with no circuitId throws).
+The four orphans were the reaper dry-run's ONLY production candidates.
+Migration = functions/scripts/clear-f1-legacy.mjs, owner-run AFTER
+deploy: deletes the 64 future old-scheme docs with cancelled change
+records; followers' events are replaced through the ordinary ledger
+path, never orphaned (3 devices follow f1-series-1; reminders on
+replaced events do not carry).**
 
 ---
 
@@ -467,7 +482,7 @@ for past-start fixtures, frozen ledger entries are never deleted, and
 the cards age out of the 510-hour query lookback on their own. Noted so
 nobody reads the residue as the migration having failed.
 
-### F30 — Appearance retirement's chosen misses
+### F30 — PARTIALLY CLOSED in Prompt 6: appearance retirement's chosen misses
 Retirement (cancel bouts the fresh yield proves gone) is deliberately
 evidence-guarded: a parent retires old appearances only when its fresh
 yield carries ≥1 appearance for that parent. Three gaps follow. (a) A
@@ -482,7 +497,16 @@ retirement on one source cannot touch the other's doc. The systemic
 answer to all three remains Stage 4's reaper. Also noted in passing: a
 decideReview decision of 'cancelled' on a PREVIOUSLY-CONFIRMED item
 publishes nothing and leaves the earlier card fixture scheduled —
-pre-existing, not introduced by Prompt 5.
+pre-existing, not introduced by Prompt 5. **PROMPT 6: the reaper now
+exists (reaper.ts, ingest-integrated, dry-run until REAPER_ENABLED) and
+is the systemic answer for PARENT fixtures. It never judges appearances
+by absence-from-yield (that stays retirement's alone — two actors on
+one doc would fight), but a reaped parent CASCADES: its future
+appearances are cancelled with it, because a withdrawn card never
+yields again and retirement could otherwise never fire for its bouts.
+Gap (c) and the one-bout-card case remain, still bounded by the guard's
+safe reading. The decideReview cancelled-after-confirmed miss also
+remains.**
 
 ### F31 — isFollowableName is a word-count proxy, and compound surnames defeat it
 "Machado Garry" is one fighter's compound surname in a UFC title, but

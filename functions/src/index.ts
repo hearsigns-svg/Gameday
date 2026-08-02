@@ -18,6 +18,7 @@ import {
   isFollowableName,
   namesPeople,
 } from './participants';
+import { reapCandidates } from './reaper';
 import { searchAthletes, searchTeams } from './search';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
@@ -89,12 +90,42 @@ function timingSafeEqualStr(a: string, b: string): boolean {
 // only layer that has seen the wire.
 export type IngestCounts = Omit<RunCounts, 'fetched' | 'futureDated'>;
 
+// The reaper applies only when explicitly enabled; until then every
+// successful fetch still RECORDS its would-reap decision (sourceRuns
+// carries it), which is the dry run the owner reads before enabling.
+const reaperEnabled = (): boolean => process.env.REAPER_ENABLED === 'true';
+
+export interface IngestReap {
+  candidates: number;
+  // Future appearances of reaped parents, cancelled with them — counted
+  // and sampled even in dry runs, so the owner reads the FULL blast
+  // radius before enabling, not just the parents.
+  cascade: number;
+  applied: number;
+  liveCount: number;
+  guardTripped: boolean;
+  sampleIds: string[];
+}
+
 // Shared ingest: diff fresh fixtures against the cache slice for one
 // followable key, then upsert fixtures + append change records.
+//
+// `reapSource` arms the reaper for this slice: a successful non-empty
+// fetch measures the stored slice against what it returned, and future-
+// dated same-source docs the fetch did not return are soft-cancelled
+// (guards and rationale in reaper.ts). Callers that cannot vouch for a
+// complete slice fetch — decideReview's single-fixture ingests, every
+// appearance slice (retirement owns those) — simply do not pass it.
 async function ingest(
   rawIncoming: Fixture[],
   followKey: string,
-): Promise<{ fixtures: number; changes: number; counts: IngestCounts }> {
+  reapSource?: string,
+): Promise<{
+  fixtures: number;
+  changes: number;
+  counts: IngestCounts;
+  reap?: IngestReap;
+}> {
   // Combat cards arrive as a title with no participants; parse the
   // fighters out and give them athlete follow keys before anything else
   // looks at the fixture.
@@ -158,6 +189,71 @@ async function ingest(
     batch.set(db.collection('fixtureChanges').doc(), { ...c, at, followKeys });
     if (++pending >= 450) await flush();
   }
+  let reap: IngestReap | undefined;
+  if (reapSource && incoming.length > 0) {
+    const decision = reapCandidates(
+      [...existing.values()],
+      incoming,
+      reapSource,
+      at,
+    );
+    // CASCADE: a withdrawn card never yields again, so retirement can
+    // never fire for its bouts — a reaped parent's live appearances
+    // would sit scheduled forever. The reaper cancels appearances ONLY
+    // this way, transitively through their parent; absence-from-yield
+    // stays retirement's alone. Enumerated BEFORE the apply decision so
+    // dry runs record the full blast radius, children included.
+    const cascade: Fixture[] = [];
+    for (const e of decision.candidates) {
+      const apps = await db
+        .collection('fixtures')
+        .where('parentFixtureId', '==', e.id)
+        .get();
+      for (const a of apps.docs) {
+        const doc = a.data() as Fixture;
+        if (doc.status === 'cancelled' || doc.startUtc < at) continue;
+        cascade.push(doc);
+      }
+    }
+    const apply =
+      reaperEnabled() && !decision.guardTripped && decision.candidates.length > 0;
+    if (apply) {
+      const cancelWithChange = (e: Fixture) => {
+        batch.set(db.collection('fixtures').doc(e.id), {
+          ...e,
+          status: 'cancelled',
+          updatedAt: at,
+        });
+        pending++;
+        // The cancellation must fan out like any provider-sent one, or
+        // followers' calendars keep the withdrawn event until their
+        // next foreground sync.
+        batch.set(db.collection('fixtureChanges').doc(), {
+          kind: 'status_changed',
+          fixtureId: e.id,
+          prevStatus: e.status,
+          newStatus: 'cancelled',
+          at,
+          followKeys: e.followKeys ?? [],
+        });
+        pending++;
+      };
+      for (const e of [...decision.candidates, ...cascade]) {
+        cancelWithChange(e);
+        if (pending >= 450) await flush();
+      }
+    }
+    reap = {
+      candidates: decision.candidates.length,
+      cascade: cascade.length,
+      applied: apply ? decision.candidates.length + cascade.length : 0,
+      liveCount: decision.liveCount,
+      guardTripped: decision.guardTripped,
+      sampleIds: [...decision.candidates, ...cascade]
+        .slice(0, 20)
+        .map((e) => e.id),
+    };
+  }
   await flush();
   return {
     fixtures: incoming.length,
@@ -166,6 +262,7 @@ async function ingest(
     // (Stage 6 adds one). The counter ships now so the identity
     // parsed === stored + unchanged + rejected is pinned from day one.
     counts: { parsed: incoming.length, rejected: 0, stored, unchanged },
+    ...(reap ? { reap } : {}),
   };
 }
 
@@ -300,6 +397,11 @@ interface PollWork {
   // appearance funnel separately from the card funnel. One extra
   // sourceRuns doc per invocation that carries appearances.
   appearances?: { followKey: string; rawCount: number; fixtures: Fixture[] };
+  // TRUE only when `fixtures` is the slice's COMPLETE current truth —
+  // a whole-season or whole-feed fetch. This is what arms the reaper:
+  // a capped fetch (athletics' page budget, PBC's card cap) proves
+  // absence of nothing and must leave it disarmed.
+  sliceComplete?: boolean;
   body?: Record<string, unknown>; // extra response fields
 }
 
@@ -315,7 +417,11 @@ async function servePoll(
   const trace = { seasonsTried: [] as string[] };
   try {
     const w = await work(trace);
-    const ingested = await ingest(w.fixtures, w.followKey);
+    const ingested = await ingest(
+      w.fixtures,
+      w.followKey,
+      w.sliceComplete ? runCtx.source : undefined,
+    );
     const counts = countsFrom(
       { fetched: w.rawCount, ...ingested.counts },
       w.fixtures,
@@ -330,6 +436,7 @@ async function servePoll(
         counts,
         error: null,
         ...(w.reason ? { reason: w.reason } : {}),
+        ...(ingested.reap ? { reap: ingested.reap } : {}),
       },
       startedAt,
     );
@@ -636,7 +743,7 @@ export const pollFdTeam = onRequest(async (req, res) => {
       // single correct value to pass — omitting it is the correct call.
       trace.seasonsTried.push('current');
       const r = await fetchFdTeamSeasonFixtures(requireFdKey(), teamId);
-      return { ...r, followKey, seasonResolved: 'current' };
+      return { ...r, followKey, seasonResolved: 'current', sliceComplete: true };
     },
   );
   res.status(out.status).json(out.body);
@@ -689,6 +796,7 @@ export const pollFdCompetition = onRequest(async (req, res) => {
         ...r,
         followKey,
         seasonResolved: String(resolved),
+        sliceComplete: true,
         body: { season: resolved },
       };
     },
@@ -825,7 +933,7 @@ export const pollMlbTeam = onRequest(async (req, res) => {
     async (trace) => {
       trace.seasonsTried.push(String(season));
       const r = await fetchMlbTeamSeasonFixtures(teamId, season);
-      return { ...r, followKey, seasonResolved: String(season) };
+      return { ...r, followKey, seasonResolved: String(season), sliceComplete: true };
     },
   );
   res.status(out.status).json(out.body);
@@ -851,7 +959,7 @@ export const pollNhlTeam = onRequest(async (req, res) => {
     async (trace) => {
       trace.seasonsTried.push(season);
       const r = await fetchNhlTeamSeasonFixtures(abbrev, season);
-      return { ...r, followKey, seasonResolved: season };
+      return { ...r, followKey, seasonResolved: season, sliceComplete: true };
     },
   );
   res.status(out.status).json(out.body);
@@ -879,6 +987,7 @@ export const pollF1 = onRequest(async (req, res) => {
         ...r,
         followKey: 'f1-series-1',
         seasonResolved: String(season),
+        sliceComplete: true,
       };
     },
   );
@@ -1052,7 +1161,7 @@ export const pollTennis = onRequest(async (req, res) => {
     async (trace) => {
       trace.seasonsTried.push('current');
       const r = await fetchTennisTournaments();
-      return { ...r, followKey: 'tennis-atp', seasonResolved: 'current' };
+      return { ...r, followKey: 'tennis-atp', seasonResolved: 'current', sliceComplete: true };
     },
   );
   res.status(out.status).json(out.body);

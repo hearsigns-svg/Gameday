@@ -55,12 +55,15 @@ test('the page carries one SportsEvent node per bout, main event first', () => {
   expect(new Set(events.map((e) => e.startDate)).size).toBe(1);
 });
 
-test('the card fixture is the main event, unchanged by Prompt 5', () => {
+test('the card fixture is the main event, with the provider\'s own window', () => {
   const f = cardToFixture(URL, html, AT)!;
   expect(f.id).toBe('pbc-fight-night-august-22-2026');
   expect(f.title).toBe('Rolando Romero vs Teofimo Lopez');
   // 2026-08-22T17:00:00-05:00, as published.
   expect(f.startUtc).toBe('2026-08-22T22:00:00.000Z');
+  // The published endDate is 19:00-05:00 — a 2h card window, the
+  // provider's word rather than the old per-league 4h constant.
+  expect(f.durationHours).toBe(2);
   expect(f.followKeys).toEqual(['pbc-cards']);
   expect(f.timePrecision).toBe('nominal');
   expect(f.confidence).toBe('provisional');
@@ -87,7 +90,7 @@ test('every bout becomes an appearance, named from performer givenName+familyNam
   for (const a of apps) {
     expect(a.parentFixtureId).toBe('pbc-fight-night-august-22-2026');
     expect(a.startUtc).toBe(card.startUtc); // provisional = parent window
-    expect(a.durationHours).toBe(4);
+    expect(a.durationHours).toBe(2); // the card's published window
     expect(a.confidence).toBe('provisional');
     expect(a.followKeys[0]).toBe('pbc-cards-appearances');
   }

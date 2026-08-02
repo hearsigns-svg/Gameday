@@ -22,6 +22,8 @@ const REGISTRY_ERROR_KEY = 'deviceRegistry.lastError.v1';
 
 const STEP_TIMEOUT_MS = 15_000;
 
+let tokenRefreshSubscribed = false;
+
 // Surfaced by Preferences so the failure is visible rather than logged
 // into the void. Null when the last registration succeeded.
 export function lastRegistryError(): string | null {
@@ -49,19 +51,45 @@ export async function registerDevice(): Promise<void> {
     let token: string | null = null;
     let tokenType: string | null = null;
     try {
-      const t = await withTimeout(
-        Notifications.getDevicePushTokenAsync(),
-        'push token',
-      );
-      token = t.data as string;
-      // Android hands back an FCM registration token (sendable by the
-      // Admin SDK); iOS hands back a raw APNs token, which it cannot
-      // send to. Recorded honestly so the sweep skips rather than
-      // silently failing — iOS push needs an FCM token (M6 follow-up).
-      tokenType = t.type === 'ios' ? 'apns' : 'fcm';
+      if (Platform.OS === 'ios') {
+        // expo-notifications hands iOS back a RAW APNs token, which the
+        // Admin SDK cannot send to — so iOS push was Android-only from
+        // M6 until Prompt 6 (F1 in FINDINGS). React Native Firebase
+        // messaging exchanges the APNs token for a real FCM
+        // registration token, and the sweep's existing fan-out then
+        // just works. The require is guarded and lazy: a JS refresh
+        // running on a native binary built before the module existed
+        // degrades to the honest no-token registration below instead of
+        // crashing at import time. RNFB v26 is MODULAR-ONLY — there is
+        // no default export, and `.default` here was undefined-then-
+        // swallowed until the Prompt 6 review probe caught it.
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { getMessaging, getToken, onTokenRefresh } =
+          require('@react-native-firebase/messaging');
+        const messaging = getMessaging();
+        // Subscribe BEFORE attempting the token: a cold start can lose
+        // the race with the APNs handshake (the FCM token is only
+        // vendable after it), and when the token then arrives the
+        // device must re-register instead of staying unsendable until
+        // the next launch. One subscription per JS lifetime, attached
+        // even when — especially when — the attempt below rejects.
+        if (!tokenRefreshSubscribed) {
+          tokenRefreshSubscribed = true;
+          onTokenRefresh(messaging, () => void registerDevice());
+        }
+        token = await withTimeout(getToken(messaging), 'fcm token');
+        tokenType = 'fcm';
+      } else {
+        const t = await withTimeout(
+          Notifications.getDevicePushTokenAsync(),
+          'push token',
+        );
+        token = t.data as string;
+        tokenType = 'fcm'; // Android: an FCM registration token already
+      }
     } catch (e) {
-      // Simulators and push-less devices — register without a token so
-      // the sweep still polls this device's follows.
+      // Simulators, push-less devices, and pre-RNFB binaries — register
+      // without a token so the sweep still polls this device's follows.
       console.warn('[gameday] push token unavailable:', String(e));
     }
 
