@@ -15,6 +15,14 @@ import { Fixture, FixtureStatus } from './fixture';
 import { loadCoverage } from './coverage';
 import { loadFdSeasons } from './fdSeasons';
 import {
+  listReviewItems,
+  ReviewItem,
+  reviewItemToFixture,
+  ReviewStatus,
+  submitReviewItem,
+  validateSubmission,
+} from './reviewQueue';
+import {
   countsFrom,
   EMPTY_COUNTS,
   httpStatusFromError,
@@ -41,6 +49,9 @@ import { fetchTsdbLeagueSeasonFixtures, fetchTsdbLeagueTeams } from './providers
 import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
 import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
 import { fetchF1SeasonFixtures } from './providers/f1';
+import { fetchPbcCards } from './providers/pbc';
+import { fetchTennisTournaments } from './providers/tennisIcs';
+import { fetchWorldAthletics } from './providers/worldAthletics';
 import {
   listFdSoccerTeams,
   listMlbTeams,
@@ -759,6 +770,226 @@ export const scheduledReconcile = onSchedule(
     await reconcileFixtures(false);
   },
 );
+
+// ─── Prompt 4: boxing (PBC), tennis, athletics ────────────────────────
+
+export const pollPbc = onRequest(
+  { timeoutSeconds: 300 },
+  async (req, res) => {
+    // The sitemap holds 319 cards and nearly all have happened; only
+    // those on or after this date are fetched, at the crawl delay PBC's
+    // robots.txt asks for.
+    const from = new Date(Date.now() - 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const out = await servePoll(
+      triggerOf(req.get(TRIGGER_HEADER)),
+      {
+        source: 'pbc',
+        sport: 'boxing',
+        competitionId: 'pbc-cards',
+        pollPath: 'pollPbc',
+        seasonRequested: null,
+      },
+      async (trace) => {
+        trace.seasonsTried.push('current');
+        const r = await fetchPbcCards(from);
+        return { ...r, followKey: 'pbc-cards', seasonResolved: 'current' };
+      },
+    );
+    res.status(out.status).json(out.body);
+  },
+);
+
+export const pollTennis = onRequest(async (req, res) => {
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'tennis',
+      sport: 'tennis',
+      competitionId: 'tennis-atp',
+      pollPath: 'pollTennis',
+      seasonRequested: null,
+    },
+    async (trace) => {
+      trace.seasonsTried.push('current');
+      const r = await fetchTennisTournaments();
+      return { ...r, followKey: 'tennis-atp', seasonResolved: 'current' };
+    },
+  );
+  res.status(out.status).json(out.body);
+});
+
+export const pollAthletics = onRequest(
+  { timeoutSeconds: 300 },
+  async (req, res) => {
+    // A rolling window: everything from a week ago to a year out. The
+    // calendar carries ~1,250 meetings for five months, so the page cap
+    // in the adapter bounds the work per run.
+    const from = new Date(Date.now() - 7 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const to = new Date(Date.now() + 365 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const out = await servePoll(
+      triggerOf(req.get(TRIGGER_HEADER)),
+      {
+        source: 'wa',
+        sport: 'athletics',
+        competitionId: 'wa-calendar',
+        pollPath: 'pollAthletics',
+        seasonRequested: null,
+      },
+      async (trace) => {
+        trace.seasonsTried.push(`${from}..${to}`);
+        const r = await fetchWorldAthletics(from, to);
+        return { ...r, followKey: 'wa-calendar', seasonResolved: 'current' };
+      },
+    );
+    res.status(out.status).json(out.body);
+  },
+);
+
+// ─── Review queue ─────────────────────────────────────────────────────
+//
+// Everything here is key-guarded: it writes to what users' calendars
+// eventually show, so it is an operator surface, not a public one.
+
+function reviewAuthed(req: { get(h: string): string | undefined }): boolean {
+  const expected = process.env.SWEEP_KEY;
+  const provided = req.get('x-sweep-key');
+  return Boolean(
+    expected && provided && timingSafeEqualStr(provided, expected),
+  );
+}
+
+export const submitReview = onRequest(async (req, res) => {
+  if (!reviewAuthed(req)) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  const parsed = validateSubmission(req.body);
+  if (!parsed.ok) {
+    // Rejected, never repaired: a repaired record is one nobody verified.
+    res.status(400).json({ error: 'invalid submission', errors: parsed.errors });
+    return;
+  }
+  const item = await submitReviewItem(db, parsed.value, new Date().toISOString());
+  res.json({ id: item.id, status: item.status });
+});
+
+export const listReview = onRequest(async (req, res) => {
+  if (!reviewAuthed(req)) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  const status = req.query.status as ReviewStatus | undefined;
+  res.json({ items: await listReviewItems(db, status) });
+});
+
+// Approve, correct or reject. Approving is the ONLY path from the queue
+// into the fixture cache.
+export const decideReview = onRequest(async (req, res) => {
+  if (!reviewAuthed(req)) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  const id = String(req.query.id ?? (req.body as { id?: string })?.id ?? '');
+  const decision = String(
+    req.query.decision ?? (req.body as { decision?: string })?.decision ?? '',
+  );
+  if (!id || !['confirmed', 'cancelled', 'provisional'].includes(decision)) {
+    res.status(400).json({ error: 'id and decision (confirmed|cancelled|provisional) required' });
+    return;
+  }
+  const ref = db.collection('reviewQueue').doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    res.status(404).json({ error: 'no such review item' });
+    return;
+  }
+  const now = new Date().toISOString();
+  // A correction may accompany the decision; it is re-validated, never
+  // trusted, and a failed correction leaves the item exactly as it was.
+  const corrections = (req.body as { corrections?: unknown })?.corrections;
+  let base = snap.data() as ReviewItem;
+  if (corrections) {
+    const parsed = validateSubmission({ ...base, ...(corrections as object) });
+    if (!parsed.ok) {
+      res.status(400).json({ error: 'invalid correction', errors: parsed.errors });
+      return;
+    }
+    base = { ...base, ...parsed.value };
+  }
+  const item: ReviewItem = {
+    ...base,
+    status: decision as ReviewStatus,
+    decidedAt: now,
+    decidedBy: String(req.query.by ?? 'operator'),
+  };
+  await ref.set(item);
+
+  const fixture = reviewItemToFixture(item, now);
+  if (fixture) {
+    await ingest([fixture], fixture.followKeys[0]);
+    res.json({ id, status: item.status, published: fixture.id });
+    return;
+  }
+  res.json({ id, status: item.status, published: null });
+});
+
+// The simplest thing that is genuinely an admin view: one page, no build
+// step, no dependency. Key-guarded like everything else here.
+export const reviewAdmin = onRequest(async (req, res) => {
+  if (!reviewAuthed(req)) {
+    res.status(403).send('forbidden');
+    return;
+  }
+  const items = await listReviewItems(db);
+  const esc = (v: unknown): string =>
+    String(v ?? '').replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string,
+    );
+  const rows = items
+    .map(
+      (i) => `<tr class="${esc(i.status)}">
+      <td>${esc(i.status)}</td>
+      <td>${esc(i.startUtc)}</td>
+      <td><strong>${esc(i.title)}</strong><br><small>${esc(i.promoter)}${i.venue ? ' — ' + esc(i.venue) : ''}</small></td>
+      <td>${i.bouts.map((b) => `${esc(b.first)} v ${esc(b.second)} <small>(${esc(b.cardPosition)}${b.titleOnTheLine ? ', ' + esc(b.titleOnTheLine) : ''})</small>`).join('<br>')}</td>
+      <td><a href="${esc(i.sourceUrl)}" rel="noreferrer noopener">source</a></td>
+      <td>
+        <button onclick="decide('${esc(i.id)}','confirmed')">approve</button>
+        <button onclick="decide('${esc(i.id)}','cancelled')">reject</button>
+      </td>
+    </tr>`,
+    )
+    .join('');
+  res.set('Content-Type', 'text/html; charset=utf-8').send(
+    `<!doctype html><meta charset="utf-8"><title>KickOffCal review queue</title>
+<style>
+ body{font:14px/1.5 system-ui,sans-serif;margin:2rem;max-width:1100px}
+ table{border-collapse:collapse;width:100%} td,th{border-bottom:1px solid #ddd;padding:.5rem;vertical-align:top;text-align:left}
+ tr.provisional{background:#fffbea} tr.cancelled{opacity:.45} tr.confirmed{background:#f0fdf4}
+ button{margin-right:.4rem;padding:.3rem .6rem;cursor:pointer}
+ small{color:#666}
+</style>
+<h1>Review queue <small>${items.length} items</small></h1>
+<p><small>Nothing here reaches a calendar until it is approved. Every row
+carries the source it was extracted from — check the claim against it.</small></p>
+<table><tr><th>status</th><th>starts</th><th>card</th><th>bouts</th><th></th><th></th></tr>${rows}</table>
+<script>
+async function decide(id, decision){
+  const key = sessionStorage.getItem('k') || prompt('operator key');
+  sessionStorage.setItem('k', key);
+  const r = await fetch('decideReview?id='+encodeURIComponent(id)+'&decision='+decision,
+    {method:'POST', headers:{'x-sweep-key':key,'Content-Type':'application/json'}, body:'{}'});
+  if (r.ok) location.reload(); else alert(await r.text());
+}
+</script>`,
+  );
+});
 
 // What every connector has actually delivered lately, per ingest slice.
 // Read-only, but it scans the run history and every future-dated fixture,

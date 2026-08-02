@@ -605,3 +605,42 @@ season; CL/EC/WC hidden).
   the provisional→all-day rule, and bestSeason's dead-season fallback.
 - 460 tests green under UTC and America/Los_Angeles.
 
+### Prompt 4/4b — Boxing, tennis and athletics at event level  [x]
+
+Sources investigated read-only, robots.txt first, no UA spoofing, no auth
+bypass. Owner rulings recorded in DECISIONS.md with their reasoning.
+
+BUILT:
+- **PBC** (`providers/pbc.ts`) — JSON-LD `SportsEvent` + the 319-URL
+  sitemap, card level, honouring the published `Crawl-delay: 10`. Slug
+  dates skip past cards without fetching them. ONE upcoming card exists
+  (FINDINGS F24).
+- **Tennis** (`providers/tennisIcs.ts`) — the ICS Tennis TV publishes for
+  subscription: 340 VEVENTs, 78 upcoming, tournament level with correct
+  multi-day spans (US Open 15 days). Fields only; the DESCRIPTION text is
+  never read. Once daily, honest UA.
+- **Athletics** (`providers/worldAthletics.ts`) — World Athletics
+  `__NEXT_DATA__`, ~1,250 meetings, paginated. Follow keys are per
+  COMPETITION GROUP so following athletics does not mean following every
+  parkrun.
+- **Review queue** (`reviewQueue.ts` + `submitReview`/`listReview`/
+  `decideReview`/`reviewAdmin`) — the boxing strategy for Golden Boy, MVP,
+  Matchroom, BOXXER, Queensberry and whatever comes next. Strict
+  validation that rejects rather than repairs, a mandatory source URL on
+  every record, nothing reaching a calendar until a human approves it.
+
+NOT BUILT, and why: WTA (no calendar in its JSON-LD), ITF (Incapsula
+challenge), ATP site and MVP (robots refusal), Golden Boy (Cloudflare),
+Matchroom/BOXXER/Queensberry (HTML parsers declined by ruling). See
+FINDINGS F18–F24.
+
+ALSO: `MAX_FIXTURE_DURATION_HOURS` widened 96h → 3 weeks, because a
+15-day Grand Slam must not fall out of the query window halfway through.
+The cost is a wider read lookback; correctness first.
+
+OWED: the extractor that feeds the review queue is an operator or agent
+session POSTing to `submitReview`. Running extraction IN the cluster needs
+an LLM provider key and a budget decision — not made here.
+
+501 tests green under UTC and America/Los_Angeles.
+

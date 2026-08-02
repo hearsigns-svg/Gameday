@@ -558,3 +558,44 @@
   precision sits with confidence ahead of freshness, so a settled kick-off
   beats a placeholder that polled later. It changes 0 fixtures today
   because fd.org and TheSportsDB cover disjoint competitions here.
+
+## Prompt 4b rulings (owner, 2026-07-31)
+
+- 2026-07-31: THE TENNIS TV ICS IS USED. The robots.txt that disallows it
+  belongs to calendar.google.com — Google Calendar's crawler policy, not
+  Tennis TV's. Tennis TV created the feed for subscription and published
+  documented instructions for adding it to Outlook and Apple Calendar.
+  Fetching one known URL on a schedule is subscribing, which is what the
+  feed is for; it is not crawling a site. Constraints that make that true
+  and keep it true: ONCE DAILY maximum, honest user-agent identification,
+  and we take the structured fields only — never the VEVENT description
+  text.
+- 2026-07-31: atptour.com and Most Valuable Promotions are PERMANENTLY
+  EXCLUDED. Both name ClaudeBot in robots.txt with `Disallow: /`. That is
+  an explicit refusal by the publisher, and it is not to be revisited,
+  routed around, or re-checked in a later stage.
+  WHY THIS DOES NOT CONTRADICT THE ICS RULING: the two are different
+  publishers making different decisions about their own property. ATP
+  refused us on ATP's site. Tennis TV published a subscription feed and
+  told people to subscribe to it. Honouring both means reading the ICS and
+  never touching atptour.com — which is exactly what we do, and it is why
+  ATP tournament coverage exists at all.
+- 2026-07-31: Golden Boy is EXCLUDED with no circumvention — Cloudflare
+  403s automated clients. No user-agent spoofing, no challenge solving, no
+  browser automation. It goes to the review queue instead.
+  EXTENDED 2026-07-31 by the same reasoning to ITF, whose
+  `TournamentApi/GetCalendar` returned an Imperva/Incapsula challenge page
+  to an honest client (212 bytes, `_Incapsula_Resource`, noindex/nofollow)
+  rather than the JSON an earlier probe saw. Same class of barrier, same
+  answer: excluded, not circumvented, routed to review.
+- 2026-07-31: Boxing takes PBC ONLY as a connector. Matchroom, BOXXER and
+  Queensberry are NOT built: a listing with day-and-month but no year, a
+  page of Elementor div soup, and JSON-LD sixteen months stale are three
+  indefinite maintenance commitments for a handful of events a month. They
+  go to the review queue, which is the boxing strategy rather than the
+  fallback.
+- 2026-07-31: WTA is NOT built as a connector either. Its /tournaments page
+  carries exactly one JSON-LD SportsEvent and it is the SEASON — "WTA Tour
+  2026", 1 January to 31 December — not a tournament calendar. The list is
+  in HTML only, so building it would mean the HTML parser the ruling above
+  just declined. Reported rather than quietly built.

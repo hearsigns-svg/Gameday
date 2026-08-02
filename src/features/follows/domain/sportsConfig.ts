@@ -161,7 +161,97 @@ export const SPORTS: SportConfig[] = [
     ],
   },
   { key: 'tennis', label: 'Tennis',
-    accent: '#65A30D', glyph: '🎾', enabled: false, browse: ['competition'], followTypes: ['competition', 'athlete'] },
+    accent: '#65A30D',
+    glyph: '🎾',
+    enabled: true,
+    browse: ['competition'],
+    followTypes: ['competition'],
+    // TOURNAMENT level only — one event per tournament, spanning its days.
+    // Draws and order of play are a later stage. ATP comes from the ICS
+    // feed Tennis TV publishes for subscription; atptour.com itself
+    // refuses this agent and is permanently excluded (docs/DECISIONS.md).
+    staticCompetitions: [
+      {
+        id: 'atp',
+        name: 'ATP Tour',
+        country: 'World',
+        key: 'tennis-atp',
+        followOnly: true,
+        pollPath: 'pollTennis',
+      },
+    ] },
+  {
+    key: 'athletics',
+    label: 'Athletics',
+    accent: '#0369A1',
+    glyph: '🏃',
+    enabled: true,
+    // MEETING level. The World Athletics calendar carries ~1,250 meetings
+    // for a five-month window, overwhelmingly minor road races — so the
+    // followables are the SERIES a fan actually follows, not the calendar
+    // as a whole. Every row polls the same feed; they differ in which
+    // group key the follow matches.
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      {
+        id: 'diamond',
+        name: 'Wanda Diamond League',
+        country: 'World',
+        key: 'wa-wanda-diamond-league-meeting',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'wch',
+        name: 'World Athletics Championships',
+        country: 'World',
+        key: 'wa-world-athletics-championships-world-athletics-series',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'ct-gold',
+        name: 'Continental Tour Gold',
+        country: 'World',
+        key: 'wa-world-athletics-continental-tour-gold',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'indoor-gold',
+        name: 'Indoor Tour Gold',
+        country: 'World',
+        key: 'wa-world-athletics-indoor-tour-gold',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'xc',
+        name: 'Cross Country Tour Gold',
+        country: 'World',
+        key: 'wa-world-athletics-cross-country-tour-gold',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'nationals',
+        name: 'National Championships',
+        country: 'World',
+        key: 'wa-national-senior-outdoor-championships',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'all',
+        name: 'Everything on the calendar',
+        country: 'World',
+        key: 'wa-calendar',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+    ],
+  },
   {
     key: 'basketball',
     label: 'Basketball',
@@ -422,16 +512,33 @@ export const SPORTS: SportConfig[] = [
     accent: '#BE123C',
     glyph: '🥊',
     enabled: true,
-    // Card-follow like UFC: one follow covers the major fight cards.
-    // Times are announced late → tbd placeholders that sharpen.
-    browse: [],
-    followTypes: ['series'],
-    seriesFollowable: {
-      key: 'tsdb-league-4445',
-      label: 'Boxing',
-      pollPath:
-        'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
-    },
+    // Card-follow: one follow covers the fight cards. Times published are
+    // the CARD start, not the main-event ringwalk, so they arrive nominal
+    // and say so rather than pretending to a minute they do not know.
+    browse: ['competition'],
+    followTypes: ['competition', 'athlete'],
+    staticCompetitions: [
+      {
+        id: '4445',
+        name: 'Major fight cards',
+        country: 'World',
+        key: 'tsdb-league-4445',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
+      },
+      {
+        // The one promoter publishing structured data (JSON-LD
+        // SportsEvent + a sitemap). Matchroom, BOXXER and Queensberry go
+        // through the review queue instead — see docs/DECISIONS.md.
+        id: 'pbc',
+        name: 'Premier Boxing Champions',
+        country: 'USA',
+        key: 'pbc-cards',
+        followOnly: true,
+        pollPath: 'pollPbc',
+      },
+    ],
   },
   {
     key: 'ufc',

@@ -37,6 +37,11 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
   pollMlbTeam: { teamId: /^\d{1,7}$/, season: /^\d{4}$/ },
   pollNhlTeam: { abbrev: /^[A-Z]{2,3}$/, season: /^\d{8}$/ },
   pollF1: { season: /^\d{4}$/ },
+  // Parameterless: each has exactly one feed, and the window is computed
+  // server-side from the clock rather than baked into a stored follow.
+  pollPbc: {},
+  pollTennis: {},
+  pollAthletics: {},
   pollTsdbLeague: {
     leagueId: /^\d{3,6}$/,
     season: /^[0-9-]{4,9}$/,
@@ -160,6 +165,12 @@ export function sliceOfPollPath(
       };
     case 'pollF1':
       return { source: 'f1', sport: 'f1', competitionId: 'f1-series-1' };
+    case 'pollPbc':
+      return { source: 'pbc', sport: 'boxing', competitionId: 'pbc-cards' };
+    case 'pollTennis':
+      return { source: 'tennis', sport: 'tennis', competitionId: 'tennis-atp' };
+    case 'pollAthletics':
+      return { source: 'wa', sport: 'athletics', competitionId: 'wa-calendar' };
     default:
       return null;
   }

@@ -348,3 +348,38 @@ The real site is `queensberry.co.uk` (Shopify). The named domain returns a
 114-byte GoDaddy parking redirect. Its JSON-LD `SportsEvent` blocks are
 present but STALE — all four are Feb–Mar 2025 — so the live schedule has to
 come from the page body, not the structured data that looks authoritative.
+
+### F22 — ITF is behind an Incapsula challenge; WTA has no tournament calendar in JSON-LD
+Both were reported usable by the Prompt 4 investigation. Building against
+the real payloads showed otherwise:
+
+- **ITF** — `TournamentApi/GetCalendar` returned 212 bytes to an honest
+  client: an Imperva/Incapsula challenge page (`_Incapsula_Resource`,
+  `noindex,nofollow`), not the JSON an earlier probe saw. Same class of
+  barrier as Golden Boy's Cloudflare 403, so the same ruling applies —
+  excluded, not circumvented.
+- **WTA** — `/tournaments` carries exactly ONE JSON-LD `SportsEvent`, and
+  it is the season: `"WTA Tour 2026"`, 1 Jan → 31 Dec. Not a calendar. The
+  tournament list is HTML-only, so building it would mean the HTML parser
+  the boxing ruling explicitly declined.
+
+The lesson worth keeping: an investigation that reads a page is not a
+substitute for building against the payload. Both of these looked usable
+until a connector was actually pointed at them.
+
+### F23 — Tennis coverage is ATP-only, and athletics is dominated by minor road races
+- Tennis ships with ATP tournaments (78 upcoming) and nothing else. WTA
+  and ITF are both unavailable per F22, so women's tennis has NO coverage
+  at all. That is a product gap, not a bug, and it is visible: the browse
+  list offers "ATP Tour" and only that.
+- World Athletics carries ~1,250 meetings for a five-month window, the
+  large majority minor road races and cross-country. Following the whole
+  calendar would flood a calendar, so the followables are the SERIES
+  (Diamond League, Continental Tour Gold, the indoor tour, championships,
+  nationals) with the catch-all offered last and named honestly
+  ("Everything on the calendar").
+
+### F24 — PBC has exactly one upcoming card
+319 sitemap URLs, 300 with a parseable date in the slug, and **one** dated
+today or later. The connector is correct and the coverage is thin — which
+is the argument for the review queue rather than against the connector.

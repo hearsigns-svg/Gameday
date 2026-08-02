@@ -77,11 +77,17 @@ export function isEndPast(endUtc: string, nowMs: number): boolean {
   return Date.parse(endUtc) + PAST_GRACE_MS <= nowMs;
 }
 
-// The longest fixture we serve: the County Championship is configured at
-// 96 hours. Any fixture that started longer ago than this plus the grace
-// cannot still be running, which makes it a safe lower bound for a query
-// that must not exclude a single live fixture.
-export const MAX_FIXTURE_DURATION_HOURS = 96;
+// The longest fixture we serve. Was 96 hours (the County Championship);
+// tennis tournaments and athletics championships are longer — the US Open
+// runs 15 days, and this bound must not exclude a Grand Slam that is
+// halfway through. Three weeks covers every span either source publishes
+// with room to spare.
+//
+// The cost is a wider query lookback (now − 510h rather than − 102h), so
+// a sync reads a few more past-but-recent documents. Correctness first:
+// the alternative is a live tournament falling out of the fetch, and the
+// ledger freeze then treating it as gone.
+export const MAX_FIXTURE_DURATION_HOURS = 24 * 21;
 
 export function queryHorizonUtc(nowMs: number): string {
   return new Date(

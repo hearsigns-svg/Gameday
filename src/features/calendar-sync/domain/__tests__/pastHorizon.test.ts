@@ -98,10 +98,13 @@ describe('past means FINISHED, not started', () => {
 
 describe('the query lower bound cannot exclude a live fixture', () => {
   test('it is the longest fixture plus the grace', () => {
-    expect(MAX_FIXTURE_DURATION_HOURS).toBe(96);
+    // Widened from 96h (the County Championship) to three weeks when
+    // tennis landed: the US Open runs 15 days, and the bound must not
+    // exclude a Grand Slam that is halfway through.
+    expect(MAX_FIXTURE_DURATION_HOURS).toBe(24 * 21);
     const now = AT('2026-08-10T12:00:00.000Z');
-    // 96h + 6h = 102h before now.
-    expect(queryHorizonUtc(now)).toBe('2026-08-06T06:00:00.000Z');
+    // 504h + 6h = 510h before now.
+    expect(queryHorizonUtc(now)).toBe('2026-07-20T06:00:00.000Z');
   });
 
   test('every fixture the bound excludes really is past', () => {
@@ -110,11 +113,11 @@ describe('the query lower bound cannot exclude a live fixture', () => {
     // The worst case: the longest fixture we serve, starting exactly at
     // the bound, must still be considered past — otherwise the query
     // would drop something the planner still wants.
-    const longest = fx({ durationHours: 96, startUtc: bound });
+    const longest = fx({ durationHours: MAX_FIXTURE_DURATION_HOURS, startUtc: bound });
     expect(isPast(longest, now)).toBe(true);
     // …and one minute later it is NOT past, so the bound is not slack.
     const justInside = fx({
-      durationHours: 96,
+      durationHours: MAX_FIXTURE_DURATION_HOURS,
       startUtc: new Date(Date.parse(bound) + 60_000).toISOString(),
     });
     expect(isPast(justInside, now)).toBe(false);
