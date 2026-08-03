@@ -124,12 +124,15 @@ describe('roster staleness — from the marker doc, never the run window', () =>
     expect(alerts[0].detail).toMatch(/never refreshed/);
   });
 
+  // Markers cover EVERY expected slice (incl. roster-atp since the
+  // Prompt 10c mint) — these tests build them from the list itself so
+  // adding a source extends them instead of silently failing them.
+  const allFresh = Object.fromEntries(
+    EXPECTED_ROSTER_SLICES.map((s) => [s, fresh]),
+  );
+
   test('fresh markers are quiet; one stale slice pages alone', () => {
-    const marker = {
-      'wta|roster-wta': fresh,
-      'f1|roster-f1': fresh,
-      'ibf|roster-ibf': stale,
-    };
+    const marker = { ...allFresh, 'ibf|roster-ibf': stale };
     const alerts = evaluateRosterAlerts(marker, NOW);
     expect(alerts).toHaveLength(1);
     expect(alerts[0].sliceKey).toBe('ibf|roster-ibf');
@@ -140,11 +143,7 @@ describe('roster staleness — from the marker doc, never the run window', () =>
     const weekOld = new Date(NOW - 7 * 24 * 3_600_000).toISOString();
     expect(
       evaluateRosterAlerts(
-        {
-          'wta|roster-wta': weekOld,
-          'f1|roster-f1': weekOld,
-          'ibf|roster-ibf': weekOld,
-        },
+        Object.fromEntries(EXPECTED_ROSTER_SLICES.map((s) => [s, weekOld])),
         NOW,
       ),
     ).toEqual([]);

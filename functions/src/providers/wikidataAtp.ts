@@ -33,11 +33,11 @@
 
 import { RosterEntry } from '../athletes';
 
-// THE MINT GATE: flipped to true only on the owner's approval of the
-// validated counts (Prompt 10b report: universe 6,559 → selected
-// 1,513). While false the source neither runs on the weekly scheduler
-// nor is expected by roster_stale — code deploys, data waits.
-export const ATP_ROSTER_ENABLED = false;
+// THE MINT GATE — OPENED 2026-08-03 on the owner's approval of the
+// validated counts (Prompt 10c: universe 6,559 → selected 1,513;
+// 110/110 on the live-draw check). The weekly scheduler owns the
+// refresh from here, under the WDQS ruling's conditions.
+export const ATP_ROSTER_ENABLED = true;
 
 export const USER_AGENT =
   'KickOffCal/1.0 (+https://kickoffcal.app; calendar sync; contact hearsigns@gmail.com)';
@@ -206,15 +206,32 @@ export function passesThreshold(p: AtpPlayer): boolean {
 // time, growing) — a smaller answer is a truncated response, and a
 // truncated roster applied would deactivate real athletes.
 export const MIN_UNIVERSE = 4_000;
-// The selected roster's plausible band (1,522 at validation).
+// The selected roster's plausible band (1,513 at validation). The
+// ceiling was first set at 4,000 — 250 under the 5,000 athlete
+// scan-cap's hard throw once the other rosters' 757 are counted, which
+// is a tripwire, not headroom (owner review, 10c). Now: 2,500 — 65%
+// organic growth over validation before anything binds, worst-case
+// total ~3,300 athletes against the 5,000 cap — and the APPROACH pages
+// first: past WARN_SELECTED the run logs a stable-prefix console.error
+// that Cloud Error Reporting groups and notifies on, so the ceiling
+// can never again become binding with nothing recording that it bound
+// (the follow-cap and sweep-ceiling lesson). The throw itself stays:
+// a same-week doubling is feed or threshold corruption, and a
+// corrupted roster applied would deactivate real athletes.
 export const MIN_SELECTED = 800;
-export const MAX_SELECTED = 4_000;
+export const MAX_SELECTED = 2_500;
+export const WARN_SELECTED = 2_000; // 80% of the ceiling
 
 export function atpRosterEntries(players: readonly AtpPlayer[]): RosterEntry[] {
   const selected = players.filter(passesThreshold);
   if (selected.length < MIN_SELECTED || selected.length > MAX_SELECTED) {
     throw new Error(
       `wikidata atp: selected ${selected.length} outside [${MIN_SELECTED}, ${MAX_SELECTED}] — threshold or feed drift, not applied`,
+    );
+  }
+  if (selected.length > WARN_SELECTED) {
+    console.error(
+      `[kickoffcal-alert] atp_roster_near_ceiling: selected ${selected.length} of ${MAX_SELECTED} — raise the band deliberately before it binds`,
     );
   }
   return selected.map(rosterEntryOf);

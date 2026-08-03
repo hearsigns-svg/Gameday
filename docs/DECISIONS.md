@@ -1245,3 +1245,27 @@
   any athlete lands. NO current-rankings browse group: P1352 is
   historical points, not a live feed — "Former world No. 1s" and
   "Grand Slam champions" are honest, "current top 20" would be a lie.
+
+## Prompt 10c decisions (2026-08-03)
+
+- 2026-08-03: THE 29-No.1s CONSTANT IS A MAINTAINED LIST WITH A STATED
+  TRIGGER. `ATP_SINGLES_NO1_QIDS` (functions/src/providers/
+  wikidataAtp.ts) is curated because P1352 is confidently wrong in both
+  directions — it lists doubles No. 1s and pre-ranking retrospectives,
+  and it misses Agassi, Murray, Năstase and Ríos. UPDATE TRIGGER: a new
+  player reaching world No. 1 IN SINGLES (world news; ≤ a few times a
+  year). THE EDIT: add one `['Q…', 'Name']` line — resolve the Q-id
+  from the player's Wikipedia article (wgWikibaseItemId) — and the next
+  weekly roster refresh imports and groups him automatically; nothing
+  else to touch. The contract test pins size 29, so the edit also bumps
+  that expectation — deliberate: a silent edit is the failure mode.
+- 2026-08-03: THE ATP SELECTION CEILING PAGES BEFORE IT BINDS.
+  MAX_SELECTED lowered 4,000 → 2,500 (the old value sat 250 under the
+  5,000 athlete scan-cap's hard throw counting the other rosters — a
+  tripwire, not headroom), and WARN_SELECTED 2,000 logs a
+  stable-prefix console.error for Error Reporting at 80%. The throw
+  stays — a same-week doubling is feed or threshold corruption and a
+  corrupted roster applied would deactivate real athletes — but it can
+  no longer become binding silently: the approach pages first, with
+  65% organic-growth room over the validated 1,513. The follow-cap and
+  sweep-ceiling lesson, applied at design time instead of after weeks.
