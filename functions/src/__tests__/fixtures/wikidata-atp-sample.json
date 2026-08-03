@@ -1,0 +1,1428 @@
+{
+ "head": {
+  "vars": [
+   "p",
+   "label",
+   "atp",
+   "dob",
+   "start",
+   "end",
+   "links",
+   "top10",
+   "wta",
+   "itf"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q106962940"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "M0JF"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Hamad Međedović"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "18"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2003"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q10132"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "N409"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Rafael Nadal"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "154"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "100007935"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1986"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2001"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2024"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q10132"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "N409"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Rafael Nadal"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "154"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "100007935"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1986"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2001"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2024"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q7407"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "A092"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Andre Agassi"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "98"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000009"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1970"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1986"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2006"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1426"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "F324"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Roger Federer"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "159"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10019424"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1981"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1998"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2022"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q5812"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "D643"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Novak Djokovic"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "152"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "100004087"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1987"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2003"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q20666681"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "HC55"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Geoff Hughes"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1961"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1962"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q27735931"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "B269"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Rod Brent"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q27859449"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "P194"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Geoffrey Pares"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q305514"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "PK29"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kenneth Powell"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "8"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10016104"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1885"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q374574"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "TE83"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Harold Throckmorton"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "9"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1897"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q465911"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "MU14"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Harold Mahony"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "24"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10015383"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1867"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1905"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q186877"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "C266"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Eoin Collins"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "4"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000280"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1968"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q189542"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "E004"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Stefan Edberg"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "56"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000393"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1966"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1983"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1996"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q67303"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "K436"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Dieter Kindlmann"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "14"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10022896"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1982"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2001"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q463485"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "C049"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Loïc Courteau"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "9"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000304"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1964"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q463982"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "D024"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Steve DeVries"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "8"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000353"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1964"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q463719"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "S081"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Larry Stefanki"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "13"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10001611"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1957"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1979"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1988"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q463811"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "F191"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Doug Flach"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "11"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000458"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1970"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1987"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2001"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q65553"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "S080"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Carl-Uwe Steeb"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "19"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10001317"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1967"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1986"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1996"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q67304"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "K260"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jens Knippschild"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "14"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10002952"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1975"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1992"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2004"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q67320"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "D249"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Hendrik Dreekmann"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "11"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10002699"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1975"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1991"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2003"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q185722"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "F316"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Juan Carlos Ferrero"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "54"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "30014719"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1980"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1998"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2012"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q186429"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "MC65"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Gaël Monfils"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "52"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "100022408"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1986"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2004"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q305043"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "S579"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Thomas Shimada"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "13"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10006779"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1975"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q305514"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "PK29"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kenneth Powell"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "8"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10016104"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1885"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q304729"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "AD74"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "József Asbóth"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "17"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10003050"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1917"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1939"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1957"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q304724"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "G476"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Guillermo García López"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "32"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "30023199"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1983"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2002"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q464621"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "G108"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Rodolphe Gilbert"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "8"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000520"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1968"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q464665"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "H005"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Rodney Harmon"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "12"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10002143"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1961"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q464773"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "O004"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Gianni Ocleppo"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "9"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10002173"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1957"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q202053"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "T376"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Brian Tobin"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "7"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10007259"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1930"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q203755"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "SB92"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Adil Shamasdin"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "17"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "30022857"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1982"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2001"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q204068"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "R255"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Patrick Rafter"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "49"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10001728"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1972"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1991"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2002"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q311014"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "SC56"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Dudi Sela"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "30"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "30023230"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1985"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2002"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q311177"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "B350"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Sergi Bruguera"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "38"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10000188"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "true"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1971"
+    },
+    "start": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1988"
+    },
+    "end": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "2002"
+    }
+   },
+   {
+    "p": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q71171"
+    },
+    "atp": {
+     "type": "literal",
+     "value": "O026"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ricki Osterthun"
+    },
+    "links": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "8"
+    },
+    "itf": {
+     "type": "literal",
+     "value": "10001037"
+    },
+    "top10": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#boolean",
+     "type": "literal",
+     "value": "false"
+    },
+    "dob": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#integer",
+     "type": "literal",
+     "value": "1964"
+    }
+   }
+  ]
+ }
+}

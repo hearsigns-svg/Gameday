@@ -1357,3 +1357,96 @@ the feature READS, not a layer that happens to agree (the F40 lesson).
   --only functions; the REVISED seed dry-run (delta: 14 sport rows NEW
   + County 24→34) awaits owner approval —
   `node scripts/seed-catalogue.mjs --apply --reset-priorities`.
+
+### Prompt 10/10b — ATP players from Wikidata  [~]
+
+Phase 1 (investigation, allowed surfaces only): Wikidata CC0 verified
+verbatim; per-player richness confirmed via the explicitly-allowed
+Special:EntityData (P536 ATP ids, P597 WTA ids in OUR stored numeric
+namespace, P599 ITF ids on BOTH tours, P1146 WA ids, P18 Commons
+images, career dates, historical rankings); enumeration surfaces sat
+under crawler-aimed robots Disallows that Wikimedia's own bot docs
+invite clients through — the Tennis-TV-ICS shape, put to the owner
+rather than judged here. ITF re-probed: GetCalendar still serves the
+byte-identical Incapsula challenge — exclusion stands, and P599 makes
+it unnecessary; daviscup.com is open (no challenge, robots allow) but
+a rebuilt Next.js app-router site — parked by ruling. Stale brief
+premises corrected from the record: ITF was never approved, tennis
+venue photos shipped in 9c, F34 closed in 9b.
+
+10B RULING EXECUTED (WDQS + Action API approved as documented
+programmatic services; crawler-vs-client reasoning + citation nuance
+recorded in DECISIONS): ONE lean enumeration query (6,559 distinct
+P536 humans, ~6.5MB, ~12–18s; the aggregate-subquery form 502s and is
+banned in-code). THRESHOLD VALIDATED BEFORE MINTING per the owner
+gate: (plausibly-current ∩ sitelinks≥3) ∪ ever-top-10 ∪ curated
+singles-No. 1 ⇒ **1,513 of 6,559**; checked against the live Toronto
+ATP draw (111 men playing THIS WEEK): 110 matched, **110/110 pass,
+zero threshold drops** — the one miss has no Wikidata item at all
+(universe bound, the WTA-qualifier class). The sitelinks arm never
+fired against a current player.
+
+BUILT (mint GATED on the owner reading the counts —
+ATP_ROSTER_ENABLED=false; the source neither runs on the scheduler
+nor is roster_stale-expected until flipped):
+- providers/wikidataAtp.ts — the enumeration + threshold + mapping;
+  MIN_UNIVERSE 4,000 truncation guard, selected-band [800, 4,000]
+  drift bounds; athletes minted source 'wikidata' (Q-id) with atp +
+  itf extraIdentities — three namespaces certify identity, NO schema
+  change (the identity map was built for this), canonical
+  athlete_NNNNNN keys untouched.
+- THE CURATED No. 1 LIST: P1352 cannot carry "Former world No. 1s"
+  honestly in either direction — it includes doubles No. 1s and
+  pre-ranking retrospectives (Jamie Murray, Arthur Gore) and MISSES
+  four singles No. 1s with no =1 statement (Agassi, Murray, Năstase,
+  Ríos). The 29 singles No. 1s are a closed, world-news-on-change set:
+  curated Q-id constant (DC-Open-alias class, cited, extracted
+  2026-08-03), membership also imports (the historically-notable arm
+  anchored). It is the ONLY men's browse group — no live rank exists
+  to cut the other ~1,480 honestly, so they are search-first; "Grand
+  Slam champions" deferred: P2522 covers 32 of 6,559 and the
+  edition-series linkage is inconsistently modelled, and the Wikipedia
+  list article mixes winners with finalists in extractable shape.
+- reconcileRoster POPULATION GUARD: every existing tennis athlete is a
+  WTA-id-backed woman; a confident cross-gender name match must mint a
+  second athlete (making draw matching honestly ambiguous), never
+  attach a man's identity and honours to a woman's follow —
+  nameMatchExcludesSources ['wta'], pinned both with and without.
+- normaliseName TRANSLITERATION FOLDS (đ→dj ø ł æ ß þ ð): đ never
+  NFD-decomposes, so 'Hamad Međedović' searchName'd as 'hamad me
+  edovi' — unfindable by anything a user types. Caught by the emulator
+  E2E probe BEFORE any prod doc carried one (verified 0 of 757
+  affected — no backfill exists to owe); client sameBout mirror synced
+  by hand as documented.
+- E2E on the emulator through the real apply path: 1,513 created, 0
+  ambiguous; searchEntities finds Međedović/Đere by typed
+  transliteration, Năstase and Alcaraz from a ZERO-fixture store (the
+  entire point — findable with nothing scheduled); browse group
+  exactly the 29 (Agassi in, Jamie Murray out), after the WTA top 50;
+  competingSoon honestly empty. Client follow flow + empty state are
+  Prompt 8 behaviour, unchanged and not re-device-verified. Men's
+  appearances have NO minting source today (F33 stands) — a follow
+  delivers events the moment a draws source exists, and the tennis
+  coverageNote now says exactly that.
+- Roster functions to 512MiB (the 6.5MB answer fans to ~6,600 row
+  objects; 256MiB left no honest headroom beside the IBF crawl).
+
+- ADVERSARIAL REVIEW (one lens, live prod + live Wikidata probes): 2
+  confirmed. The real one: the population guard keyed on
+  providerIds.wta and MISSED name-keyed tennis women (a blank-PlayerID
+  draw mint has no id to check) — fixed: an id-less confident name
+  match is excluded whenever the guard is active, pinned. Ops note
+  encoded in the flip procedure: the roster_stale expectation arrives
+  at deploy time, so the flip MUST be followed immediately by
+  runRoster or it pages within 6h. Survived attack, worth keeping:
+  all 29 curated Q-ids verified against live Wikidata (the banked
+  sample alone could not catch a typo); zero prod carriers of the
+  folded letters anywhere a normaliseName output persists; live
+  fetchAtpRoster one-shot 4.5s / 109MB RSS; import graph cycle-free
+  (the athletes import is type-only); future note — MAX_SELECTED
+  4,000 sits within 250 of the 5,000 athlete scan-cap tripwire.
+- 726 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean; deployed --only functions (the gated
+  source is inert in prod). MINT AWAITS the owner's read of the
+  counts: on approval I flip ATP_ROSTER_ENABLED, deploy, and invoke
+  runRoster in the same action — then the Tuesday scheduler owns it.

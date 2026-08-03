@@ -1211,3 +1211,37 @@
   maintain, disagree about, and keep dormancy-coherent. Shipping ONE
   UK-leaning default now; the overlay is additive later if store
   metrics ever demand it (owner to choose from the 11b report).
+
+## Prompt 10b ruling (owner, 2026-08-03)
+
+- 2026-08-03: THE WIKIDATA QUERY SERVICE AND MEDIAWIKI ACTION API ARE
+  APPROVED as documented programmatic services. The reasoning travels
+  with the decision: robots.txt is a CRAWLER protocol — it governs
+  indexers walking link graphs, which is why the Disallows cover /w/,
+  /api/ and /sparql, infinite dynamic URL space that would be pointless
+  to index. Wikimedia simultaneously publishes a User-Agent policy,
+  rate limits and API etiquette documentation instructing bots how to
+  use those endpoints, and a publisher does not write a manual for the
+  thing it is refusing. Same structure as the Tennis TV ICS ruling:
+  robots keeps crawlers out, documentation invites clients, and we are
+  a client. CONDITIONS: honest UA with a contact; weekly cadence
+  matching the roster scheduler; ONE enumeration query, not a crawl
+  (per-player detail comes from Special:EntityData, which robots
+  explicitly allows); stay inside documented rate limits and query
+  timeout — if WDQS starts timing out or throttling at weekly cadence,
+  STOP AND TELL THE OWNER: that is Wikimedia's signal, an owner
+  decision the same way the ICS 429s were. CITATION NUANCE, stated so
+  nobody relitigates it: a Wikidata statement referencing atptour.com
+  as a source is metadata, not a fetch — we never follow it, and
+  consuming Wikidata's CC0 facts (verified: "All structured data in
+  the main, property and lexeme namespaces is made available under the
+  Creative Commons CC0 License") involves zero requests to anything
+  ATP operates. atptour.com stays permanently excluded.
+- 2026-08-03: THE IMPORT THRESHOLD IS VALIDATED BEFORE MINTING — the
+  current ATP top 100 (from a legitimately readable list) must ALL
+  pass the filter; a threshold that drops a currently-ranked player is
+  wrong regardless of how principled it looks. sitelinks>=3 is the arm
+  to loosen if the check fails. Counts reported to the owner before
+  any athlete lands. NO current-rankings browse group: P1352 is
+  historical points, not a live feed — "Former world No. 1s" and
+  "Grand Slam champions" are honest, "current top 20" would be a lie.

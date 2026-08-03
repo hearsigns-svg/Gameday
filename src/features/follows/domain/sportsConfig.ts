@@ -174,7 +174,7 @@ export const SPORTS: SportConfig[] = [
   },
   { key: 'tennis', label: 'Tennis',
     coverageNote:
-      'WTA players are browsable and followable, with draws and match times. ATP tournaments are covered, but ATP players are not — the ATP publishes no usable player feed. Finals as calendar events likewise come from the WTA feed only.',
+      'WTA players are browsable and followable, with draws and match times. ATP players are findable and followable too — but men’s match times have no approved source yet, so following a man delivers his events the moment a source for them exists. Finals as calendar events come from the WTA feed only.',
     accent: '#65A30D',
     glyph: '🎾',
     enabled: true,

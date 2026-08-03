@@ -69,6 +69,10 @@ export interface Athlete {
   missedRefreshes: number; // consecutive roster refreshes absent from
   rank?: number; // roster rank, 1 = best; absent for unranked
   championOf?: string[]; // sanctioning orgs, boxing: ['IBF', 'WBO']
+  // Career honours a browse group can be built on where no live rank
+  // exists (Prompt 10b): ['former-no1'] from Wikidata P1352=1. Facts
+  // about a career, never a claim about current form.
+  honours?: string[];
   countryCode?: string;
   nextStartUtc?: string; // soonest future appearance; search/browse hint
   createdAt: string;
@@ -495,6 +499,13 @@ export interface RosterEntry {
   rank?: number;
   championOf?: string[];
   countryCode?: string;
+  honours?: string[];
+  // Additional provider identities the SAME source vouches for in one
+  // record (Prompt 10b: a Wikidata row carries the ATP id and the ITF
+  // id beside the Q-id). They join the identity map exactly like the
+  // primary — per-identity source and lastSeenAt — so any of the three
+  // namespaces certifies this athlete in matching.
+  extraIdentities?: Array<{ source: string; externalId: string }>;
 }
 
 export const MISSES_BEFORE_INACTIVE = 2;
@@ -510,6 +521,17 @@ export function reconcileRoster(
   existing: readonly Athlete[],
   entries: readonly RosterEntry[],
   nowIso: string,
+  opts: {
+    // Population-exclusion guard (Prompt 10b): a CONFIDENT name match
+    // to an athlete carrying a provider id from one of these sources is
+    // treated as UNKNOWN — two different people sharing a rendered
+    // name. The ATP roster passes ['wta']: every existing tennis
+    // athlete is a WTA-id-backed woman, and a cross-gender name
+    // collision must mint a second athlete (whose name twin then makes
+    // draw-name matching honestly ambiguous), never attach a man's
+    // identity and honours to a woman's follow.
+    nameMatchExcludesSources?: string[];
+  } = {},
 ): RosterReconciliation {
   const index = buildAthleteIndex(existing);
   const toCreate: RosterEntry[] = [];
@@ -519,10 +541,26 @@ export function reconcileRoster(
   const seen = new Set<string>();
 
   for (const e of entries) {
-    const m = matchAthlete(index, e.sport, {
+    let m = matchAthlete(index, e.sport, {
       name: e.name,
       ...(e.externalId ? { source: e.source, externalId: e.externalId } : {}),
     });
+    if (
+      m.kind === 'confident' &&
+      opts.nameMatchExcludesSources !== undefined &&
+      (opts.nameMatchExcludesSources.some(
+        (s) => m.athlete!.providerIds[s] !== undefined,
+      ) ||
+        // A name-keyed athlete carries NO provider id to check — and in
+        // tennis the only name-keyed mint path is a WTA draw row with a
+        // blank PlayerID, i.e. exactly the population the exclusion
+        // names (review round: the id-marker check alone left this hole
+        // open). When the guard is active, an id-less name match is as
+        // untrustworthy as an excluded-source one.
+        m.athlete!.nameKeyed)
+    ) {
+      m = { kind: 'unknown' };
+    }
     if (m.kind === 'ambiguous') {
       if (e.externalId === null && isFullName(e.name)) {
         skippedAmbiguous.push(`${e.source}: ${e.name}`);
@@ -545,33 +583,45 @@ export function reconcileRoster(
     const a = m.athlete!;
     seen.add(a.id);
     const prev = toUpdate.get(a.id) ?? {};
-    const identity: AthleteIdentity = {
-      source: e.source,
-      externalId: e.externalId,
-      name: e.name,
-      lastSeenAt: nowIso,
-    };
+    const extras = e.extraIdentities ?? [];
+    const replaced = new Set([e.source, ...extras.map((x) => x.source)]);
     const identities = [
       ...(prev.identities ?? a.identities).filter(
-        (i) => i.source !== e.source,
+        (i) => !replaced.has(i.source),
       ),
-      identity,
+      {
+        source: e.source,
+        externalId: e.externalId,
+        name: e.name,
+        lastSeenAt: nowIso,
+      },
+      ...extras.map((x) => ({
+        source: x.source,
+        externalId: x.externalId,
+        name: e.name,
+        lastSeenAt: nowIso,
+      })),
     ];
     const aliasSet = new Set([...(prev.aliases ?? a.aliases)]);
     const n = normaliseName(e.name);
     if (n && n !== a.searchName) aliasSet.add(n);
+    const providerIdAdds: Record<string, string> = {
+      ...(e.externalId ? { [e.source]: e.externalId } : {}),
+      ...Object.fromEntries(extras.map((x) => [x.source, x.externalId])),
+    };
     toUpdate.set(a.id, {
       ...prev,
       identities,
       aliases: [...aliasSet],
-      ...(e.externalId
-        ? { providerIds: { ...a.providerIds, [e.source]: e.externalId } }
+      ...(Object.keys(providerIdAdds).length > 0
+        ? { providerIds: { ...a.providerIds, ...providerIdAdds } }
         : {}),
       ...(e.rank !== undefined ? { rank: e.rank } : {}),
       ...(e.championOf !== undefined ? { championOf: e.championOf } : {}),
       ...(e.countryCode ? { countryCode: e.countryCode } : {}),
       ...(e.grouping ? { grouping: e.grouping } : {}),
       ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
+      ...(e.honours !== undefined ? { honours: e.honours } : {}),
       active: true,
       missedRefreshes: 0,
       nameKeyed:
@@ -639,7 +689,12 @@ export function rosterAthlete(
     sport: e.sport,
     ...(e.grouping ? { grouping: e.grouping } : {}),
     ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
-    providerIds: e.externalId ? { [e.source]: e.externalId } : {},
+    providerIds: {
+      ...(e.externalId ? { [e.source]: e.externalId } : {}),
+      ...Object.fromEntries(
+        (e.extraIdentities ?? []).map((x) => [x.source, x.externalId]),
+      ),
+    },
     identities: [
       {
         source: e.source,
@@ -647,6 +702,12 @@ export function rosterAthlete(
         name: e.name,
         lastSeenAt: nowIso,
       },
+      ...(e.extraIdentities ?? []).map((x) => ({
+        source: x.source,
+        externalId: x.externalId,
+        name: e.name,
+        lastSeenAt: nowIso,
+      })),
     ],
     provenance: 'roster',
     nameKeyed: !e.externalId,
@@ -655,6 +716,7 @@ export function rosterAthlete(
     ...(e.rank !== undefined ? { rank: e.rank } : {}),
     ...(e.championOf !== undefined ? { championOf: e.championOf } : {}),
     ...(e.countryCode ? { countryCode: e.countryCode } : {}),
+    ...(e.honours !== undefined ? { honours: e.honours } : {}),
     createdAt: nowIso,
     updatedAt: nowIso,
   };

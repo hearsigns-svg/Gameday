@@ -486,3 +486,102 @@ describe('accentHue — the generated colour identity (Prompt 9b)', () => {
     expect(a.accentHue).toBe(accentHueOf('athlete_000123'));
   });
 });
+
+// ── Prompt 10b: multi-identity roster entries + the population guard ──
+
+describe('ATP roster reconciliation (Prompt 10b)', () => {
+  const nowIso = '2026-08-03T00:00:00.000Z';
+  const atpEntry = (over: Partial<RosterEntry> = {}): RosterEntry => ({
+    source: 'wikidata',
+    externalId: 'Q5812',
+    name: 'Novak Djokovic',
+    sport: 'tennis',
+    grouping: 'Former world No. 1s',
+    groupingKey: 'atp-no1',
+    honours: ['former-no1'],
+    extraIdentities: [
+      { source: 'atp', externalId: 'D643' },
+      { source: 'itf', externalId: '100004087' },
+    ],
+    ...over,
+  });
+
+  test('a created athlete carries all three identities and the honours', () => {
+    const rec = reconcileRoster([], [atpEntry()], nowIso);
+    expect(rec.toCreate).toHaveLength(1);
+    const a = rosterAthlete('athlete_000900', rec.toCreate[0], nowIso);
+    expect(a.providerIds).toEqual({
+      wikidata: 'Q5812',
+      atp: 'D643',
+      itf: '100004087',
+    });
+    expect(a.identities.map((i) => i.source).sort()).toEqual(['atp', 'itf', 'wikidata']);
+    expect(a.honours).toEqual(['former-no1']);
+    expect(a.nameKeyed).toBe(false);
+  });
+
+  test('THE GUARD: a name-colliding WTA woman never receives a man\'s identity', () => {
+    // Same rendered name, same sport — two different people. Without
+    // the guard this is a CONFIDENT unique-name match and the ATP
+    // identity lands on the woman's doc.
+    const woman = rosterAthlete(
+      'athlete_000001',
+      {
+        source: 'wta',
+        externalId: '999001',
+        name: 'Novak Djokovic', // synthetic collision
+        sport: 'tennis',
+      },
+      nowIso,
+    );
+    const guarded = reconcileRoster([woman], [atpEntry()], nowIso, {
+      nameMatchExcludesSources: ['wta'],
+    });
+    expect(guarded.toUpdate).toHaveLength(0);
+    expect(guarded.toCreate).toHaveLength(1); // a second, distinct athlete
+    // And WITHOUT the guard it would have merged — pinning why it exists.
+    const unguarded = reconcileRoster([woman], [atpEntry()], nowIso);
+    expect(unguarded.toUpdate).toHaveLength(1);
+  });
+
+  test('re-running the roster against its own athlete matches CERTAIN by Q-id and refreshes identities', () => {
+    const a = rosterAthlete('athlete_000900', atpEntry(), '2026-07-01T00:00:00.000Z');
+    const rec = reconcileRoster([a], [atpEntry()], nowIso, {
+      nameMatchExcludesSources: ['wta'],
+    });
+    expect(rec.toCreate).toHaveLength(0);
+    expect(rec.toUpdate).toHaveLength(1);
+    const patch = rec.toUpdate[0].patch;
+    expect(patch.providerIds).toMatchObject({ wikidata: 'Q5812', atp: 'D643' });
+    expect(patch.identities!.filter((i) => i.source === 'wikidata')).toHaveLength(1);
+    expect(patch.identities!.every((i) => i.lastSeenAt === nowIso)).toBe(true);
+  });
+
+  test('THE GUARD also covers a NAME-KEYED woman — a blank-PlayerID draw mint has no wta id to check', () => {
+    // wtaTennis mints a draw participant with a blank PlayerID as
+    // name-keyed: providerIds {}, no source id anywhere. The id-marker
+    // check alone missed her (review round) — the man's identities
+    // would have landed on her doc and flipped nameKeyed false.
+    const nameKeyed = rosterAthlete(
+      'athlete_000002',
+      {
+        source: 'derived',
+        externalId: null,
+        name: 'Novak Djokovic', // synthetic collision
+        sport: 'tennis',
+      },
+      nowIso,
+    );
+    expect(nameKeyed.nameKeyed).toBe(true);
+    const guarded = reconcileRoster([nameKeyed], [atpEntry()], nowIso, {
+      nameMatchExcludesSources: ['wta'],
+    });
+    expect(guarded.toUpdate).toHaveLength(0);
+    expect(guarded.toCreate).toHaveLength(1);
+    // Without the guard active, the confident merge still happens for
+    // the OTHER rosters — behaviour unchanged where no exclusion is
+    // named.
+    const unguarded = reconcileRoster([nameKeyed], [atpEntry()], nowIso);
+    expect(unguarded.toUpdate).toHaveLength(1);
+  });
+});

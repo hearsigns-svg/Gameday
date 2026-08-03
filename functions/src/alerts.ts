@@ -29,6 +29,7 @@
 //     reason 'no_future_events' and never fire it.
 
 import { CoverageRow } from './coverage';
+import { ATP_ROSTER_ENABLED } from './providers/wikidataAtp';
 
 // KNOWN BOUNDS, accepted and stated rather than papered over:
 //   - yield_died self-extinguishes once the slice's last yielding run
@@ -73,6 +74,10 @@ export const EXPECTED_ROSTER_SLICES = [
   'wta|roster-wta',
   'f1|roster-f1',
   'ibf|roster-ibf',
+  // ATP via Wikidata (Prompt 10b): expected only once the mint gate is
+  // open — listed earlier, roster_stale would page about a source that
+  // has never been allowed to run.
+  ...(ATP_ROSTER_ENABLED ? ['wikidata|roster-atp'] : []),
 ];
 
 export function evaluateRosterAlerts(

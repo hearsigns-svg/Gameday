@@ -81,6 +81,7 @@ import { fetchTennisTournaments } from './providers/tennisIcs';
 import { fetchWorldAthletics } from './providers/worldAthletics';
 import { fetchWtaTennis } from './providers/wtaTennis';
 import { fetchWtaRankings } from './providers/wtaRankings';
+import { ATP_ROSTER_ENABLED, fetchAtpRoster } from './providers/wikidataAtp';
 import { fetchIbfRatings } from './providers/ibfRatings';
 import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
 import { applyRoster } from './rosterStore';
@@ -1404,6 +1405,7 @@ interface RosterSource {
   source: string;
   sport: string;
   run: () => Promise<{ rawCount: number; entries: import('./athletes').RosterEntry[] }>;
+  applyOpts?: { nameMatchExcludesSources?: string[] };
 }
 
 const rosterSources = (): RosterSource[] => [
@@ -1425,6 +1427,22 @@ const rosterSources = (): RosterSource[] => [
     sport: 'boxing',
     run: () => fetchIbfRatings(),
   },
+  // ATP players via Wikidata (Prompt 10b) — behind the mint gate until
+  // the owner approves the validated counts. The reconcile guard:
+  // every existing tennis athlete is a WTA-id-backed woman, and a
+  // cross-gender name collision must mint a second athlete, never
+  // attach a man's identity to a woman's follow.
+  ...(ATP_ROSTER_ENABLED
+    ? [
+        {
+          slice: 'roster-atp',
+          source: 'wikidata',
+          sport: 'tennis',
+          run: () => fetchAtpRoster(),
+          applyOpts: { nameMatchExcludesSources: ['wta'] },
+        },
+      ]
+    : []),
 ];
 
 async function refreshRosters(
@@ -1452,7 +1470,7 @@ async function refreshRosters(
       if (entries.length === 0) {
         throw new Error(`${s.source} roster returned zero entries`);
       }
-      const applied = await applyRoster(db, entries, startedAt);
+      const applied = await applyRoster(db, entries, startedAt, s.applyOpts ?? {});
       // The staleness marker the sweep's roster_stale rule reads —
       // written ONLY on a successful, non-empty, fully-applied refresh.
       await db
@@ -1509,7 +1527,10 @@ export const scheduledRoster = onSchedule(
     schedule: 'every tuesday 03:00',
     timeZone: 'Etc/UTC',
     timeoutSeconds: 540,
-    memory: '256MiB',
+    // 512MiB since Prompt 10b: the Wikidata enumeration answer is a
+    // ~6.5MB JSON body that fans out to ~6,600 row objects before
+    // folding — 256MiB left no honest headroom beside the IBF crawl.
+    memory: '512MiB',
   },
   async () => {
     await refreshRosters('roster');
@@ -1518,7 +1539,7 @@ export const scheduledRoster = onSchedule(
 
 // Manual trigger, same guard-shape as runSweep: fails closed.
 export const runRoster = onRequest(
-  { timeoutSeconds: 540, memory: '256MiB', maxInstances: 1 },
+  { timeoutSeconds: 540, memory: '512MiB', maxInstances: 1 },
   async (req, res) => {
     const expected = process.env.SWEEP_KEY;
     const provided = req.get('x-sweep-key');

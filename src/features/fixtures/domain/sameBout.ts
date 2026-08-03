@@ -37,13 +37,21 @@ import { timePrecisionOf } from './horizon';
 const PERSON_SPORTS = new Set(['boxing', 'ufc']);
 
 // Mirrors functions/src/identity.ts normaliseName: case and diacritics
-// fold, every non-alphanumeric becomes a space — so "Teófimo López"
-// and "Teofimo Lopez" are one participant.
+// fold, non-decomposing letters transliterated (đ→dj — Prompt 10b),
+// every non-alphanumeric becomes a space — so "Teófimo López" and
+// "Teofimo Lopez" are one participant.
 function normalise(name: string): string {
   return name
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
+    .replace(/đ/g, 'dj')
+    .replace(/ø/g, 'o')
+    .replace(/ł/g, 'l')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
+    .replace(/þ/g, 'th')
+    .replace(/ð/g, 'd')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }

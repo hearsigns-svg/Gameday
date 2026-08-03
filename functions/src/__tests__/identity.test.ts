@@ -389,3 +389,10 @@ describe('merge prefers the provider that knows the real time', () => {
     expect(decision.data.startUtc).toBe('2026-08-21T19:00:00.000Z');
   });
 });
+
+test('non-decomposing letters transliterate — Međedović is findable as medjedovic (Prompt 10b)', () => {
+  expect(normaliseName('Hamad Međedović')).toBe('hamad medjedovic');
+  expect(normaliseName('Laslo Đere')).toBe('laslo djere');
+  expect(normaliseName('Søren Løvenskiold')).toBe('soren lovenskiold');
+  expect(normaliseName('Łukasz Kubot')).toBe('lukasz kubot');
+});

@@ -27,6 +27,18 @@ export function normaliseName(raw: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // diacritics: Hrgović → Hrgovic
     .toLowerCase()
+    // Letters NFD cannot fold (they are letters, not letter+mark):
+    // without these, đ became a SPACE and 'Međedović' was unfindable
+    // by any transliteration a user would type (Prompt 10b — caught by
+    // the emulator search probe before any prod doc carried one; the
+    // dominant Latin-ASCII renderings, đ→dj as en-Wikipedia titles do).
+    .replace(/đ/g, 'dj')
+    .replace(/ø/g, 'o')
+    .replace(/ł/g, 'l')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
+    .replace(/þ/g, 'th')
+    .replace(/ð/g, 'd')
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')

@@ -289,6 +289,10 @@ export function groupOrderKey(groupingKey: string): string {
   if (womens >= 0 && groupingKey.startsWith('boxing-w-')) {
     return `1${String(womens).padStart(2, '0')}`;
   }
+  // Tennis: the WTA top 50 (full live coverage) leads; the men's
+  // curated Former-No. 1s group follows it (Prompt 10b).
+  if (groupingKey === 'wta') return '20';
+  if (groupingKey === 'atp-no1') return '21';
   return `5${groupingKey}`;
 }
 
