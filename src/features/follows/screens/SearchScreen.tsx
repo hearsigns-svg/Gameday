@@ -33,7 +33,7 @@ import {
   SearchAthleteHit,
   SearchTeamHit,
 } from '../data/directoryRepo';
-import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed, Followable } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
@@ -219,12 +219,14 @@ export default function SearchScreen({ navigation }: Props) {
     // so "Champions League" outranks "Championship" for "champion"
     // whichever source each came from.
     const seen = new Set<string>();
-    const compRows = byPriority(
+    const pr = cachedPriorities();
+    const compRows = byPriorityLive(
       [...comps, ...soccerRows].filter((r) =>
         seen.has(r.key) ? false : (seen.add(r.key), true),
       ),
       (r) => r.key,
-      cachedPriorities().priorities,
+      pr.priorities,
+      new Set(pr.dormant),
     );
     return [
       { title: 'Teams', data: teamRows },
@@ -232,7 +234,7 @@ export default function SearchScreen({ navigation }: Props) {
       { title: 'Competitions', data: compRows },
       {
         title: 'Sports',
-        data: byPriority(sports, (r) => r.sportKey ?? r.key, cachedPriorities().sportWeights),
+        data: byPriority(sports, (r) => r.sportKey ?? r.key, pr.sportWeights),
       },
     ].filter((s) => s.data.length > 0);
   }, [query, teams, athletes, soccerLeagues]);

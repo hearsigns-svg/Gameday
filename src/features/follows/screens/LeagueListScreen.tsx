@@ -17,7 +17,7 @@ import {
   fetchTournaments,
   TournamentRow,
 } from '../data/directoryRepo';
-import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
@@ -55,13 +55,16 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     }
     if (sport?.staticCompetitions) {
       // Single-league sports: the rows are config; their ORDER is
-      // catalogue-weight data (Prompt 11), config order as fallback.
+      // catalogue-weight data (Prompt 11), live rows before dormant
+      // ones (11b), config order as the offline fallback.
       void refreshPriorities();
+      const pr = cachedPriorities();
       setLeagues(
-        byPriority(
+        byPriorityLive(
           sport.staticCompetitions,
           (c) => c.key,
-          cachedPriorities().priorities,
+          pr.priorities,
+          new Set(pr.dormant),
         ),
       );
       return;

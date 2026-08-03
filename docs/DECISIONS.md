@@ -1175,3 +1175,39 @@
   transient failure into 48h of data age, while tier 1 plus the guard
   costs three cheap skip records daily and buys same-day retries
   (review round) (F41).
+
+## Prompt 11b decisions (owner revisions, 2026-08-03)
+
+- 2026-08-03: SPORT WEIGHT IS ITS OWN KNOB, not derived from the best
+  competition. Deriving from the max conflated "has one giant event"
+  with "is a big sport" — Wimbledon put tennis second globally despite
+  four mainstream weeks a year, and cricket/rugby sank on a UK-built
+  app. `sport:<key>` rows (rankOnly, sportRow) carry each sport's own
+  weight; the derived max survives only as the missing-row fallback so
+  absence degrades to the old behaviour, never to zero. Same argument
+  as tier-versus-priority: two knobs is right when they measure
+  different things. The seeded order is UK-leaning by owner direction.
+- 2026-08-03: DORMANT COMPETITIONS SORT BELOW LIVE ONES, NEVER HIDE.
+  A priced row with zero future fixtures (census at revision time: 7 of
+  67 keys — World Cup, Euros, Champions League, IPL, FA Cup, T20 World
+  Cup, World Athletics Championships) must not top its sport's list;
+  it stays findable and followable at the tail because a follow must
+  survive until the fixtures land. Dormancy is aggregate COUNTS on the
+  same composite index the client fixture query uses, computed inside
+  the 5-minute priority cache — the sort never reads fixture state per
+  request (the brief's stop-condition, not tripped). A count failure
+  degrades to LIVE: a read failure must never be read as "no fixtures",
+  applied to ordering.
+- 2026-08-03: SKIP RECORDS SUPPLY NO FETCH EVIDENCE to coverage rows.
+  lastReason/lastError now come from the latest NON-skip run: a
+  `skipped_ics_daily_cap` landing after the real daily fetch read as an
+  honest empty and suppressed yield_died for tennis-atp — the alert
+  F40 just proved load-bearing. lastRunAt stays the literal latest
+  (skips are still activity).
+- 2026-08-03: LOCALE-AWARE ORDERING — ANALYSED, NOT BUILT. Mechanism
+  cost is small (an optional per-region overlay field on catalogue
+  entries, a locale param on listPriorities, per-locale cache); the
+  real cost is CURATION — every locale is a second full ranking to
+  maintain, disagree about, and keep dormancy-coherent. Shipping ONE
+  UK-leaning default now; the overlay is additive later if store
+  metrics ever demand it (owner to choose from the 11b report).

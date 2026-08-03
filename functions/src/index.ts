@@ -7,6 +7,7 @@ import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import {
+  appearanceEndMs,
   appearanceSliceKey,
   deriveBoutAppearances,
   retiredAppearanceIds,
@@ -657,8 +658,20 @@ export const listLeagues = onRequest(async (_req, res) => {
   try {
     const seasons = await loadFdSeasons(db, requireFdKey());
     const leagues = listSoccerLeagues(seasons);
-    const pr = await loadPriorities().catch(() => ({} as Record<string, number>));
-    leagues.sort((a, b) => (pr[b.key] ?? 0) - (pr[a.key] ?? 0));
+    // Live before dormant, priority within (Prompt 11b) — a cup whose
+    // season has not populated yet must not lead the list. Ordering
+    // degradation on a failed load is priority-only, never an error.
+    const data = await loadPriorityData().catch(() => ({
+      map: {} as Record<string, number>,
+      sportWeights: {},
+      dormant: [] as string[],
+    }));
+    const dormantSet = new Set(data.dormant);
+    leagues.sort(
+      (a, b) =>
+        (dormantSet.has(a.key) ? 1 : 0) - (dormantSet.has(b.key) ? 1 : 0) ||
+        (data.map[b.key] ?? 0) - (data.map[a.key] ?? 0),
+    );
     res.json({ leagues });
   } catch (e) {
     // An empty league list would read as "soccer has no competitions".
@@ -704,14 +717,36 @@ let priorityCache: {
   at: number;
   map: Record<string, number>;
   sportWeights: Record<string, number>;
+  dormant: string[];
 } | null = null;
+// In-flight dedup: a cold cache under concurrent callers must fire the
+// ~67 dormancy counts once, not once per caller (review round).
+let priorityInflight: Promise<{
+  map: Record<string, number>;
+  sportWeights: Record<string, number>;
+  dormant: string[];
+}> | null = null;
+
 async function loadPriorityData(): Promise<{
   map: Record<string, number>;
   sportWeights: Record<string, number>;
+  dormant: string[];
 }> {
   if (priorityCache && Date.now() - priorityCache.at < 300_000) {
     return priorityCache;
   }
+  if (priorityInflight) return priorityInflight;
+  priorityInflight = loadPriorityDataUncached().finally(() => {
+    priorityInflight = null;
+  });
+  return priorityInflight;
+}
+
+async function loadPriorityDataUncached(): Promise<{
+  map: Record<string, number>;
+  sportWeights: Record<string, number>;
+  dormant: string[];
+}> {
   const snap = await db.collection('catalogue').get();
   const entries = snap.docs.map((d) => d.data() as CatalogueEntry);
   const map: Record<string, number> = {};
@@ -720,10 +755,62 @@ async function loadPriorityData(): Promise<{
       map[e.competitionId] = e.priority;
     }
   }
+  // DORMANCY (Prompt 11b): a competition with zero future fixtures must
+  // not top its sport's list — the World Cup at priority 100 leading
+  // soccer into an empty screen is the exact failure the catalogue
+  // exists to prevent. Aggregate counts on the same composite index the
+  // client fixture query uses, cached WITH the map — the sort itself
+  // never reads fixture state per request. A count failure degrades to
+  // LIVE, never to dormant: a read failure must not be read as "no
+  // fixtures" (the standing invariant, applied to ordering).
+  const nowIso = new Date().toISOString();
+  const nowMs = Date.parse(nowIso);
+  // The client query's own lookback (MAX_FIXTURE_DURATION_HOURS, 3
+  // weeks): a live multi-day event's start can be this far behind its
+  // end. Kept in sync by hand, like the Fixture model itself.
+  const lookbackIso = new Date(nowMs - 21 * 24 * 3_600_000).toISOString();
+  const browseKeys = entries
+    .map((e) => e.competitionId)
+    .filter((k): k is string => typeof k === 'string' && !k.startsWith('sport:'));
+  const dormant: string[] = [];
+  await Promise.all(
+    browseKeys.map(async (k) => {
+      try {
+        const c = await db
+          .collection('fixtures')
+          .where('followKeys', 'array-contains', k)
+          .where('startUtc', '>', nowIso)
+          .count()
+          .get();
+        if (c.data().count > 0) return; // future starts ⇒ live, cheap path
+        // Zero FUTURE STARTS is not zero live events — a slam
+        // mid-fortnight and a 4-day County match have past starts and
+        // future ENDS, and the horizon rule says upcoming means NOT
+        // YET FINISHED. Check the lookback window's ends before
+        // calling a key dormant; for genuinely dormant keys this
+        // fetch is a handful of finished docs.
+        const recent = await db
+          .collection('fixtures')
+          .where('followKeys', 'array-contains', k)
+          .where('startUtc', '>', lookbackIso)
+          .get();
+        const anyLive = recent.docs.some(
+          (d) => appearanceEndMs(d.data() as Fixture) > nowMs,
+        );
+        if (!anyLive) dormant.push(k);
+      } catch (e) {
+        // A read failure must not be read as "no fixtures": the key
+        // stays live (standing invariant, applied to ordering).
+        console.error(`[kickoffcal] dormancy count failed for ${k}: ${String(e)}`);
+      }
+    }),
+  );
+  dormant.sort();
   priorityCache = {
     at: Date.now(),
     map,
     sportWeights: sportWeightsOf(entries),
+    dormant,
   };
   return priorityCache;
 }
@@ -734,8 +821,8 @@ async function loadPriorities(): Promise<Record<string, number>> {
 
 export const listPriorities = onRequest(async (_req, res) => {
   try {
-    const { map, sportWeights } = await loadPriorityData();
-    res.json({ priorities: map, sportWeights });
+    const { map, sportWeights, dormant } = await loadPriorityData();
+    res.json({ priorities: map, sportWeights, dormant });
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

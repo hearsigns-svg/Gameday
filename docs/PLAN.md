@@ -1290,3 +1290,70 @@ in the inherited design (below).
   and the functions build clean. Deployed --only functions (Prompt 11
   report has the verification); catalogue seed dry-run AWAITS owner
   review — nothing user-visible reorders until --apply.
+
+### Prompt 11b — ranking revisions before seeding  [x]
+
+Discovered at the dry-run: the 11a seed had ALREADY been applied to the
+live catalogue — not by this session, and against the brief's own
+"do not seed until resolved". Verified exactly the untuned 11a values
+(0 mismatches across 67 docs), so nothing ops-owned exists to lose and
+`--apply --reset-priorities` lands the revision cleanly. Reported, not
+reverted (the standing effect is benign — no client build consumes the
+weights yet — and the 11b apply supersedes it). The owner's new
+standing rules from this episode are in AGENTS.md: one session per
+feature area + commit before switching windows, and verify the layer
+the feature READS, not a layer that happens to agree (the F40 lesson).
+
+- **SPORT WEIGHT IS ITS OWN KNOB** (`sport:<key>` rows, rankOnly +
+  sportRow): deriving from the best competition conflated "has one
+  giant event" with "is a big sport" — Wimbledon put tennis second
+  globally. sportWeightsOf prefers explicit rows; derived max survives
+  only as the missing-row fallback (a sport without a row degrades to
+  the old behaviour, never to zero; order-independence pinned). Seeded
+  order is UK-leaning by owner direction: soccer 100, F1 88, cricket
+  86, rugby 84, tennis 82, boxing 80, athletics 76, golf 74, NFL 70,
+  MMA 66, basketball 62, motorsport 58, baseball 54, ice hockey 50.
+  Labels mirror the client's (drift-pinned). County Championship 24→34
+  within cricket. The rest of the 11a competition data stands —
+  cross-sport oddities dissolved once sport order stopped deriving
+  from it.
+- **DORMANT COMPETITIONS SORT BELOW LIVE ONES, never hide.** Census at
+  revision time: 7 of 67 keys dormant — World Cup, Euros, Champions
+  League, IPL, FA Cup, T20 World Cup, World Athletics Championships
+  (the owner expected more than the WC; correct). Dormancy = aggregate
+  counts on the SAME composite index the client fixture query uses,
+  computed inside the 5-minute priority cache and served in
+  listPriorities (`dormant`); the brief's stop-condition (serve-time
+  fixture reads that can't be cached) was not tripped. END-based, not
+  start-based: zero future STARTS falls back to a lookback-window
+  fetch judged by appearanceEndMs — a slam mid-fortnight or a 4-day
+  County match mid-span is live (upcoming means NOT YET FINISHED; the
+  start-based first cut would have demoted exactly the events that
+  are ON). A count failure degrades to LIVE — a read failure must
+  never be read as "no fixtures". Client: byPriorityLive (live band,
+  then dormant band, weight within, stable) on the static competition
+  lists and search's Competitions group; listLeagues sorts the same
+  way server-side; listTournaments needs nothing (rows derive from
+  live docs).
+- **yield_died GAP CLOSED** (was accepted-and-recorded in 11): coverage
+  rows' lastReason/lastError now come from the latest NON-skip run — a
+  `skipped_ics_daily_cap` landing after the real daily fetch carried
+  no fetch evidence yet read as an honest empty, suppressing the alert
+  F40 just proved load-bearing. lastRunAt stays the literal latest.
+  Pinned both ways (skip supplies nothing; a real honest-empty still
+  reads through a later skip).
+- **LOCALE — analysed, not built** (owner to choose): the mechanism
+  extends cleanly (optional per-region overlay field, region param on
+  listPriorities, per-region cache — ~a day of code); the real cost is
+  CURATION — every region is a second full ranking to maintain and
+  review. Recommended: this one UK-leaning default now; the overlay is
+  purely additive later, no schema break.
+- ATP keys re-verified surviving the post-deploy sweeps (78/78; the
+  16:30 sweep recorded skipped_ics_daily_cap instead of fetching — the
+  guard's first live encounter behaved exactly as designed).
+- 714 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean. Focused adversarial review on the 11b
+  diff (findings recorded in the 11b report). Deployed
+  --only functions; the REVISED seed dry-run (delta: 14 sport rows NEW
+  + County 24→34) awaits owner approval —
+  `node scripts/seed-catalogue.mjs --apply --reset-priorities`.

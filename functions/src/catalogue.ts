@@ -52,6 +52,12 @@ export interface CatalogueEntry {
   // sweep never polls individually — their tour/calendar slice is what
   // warms. Carried here so ONE collection owns ordering, never polled.
   rankOnly?: boolean;
+  // Sport-row entries (`sport:<key>`, Prompt 11b): the SPORT's own
+  // browse weight, a separate knob from any competition's priority.
+  // Deriving sport order from the best competition conflated "has one
+  // giant event" with "is a big sport" — Wimbledon put tennis second
+  // globally (owner review).
+  sportRow?: boolean;
 }
 
 // The daily (tier 2) window: the first sweep of the UTC day.
@@ -67,6 +73,12 @@ const T2 = (competitionId: string, label: string, sport: string, pollPath: strin
 // (their tour/calendar slice is what warms). One collection owns ordering.
 const RANK = (competitionId: string, label: string, sport: string, priority: number): CatalogueEntry =>
   ({ competitionId, label, pollPath: '', tier: 2, enabled: false, sport, priority, rankOnly: true });
+// Sport rows: the sport's OWN browse weight (Prompt 11b). The `sport:`
+// id prefix cannot collide with a real competition key (no served key
+// carries a colon), and rankOnly keeps every route invariant exempting
+// them.
+const SPORT = (sport: string, label: string, priority: number): CatalogueEntry =>
+  ({ competitionId: `sport:${sport}`, label, pollPath: '', tier: 2, enabled: false, sport, priority, rankOnly: true, sportRow: true });
 
 // PRIORITY DATA (Prompt 11) — a judgement call by design, made
 // reviewable by being data: global audience and cultural weight, not
@@ -124,7 +136,7 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('tsdb-league-4801', 'ODI Internationals', 'cricket', 'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8', 39),
   T2('tsdb-league-4979', 'T20 Internationals', 'cricket', 'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4', 41),
   T2('tsdb-league-5103', 'T20 World Cup', 'cricket', 'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4', 55),
-  T2('tsdb-league-4458', 'County Championship', 'cricket', 'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96', 24),
+  T2('tsdb-league-4458', 'County Championship', 'cricket', 'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96', 34),
   T2('tsdb-league-4516', 'WNBA', 'basketball', 'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5', 36),
   T2('tsdb-league-4549', 'FIBA WC qualifiers', 'basketball', 'pollTsdbLeague?leagueId=4549&season=2027&sport=basketball&durationHours=2', 28),
   T2('tsdb-league-4830', 'KBO League', 'baseball', 'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3', 27),
@@ -165,19 +177,45 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   RANK('wa-world-athletics-indoor-tour-gold', 'Indoor Tour Gold', 'athletics', 35),
   RANK('wa-world-athletics-cross-country-tour-gold', 'Cross Country Tour Gold', 'athletics', 33),
   RANK('wa-national-senior-outdoor-championships', 'National Championships', 'athletics', 31),
+  // ── Sport rows (Prompt 11b): the sports-grid order, its own knob ────
+  // UK-leaning by owner direction (the app is UK-built; its distinctive
+  // coverage is boxing, tennis and athletics). Competition priorities
+  // above order rows only WITHIN a sport now.
+  SPORT('soccer', 'Soccer', 100),
+  SPORT('f1', 'Formula 1', 88),
+  SPORT('cricket', 'Cricket', 86),
+  SPORT('rugby', 'Rugby', 84),
+  SPORT('tennis', 'Tennis', 82),
+  SPORT('boxing', 'Boxing', 80),
+  SPORT('athletics', 'Athletics', 76),
+  SPORT('golf', 'Golf', 74),
+  SPORT('nfl', 'American football', 70),
+  SPORT('ufc', 'MMA', 66),
+  SPORT('basketball', 'Basketball', 62),
+  SPORT('motorsport', 'Motorsport', 58),
+  SPORT('baseball', 'Baseball', 54),
+  SPORT('ice-hockey', 'Ice hockey', 50),
 ];
 
-// Per-sport ordering weight: the sport's best competition speaks for
-// the sport ("the top sports should lead the list"). Derived, not a
-// second knob — tuning a competition's priority is what moves its
-// sport. rankOnly rows count (Wimbledon speaks for tennis).
+// Per-sport ordering weight. An EXPLICIT sport row wins outright — its
+// own knob, tuned independently of any competition (Prompt 11b: the
+// derived-max rule conflated "has one giant event" with "is a big
+// sport"). The derived max survives only as the fallback for a sport
+// with no row, so a missing row degrades to the old behaviour instead
+// of to zero.
 export function sportWeightsOf(
   entries: readonly CatalogueEntry[],
 ): Record<string, number> {
   const weights: Record<string, number> = {};
+  const explicit = new Set<string>();
   for (const e of entries) {
     if (!e.sport || typeof e.priority !== 'number') continue;
-    weights[e.sport] = Math.max(weights[e.sport] ?? 0, e.priority);
+    if (e.sportRow) {
+      weights[e.sport] = e.priority;
+      explicit.add(e.sport);
+    } else if (!explicit.has(e.sport)) {
+      weights[e.sport] = Math.max(weights[e.sport] ?? 0, e.priority);
+    }
   }
   return weights;
 }

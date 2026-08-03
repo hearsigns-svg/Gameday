@@ -274,3 +274,56 @@ describe('truncation', () => {
     expect(buildCoverageReport([], NO_STORED, NOW_MS).truncated).toBe(false);
   });
 });
+
+test('a SKIP record as the latest run supplies no lastReason/lastError — skips carry no fetch evidence (Prompt 11b)', () => {
+  // The gap: pollTennis's daily-cap skips land AFTER the real fetch.
+  // If the literal latest run supplied lastReason, the skip read as an
+  // "honest empty" and yield_died could never fire for tennis-atp —
+  // the alert F40 proved load-bearing.
+  const runs = [
+    run({
+      source: 'tennis',
+      competitionId: 'tennis-atp',
+      startedAt: '2026-07-30T00:20:00.000Z',
+      zeroYield: true,
+      counts: { fetched: 340, parsed: 340, rejected: 0, stored: 0, unchanged: 340, futureDated: 0 },
+    }),
+    run({
+      source: 'tennis',
+      competitionId: 'tennis-atp',
+      startedAt: '2026-07-31T06:20:00.000Z',
+      httpStatus: null,
+      reason: 'skipped_ics_daily_cap',
+      zeroYield: true,
+      counts: { fetched: 0, parsed: 0, rejected: 0, stored: 0, unchanged: 0, futureDated: 0 },
+    }),
+  ];
+  const report = buildCoverageReport(runs, NO_STORED, NOW_MS);
+  const row = rowFor(report, 'tennis|tennis-atp');
+  expect(row.lastRunAt).toBe('2026-07-31T06:20:00.000Z'); // the skip IS the latest activity
+  expect(row.lastReason).toBeNull(); // …but not fetch evidence
+  expect(row.lastError).toBeNull();
+  // And a real fetch's honest-empty reason still comes through when a
+  // skip lands after it.
+  const honest = [
+    run({
+      source: 'tennis',
+      competitionId: 'tennis-atp',
+      startedAt: '2026-07-30T00:20:00.000Z',
+      reason: 'no_future_events',
+      zeroYield: true,
+      counts: { fetched: 0, parsed: 0, rejected: 0, stored: 0, unchanged: 0, futureDated: 0 },
+    }),
+    run({
+      source: 'tennis',
+      competitionId: 'tennis-atp',
+      startedAt: '2026-07-31T06:20:00.000Z',
+      httpStatus: null,
+      reason: 'skipped_ics_daily_cap',
+      zeroYield: true,
+      counts: { fetched: 0, parsed: 0, rejected: 0, stored: 0, unchanged: 0, futureDated: 0 },
+    }),
+  ];
+  const honestRow = rowFor(buildCoverageReport(honest, NO_STORED, NOW_MS), 'tennis|tennis-atp');
+  expect(honestRow.lastReason).toBe('no_future_events');
+});

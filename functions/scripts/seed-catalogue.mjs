@@ -31,10 +31,11 @@ const finalEntry = (e) => {
 
 const t1 = CATALOGUE_SEED.filter((e) => e.tier === 1 && !e.rankOnly).length;
 const t2 = CATALOGUE_SEED.filter((e) => e.tier === 2 && !e.rankOnly).length;
-const rank = CATALOGUE_SEED.filter((e) => e.rankOnly).length;
+const rank = CATALOGUE_SEED.filter((e) => e.rankOnly && !e.sportRow).length;
+const sports = CATALOGUE_SEED.filter((e) => e.sportRow).length;
 console.log(
   `${apply ? 'seeding' : 'WOULD seed'} ${CATALOGUE_SEED.length} entries ` +
-    `(tier 1: ${t1}, tier 2: ${t2}, rank-only: ${rank})` +
+    `(tier 1: ${t1}, tier 2: ${t2}, rank-only: ${rank}, sport rows: ${sports})` +
     `${resetPriorities ? ' [RESET PRIORITIES]' : ''}`,
 );
 for (const e of CATALOGUE_SEED) {

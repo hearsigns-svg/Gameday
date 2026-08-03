@@ -10,7 +10,7 @@
 
 import { readJson, writeJson } from '../../../core/storage';
 import { functionsBaseUrl } from '../../../core/firebase';
-export { byPriority } from '../domain/browseOrder';
+export { byPriority, byPriorityLive } from '../domain/browseOrder';
 
 const CACHE_KEY = 'browsePriority.v1';
 
@@ -21,6 +21,9 @@ const REFRESH_MIN_INTERVAL_MS = 3_600_000;
 export interface BrowsePriorities {
   priorities: Record<string, number>; // competition/tournament key → weight
   sportWeights: Record<string, number>; // client sport key → weight
+  // Competition keys with zero future fixtures right now (Prompt 11b):
+  // demoted below live rows within their sport, never hidden.
+  dormant: string[];
 }
 
 interface PriorityCache extends BrowsePriorities {
@@ -29,7 +32,11 @@ interface PriorityCache extends BrowsePriorities {
 
 export function cachedPriorities(): BrowsePriorities {
   const c = readJson<PriorityCache | null>(CACHE_KEY, null);
-  return c ?? { priorities: {}, sportWeights: {} };
+  return {
+    priorities: c?.priorities ?? {},
+    sportWeights: c?.sportWeights ?? {},
+    dormant: c?.dormant ?? [],
+  };
 }
 
 // Fire-and-forget refresh; callers render from the cache and re-render
@@ -55,6 +62,7 @@ export async function refreshPriorities(): Promise<void> {
         typeof body.sportWeights === 'object' && body.sportWeights !== null
           ? body.sportWeights
           : {},
+      dormant: Array.isArray(body.dormant) ? body.dormant : [],
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);
   } catch {

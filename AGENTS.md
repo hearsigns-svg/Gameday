@@ -139,6 +139,18 @@ These apply to every stage. They do not need restating in a brief.
    (`src/features/fixtures/domain/horizon.ts`) is the one definition.
 6. The other Claude Code session must be idle against production during
    any reaper run.
+7. **One session per feature area, and commit before switching windows**
+   (owner ruling 2026-08-03). Prompt 11 found an uncommitted, unreported
+   half-feature from another session in the tree — five failing tests,
+   design decisions nobody had reviewed. Never leave a feature area's
+   working tree dirty for another session to inherit; if work must
+   pause, commit it (marked WIP) and say so in the session that owns it.
+8. **Verify the layer the feature reads, not a layer that happens to
+   agree** (owner ruling 2026-08-03, from F40). Prompt 9 verified
+   tournament follows by reading `listTournaments` — computed from
+   titles at serve time — while the stored docs' followKeys, the layer
+   follows actually query, carried nothing. A derived view agreeing is
+   not proof; probe the store the feature depends on.
 
 ## Concurrency against production
 

@@ -61,18 +61,36 @@ test('priorities are 0–100, and within-sport ties are only the documented peer
   // Ties are deterministic anyway — every consumer sort is stable, so
   // tied rows keep source order — but an ACCIDENTAL tie is usually a
   // data slip. The one deliberate tie: the two tennis tours are peers.
+  // Sport rows are a separate namespace (they order the sports grid,
+  // never a competition list) and are excluded.
   const ALLOWED_TIES = new Set(['tennis:66']);
   const seen = new Map<string, string>();
   for (const e of CATALOGUE_SEED) {
     if (e.priority === undefined) continue;
     expect(e.priority).toBeGreaterThanOrEqual(0);
     expect(e.priority).toBeLessThanOrEqual(100);
+    if (e.sportRow) continue;
     const key = `${e.sport}:${e.priority}`;
     if (!ALLOWED_TIES.has(key)) {
       expect(`${key} ${seen.get(key) ?? ''}`.trim()).toBe(key);
     }
     seen.set(key, e.competitionId);
   }
+});
+
+test('sport rows: one per enabled sport, sport: id prefix, rank-inert, distinct weights (Prompt 11b)', () => {
+  const sportRows = CATALOGUE_SEED.filter((e) => e.sportRow);
+  const bySport = new Map(sportRows.map((e) => [e.sport, e]));
+  for (const s of SPORTS.filter((s) => s.enabled)) {
+    const row = bySport.get(s.key);
+    expect(`${s.key}: ${row?.competitionId}`).toBe(`${s.key}: sport:${s.key}`);
+    // The label mirrors the client's, so the ops table and the app
+    // never disagree about what a weight names.
+    expect(`${s.key}: ${row?.label}`).toBe(`${s.key}: ${s.label}`);
+    expect(row?.rankOnly).toBe(true);
+  }
+  const weights = sportRows.map((e) => e.priority);
+  expect(new Set(weights).size).toBe(weights.length); // grid order fully determined
 });
 
 test('the tennis slam RANK keys are exactly what the feed titles mint', () => {
@@ -110,16 +128,29 @@ test('tennis-atp stays tier 1 WITH the connector cadence guard (F41) — the pai
   expect(atp.enabled).toBe(true);
 });
 
-test('sportWeightsOf: the best competition speaks for its sport, rankOnly included', () => {
+test('sportWeightsOf: explicit sport rows win outright; derived max is only the missing-row fallback', () => {
   const w = sportWeightsOf(CATALOGUE_SEED);
-  expect(w.soccer).toBe(100); // World Cup
-  expect(w.tennis).toBe(98); // Wimbledon, a rankOnly row
-  expect(w.athletics).toBe(58); // Diamond League, not the catch-all
+  // Explicit rows (Prompt 11b): tennis is 82 by its own knob, NOT 98 —
+  // Wimbledon no longer speaks for the sport ("has one giant event" ≠
+  // "is a big sport", owner review).
+  expect(w.soccer).toBe(100);
+  expect(w.tennis).toBe(82);
+  expect(w.cricket).toBe(86);
+  expect(w.rugby).toBe(84);
+  expect(w.athletics).toBe(76);
   // Every enabled browse sport has a weight, so the sports row can
   // order fully once the client consumes it.
   for (const s of SPORTS.filter((s) => s.enabled)) {
     expect(`${s.key}: ${typeof w[s.key]}`).toBe(`${s.key}: number`);
   }
+  // Fallback: strip the sport rows and the old derived-max behaviour
+  // returns — a sport missing its row degrades gracefully, never to 0.
+  const derived = sportWeightsOf(CATALOGUE_SEED.filter((e) => !e.sportRow));
+  expect(derived.tennis).toBe(98); // Wimbledon again
+  // Order independence: a sport row seen BEFORE its sport's
+  // competitions must not be clobbered by a later derived max.
+  const reversed = sportWeightsOf([...CATALOGUE_SEED].reverse());
+  expect(reversed.tennis).toBe(82);
 });
 
 test('DRIFT GUARD: every browse-offered competition pollPath is catalogued', () => {

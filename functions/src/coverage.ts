@@ -28,9 +28,13 @@ export interface CoverageRow {
   hoursSinceLastRun: number | null;
   hoursSinceLastSuccess: number | null;
   hoursSinceLastNonZeroYield: number | null;
-  lastError: string | null; // error of the most recent run, if it failed
-  // The most recent run's honest-empty reason (no_future_events, sweep
-  // skips) — alerting must never page on a season that simply ended.
+  // Error/reason of the most recent NON-SKIP run (Prompt 11b): a skip
+  // record carries no evidence about the provider's answer, and a
+  // daily-cap skip landing after the real fetch must not read as an
+  // honest empty — that suppressed yield_died exactly when F40 proved
+  // it load-bearing. Alerting must still never page on a season that
+  // simply ended (no_future_events reads through later skips).
+  lastError: string | null;
   lastReason: string | null;
   lastSeasonResolved: string | null;
 }
@@ -124,6 +128,16 @@ export function buildCoverageReport(
         .find(
           (r) => r.error === null && !String(r.reason ?? '').startsWith('skipped'),
         ) ?? null;
+    // The latest run that actually FETCHED (or tried to). Skip records
+    // carry no evidence about the provider's answer, so a skip as the
+    // literal latest run must not supply lastReason/lastError: a
+    // 'skipped_ics_daily_cap' reading as an honest empty suppressed
+    // yield_died for tennis-atp exactly when F40 proved that alert is
+    // load-bearing (Prompt 11b).
+    const lastFetch =
+      [...mine]
+        .reverse()
+        .find((r) => !String(r.reason ?? '').startsWith('skipped')) ?? null;
     const lastYield = [...mine].reverse().find((r) => !r.zeroYield) ?? null;
     const slice = stored.bySlice.get(key);
     rows.push({
@@ -141,8 +155,8 @@ export function buildCoverageReport(
         lastYield?.startedAt ?? null,
         nowMs,
       ),
-      lastError: latest?.error ?? null,
-      lastReason: latest?.reason ?? null,
+      lastError: lastFetch?.error ?? null,
+      lastReason: lastFetch?.reason ?? null,
       lastSeasonResolved: lastSuccess?.seasonResolved ?? null,
     });
   }
