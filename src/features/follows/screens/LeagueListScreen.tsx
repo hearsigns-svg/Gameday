@@ -14,6 +14,8 @@ import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   fetchLeagues,
+  fetchTournaments,
+  TournamentRow,
 } from '../data/directoryRepo';
 import { isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
@@ -24,6 +26,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
   const sport = sportByKey(route.params.sportKey);
   const [leagues, setLeagues] = useState<DirectoryLeague[] | null>(null);
+  const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [, forceRender] = useState(0);
@@ -60,6 +63,34 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       else setError(messageOf(r.error));
     })();
   }, [sport]);
+
+  // Tournament rows (Prompt 9): the competitions people actually want —
+  // Wimbledon, not "ATP Tour". Joint ATP+WTA events arrive merged under
+  // one key; a fetch failure keeps the tour rows working and says so.
+  useEffect(() => {
+    if (!sport?.tournamentBrowse) return;
+    void (async () => {
+      const r = await fetchTournaments();
+      if (r.ok) setTournaments(r.value);
+      else setError(messageOf(r.error));
+    })();
+  }, [sport]);
+
+  const tournamentCaption = (row: TournamentRow): string => {
+    // UTC, like every all-day surface (the day sentinels are UTC
+    // midnights — device-zone formatting shifted an endpoint a day in
+    // every zone), and the EXCLUSIVE end renders as its INCLUSIVE
+    // final day (review round).
+    const fmt = (ms: number) =>
+      new Date(ms).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      });
+    const tours =
+      row.tours === 'joint' ? 'ATP · WTA' : row.tours.toUpperCase();
+    return `${fmt(Date.parse(row.startUtc))} – ${fmt(Date.parse(row.endUtc) - 86_400_000)} · ${tours}`;
+  };
 
   const toggle = useCallback(async (league: DirectoryLeague) => {
     const isSeries = league.key === sport?.seriesFollowable?.key;
@@ -148,6 +179,54 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 </Text>
               }
             />
+          ) : null
+        }
+        // Tournaments below the tour rows: one row per canonical
+        // tournament, soonest first, followed by KEY — a joint event is
+        // one row, and following it needs no pollPath (both tour slices
+        // stay warm on the tier-1 catalogue).
+        ListFooterComponent={
+          tournaments.length > 0 ? (
+            <View>
+              <Text
+                style={[
+                  type.caption,
+                  {
+                    color: t.textSecondary,
+                    paddingHorizontal: spacing.l,
+                    paddingTop: spacing.l,
+                    paddingBottom: spacing.s,
+                    fontWeight: '600',
+                  },
+                ]}
+              >
+                TOURNAMENTS
+              </Text>
+              {tournaments.map((row) => (
+                <ListRow
+                  key={row.key}
+                  title={row.name}
+                  caption={tournamentCaption(row)}
+                  accessibilityLabel={row.name}
+                  right={
+                    <FollowButton
+                      following={isFollowed(row.key)}
+                      subject={row.name}
+                      busy={busyKey === row.key}
+                      onPress={() =>
+                        void toggle({
+                          id: row.key,
+                          name: row.name,
+                          country: '',
+                          key: row.key,
+                          followOnly: true,
+                        })
+                      }
+                    />
+                  }
+                />
+              ))}
+            </View>
           ) : null
         }
         renderItem={({ item }) => (

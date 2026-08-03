@@ -1008,3 +1008,34 @@
   string) exists and stays. The server-side alternative — relaxing that
   guard per-sport and merging a parent with an appearance — reshapes
   the appearance model and waits for its own brief (F28).
+
+## Prompt 9 decisions (2026-08-03)
+
+- 2026-08-03: TENNIS TOURNAMENTS ARE FOLLOWABLE COMPETITIONS — one
+  YEAR-AGNOSTIC canonical key (`tennis-t-<slug>`) riding followKeys on
+  both feeds' parents, so "Wimbledon" is one follow spanning editions
+  and feeds. THE JOIN IS A NAME+DATES HEURISTIC, stated plainly: no
+  shared id exists between the Tennis TV ICS and the WTA API. Exact
+  normalised-title equality (+ window overlap for edition identity)
+  auto-joins — measured on the live store it pairs Toronto, Cincinnati,
+  the US Open and Beijing with zero false pairs — and sponsor variants
+  are joined by a CURATED alias table citing evidence per entry
+  (DC Open: "Mubadala DC Open" WTA vs "Mubadala Citi DC Open" ICS).
+  Never fuzzy token matching: guessing which words are noise is the
+  AFC-Liverpool mistake. Appearances do NOT carry the key — a
+  tournament follow gets the tournament event; match events come from
+  player follows. Tournament follows carry NO pollPath (both tour
+  slices are tier-1 catalogue-warmed).
+- 2026-08-03: THE JOINT PAIR COLLAPSES CLIENT-SIDE (dedupeSameEvent):
+  same tournament key + overlapping spans ⇒ one calendar entry, the
+  WTA doc winning (draws and order of play hang off it). This also
+  closes F33's two-events-for-joint-slams for users following both
+  tours, as a one-time delete of the ICS twin. GENERALISATION, asked
+  and answered: the KEY-STAMPING mechanism generalises (it is the
+  club-alias pattern — identity keys ride followKeys); the PAIRING
+  heuristic does not — tennis pairs by title because both feeds name
+  the same tournament, combat paired by participant pair because that
+  IS a bout's identity. Each new cross-feed class needs its own
+  identity argument; they converge only at the client dedupe umbrella.
+  Server-side merging (one doc instead of collapse-at-render) remains
+  unbuilt for both classes — F28's remaining half, its own brief.

@@ -34,6 +34,7 @@
 import { appearanceFor } from '../appearances';
 import { AppearanceDraft } from '../athletes';
 import { Fixture } from '../fixture';
+import { tournamentKey } from '../tennisTournaments';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.wtatennis.com/tennis';
@@ -128,7 +129,14 @@ export function tournamentToFixture(
     competition: 'WTA Tour',
     competitionId: 'tennis-wta',
     title: shortTitle(t.title),
-    followKeys: ['tennis-wta'],
+    // The tour slice plus the YEAR-AGNOSTIC canonical tournament key
+    // (Prompt 9): a joint event shares this key with its ICS parent,
+    // which is what makes "Wimbledon" one followable, not two. A title
+    // that normalises to nothing stamps no key.
+    followKeys: [
+      'tennis-wta',
+      ...((k) => (k ? [k] : []))(tournamentKey(shortTitle(t.title))),
+    ],
     startUtc: new Date(start).toISOString(),
     status: 'scheduled',
     durationHours: days * 24,

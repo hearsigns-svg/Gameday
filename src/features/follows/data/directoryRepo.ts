@@ -103,6 +103,28 @@ export async function fetchTeams(
   return r.ok ? ok(r.value.teams) : r;
 }
 
+// Tennis tournaments as followable competitions (Prompt 9): one row
+// per canonical tournament, joint ATP+WTA events already merged
+// server-side under the year-agnostic `tennis-t-` key.
+export interface TournamentRow {
+  key: string;
+  name: string;
+  tours: 'atp' | 'wta' | 'joint';
+  startUtc: string;
+  endUtc: string;
+}
+
+export async function fetchTournaments(): Promise<Result<TournamentRow[]>> {
+  const r = await getJson<{ tournaments: TournamentRow[] }>('listTournaments');
+  // A 404 means the route isn't deployed yet — degrade to "no
+  // tournament rows" so the tour rows keep working; real failures stay
+  // loud.
+  if (!r.ok && r.error.kind === 'provider' && r.error.status === 404) {
+    return ok([]);
+  }
+  return r.ok ? ok(r.value.tournaments) : r;
+}
+
 // The curated athlete lists for a sport's browse screen. A failure is a
 // failure — an empty directory rendered from an error would read as
 // "this sport has nobody", the standing invariant's failure mode.

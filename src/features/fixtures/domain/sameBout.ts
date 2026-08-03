@@ -71,6 +71,93 @@ function pairKey(f: Fixture): string | null {
   return `${f.sport}|${pair.join('|')}`;
 }
 
+// ─── Tennis: one tournament, two feeds ────────────────────────────────
+//
+// A joint ATP+WTA event is one tournament in two parent docs (the ICS
+// and the WTA API), unmergeable server-side for the same F28 reasons.
+// Since Prompt 9 both parents carry the canonical year-agnostic
+// tournament key (`tennis-t-<slug>`), so the pair is identifiable here:
+// same key, overlapping spans ⇒ one real event. The WTA doc wins — it
+// is the richer side (draws and order of play hang off it) — with the
+// id as the deterministic tiebreak. Editions a year apart never
+// overlap, so a "Wimbledon" follow still yields every year's event.
+function tournamentPairKey(f: Fixture): string | null {
+  if (f.sport !== 'tennis') return null;
+  if (f.parentFixtureId) return null; // appearances are never parents
+  return f.followKeys.find((k) => k.startsWith('tennis-t-')) ?? null;
+}
+
+function spansOverlap(a: Fixture, b: Fixture): boolean {
+  const endOf = (f: Fixture) =>
+    Date.parse(f.startUtc) + (f.durationHours ?? 24) * 3_600_000;
+  return (
+    Date.parse(a.startUtc) < endOf(b) && Date.parse(b.startUtc) < endOf(a)
+  );
+}
+
+function dedupeJointTournaments(
+  fixtures: readonly Fixture[],
+  pinnedIds: ReadonlySet<string>,
+): Fixture[] {
+  const byKey = new Map<string, Fixture[]>();
+  for (const f of fixtures) {
+    if (f.status === 'cancelled') continue;
+    const key = tournamentPairKey(f);
+    if (!key) continue;
+    byKey.set(key, [...(byKey.get(key) ?? []), f]);
+  }
+  const drop = new Set<string>();
+  for (const group of byKey.values()) {
+    if (group.length < 2) continue;
+    const sorted = [...group].sort((a, b) =>
+      a.startUtc.localeCompare(b.startUtc),
+    );
+    let cluster: Fixture[] = [];
+    const flush = () => {
+      // SAME-PROVIDER GUARD, the rule that prevents data loss
+      // (identity.ts): two docs from ONE feed are distinct by
+      // construction — a feed quirk (a duplicate VEVENT, a split
+      // "Davis Cup Final 8"/"Davis Cup Final") must never silently
+      // delete a real event. Only a genuine cross-feed pair collapses.
+      const providers = new Set(cluster.map((f) => f.id.split('-')[0]));
+      if (cluster.length >= 2 && providers.size >= 2) {
+        const winner = [...cluster].sort((a, b) => {
+          const aw = a.id.startsWith('wta-') ? 0 : 1;
+          const bw = b.id.startsWith('wta-') ? 0 : 1;
+          return aw - bw || a.id.localeCompare(b.id);
+        })[0];
+        for (const f of cluster) {
+          if (f.id !== winner.id && !pinnedIds.has(f.id)) drop.add(f.id);
+        }
+      }
+      cluster = [];
+    };
+    for (const f of sorted) {
+      if (cluster.length === 0 || cluster.some((c) => spansOverlap(c, f))) {
+        cluster.push(f);
+      } else {
+        flush();
+        cluster = [f];
+      }
+    }
+    flush();
+  }
+  return fixtures.filter((f) => !drop.has(f.id));
+}
+
+// The umbrella: every same-real-event rule, applied before the planner
+// and the snapshot. Combat pairs and joint tennis tournaments today;
+// any future "one event, two feeds" class belongs here too.
+export function dedupeSameEvent(
+  fixtures: readonly Fixture[],
+  pinnedIds: ReadonlySet<string> = new Set(),
+): Fixture[] {
+  return dedupeJointTournaments(
+    dedupeSameBout(fixtures, pinnedIds),
+    pinnedIds,
+  );
+}
+
 export function dedupeSameBout(
   fixtures: readonly Fixture[],
   pinnedIds: ReadonlySet<string> = new Set(),

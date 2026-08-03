@@ -36,7 +36,11 @@ test('a tournament becomes a date_only span parent under the tennis-wta slice', 
     competition: 'WTA Tour',
     competitionId: 'tennis-wta',
     title: 'Mubadala DC Open',
-    followKeys: ['tennis-wta'],
+    // Tour slice + the canonical tournament key (Prompt 9). DC is the
+    // evidenced ALIAS case: the WTA says "Mubadala DC Open", the ATP
+    // ICS says "Mubadala Citi DC Open" — one Washington event, and
+    // both slugs fold to tennis-t-dc-open.
+    followKeys: ['tennis-wta', 'tennis-t-dc-open'],
     startUtc: '2026-07-27T00:00:00.000Z',
     status: 'scheduled',
     durationHours: 7 * 24, // 07-27..08-02, endDate INCLUSIVE

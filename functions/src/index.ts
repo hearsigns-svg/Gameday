@@ -31,6 +31,7 @@ import {
 import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
+import { shapeTournamentRows } from './tennisTournaments';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
@@ -673,6 +674,46 @@ export const searchEntities = onRequest(async (req, res) => {
       athletes: await searchAthletes(store, q),
     });
   } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+// Tennis tournaments as followable competitions (Prompt 9): one row
+// per canonical tournament — a joint ATP+WTA event is ONE row carrying
+// both draws — dated by its soonest upcoming edition. Read from the
+// fixtures the tour polls already maintain; cached per instance
+// because browse is a per-open path.
+const TOURNAMENT_CACHE_MS = 60_000;
+let tournamentCache: { at: number; body: unknown } | null = null;
+
+export const listTournaments = onRequest(async (_req, res) => {
+  try {
+    if (tournamentCache && Date.now() - tournamentCache.at < TOURNAMENT_CACHE_MS) {
+      res.json(tournamentCache.body);
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const [atp, wta] = await Promise.all([
+      db.collection('fixtures').where('competitionId', '==', 'tennis-atp').get(),
+      db.collection('fixtures').where('competitionId', '==', 'tennis-wta').get(),
+    ]);
+    const parents = [...atp.docs, ...wta.docs].map((d) => {
+      const f = d.data() as Fixture;
+      return {
+        competitionId: f.competitionId,
+        title: f.title,
+        startUtc: f.startUtc,
+        ...(f.durationHours !== undefined
+          ? { durationHours: f.durationHours }
+          : {}),
+        status: f.status,
+      };
+    });
+    const body = { tournaments: shapeTournamentRows(parents, nowIso) };
+    tournamentCache = { at: Date.now(), body };
+    res.json(body);
+  } catch (e) {
+    // An empty tournament list would read as "tennis has no events".
     res.status(502).json({ error: String(e) });
   }
 });

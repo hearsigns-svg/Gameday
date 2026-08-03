@@ -38,6 +38,10 @@ export interface SportConfig {
   // Single-league sports skip the server round-trip for the competition
   // level; the entry is config, not data.
   staticCompetitions?: StaticCompetition[];
+  // Tournament rows below the tour rows (Prompt 9): the competitions
+  // people actually want — Wimbledon, not "ATP Tour" — served by
+  // listTournaments with joint two-tour events merged under one key.
+  tournamentBrowse?: boolean;
   // Series sports (F1, UFC): the one followable, followed straight from
   // the sport row.
   seriesFollowable?: { key: string; label: string; pollPath?: string };
@@ -176,6 +180,7 @@ export const SPORTS: SportConfig[] = [
     enabled: true,
     browse: ['competition', 'athlete'],
     followTypes: ['competition', 'athlete'],
+    tournamentBrowse: true,
     // ATP: TOURNAMENT level from the ICS feed Tennis TV publishes for
     // subscription — atptour.com itself refuses this agent and is
     // permanently excluded (docs/DECISIONS.md). WTA: tournaments PLUS

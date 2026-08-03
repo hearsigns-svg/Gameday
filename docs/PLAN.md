@@ -1093,5 +1093,48 @@ in the Prompt 8 report.
   drivers after two refreshes (self-heals on reactivation).
 - 637 tests green under UTC and America/Los_Angeles; both typechecks
   and the functions build clean. Deploy + roster seed are owner-run
-  (see the Prompt 8 report's Run these).
+  (see the Prompt 8 report's Run these). DEPLOYED + SEEDED by owner
+  2026-08-03 (verified: 29 functions, 749 athletes, roster marker
+  fresh, catalogue sweep polling 55 paths). Post-ship same-day fixes:
+  7e6c8ca (F39 — pre-RNFB binary RedBox on follow; native-reported
+  TurboModule miss despite JS catch; rnfbPresence non-throwing gate,
+  device-verified) and d3bc696 (one real fight one calendar entry —
+  client dedupeSameBout collapses cross-provider bout pairs;
+  device+sqlite verified).
+
+### Prompt 9 Part A — tennis browse: tournaments as competitions  [x]
+
+- **A1 NOT REPRODUCIBLE**: the ATP Tour row exists in config
+  (staticCompetitions, unchanged since Prompt 4), renders on-device
+  beside WTA (screenshot-verified), its slice is live (78 future
+  tournaments, soonest Aug 13) and its follow path is the ordinary
+  static-competition path. The one genuinely WTA-only surface is the
+  tennis ATHLETES screen — honest, no ATP player feed, and the
+  coverageNote on that screen says so. Same-shape sweep across the
+  store: every slice with future fixtures maps to a browse surface
+  except athletics' non-curated wa-* groups, which are covered by the
+  deliberate "Everything on the calendar" catch-all row (F23 design).
+- **A2 BUILT**: tournaments are followable competitions. Canonical
+  YEAR-AGNOSTIC key `tennis-t-<slug>` stamped into followKeys by both
+  providers (competitionId untouched — ingest/reaper/coverage
+  unaffected; probe: 0 fixtureChanges from the one-time rewrite of
+  existing docs, then stable poll-over-poll). JOIN = name+dates
+  heuristic, stated plainly (no shared id exists): exact normalised
+  title + window overlap auto-joins; curated alias table for evidenced
+  sponsor variants (DC Open; Toronto canonicalised sponsor-light
+  before any follows exist). MEASURED against prod through the real
+  code: 99 tournament rows — 4 joint (Toronto, Cincinnati, US Open,
+  Beijing), 57 ATP-only, 38 WTA-only. `listTournaments` endpoint +
+  client rows under the tour rows (UTC-formatted inclusive spans);
+  tournament follows carry NO pollPath (tier-1 catalogue warmth).
+  Joint pairs collapse client-side in dedupeSameEvent (WTA doc wins —
+  draws/OOP hang off it), which also closes F33's two-events case for
+  both-tour followers; SAME-PROVIDER GUARD added so a feed quirk can
+  never delete a real event (review round). Review round: 7 findings,
+  2 fixed pre-commit (caption UTC/inclusive-end; same-provider guard)
+  + Toronto alias + empty-slug guard; stated bounds: flagship rows
+  read "ATP" with 2027 dates until the WTA window reaches them; the
+  45-day edition window can cosmetically fuse two same-slug events'
+  browse dates (0 live cases; calendar unaffected). Fixture id scheme
+  UNCHANGED (the stop-gate never tripped). 659 tests, both TZs.
 
