@@ -81,4 +81,22 @@ describe('routes that honestly do not exist', () => {
       pollPathFor(f({ key: 'nhl-team-BOS', sportKey: 'ice-hockey', type: 'team' })),
     ).not.toBeNull();
   });
+
+  test('canonical athlete follows carry no route of their own (Prompt 8)', () => {
+    // Athlete follows ride the catalogue's warmth: no pollPath for
+    // tennis or boxing athletes — the appearance reaches them through
+    // the ordinary query path. F1 is the one deliberate exception: the
+    // driver's fixtures ARE the session fixtures, and a driver-only
+    // follower keeps the F1 slice registered exactly like a series
+    // follower would.
+    expect(
+      pollPathFor(f({ key: 'athlete_000184', sportKey: 'tennis', type: 'athlete' })),
+    ).toBeNull();
+    expect(
+      pollPathFor(f({ key: 'athlete_000201', sportKey: 'boxing', type: 'athlete' })),
+    ).toBeNull();
+    expect(
+      pollPathFor(f({ key: 'athlete_000112', sportKey: 'f1', type: 'athlete' })),
+    ).toMatch(/^pollF1\?season=\d{4}$/);
+  });
 });

@@ -38,12 +38,37 @@ export interface SearchTeamHit {
 }
 
 export interface SearchAthleteHit {
-  key: string; // athlete-<slug> follow key
+  key: string; // CANONICAL athlete id (athlete_000184) — the follow key
   name: string;
   sportKey: string;
-  // Absent for review-sourced athletes: their fixtures refresh when an
-  // operator decides, not on a poll route.
+  grouping?: string; // 'Heavyweight' | 'WTA Tour' — caption material
+  nextStartUtc?: string;
+  // Pre-Prompt-8 servers sent a pollPath; athlete follows no longer
+  // need one (the catalogue keeps their sources warm), but the field is
+  // kept optional so deploy skew in either direction stays harmless.
   pollPath?: string;
+}
+
+// ─── Individual-sport browse (Prompt 8) ───────────────────────────────
+
+export interface AthleteCard {
+  key: string;
+  name: string;
+  sportKey: string;
+  rank?: number;
+  championOf?: string[];
+  countryCode?: string;
+  grouping?: string;
+  nextStartUtc?: string;
+}
+
+export interface AthleteBrowse {
+  groups: Array<{
+    grouping: string;
+    groupingKey: string;
+    athletes: AthleteCard[];
+  }>;
+  competingSoon: AthleteCard[];
 }
 
 export interface SearchHits {
@@ -78,8 +103,20 @@ export async function fetchTeams(
   return r.ok ? ok(r.value.teams) : r;
 }
 
+// The curated athlete lists for a sport's browse screen. A failure is a
+// failure — an empty directory rendered from an error would read as
+// "this sport has nobody", the standing invariant's failure mode.
+export async function fetchAthleteBrowse(
+  sportKey: string,
+): Promise<Result<AthleteBrowse>> {
+  return getJson<AthleteBrowse>(
+    `listAthletes?sport=${encodeURIComponent(sportKey)}`,
+  );
+}
+
 // Federated search — teams server-filtered to leagues we actually
-// serve, athletes from the appearance-fed directory.
+// serve, athletes from the canonical directory (an athlete with no
+// scheduled event is findable; that is the point of the directory).
 export async function searchEntities(
   query: string,
 ): Promise<Result<SearchHits>> {

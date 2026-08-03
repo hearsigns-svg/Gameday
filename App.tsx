@@ -30,6 +30,7 @@ import CalendarPrimingScreen from './src/features/calendar-sync/screens/Calendar
 import HomeScreen from './src/features/follows/screens/HomeScreen';
 import FollowingScreen from './src/features/follows/screens/FollowingScreen';
 import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen';
+import AthleteListScreen from './src/features/follows/screens/AthleteListScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
@@ -185,6 +186,11 @@ export default function App() {
           name="LeagueList"
           component={LeagueListScreen}
           options={{ title: 'Competitions' }}
+        />
+        <Stack.Screen
+          name="AthleteList"
+          component={AthleteListScreen}
+          options={{ title: 'Athletes' }}
         />
         <Stack.Screen
           name="TeamList"

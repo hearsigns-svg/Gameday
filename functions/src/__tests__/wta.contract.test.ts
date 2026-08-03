@@ -55,9 +55,14 @@ test('the calendar carries the US Open — slam coverage without touching usopen
 test('still-in means named in an undecided singles match — walkovers, doubles and finished matches do not count', () => {
   // LS001 is the unplayed final (Winner "0"); every other sampled match
   // is decided ("2"/"3"), a walkover ("5", Krueger–Osaka), or doubles.
-  expect(playersStillIn(matches).sort()).toEqual([
-    'Alexandra Eala',
-    'Jessica Pegula',
+  // Each ref carries the WTA's own numeric id — the disambiguation
+  // source canonical identity runs on (Prompt 8).
+  const stillIn = [...playersStillIn(matches)].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  expect(stillIn).toEqual([
+    { name: 'Alexandra Eala', wtaId: '330332' },
+    { name: 'Jessica Pegula', wtaId: '316956' },
   ]);
 });
 
@@ -70,7 +75,10 @@ test('order-of-play times are venue-local with explicit offsets', () => {
 });
 
 test('playerSlots reads days, courts and dict-shaped containers; ATP skeletons never leak', () => {
-  const slots = playerSlots(oopSample);
+  const { slots, ids } = playerSlots(oopSample);
+  // The OOP carries the same numeric ids as the draw (verified on the
+  // banked joint payloads) — either feed can certify identity.
+  expect(ids.get('Jessica Pegula')).toBe('316956');
   // Pegula carries BOTH her slots — the July 30 quarter and the final.
   expect(slots.get('Jessica Pegula')).toEqual([
     {
@@ -103,7 +111,7 @@ test('playerSlots reads days, courts and dict-shaped containers; ATP skeletons n
 });
 
 test('REGRESSION: a played morning slot yields to the same payload\'s later final — and an in-progress match keeps its slot', () => {
-  const pegula = playerSlots(oopSample).get('Jessica Pegula')!;
+  const pegula = playerSlots(oopSample).slots.get('Jessica Pegula')!;
   // Mid-quarter (19:00–22:00Z window): the quarter is the thing to show.
   expect(pickLiveSlot(pegula, '2026-07-30T21:00:00.000Z')!.opponent).toBe(
     'Magdalena Frech',
@@ -126,7 +134,9 @@ test('REGRESSION: a played morning slot yields to the same payload\'s later fina
 
 test('draw only (no order of play yet) → provisional appearances on the parent window', () => {
   const parent = tournamentToFixture(dc, AT)!;
-  const apps = buildTournamentAppearances(parent, matches, null, AT);
+  const apps = buildTournamentAppearances(parent, matches, null, AT).map(
+    (d) => d.fixture,
+  );
   expect(apps.map((a) => a.id).sort()).toEqual([
     'wta-1045-2026-app-alexandra-eala',
     'wta-1045-2026-app-jessica-pegula',
@@ -144,21 +154,34 @@ test('draw only (no order of play yet) → provisional appearances on the parent
 test('order of play confirms the SAME ids in place — the appearanceLifecycle mechanism, fed by real data', () => {
   const parent = tournamentToFixture(dc, AT)!;
   const provisional = buildTournamentAppearances(parent, matches, null, AT);
-  const confirmed = buildTournamentAppearances(parent, matches, oopSample, AT);
+  const confirmedDrafts = buildTournamentAppearances(
+    parent,
+    matches,
+    oopSample,
+    AT,
+  );
+  const confirmed = confirmedDrafts.map((d) => d.fixture);
   const eala = confirmed.find((a) => a.id === 'wta-1045-2026-app-alexandra-eala')!;
-  expect(provisional.map((a) => a.id).sort()).toEqual(
+  expect(provisional.map((d) => d.fixture.id).sort()).toEqual(
     confirmed.map((a) => a.id).sort(),
   );
+  // The draft's ref carries her id — resolution links CERTAIN, and a
+  // player outside the top-200 roster still becomes an id-backed
+  // athlete rather than a name guess.
+  const ealaDraft = confirmedDrafts.find(
+    (d) => d.fixture.id === 'wta-1045-2026-app-alexandra-eala',
+  )!;
+  expect(ealaDraft.refs).toEqual([
+    { name: 'Alexandra Eala', source: 'wta', externalId: '330332' },
+  ]);
   expect(eala.startUtc).toBe('2026-08-02T17:30:00.000Z');
   expect(eala.durationHours).toBe(3);
   expect(eala.timePrecision).toBe('exact');
   expect(eala.confidence).toBe('confirmed');
   expect(eala.title).toBe('Alexandra Eala vs Jessica Pegula — Mubadala DC Open');
   expect(eala.athletes).toEqual(['Alexandra Eala']);
-  expect(eala.followKeys).toEqual([
-    'tennis-wta-appearances',
-    'athlete-alexandra-eala',
-  ]);
+  // Keys are resolution's job now: the draft carries only its slice key.
+  expect(eala.followKeys).toEqual(['tennis-wta-appearances']);
 });
 
 test('a day-only slot is a confirmed date_only appearance for that day — all day, not only at midnight', () => {
@@ -171,7 +194,12 @@ test('a day-only slot is a confirmed date_only appearance for that day — all d
     '2026-07-25T00:00:00.000Z',
     '2026-07-25T12:00:00.000Z',
   ]) {
-    const apps = buildTournamentAppearances(parent, matches, oopSample, nowIso);
+    const apps = buildTournamentAppearances(
+      parent,
+      matches,
+      oopSample,
+      nowIso,
+    ).map((d) => d.fixture);
     const ngounoue = apps.find(
       (a) => a.id === 'wta-1045-2026-app-clervie-ngounoue',
     )!;
@@ -196,7 +224,7 @@ test('REGRESSION: a confirmed slot never demotes to provisional mid-match', () =
     matches,
     oopSample,
     '2026-08-02T18:30:00.000Z',
-  );
+  ).map((d) => d.fixture);
   const eala = apps.find((a) => a.id === 'wta-1045-2026-app-alexandra-eala')!;
   expect(eala.confidence).toBe('confirmed');
   expect(eala.startUtc).toBe('2026-08-02T17:30:00.000Z');

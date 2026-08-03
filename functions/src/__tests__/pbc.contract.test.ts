@@ -69,32 +69,35 @@ test('the card fixture is the main event, with the provider\'s own window', () =
   expect(f.confidence).toBe('provisional');
 });
 
-test('every bout becomes an appearance, named from performer givenName+familyName', () => {
+test('every bout becomes an appearance draft, named from performer givenName+familyName', () => {
   const card = cardToFixture(URL, html, AT)!;
-  const apps = cardAppearances(card, html, AT);
-  expect(apps).toHaveLength(4);
+  const drafts = cardAppearances(card, html, AT);
+  expect(drafts).toHaveLength(4);
   // The third bout's NODE name says "Antonio Russell"; the performer
   // record says "Gary Antonio Russell". The Person record wins — the
   // node name abbreviates.
-  expect(apps.map((a) => a.title)).toEqual([
+  expect(drafts.map((d) => d.fixture.title)).toEqual([
     'Rolando Romero vs Teofimo Lopez',
     'Yoenli Hernandez vs Francisco Daniel Veron',
     'Victor Santillan vs Gary Antonio Russell',
     'Carlos Utria vs Israel Mercado',
   ]);
   // Nicknames — including the empty "" for fighters without one — never
-  // leak into names or keys.
-  expect(apps.flatMap((a) => a.athletes ?? [])).not.toContainEqual(
+  // leak into names or refs.
+  expect(drafts.flatMap((d) => d.fixture.athletes ?? [])).not.toContainEqual(
     expect.stringContaining('"'),
   );
-  for (const a of apps) {
-    expect(a.parentFixtureId).toBe('pbc-fight-night-august-22-2026');
-    expect(a.startUtc).toBe(card.startUtc); // provisional = parent window
-    expect(a.durationHours).toBe(2); // the card's published window
-    expect(a.confidence).toBe('provisional');
-    expect(a.followKeys[0]).toBe('pbc-cards-appearances');
+  for (const d of drafts) {
+    expect(d.fixture.parentFixtureId).toBe('pbc-fight-night-august-22-2026');
+    expect(d.fixture.startUtc).toBe(card.startUtc); // provisional = parent window
+    expect(d.fixture.durationHours).toBe(2); // the card's published window
+    expect(d.fixture.confidence).toBe('provisional');
+    expect(d.fixture.followKeys).toEqual(['pbc-cards-appearances']);
+    // PBC publishes no fighter ids: refs are name-only, and canonical
+    // resolution (athletes.ts, policy 'structured') decides the keys.
+    expect(d.refs.every((r) => r.externalId === undefined)).toBe(true);
   }
   // The prelim fighter the whole stage exists for: followable from the
   // undercard, not just the marquee.
-  expect(apps[3].followKeys).toContain('athlete-israel-mercado');
+  expect(drafts[3].refs.map((r) => r.name)).toContain('Israel Mercado');
 });

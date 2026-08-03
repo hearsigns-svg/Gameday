@@ -1,0 +1,462 @@
+// Canonical athlete identity — the matcher, the roster reconciliation,
+// and the two failures this stage exists to close: F31 (a compound
+// surname defeating a word-count gate) and F34 (two athletes, one
+// rendered name, one surviving doc). The rules pinned here are the
+// brief's, verbatim:
+//   full name + provider id            → certain
+//   full name, unique in the directory → confident
+//   surname, or matching more than one → ambiguous: no link, no key
+//   MISSES_BEFORE_INACTIVE roster absences → inactive, NEVER deleted
+
+import {
+  Athlete,
+  athleteIdFrom,
+  buildAthleteIndex,
+  isCanonicalAthleteKey,
+  matchAthlete,
+  MISSES_BEFORE_INACTIVE,
+  reconcileRoster,
+  resolveDrafts,
+  rosterAthlete,
+  RosterEntry,
+  stampDriverKeys,
+} from '../athletes';
+import { appearanceFor } from '../appearances';
+import { Fixture } from '../fixture';
+import { normaliseName } from '../identity';
+
+const NOW = '2026-08-03T00:00:00.000Z';
+
+const athlete = (over: Partial<Athlete> & { id: string }): Athlete => ({
+  displayName: 'Nobody',
+  searchName: normaliseName(over.displayName ?? 'Nobody'),
+  aliases: [],
+  sport: 'tennis',
+  providerIds: {},
+  identities: [],
+  provenance: 'roster',
+  nameKeyed: true,
+  active: true,
+  missedRefreshes: 0,
+  createdAt: NOW,
+  updatedAt: NOW,
+  ...over,
+});
+
+describe('canonical ids', () => {
+  test('format, and the range guard', () => {
+    expect(athleteIdFrom(184)).toBe('athlete_000184');
+    expect(isCanonicalAthleteKey('athlete_000184')).toBe(true);
+    expect(isCanonicalAthleteKey('athlete-teofimo-lopez')).toBe(false);
+    expect(() => athleteIdFrom(0)).toThrow();
+    expect(() => athleteIdFrom(1_000_000)).toThrow();
+  });
+});
+
+describe('matchAthlete — the certainty ladder', () => {
+  const sabalenka = athlete({
+    id: 'athlete_000001',
+    displayName: 'Aryna Sabalenka',
+    providerIds: { wta: '320760' },
+    nameKeyed: false,
+  });
+  const lopez = athlete({
+    id: 'athlete_000002',
+    displayName: 'Teofimo Lopez',
+    sport: 'boxing',
+  });
+  const garcia1 = athlete({
+    id: 'athlete_000003',
+    displayName: 'Maria Garcia',
+    providerIds: { wta: '111' },
+    nameKeyed: false,
+  });
+  const garcia2 = athlete({
+    id: 'athlete_000004',
+    displayName: 'Maria Garcia',
+    providerIds: { wta: '222' },
+    nameKeyed: false,
+  });
+  const index = buildAthleteIndex([sabalenka, lopez, garcia1, garcia2]);
+
+  test('provider id → CERTAIN, whatever the rendered name', () => {
+    const m = matchAthlete(index, 'tennis', {
+      name: 'A. Sabalenka',
+      source: 'wta',
+      externalId: '320760',
+    });
+    expect(m.kind).toBe('certain');
+    expect(m.athlete!.id).toBe('athlete_000001');
+  });
+
+  test('unknown provider id with an id-backed name match → unknown (a DIFFERENT person), never a merge', () => {
+    // Sabalenka already carries wta:320760; an entry claiming the same
+    // name under wta:999999 is somebody else (or feed corruption) —
+    // merging would hand her follows to the wrong record.
+    expect(
+      matchAthlete(index, 'tennis', {
+        name: 'Aryna Sabalenka',
+        source: 'wta',
+        externalId: '999999',
+      }).kind,
+    ).toBe('unknown');
+  });
+
+  test('REGRESSION: an id arriving for a NAME-KEYED athlete upgrades, never twins', () => {
+    // A WTA player minted name-keyed from a draw whose PlayerID was
+    // blank must become ONE athlete when her id shows up — the
+    // id-backed twin poisoned the name forever (review round).
+    const nameKeyed = athlete({
+      id: 'athlete_000050',
+      displayName: 'Maya Joint',
+      providerIds: {},
+    });
+    const m = matchAthlete(buildAthleteIndex([nameKeyed]), 'tennis', {
+      name: 'Maya Joint',
+      source: 'wta',
+      externalId: '334444',
+    });
+    expect(m.kind).toBe('confident');
+    expect(m.athlete!.id).toBe('athlete_000050');
+    // And through reconcileRoster the identity attaches with the id.
+    const r = reconcileRoster(
+      [nameKeyed],
+      [
+        {
+          source: 'wta',
+          externalId: '334444',
+          name: 'Maya Joint',
+          sport: 'tennis',
+          rank: 150,
+        },
+      ],
+      NOW,
+    );
+    expect(r.toCreate).toHaveLength(0);
+    const patch = r.toUpdate.find((u) => u.id === 'athlete_000050')!.patch;
+    expect(patch.providerIds).toEqual({ wta: '334444' });
+    expect(patch.nameKeyed).toBe(false);
+  });
+
+  test('unique full name → CONFIDENT; diacritics fold', () => {
+    const m = matchAthlete(index, 'boxing', { name: 'Teófimo López' });
+    expect(m.kind).toBe('confident');
+    expect(m.athlete!.id).toBe('athlete_000002');
+  });
+
+  test('a surname is not an identity — ambiguous even when unique', () => {
+    expect(matchAthlete(index, 'boxing', { name: 'Lopez' }).kind).toBe(
+      'ambiguous',
+    );
+  });
+
+  test('a name matching two athletes is ambiguous', () => {
+    expect(matchAthlete(index, 'tennis', { name: 'Maria Garcia' }).kind).toBe(
+      'ambiguous',
+    );
+  });
+
+  test('sport scopes the name space — a boxer never matches a tennis query', () => {
+    expect(matchAthlete(index, 'tennis', { name: 'Teofimo Lopez' }).kind).toBe(
+      'unknown',
+    );
+  });
+
+  test('aliases match too', () => {
+    const withAlias = buildAthleteIndex([
+      athlete({
+        id: 'athlete_000005',
+        displayName: 'Alexandra Eala',
+        aliases: [normaliseName('Alex Eala')],
+      }),
+    ]);
+    expect(matchAthlete(withAlias, 'tennis', { name: 'Alex Eala' }).kind).toBe(
+      'confident',
+    );
+  });
+});
+
+describe('F34 — two players, one rendered name', () => {
+  const parent: Fixture = {
+    id: 'wta-1045-2026',
+    sport: 'tennis',
+    competition: 'WTA Tour',
+    competitionId: 'tennis-wta',
+    title: 'Somewhere Open',
+    followKeys: ['tennis-wta'],
+    startUtc: '2026-08-01T00:00:00.000Z',
+    status: 'scheduled',
+    durationHours: 168,
+    timePrecision: 'date_only',
+    updatedAt: NOW,
+  };
+  const garcia1 = athlete({
+    id: 'athlete_000003',
+    displayName: 'Maria Garcia',
+    providerIds: { wta: '111' },
+  });
+  const garcia2 = athlete({
+    id: 'athlete_000004',
+    displayName: 'Maria Garcia',
+    providerIds: { wta: '222' },
+  });
+
+  test('distinct ids at one name-built doc id: first kept, second REFUSED loudly', () => {
+    const drafts = ['111', '222'].map(
+      (id) =>
+        appearanceFor(parent, {
+          refs: [{ name: 'Maria Garcia', source: 'wta', externalId: id }],
+          title: 'Maria Garcia — Somewhere Open',
+          updatedAt: NOW,
+        })!,
+    );
+    const r = resolveDrafts(drafts, buildAthleteIndex([garcia1, garcia2]), {
+      create: 'structured',
+    });
+    // One doc survives (the ids collide on the name-built appearance id
+    // — extending the id scheme is gated on an owner ruling), and the
+    // collision is COUNTED, never silently absorbed. The surviving doc
+    // carries only the surviving player's key: the other player's
+    // follower gets nothing rather than someone else's schedule.
+    expect(r.appearances).toHaveLength(1);
+    expect(r.appearances[0].followKeys).toEqual([
+      'tennis-wta-appearances',
+      'athlete_000003',
+    ]);
+    expect(r.counts.nameCollisions).toBeGreaterThanOrEqual(1);
+    expect(r.collisionDetails.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('roster reconciliation', () => {
+  const entry = (over: Partial<RosterEntry> = {}): RosterEntry => ({
+    source: 'wta',
+    externalId: '320760',
+    name: 'Aryna Sabalenka',
+    sport: 'tennis',
+    grouping: 'WTA Tour',
+    groupingKey: 'wta',
+    rank: 1,
+    countryCode: 'BLR',
+    ...over,
+  });
+
+  test('a new entry creates; an id-matched entry updates in place', () => {
+    const fresh = reconcileRoster([], [entry()], NOW);
+    expect(fresh.toCreate).toHaveLength(1);
+    const existing = rosterAthlete('athlete_000001', entry(), NOW);
+    const again = reconcileRoster(
+      [existing],
+      [entry({ rank: 3, name: 'A. Sabalenka' })],
+      '2026-08-10T00:00:00.000Z',
+    );
+    expect(again.toCreate).toHaveLength(0);
+    const patch = again.toUpdate.find((u) => u.id === 'athlete_000001')!.patch;
+    expect(patch.rank).toBe(3);
+    // The drifted name form becomes an alias, so search finds both.
+    expect(patch.aliases).toContain(normaliseName('A. Sabalenka'));
+  });
+
+  test('an id-less roster entry attaches to a unique name match — one athlete, two identities', () => {
+    // An IBF-rated boxer who already exists as a PBC fixture-derived
+    // athlete must become ONE athlete, not two.
+    const pbcDerived = athlete({
+      id: 'athlete_000009',
+      displayName: 'Gary Antonio Russell',
+      sport: 'boxing',
+      provenance: 'fixture_derived',
+      identities: [
+        { source: 'pbc', externalId: null, name: 'Gary Antonio Russell', lastSeenAt: NOW },
+      ],
+    });
+    const r = reconcileRoster(
+      [pbcDerived],
+      [
+        entry({
+          source: 'ibf',
+          externalId: null,
+          name: 'Gary Antonio Russell',
+          sport: 'boxing',
+          grouping: 'Bantamweight',
+          groupingKey: 'boxing-bantamweight',
+          rank: 4,
+        }),
+      ],
+      NOW,
+    );
+    expect(r.toCreate).toHaveLength(0);
+    const patch = r.toUpdate.find((u) => u.id === 'athlete_000009')!.patch;
+    expect(patch.identities).toHaveLength(2);
+    expect(patch.rank).toBe(4);
+  });
+
+  test('an id-less entry matching TWO athletes is skipped and reported, never guessed', () => {
+    const g1 = athlete({ id: 'athlete_000003', displayName: 'Maria Garcia' });
+    const g2 = athlete({ id: 'athlete_000004', displayName: 'Maria Garcia' });
+    const r = reconcileRoster(
+      [g1, g2],
+      [entry({ externalId: null, name: 'Maria Garcia' })],
+      NOW,
+    );
+    expect(r.toCreate).toHaveLength(0);
+    expect(r.skippedAmbiguous).toEqual(['wta: Maria Garcia']);
+  });
+
+  test('absence marks inactive after MISSES_BEFORE_INACTIVE — and NEVER deletes', () => {
+    const a = rosterAthlete('athlete_000001', entry(), NOW);
+    const first = reconcileRoster([a], [entry({ externalId: '999', name: 'Somebody New' })], NOW);
+    const patch1 = first.toUpdate.find((u) => u.id === 'athlete_000001')!.patch;
+    expect(patch1.missedRefreshes).toBe(1);
+    expect(patch1.active).toBeUndefined(); // one miss is not inactivity
+    // A stale rank is a lie the moment the athlete drops off the list.
+    expect('rank' in patch1 && patch1.rank === undefined).toBe(true);
+
+    const missed = { ...a, missedRefreshes: MISSES_BEFORE_INACTIVE - 1 };
+    const second = reconcileRoster(
+      [missed],
+      [entry({ externalId: '999', name: 'Somebody New' })],
+      NOW,
+    );
+    const patch2 = second.toUpdate.find((u) => u.id === 'athlete_000001')!.patch;
+    expect(patch2.active).toBe(false);
+  });
+
+  test('re-appearance reactivates and zeroes the miss counter', () => {
+    const inactive = {
+      ...rosterAthlete('athlete_000001', entry(), NOW),
+      active: false,
+      missedRefreshes: 3,
+    };
+    const r = reconcileRoster([inactive], [entry({ rank: 12 })], NOW);
+    const patch = r.toUpdate.find((u) => u.id === 'athlete_000001')!.patch;
+    expect(patch.active).toBe(true);
+    expect(patch.missedRefreshes).toBe(0);
+  });
+
+  test('duplicate entries within one refresh create ONE athlete', () => {
+    // A page overlap during a mid-fetch rank shift can repeat a player
+    // and still pass the contiguity proof; the reconciliation must not
+    // mint twins (review round).
+    const r = reconcileRoster(
+      [],
+      [entry({ rank: 99 }), entry({ rank: 100 })],
+      NOW,
+    );
+    expect(r.toCreate).toHaveLength(1);
+  });
+
+  test('absence is scoped to roster-PLACED athletes — a rank-less draw player is not the roster\'s to deactivate', () => {
+    // A rank-250 player minted from a draw is absent from the top 200
+    // BY CONSTRUCTION (review round: the unscoped pass deactivated
+    // active players weekly, and the F1 twin stripped session keys).
+    const drawPlayer = {
+      ...athlete({
+        id: 'athlete_000200',
+        displayName: 'Maya Joint',
+        providerIds: { wta: '334444' },
+      }),
+      provenance: 'fixture_derived' as const,
+      identities: [
+        {
+          source: 'wta',
+          externalId: '334444',
+          name: 'Maya Joint',
+          lastSeenAt: NOW,
+        },
+      ],
+    };
+    const r = reconcileRoster([drawPlayer], [entry()], NOW);
+    expect(r.toUpdate.find((u) => u.id === 'athlete_000200')).toBeUndefined();
+  });
+
+  test('an already-inactive athlete is left alone — no unbounded counters, no recount', () => {
+    const inactive = {
+      ...rosterAthlete('athlete_000001', entry(), NOW),
+      active: false,
+      missedRefreshes: 2,
+    };
+    const r = reconcileRoster(
+      [inactive],
+      [entry({ externalId: '999', name: 'Somebody New' })],
+      NOW,
+    );
+    expect(r.toUpdate.find((u) => u.id === 'athlete_000001')).toBeUndefined();
+  });
+
+  test('another source\'s refresh never touches this source\'s athletes', () => {
+    const wta = rosterAthlete('athlete_000001', entry(), NOW);
+    const r = reconcileRoster(
+      [wta],
+      [
+        entry({
+          source: 'ibf',
+          externalId: null,
+          name: 'Moses Itauma',
+          sport: 'boxing',
+        }),
+      ],
+      NOW,
+    );
+    expect(r.toUpdate.find((u) => u.id === 'athlete_000001')).toBeUndefined();
+  });
+});
+
+describe('F1 driver stamping', () => {
+  const session = (id: string, kind: 'race' | 'support'): Fixture => ({
+    id,
+    sport: 'f1',
+    competition: 'Formula 1',
+    competitionId: 'f1-series-1',
+    title: 'Dutch Grand Prix — Race',
+    followKeys: ['f1-series-1'],
+    startUtc: '2026-08-23T13:00:00.000Z',
+    status: 'scheduled',
+    durationHours: 2,
+    sessionKind: kind,
+    updatedAt: NOW,
+  });
+
+  test('active drivers with f1 ids are stamped, sorted, and re-stamping is stable', () => {
+    const drivers = [
+      athlete({
+        id: 'athlete_000112',
+        displayName: 'Max Verstappen',
+        sport: 'f1',
+        providerIds: { f1: 'max_verstappen' },
+      }),
+      athlete({
+        id: 'athlete_000041',
+        displayName: 'Fernando Alonso',
+        sport: 'f1',
+        providerIds: { f1: 'alonso' },
+      }),
+      athlete({
+        id: 'athlete_000999',
+        displayName: 'Retired Driver',
+        sport: 'f1',
+        providerIds: { f1: 'old_hand' },
+        active: false,
+      }),
+    ];
+    const stamped = stampDriverKeys(
+      [session('f1-2026-zandvoort-race', 'race')],
+      drivers,
+    );
+    expect(stamped[0].followKeys).toEqual([
+      'f1-series-1',
+      'athlete_000041',
+      'athlete_000112',
+    ]);
+    // Idempotent: stamping the stamped output changes nothing — ingest
+    // diffs by equality, so instability would rewrite every session
+    // every poll.
+    expect(stampDriverKeys(stamped, drivers)).toEqual(stamped);
+    // sessionKind untouched: the race-only preference keeps working.
+    expect(stamped[0].sessionKind).toBe('race');
+  });
+
+  test('an empty roster stamps nothing', () => {
+    const f = session('f1-2026-zandvoort-race', 'race');
+    expect(stampDriverKeys([f], [])[0].followKeys).toEqual(['f1-series-1']);
+  });
+});

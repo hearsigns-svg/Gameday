@@ -32,6 +32,7 @@
 // that atptour.com remains excluded.
 
 import { appearanceFor } from '../appearances';
+import { AppearanceDraft } from '../athletes';
 import { Fixture } from '../fixture';
 import { ProviderFetch, requireArray } from './fetchResult';
 
@@ -143,22 +144,38 @@ const fullName = (first?: string, last?: string): string | null => {
   return f && l ? `${f} ${l}` : null;
 };
 
+// A draw/OOP participant with the WTA's own numeric id where the feed
+// carried one. THE ID IS THE POINT (Prompt 8): a name is ambiguous,
+// `wta:320760` is not — the id is what makes canonical identity CERTAIN
+// downstream, and what finally distinguishes two players who render to
+// one name (F34).
+export interface WtaPlayerRef {
+  name: string;
+  wtaId: string | null;
+}
+
 // Who is still in the singles draw: named in a match that has no
 // decision yet. Winner '0' is the only "not decided" value observed;
 // anything else ('2'/'3' winner side, '5' walkover) is a decided match.
-export function playersStillIn(matches: readonly WtaMatch[]): string[] {
-  const names = new Set<string>();
+// Deduped by id where known, by name only as the fallback — two ids
+// sharing a rendered name stay TWO players.
+export function playersStillIn(matches: readonly WtaMatch[]): WtaPlayerRef[] {
+  const players = new Map<string, WtaPlayerRef>();
   for (const m of matches) {
     if (m.DrawMatchType !== 'S') continue;
     if ((m.Winner ?? '0') !== '0') continue;
-    for (const n of [
-      fullName(m.PlayerNameFirstA, m.PlayerNameLastA),
-      fullName(m.PlayerNameFirstB, m.PlayerNameLastB),
-    ]) {
-      if (n) names.add(n);
+    const sides: Array<[string | null, string | undefined]> = [
+      [fullName(m.PlayerNameFirstA, m.PlayerNameLastA), m.PlayerIDA],
+      [fullName(m.PlayerNameFirstB, m.PlayerNameLastB), m.PlayerIDB],
+    ];
+    for (const [name, rawId] of sides) {
+      if (!name) continue;
+      const wtaId = rawId?.trim() ? String(rawId).trim() : null;
+      const key = wtaId ? `id:${wtaId}` : `name:${name}`;
+      if (!players.has(key)) players.set(key, { name, wtaId });
     }
   }
-  return [...names];
+  return [...players.values()];
 }
 
 export interface PlayerSlot {
@@ -194,13 +211,22 @@ export function slotInstant(isoDate: string, notBefore: string): string | null {
 // and dropped venue-local evenings; both wrong ways at once). Keyed by
 // full name, the same key the draw yields — the OOP and draw carry the
 // same names for the same people (verified in the banked payloads).
-export function playerSlots(oopBody: unknown): Map<string, PlayerSlot[]> {
+export interface OopExtract {
+  slots: Map<string, PlayerSlot[]>;
+  // name → WTA numeric id, where the OOP carried one. Same id namespace
+  // as the draw's PlayerIDA/B (verified identical on the banked joint
+  // payloads), so either feed can certify identity.
+  ids: Map<string, string>;
+}
+
+export function playerSlots(oopBody: unknown): OopExtract {
   const body = oopBody as { orderOfPlay?: unknown };
   const raw = requireArray(
     body.orderOfPlay as string[] | null | undefined,
     'wta',
     'orderOfPlay',
   );
+  const ids = new Map<string, string>();
   const slots = new Map<string, PlayerSlot[]>();
   for (const entry of raw) {
     let parsed: unknown;
@@ -235,9 +261,15 @@ export function playerSlots(oopBody: unknown): Map<string, PlayerSlot[]> {
           const players = asArray(m.Players).filter(
             (p) => p.isKnown && p.Player,
           );
-          const names = players
-            .map((p) => fullName(p.Player!.FirstName, p.Player!.SurName))
-            .filter((n): n is string => n !== null);
+          const names: string[] = [];
+          for (const p of players) {
+            const n = fullName(p.Player!.FirstName, p.Player!.SurName);
+            if (!n) continue;
+            names.push(n);
+            if (p.Player!.id !== undefined && !ids.has(n)) {
+              ids.set(n, String(p.Player!.id));
+            }
+          }
           const instant = slotInstant(isoDate, m.NotBeforeISOTime ?? '');
           for (const name of names) {
             const opponent = names.find((n) => n !== name);
@@ -266,7 +298,7 @@ export function playerSlots(oopBody: unknown): Map<string, PlayerSlot[]> {
       }
     }
   }
-  return slots;
+  return { slots, ids };
 }
 
 // The slot to show NOW: the soonest whose window is still open — so an
@@ -291,34 +323,74 @@ export function pickLiveSlot(
   return graced[0];
 }
 
-// One appearance per player: still-in-the-draw players get the parent
-// window (provisional); players with a scheduled slot get it confirmed —
-// timed when the order of play gives a time, date_only when it gives
-// only the day. The id is the same either way, so every transition is
-// an in-place update on the device.
+// One appearance DRAFT per player: still-in-the-draw players get the
+// parent window (provisional); players with a scheduled slot get it
+// confirmed — timed when the order of play gives a time, date_only when
+// it gives only the day. The id is the same either way, so every
+// transition is an in-place update on the device.
+//
+// Participants are UNIONED BY NUMERIC ID where one exists (name only as
+// the fallback), so two players whose romanised names render identically
+// arrive downstream as two refs with two ids — resolution then keeps
+// the doc-id collision LOUD instead of silently absorbing one player
+// into the other (F34). The draw↔OOP slot join stays by full name: it
+// is the join key both feeds carry, verified identical in the banked
+// payloads.
 export function buildTournamentAppearances(
   parent: Fixture,
   matches: readonly WtaMatch[],
   oopBody: unknown | null,
   nowIso: string,
-): Fixture[] {
+): AppearanceDraft[] {
   const inDraw = playersStillIn(matches);
-  const slots = oopBody
+  const oop: OopExtract = oopBody
     ? playerSlots(oopBody)
-    : new Map<string, PlayerSlot[]>();
-  const players = new Set<string>([...inDraw, ...slots.keys()]);
-  const out: Fixture[] = [];
-  for (const name of players) {
-    const liveSlot = pickLiveSlot(slots.get(name) ?? [], nowIso);
+    : { slots: new Map(), ids: new Map() };
+  const players = new Map<string, WtaPlayerRef>();
+  const keyOf = (p: WtaPlayerRef) => (p.wtaId ? `id:${p.wtaId}` : `name:${p.name}`);
+  for (const p of inDraw) players.set(keyOf(p), p);
+  for (const [name, slotList] of oop.slots) {
+    void slotList;
+    const p: WtaPlayerRef = { name, wtaId: oop.ids.get(name) ?? null };
+    if (!players.has(keyOf(p))) players.set(keyOf(p), p);
+  }
+  const inDrawKeys = new Set(inDraw.map(keyOf));
+  // The slot join is NAME-keyed (the only join key both feeds carry).
+  // When two distinct ids share a rendered name, a name-joined slot
+  // cannot be attributed: publishing it would hand one player's match
+  // — opponent, time, title — to the other (review round, probe-
+  // confirmed). Collided names get NO slot: both players stay at the
+  // provisional parent window, which is honest, and the doc-id
+  // collision downstream stays loud.
+  const nameCount = new Map<string, number>();
+  for (const p of players.values()) {
+    nameCount.set(p.name, (nameCount.get(p.name) ?? 0) + 1);
+  }
+  const out: AppearanceDraft[] = [];
+  // Deterministic order (ids first, ascending) so a name-collision
+  // always resolves the same way run over run.
+  const ordered = [...players.values()].sort((a, b) =>
+    keyOf(a).localeCompare(keyOf(b)),
+  );
+  for (const p of ordered) {
+    const nameCollided = (nameCount.get(p.name) ?? 0) > 1;
+    const liveSlot = nameCollided
+      ? undefined
+      : pickLiveSlot(oop.slots.get(p.name) ?? [], nowIso);
     // A player with no open-or-graced slot and no live draw match has
     // been eliminated — their doc simply stops being emitted, and the
     // end-based retirement freeze keeps the played match in calendars.
-    if (!inDraw.includes(name) && !liveSlot) continue;
+    if (!inDrawKeys.has(keyOf(p)) && !liveSlot) continue;
     const title = liveSlot?.opponent
-      ? `${name} vs ${liveSlot.opponent} — ${parent.title}`
-      : `${name} — ${parent.title}`;
+      ? `${p.name} vs ${liveSlot.opponent} — ${parent.title}`
+      : `${p.name} — ${parent.title}`;
     const a = appearanceFor(parent, {
-      athletes: [name],
+      refs: [
+        {
+          name: p.name,
+          ...(p.wtaId ? { source: 'wta', externalId: p.wtaId } : {}),
+        },
+      ],
       title,
       updatedAt: nowIso,
       ...(liveSlot
@@ -365,7 +437,7 @@ async function getJson(url: string): Promise<unknown> {
 }
 
 export interface WtaFetch extends ProviderFetch {
-  appearances: Fixture[];
+  appearances: AppearanceDraft[];
   // Funnel stage A for the appearance slice: singles draw records seen
   // across the active tournaments, before the still-in and named gates.
   appearanceRawCount: number;
@@ -424,7 +496,7 @@ export async function fetchWtaTennis(
     .filter((t) => isActive(t, nowIso))
     .sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''));
   const fetchable = active.slice(0, MAX_ACTIVE_TOURNAMENTS);
-  const appearances: Fixture[] = [];
+  const appearances: AppearanceDraft[] = [];
   let appearanceRawCount = 0;
   for (const t of fetchable) {
     const id = t.tournamentGroup?.id;

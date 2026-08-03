@@ -127,6 +127,29 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       <FlatList
         data={leagues}
         keyExtractor={(l) => l.key}
+        // Athlete browse rides ABOVE the competition rows for sports
+        // that have a directory (Prompt 8): people are what a fan of an
+        // individual sport arrives looking for, and the entry point must
+        // not hide behind global search.
+        ListHeaderComponent={
+          sport?.browse.includes('athlete') ? (
+            <ListRow
+              title="Athletes"
+              caption="Champions, rankings and who's competing soon"
+              accessibilityLabel="Browse athletes"
+              onPress={() =>
+                navigation.navigate('AthleteList', {
+                  sportKey: route.params.sportKey,
+                })
+              }
+              right={
+                <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
+                  ›
+                </Text>
+              }
+            />
+          ) : null
+        }
         renderItem={({ item }) => (
           <ListRow
             title={item.name}

@@ -21,23 +21,18 @@
 //     never changes, the device planner emits an in-place UPDATE against
 //     the same ledger entry — never a second event.
 //
-// FOLLOW KEYS are the point of the model: an appearance carries the
-// athlete keys of its FULL-NAMED participants (surname-only names are
-// display-only, per the participants.ts rule — a surname is not an
-// identity and this stage does not pretend otherwise), plus one
-// non-followable SLICE KEY (`<parent competitionId>-appearances`) that
-// exists so ingest can diff the slice and coverage can count it. Parent
-// events carry NO athlete keys — the appearance is where an athlete
-// follow attaches, whether the athlete headlines or opens the prelims.
+// SINCE PROMPT 8 providers emit DRAFTS, not finished docs: the fixture
+// plus one AthleteRef per participant (name, and the provider's numeric
+// id where one exists). Follow keys are decided in ONE place —
+// athletes.ts:resolveDrafts — against the canonical athlete directory:
+// certain by provider id, confident by unique full name, ambiguous
+// mints nothing. The word-count gate that F31 defeated is gone;
+// directory membership is the test.
 
+import { AppearanceDraft, AthleteRef } from './athletes';
 import { Fixture } from './fixture';
 import { normaliseName } from './identity';
-import {
-  athleteKey,
-  isFollowableName,
-  namesPeople,
-  parseBout,
-} from './participants';
+import { namesPeople, parseBout } from './participants';
 
 // The ingest/coverage slice for a parent's appearances. Not offered as a
 // followable anywhere; it rides in followKeys so the existing
@@ -52,6 +47,11 @@ const slug = (name: string): string =>
 // Stable across provisional → confirmed, and across re-polls: built only
 // from the parent id and the participants' names. The ledger is keyed by
 // this and the notes tag embeds it, so it must be born final.
+//
+// KNOWN LIMIT (F34, owner ruling pending): the id is name-built, so two
+// distinct athletes sharing a rendered name inside one parent would
+// collide. resolveDrafts detects that case, keeps the first,
+// and REFUSES the second loudly rather than silently absorbing it.
 export function appearanceId(
   parentId: string,
   athletes: readonly string[],
@@ -68,9 +68,10 @@ export interface AppearanceSlot {
   dayOnly?: boolean;
 }
 
-// Build one appearance from its parent. Returns null when no participant
-// has a followable (full) name — an appearance nobody can follow is a
-// doc with no consumer.
+// Build one appearance DRAFT from its parent. Returns null only when no
+// participant ref was supplied at all — whether the draft survives to a
+// stored doc is resolution's decision (a draft none of whose refs
+// resolve to a followable athlete is dropped there).
 //
 // Without `slot`, the appearance is PROVISIONAL and carries the parent's
 // window verbatim — including a date_only parent's day sentinel, so a
@@ -80,52 +81,55 @@ export interface AppearanceSlot {
 export function appearanceFor(
   parent: Fixture,
   opts: {
-    athletes: readonly string[]; // display names, first-named first
+    refs: readonly AthleteRef[]; // participants, first-named first
     title: string;
     updatedAt: string;
     slot?: AppearanceSlot;
   },
-): Fixture | null {
-  const keys = opts.athletes.filter(isFollowableName).map(athleteKey);
-  if (keys.length === 0) return null;
+): AppearanceDraft | null {
+  if (opts.refs.length === 0) return null;
+  const names = opts.refs.map((r) => r.name);
   const base: Fixture = {
-    id: appearanceId(parent.id, opts.athletes),
+    id: appearanceId(parent.id, names),
     sport: parent.sport,
     competition: parent.competition,
     competitionId: appearanceSliceKey(parent.competitionId),
     title: opts.title,
-    followKeys: [
-      appearanceSliceKey(parent.competitionId),
-      ...new Set(keys),
-    ],
+    followKeys: [appearanceSliceKey(parent.competitionId)],
     startUtc: opts.slot?.startUtc ?? parent.startUtc,
     status: parent.status,
     parentFixtureId: parent.id,
-    athletes: [...opts.athletes],
+    athletes: [...names],
     updatedAt: opts.updatedAt,
     ...(parent.venueTz ? { venueTz: parent.venueTz } : {}),
   };
   if (opts.slot) {
     return {
-      ...base,
-      timePrecision: opts.slot.dayOnly ? 'date_only' : 'exact',
-      confidence: 'confirmed',
-      ...(opts.slot.durationHours !== undefined
-        ? { durationHours: opts.slot.durationHours }
-        : {}),
+      fixture: {
+        ...base,
+        timePrecision: opts.slot.dayOnly ? 'date_only' : 'exact',
+        confidence: 'confirmed',
+        ...(opts.slot.durationHours !== undefined
+          ? { durationHours: opts.slot.durationHours }
+          : {}),
+      },
+      refs: [...opts.refs],
     };
   }
   return {
-    ...base,
-    // The parent's window, verbatim: a nominal card start stays nominal
-    // (timed event, in-place update on confirmation), a date_only
-    // tournament stays date_only (all-day span; confirmation is the
-    // established placeholder-sharpening kind flip).
-    ...(parent.durationHours !== undefined
-      ? { durationHours: parent.durationHours }
-      : {}),
-    ...(parent.timePrecision ? { timePrecision: parent.timePrecision } : {}),
-    confidence: 'provisional',
+    fixture: {
+      ...base,
+      // The parent's window, verbatim: a nominal card start stays nominal
+      // (timed event, in-place update on confirmation), a date_only
+      // tournament stays date_only (all-day span; confirmation is the
+      // established placeholder-sharpening kind flip).
+      ...(parent.durationHours !== undefined
+        ? { durationHours: parent.durationHours }
+        : {}),
+      ...(parent.timePrecision ? { timePrecision: parent.timePrecision } : {}),
+      confidence: 'provisional',
+    },
+    refs: [...opts.refs],
   };
 }
 
@@ -135,15 +139,15 @@ export interface ParsedBoutLike {
 }
 
 // Combat-card appearances derivable from a bout: both fighters on one
-// doc — a bout is one thing, and a user following either fighter (or
+// draft — a bout is one thing, and a user following either fighter (or
 // both) must get exactly one calendar event for it.
 export function boutAppearance(
   parent: Fixture,
   bout: ParsedBoutLike,
   updatedAt: string,
-): Fixture | null {
+): AppearanceDraft | null {
   return appearanceFor(parent, {
-    athletes: [bout.first, bout.second],
+    refs: [{ name: bout.first }, { name: bout.second }],
     title: `${bout.first} vs ${bout.second}`,
     updatedAt,
   });
@@ -225,17 +229,17 @@ export function retiredAppearanceIds(
 
 // The generic combat consumer: whatever a slice's card titles yield.
 // TheSportsDB publishes no bout structure, so the HEADLINE bout parsed
-// from the title is all a card can contribute here — UFC's surname-only
-// titles yield nothing, honestly (a surname is not an identity), while
-// full-named boxing titles yield the main bout. Providers with real
-// bout-level data (PBC's JSON-LD) build their appearances themselves and
-// skip this. Appearances are only derived for cards not already past —
-// gated by the caller, which knows its window.
+// from the title is all a card can contribute here — UFC's surname
+// titles honestly yield nothing (a surname is not an identity), while
+// full-named boxing titles yield the main bout as a draft. TITLE-PARSED
+// names never CREATE directory athletes (resolution policy 'never' at
+// the call site): a parsed title resolving against the directory is
+// evidence; a parsed title inventing an identity is F31.
 export function deriveBoutAppearances(
   fixtures: readonly Fixture[],
   updatedAt: string,
-): Fixture[] {
-  const out: Fixture[] = [];
+): AppearanceDraft[] {
+  const out: AppearanceDraft[] = [];
   for (const f of fixtures) {
     if (!namesPeople(f.sport)) continue;
     if (f.parentFixtureId) continue; // never derive from an appearance

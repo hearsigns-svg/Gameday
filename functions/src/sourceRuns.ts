@@ -18,7 +18,7 @@
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { Fixture } from './fixture';
 
-export type RunTrigger = 'sweep' | 'follow' | 'manual';
+export type RunTrigger = 'sweep' | 'follow' | 'manual' | 'roster';
 
 // Set by the sweep when it self-calls a poller, and by the app when a
 // follow warms the cache. Anything else is somebody at a terminal.
@@ -83,6 +83,14 @@ export interface RunOutcome {
     guardTripped: boolean;
     sampleIds: string[]; // capped, for the ops eye — never the full list
   };
+  // Canonical-identity resolution counts for appearance slices
+  // (Prompt 8): certain / confident / ambiguous / created / collisions.
+  // Identity decisions are quiet by nature; the run record is where
+  // they stop being invisible.
+  resolution?: Record<string, unknown>;
+  // Roster refresh outcome (Prompt 8): created / updated / deactivated /
+  // skippedAmbiguous, for the roster-* slices.
+  roster?: Record<string, unknown>;
 }
 
 export type RunReason =

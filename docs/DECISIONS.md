@@ -889,3 +889,109 @@
   ATP/WTA asymmetry, athletics' missing athlete level, combat sports'
   broadcast-start times. A user should read what coverage is, not
   discover it.
+
+## Prompt 8 decisions (2026-08-03)
+
+- 2026-08-03: AN ATHLETE IS AN ENTITY, NOT A SIDE EFFECT. The
+  `athletes` collection exists independently of fixtures: canonical id
+  (`athlete_000184`, a transactional counter — provider-agnostic and
+  permanent), display name + aliases, sport + grouping, a PROVIDER
+  IDENTITY MAP (`wta: 320760`, `f1: max_verstappen`) with source and
+  lastSeenAt per identity, provenance (roster / fixture_derived /
+  review), and an explicit `nameKeyed` flag where no provider publishes
+  an id. Provider numeric ids are the disambiguation source — a name is
+  ambiguous, `wta:320760` is not.
+- 2026-08-03: WHY ATHLETE FOLLOWS WORK NOW, WITH NO EVENT SCHEDULED —
+  worth stating because it was untrue a week ago. Following an athlete
+  used to piggyback on their card's poll path; a fighter with no card
+  had no path, so following them was impossible. The Prompt 7 catalogue
+  warms PBC, TSDB boxing, WTA and World Athletics on tier 1 regardless
+  of followers, so athlete follows carry NO pollPath at all any more:
+  the sources stay fresh on their own, and the moment a bout or draw is
+  announced the appearance minted carries the athlete's canonical key,
+  which flows to the follower through the ordinary query path.
+- 2026-08-03: FOLLOW KEYS ARE CANONICAL-ATHLETE-SCOPED. Verified before
+  the cut: ZERO name-scoped (`athlete-<slug>`) follow keys existed on
+  any of the 7 production devices, so there is no migration and no
+  dual-key emission — appearances carry `athlete_......` ids only. The
+  legacy athleteDirectory collection stops being written and read;
+  left in place as evidence.
+- 2026-08-03: THE MATCHING LADDER, and the surname rule unrelaxed:
+  full name + provider id ⇒ CERTAIN; full name unique in the sport's
+  directory ⇒ CONFIDENT (recorded as name-matched); surname-only or a
+  name matching more than one athlete ⇒ AMBIGUOUS — no link, no key,
+  display-only, exactly as Prompt 4 ruled. F31's word-count gate is
+  GONE: directory membership is the followability test, and
+  TITLE-PARSED names may resolve against the directory but may never
+  CREATE an entry ("Machado Garry" now mints nothing). Only structured
+  participant records create fixture-derived athletes: PBC performer
+  nodes, WTA draw records (which carry numeric ids — a qualifier
+  outside the top 200 still becomes an id-backed athlete), and
+  operator-approved review bouts.
+- 2026-08-03: F34 IS DETECTED, NOT YET REPRESENTABLE. Appearance doc
+  ids are name-built; two distinct provider ids rendering to one name
+  inside one parent now REFUSE the second ref loudly (counted in the
+  run record as nameCollisions, error-logged) instead of silently
+  handing one player's slot to the other. Representing both requires
+  extending the appearance id scheme, which the brief gates on an owner
+  ruling — asked in the Prompt 8 report, zero live occurrences today.
+- 2026-08-03: ROSTER SOURCES — creators only, probed individually:
+  WTA singles top 200 (api.wtatennis.com, the approved host; numeric
+  ids, rank-contiguity verified per fetch); Jolpica per-season F1
+  drivers (total-vs-fetched verified); IBF ratings via the site's OWN
+  JSON API (/wp-json/ratings/v1/filter — internal JSON, Crawl-delay 10
+  honoured, all-or-nothing across 33 weight classes). The IBF payload
+  also publishes the WBA, WBC and WBO champions per class as ITS OWN
+  fields, so champions across all four bodies come from one permitted
+  creator. WBC itself names ClaudeBot `Disallow: /` — excluded
+  permanently, never touched (the IBF's statements about WBC champions
+  are IBF content on IBF's site, the Tennis-TV-ICS class of reasoning).
+  WBA and WBO permit crawling but publish ratings ONLY as HTML (their
+  WP REST APIs answer 401) — HTML-soup, declined by standing rule.
+- 2026-08-03: ROSTERS REFRESH ON THEIR OWN SCHEDULER (scheduledRoster,
+  Tuesdays 03:00 UTC), not as catalogue entries: IBF's crawl-delay
+  arithmetic (~6 minutes) would eat the fixture sweep's deadline, and
+  rankings change weekly at most — the WTA publishes Mondays. Each
+  source is all-or-nothing — a failed OR EMPTY fetch throws (a zero-
+  entry roster applied would deactivate everyone and, for F1, strip
+  driver keys from every session) — and writes sourceRuns under
+  roster-* slices. Staleness is watched by the SWEEP (the watcher must
+  not share the fate of the watched) from a DEDICATED marker doc
+  (status/rosters, written only on successful refreshes) against a
+  static expected-slice list: the review round proved coverage rows
+  cannot carry this alert — weekly roster runs age out of the 5,000-run
+  window, so the row vanishes exactly when the roster is most stale,
+  and before the first-ever refresh no row exists at all. An empty
+  marker pages "never refreshed", which is the totality failure the
+  rule exists for. yield_died cannot cover roster slices — it keys on
+  futureDated, a fixture concept; a roster's "succeeding but empty"
+  equivalent is the all-or-nothing throw plus parsed=0 in run history.
+- 2026-08-03: RETIRED ATHLETES ARE MARKED, NEVER DELETED. An athlete
+  absent from their roster source for 2 consecutive refreshes goes
+  active:false — dropped from curated browse, still searchable, their
+  rank cleared (a stale #3 is a lie); any reappearance reactivates. A
+  followed athlete disappearing from a roster must never delete the
+  user's follow.
+- 2026-08-03: F1 DRIVER FOLLOWS STAMP THE SESSION FIXTURES. F1 has no
+  sub-event to hang an appearance on — every entrant runs every
+  session — so the session IS the appearance: the season's driver keys
+  (from the Jolpica roster) ride ON the session docs' followKeys,
+  sorted for diff stability. A driver follow therefore yields the full
+  weekend THROUGH the existing race-only preference, which keeps
+  working because sessionKind is untouched. No per-driver appearance
+  docs: 31 drivers × 115 sessions of identical docs would say nothing
+  the stamp does not.
+- 2026-08-03: INDIVIDUAL-SPORT BROWSE IS SEARCH-FIRST, never a copy of
+  the teams list: a search box over the canonical directory (an athlete
+  with NO scheduled event is findable — the Usyk failure was the whole
+  point), curated groups so the screen is never empty (boxing by weight
+  class champion-first, men's then women's; tennis top 50; the F1
+  grid), and a competing-soon row from the appearance-maintained
+  nextStartUtc. The athlete page is the Team route with an HONEST empty
+  state: "No scheduled events. We'll add them when announced." MMA gets
+  no athlete browse and says why (no roster source; ufc.com serves
+  rankings as CSS-classed HTML with zero structured payload — the F26
+  finding extends to the roster surface). Athletics likewise: World
+  Athletics world rankings live on the LEGACY server-rendered app, not
+  the __NEXT_DATA__ surface — parsing them is HTML-soup and awaits a
+  ruling; the athlete-level coverageNote says so.

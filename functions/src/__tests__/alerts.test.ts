@@ -107,3 +107,46 @@ test('a failing slice is one incident, not two', () => {
   expect(alerts).toHaveLength(1);
   expect(alerts[0].condition).toBe('no_success_24h');
 });
+
+describe('roster staleness — from the marker doc, never the run window', () => {
+  const { evaluateRosterAlerts, EXPECTED_ROSTER_SLICES, ROSTER_STALE_HOURS } =
+    jest.requireActual<typeof import('../alerts')>('../alerts');
+  const NOW = Date.parse('2026-08-03T00:00:00.000Z');
+  const fresh = new Date(NOW - 24 * 3_600_000).toISOString();
+  const stale = new Date(NOW - (ROSTER_STALE_HOURS + 1) * 3_600_000).toISOString();
+
+  test('an EMPTY marker pages for every expected slice — the first-deploy totality failure is visible', () => {
+    const alerts = evaluateRosterAlerts({}, NOW);
+    expect(alerts.map((a) => a.sliceKey).sort()).toEqual(
+      [...EXPECTED_ROSTER_SLICES].sort(),
+    );
+    expect(alerts[0].condition).toBe('roster_stale');
+    expect(alerts[0].detail).toMatch(/never refreshed/);
+  });
+
+  test('fresh markers are quiet; one stale slice pages alone', () => {
+    const marker = {
+      'wta|roster-wta': fresh,
+      'f1|roster-f1': fresh,
+      'ibf|roster-ibf': stale,
+    };
+    const alerts = evaluateRosterAlerts(marker, NOW);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].sliceKey).toBe('ibf|roster-ibf');
+    expect(alerts[0].detail).toContain(stale);
+  });
+
+  test('a week-old refresh is inside the 8-day threshold', () => {
+    const weekOld = new Date(NOW - 7 * 24 * 3_600_000).toISOString();
+    expect(
+      evaluateRosterAlerts(
+        {
+          'wta|roster-wta': weekOld,
+          'f1|roster-f1': weekOld,
+          'ibf|roster-ibf': weekOld,
+        },
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+});

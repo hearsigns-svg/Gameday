@@ -25,6 +25,7 @@
 // which we honour — see PBC_CRAWL_DELAY_MS.
 
 import { appearanceFor } from '../appearances';
+import { AppearanceDraft } from '../athletes';
 import { Fixture } from '../fixture';
 import { ProviderFetch } from './fetchResult';
 
@@ -189,19 +190,24 @@ function performerName(p: LdPerson): string | null {
   return given && family ? `${given} ${family}` : null;
 }
 
-// Every bout on a card page → appearance docs against the card fixture.
-// One SportsEvent node per bout, main event first; a node whose
-// performers cannot both be named contributes nothing (no invented
-// names, no half-parsed bouts).
+// Every bout on a card page → appearance DRAFTS against the card
+// fixture. One SportsEvent node per bout, main event first; a node
+// whose performers cannot both be named contributes nothing (no
+// invented names, no half-parsed bouts). PBC's JSON-LD publishes no
+// fighter ids — givenName+familyName is all there is — so the refs are
+// name-only and the athletes they create downstream are name-keyed,
+// with the record saying so. STRUCTURED names, though: unlike a parsed
+// card title, a performer node is the promoter stating who is fighting,
+// which is why this source may create directory athletes.
 export function cardAppearances(
   card: Fixture,
   html: string,
   updatedAt: string,
-): Fixture[] {
+): AppearanceDraft[] {
   const events = extractLdJson(html).filter(
     (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
   );
-  const out: Fixture[] = [];
+  const out: AppearanceDraft[] = [];
   for (const e of events) {
     const performers = (e.performer ?? []).map(performerName);
     if (performers.length !== 2 || performers.some((n) => n === null)) {
@@ -209,7 +215,7 @@ export function cardAppearances(
     }
     const [first, second] = performers as [string, string];
     const a = appearanceFor(card, {
-      athletes: [first, second],
+      refs: [{ name: first }, { name: second }],
       title: `${first} vs ${second}`,
       updatedAt,
     });
@@ -223,7 +229,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export interface PbcFetch extends ProviderFetch {
   // Bout-level appearance docs, built from the SAME page fetches as the
   // cards — ingested under their own slice by the caller.
-  appearances: Fixture[];
+  appearances: AppearanceDraft[];
   // Funnel stage A for the appearance slice: bout nodes seen on fetched
   // pages, before the both-fighters-named and followable-name gates.
   appearanceRawCount: number;
@@ -244,7 +250,7 @@ export async function fetchPbcCards(
   const candidates = candidateOrder(urls, fromDate);
   const now = new Date().toISOString();
   const fixtures: Fixture[] = [];
-  const appearances: Fixture[] = [];
+  const appearances: AppearanceDraft[] = [];
   let appearanceRawCount = 0;
   for (const url of candidates.slice(0, maxCards)) {
     const page = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });

@@ -21,6 +21,9 @@ export type RootStackParamList = {
   Search: undefined;
   SportPicker: undefined;
   LeagueList: { sportKey: string };
+  // Individual-sport athlete browse (Prompt 8): search-first over the
+  // canonical directory, curated entry points, competing-soon.
+  AthleteList: { sportKey: string };
   TeamList: {
     sportKey: string;
     leagueId: number | string;

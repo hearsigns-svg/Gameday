@@ -168,66 +168,44 @@ export async function searchTeams(
 }
 
 // ─── Athletes ─────────────────────────────────────────────────────────
+//
+// SINCE PROMPT 8 search hits the CANONICAL DIRECTORY (the `athletes`
+// collection), not the fixture store: an athlete with no scheduled
+// event must be findable and followable — that empty state is the
+// feature. The old rule ("offered only while something upcoming
+// exists") was exactly the Usyk failure: no announced fight, no search
+// result, and when the fight lands weeks later the user who couldn't
+// follow never finds out.
+//
+// Hits carry NO pollPath. An athlete follow needs no poll route of its
+// own — the Prompt 7 catalogue keeps the athlete's sources warm
+// regardless of followers, and the moment a bout or draw is announced
+// the appearance carrying this athlete's canonical key flows to the
+// follower through the ordinary query path.
+
+import { Athlete } from './athletes';
+import { loadAthletes } from './rosterStore';
 
 export interface SearchAthleteHit {
-  key: string; // athlete-<slug> follow key
+  key: string; // the CANONICAL athlete id (athlete_000184)
   name: string;
   sportKey: string;
-  pollPath?: string; // absent for review-sourced athletes (no poll route)
-}
-
-interface AthleteDirectoryDoc {
-  key?: string;
-  name?: string;
-  sportKey?: string;
-  searchName?: string;
-  pollPath?: string;
+  grouping?: string; // 'Heavyweight' | 'WTA Tour' — the caption source
   nextStartUtc?: string;
 }
 
-// The directory is written through by appearance ingest and bounded by
-// "athletes with a future-dated appearance", which today is tens of
-// docs. The scan is capped and the cap is REPORTED via the truncated
-// flag on the cache rather than silently shrinking the search space.
-const ATHLETE_SCAN_CAP = 1000;
-const ATHLETE_CACHE_MS = 60_000;
-let athleteCache: {
-  at: number;
-  docs: AthleteDirectoryDoc[];
-  truncated: boolean;
-} | null = null;
+const athleteHit = (a: Athlete): SearchAthleteHit => ({
+  key: a.id,
+  name: a.displayName,
+  sportKey: a.sport,
+  ...(a.grouping ? { grouping: a.grouping } : {}),
+  ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+});
 
-async function loadAthletes(
-  db: Firestore,
-): Promise<{ docs: AthleteDirectoryDoc[]; truncated: boolean }> {
-  if (athleteCache && Date.now() - athleteCache.at < ATHLETE_CACHE_MS) {
-    return athleteCache;
-  }
-  // Soonest upcoming first, so if the cap ever bites it drops the
-  // athletes furthest from mattering.
-  const snap = await db
-    .collection('athleteDirectory')
-    .orderBy('nextStartUtc', 'asc')
-    .limit(ATHLETE_SCAN_CAP)
-    .get();
-  const docs = snap.docs.map((d) => d.data() as AthleteDirectoryDoc);
-  athleteCache = {
-    at: Date.now(),
-    docs,
-    truncated: snap.size >= ATHLETE_SCAN_CAP,
-  };
-  if (athleteCache.truncated) {
-    console.warn(
-      `athleteDirectory scan hit its ${ATHLETE_SCAN_CAP}-doc cap — athlete search is no longer complete`,
-    );
-  }
-  return athleteCache;
-}
-
-// An athlete is offered only while something upcoming exists for them —
-// search must not promise fixtures we cannot deliver. Substring match on
-// the normalised name, same as team search, so "nurmagomedov" finds
-// "Usman Nurmagomedov".
+// Substring match on the normalised name and aliases, same as team
+// search, so "nurmagomedov" finds "Usman Nurmagomedov" and "Teófimo"
+// finds "Teofimo Lopez". Inactive athletes stay findable — their page
+// shows the honest empty state — they just rank below active ones.
 export async function searchAthletes(
   db: Firestore,
   rawQuery: string,
@@ -235,27 +213,133 @@ export async function searchAthletes(
 ): Promise<SearchAthleteHit[]> {
   const q = normaliseName(rawQuery);
   if (q.length < 2) return [];
-  const nowIso = new Date().toISOString();
-  const { docs } = await loadAthletes(db);
-  return docs
-    .filter(
-      (d) =>
-        d.key &&
-        d.name &&
-        d.sportKey &&
-        (d.nextStartUtc ?? '') >= nowIso &&
-        (d.searchName ?? normaliseName(d.name)).includes(q),
-    )
+  const athletes = await loadAthletes(db);
+  return athletes
+    .filter((a) => [a.searchName, ...a.aliases].some((n) => n.includes(q)))
     .sort((a, b) => {
-      const ap = (a.searchName ?? '').startsWith(q) ? 0 : 1;
-      const bp = (b.searchName ?? '').startsWith(q) ? 0 : 1;
-      return ap - bp || (a.nextStartUtc ?? '').localeCompare(b.nextStartUtc ?? '');
+      const ap = a.searchName.startsWith(q) ? 0 : 1;
+      const bp = b.searchName.startsWith(q) ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      const aa = a.active ? 0 : 1;
+      const ba = b.active ? 0 : 1;
+      if (aa !== ba) return aa - ba;
+      // Sooner events first, then the better-ranked.
+      const an = a.nextStartUtc ?? '~';
+      const bn = b.nextStartUtc ?? '~';
+      if (an !== bn) return an.localeCompare(bn);
+      return (a.rank ?? 9999) - (b.rank ?? 9999);
     })
     .slice(0, cap)
-    .map((d) => ({
-      key: d.key!,
-      name: d.name!,
-      sportKey: d.sportKey!,
-      ...(d.pollPath ? { pollPath: d.pollPath } : {}),
-    }));
+    .map(athleteHit);
+}
+
+// ─── Individual-sport browse ──────────────────────────────────────────
+//
+// Curated entry points so the athlete screen is never empty: champions
+// and rated fighters by weight class, tennis by ranking, F1's driver
+// list — plus a "competing soon" row from the appearance-maintained
+// nextStartUtc. Groups are built from the directory in memory (the
+// collection is bounded); inactive athletes are excluded from curated
+// lists but remain searchable.
+
+export interface AthleteCard {
+  key: string;
+  name: string;
+  sportKey: string;
+  rank?: number;
+  championOf?: string[];
+  countryCode?: string;
+  grouping?: string;
+  nextStartUtc?: string;
+}
+
+export interface AthleteBrowse {
+  groups: Array<{ grouping: string; groupingKey: string; athletes: AthleteCard[] }>;
+  competingSoon: AthleteCard[];
+}
+
+const card = (a: Athlete): AthleteCard => ({
+  key: a.id,
+  name: a.displayName,
+  sportKey: a.sport,
+  ...(a.rank !== undefined ? { rank: a.rank } : {}),
+  ...(a.championOf !== undefined ? { championOf: a.championOf } : {}),
+  ...(a.countryCode ? { countryCode: a.countryCode } : {}),
+  ...(a.grouping ? { grouping: a.grouping } : {}),
+  ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+});
+
+// Boxing weight classes browse heavy → light, men then women — the
+// order every boxing fan already knows. Other sports order groups
+// alphabetically (they have one group today).
+const BOXING_CLASS_ORDER = [
+  'heavyweight', 'cruiserweight', 'light-heavyweight', 'super-middleweight',
+  'middleweight', 'jr-middleweight', 'welterweight', 'jr-welterweight',
+  'lightweight', 'jr-lightweight', 'featherweight', 'jr-featherweight',
+  'bantamweight', 'jr-bantamweight', 'flyweight', 'jr-flyweight',
+  'mini-flyweight', 'jr-mini-flyweight',
+];
+
+export function groupOrderKey(groupingKey: string): string {
+  const mens = BOXING_CLASS_ORDER.indexOf(groupingKey.replace(/^boxing-/, ''));
+  if (mens >= 0) return `0${String(mens).padStart(2, '0')}`;
+  const womens = BOXING_CLASS_ORDER.indexOf(
+    groupingKey.replace(/^boxing-w-/, ''),
+  );
+  if (womens >= 0 && groupingKey.startsWith('boxing-w-')) {
+    return `1${String(womens).padStart(2, '0')}`;
+  }
+  return `5${groupingKey}`;
+}
+
+export const GROUP_CAP = 50; // tennis top 50 — the curated cut, not the roster's
+export const COMPETING_SOON_DAYS = 45;
+export const COMPETING_SOON_CAP = 20;
+
+export function shapeAthleteBrowse(
+  athletes: readonly Athlete[],
+  sport: string,
+  nowIso: string,
+): AthleteBrowse {
+  const inSport = athletes.filter((a) => a.sport === sport);
+  const byGroup = new Map<string, Athlete[]>();
+  for (const a of inSport) {
+    if (!a.active || !a.groupingKey) continue;
+    const list = byGroup.get(a.groupingKey) ?? [];
+    list.push(a);
+    byGroup.set(a.groupingKey, list);
+  }
+  const groups = [...byGroup.entries()]
+    .sort(([ka], [kb]) => groupOrderKey(ka).localeCompare(groupOrderKey(kb)))
+    .map(([groupingKey, list]) => {
+      const sorted = [...list].sort((a, b) => {
+        // Champions first, then by rank, then name — the browse
+        // structure users already understand.
+        const ac = (a.championOf?.length ?? 0) > 0 ? 0 : 1;
+        const bc = (b.championOf?.length ?? 0) > 0 ? 0 : 1;
+        if (ac !== bc) return ac - bc;
+        const r = (a.rank ?? 9999) - (b.rank ?? 9999);
+        if (r !== 0) return r;
+        return a.displayName.localeCompare(b.displayName);
+      });
+      return {
+        grouping: sorted[0].grouping ?? groupingKey,
+        groupingKey,
+        athletes: sorted.slice(0, GROUP_CAP).map(card),
+      };
+    });
+  const horizon = new Date(
+    Date.parse(nowIso) + COMPETING_SOON_DAYS * 86_400_000,
+  ).toISOString();
+  const competingSoon = inSport
+    .filter(
+      (a) =>
+        a.nextStartUtc !== undefined &&
+        a.nextStartUtc >= nowIso &&
+        a.nextStartUtc <= horizon,
+    )
+    .sort((a, b) => a.nextStartUtc!.localeCompare(b.nextStartUtc!))
+    .slice(0, COMPETING_SOON_CAP)
+    .map(card);
+  return { groups, competingSoon };
 }

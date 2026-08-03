@@ -122,26 +122,9 @@ export function enrichBoutParticipants(
   });
 }
 
-// Stable, provider-independent follow key for a person. Built from the
-// same normalisation the alias table uses, so "Teófimo López" and
-// "Teofimo Lopez" resolve to one athlete.
-export function athleteKey(name: string): string {
-  const slug = normaliseName(name).replace(/\s+/g, '-');
-  return `athlete-${slug}`;
-}
-
-// Only a FULL name earns a follow key.
-//
-// UFC titles name fighters by surname alone — "UFC 330 Makhachev vs
-// Machado Garry" — and a surname is not an identity: Nurmagomedov,
-// Rodriguez and Silva are each several different fighters. A key built
-// from one would quietly put another man's fights in somebody's calendar,
-// which is the same failure as stripping "AFC" off a club name and is the
-// one mistake this codebase has decided it will not make.
-//
-// Surname-only bouts still get their participants written — they are
-// useful for display and for cross-provider identity — they just do not
-// become something you can follow. 154 of the 295 parsed names qualify.
-export function isFollowableName(name: string): boolean {
-  return name.trim().split(/\s+/).length >= 2;
-}
+// RETIRED IN PROMPT 8: athleteKey (the name-slug follow key) and
+// isFollowableName (the word-count gate F31 defeated). Follow keys are
+// canonical athlete ids now — athletes.ts owns identity, and directory
+// membership, not word count, is what makes a name followable. Verified
+// before removal: zero name-scoped athlete follow keys existed on any
+// production device (2026-08-03), so nothing breaks.

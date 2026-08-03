@@ -11,7 +11,7 @@
 
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { evaluateAlerts } from './alerts';
+import { evaluateAlerts, evaluateRosterAlerts } from './alerts';
 import {
   CatalogueEntry,
   orderSweepPaths,
@@ -539,6 +539,23 @@ export async function sweepAll(): Promise<SweepResult> {
     }
     const coverage = await loadCoverage(db, Date.now());
     const active = evaluateAlerts(coverage.rows, demanded, Date.now());
+    // Roster staleness comes from the dedicated marker doc, never the
+    // run-window join (see alerts.ts). A marker READ FAILURE skips the
+    // roster evaluation loudly rather than paging "never refreshed" —
+    // a read failure must not impersonate an empty marker. The doc
+    // simply not existing yet IS the empty marker: nothing has ever
+    // refreshed, which is exactly what the alert should say.
+    let rosterEvaluated = false;
+    try {
+      const markerSnap = await db.collection('status').doc('rosters').get();
+      const marker =
+        (markerSnap.data()?.slices as Record<string, string> | undefined) ??
+        {};
+      active.push(...evaluateRosterAlerts(marker, Date.now()));
+      rosterEvaluated = true;
+    } catch (e) {
+      console.error(`[kickoffcal] roster marker read failed: ${e}`);
+    }
     alertsOpen = active.length;
     const activeIds = new Set(
       active.map((a) => `${a.sliceKey}--${a.condition}`.replace(/[/|]/g, '_')),
@@ -579,7 +596,13 @@ export async function sweepAll(): Promise<SweepResult> {
       // never demanded a slice (tier 2 off-hours, deadline-truncated)
       // proves nothing about it — without this check every tier-2
       // alert flapped resolved/open across the day's four sweeps.
-      if (!demanded.has(doc.data().sliceKey)) continue;
+      // ROSTER slices resolve only when THIS sweep actually evaluated
+      // the marker doc: a marker read failure proves nothing, so it
+      // must not resolve a real staleness alert.
+      const sliceKey = String(doc.data().sliceKey ?? '');
+      const rosterSlice = sliceKey.split('|')[1]?.startsWith('roster-');
+      if (rosterSlice && !rosterEvaluated) continue;
+      if (!rosterSlice && !demanded.has(sliceKey)) continue;
       await doc.ref.set({ resolvedAt: startedAt }, { merge: true });
       console.log(
         `[kickoffcal-alert] RESOLVED ${doc.data().condition} ${doc.data().sliceKey}`,

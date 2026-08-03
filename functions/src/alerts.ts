@@ -40,7 +40,7 @@ import { CoverageRow } from './coverage';
 //     route to its PARENT slice), so an appearance funnel dying alone
 //     — parents healthy, bouts gone — does not page. The funnel's
 //     zeroYield history stays visible in coverageReport.
-export type AlertCondition = 'no_success_24h' | 'yield_died';
+export type AlertCondition = 'no_success_24h' | 'yield_died' | 'roster_stale';
 
 export interface Alert {
   sliceKey: string; // `${source}|${competitionId}`
@@ -50,6 +50,53 @@ export interface Alert {
 
 export const NO_SUCCESS_HOURS = 24;
 export const YIELD_DIED_HOURS = 72;
+// Rosters refresh WEEKLY (scheduledRoster, Tuesdays); eight days of
+// silence means a refresh was missed — the directory is going stale.
+export const ROSTER_STALE_HOURS = 8 * 24;
+
+// The roster slices are never sweep-demanded — the sweep does not poll
+// them — and they must NOT be judged from coverage rows: rows exist
+// only inside the most-recent-5000-run window, so a weekly roster's
+// record ages out in weeks and the row VANISHES exactly when the
+// roster is most stale (review round, probe-confirmed — the alert
+// would have auto-resolved on the row's disappearance, and could never
+// fire at all before the first-ever refresh). Instead, refreshRosters
+// maintains a dedicated marker doc (status/rosters: sliceKey →
+// lastSuccessAt) and the sweep evaluates THIS static expectation list
+// against it — a missing marker is "never refreshed", which is the
+// totality failure the rule exists to catch. yield_died cannot cover
+// rosters either way: it keys on futureDated, a fixture concept; the
+// roster equivalent ("succeeding but parsing nothing") is the
+// all-or-nothing throw in each fetcher plus parsed counts in the run
+// history.
+export const EXPECTED_ROSTER_SLICES = [
+  'wta|roster-wta',
+  'f1|roster-f1',
+  'ibf|roster-ibf',
+];
+
+export function evaluateRosterAlerts(
+  marker: Readonly<Record<string, string>>,
+  nowMs: number,
+): Alert[] {
+  const alerts: Alert[] = [];
+  for (const sliceKey of EXPECTED_ROSTER_SLICES) {
+    const last = marker[sliceKey];
+    const hoursSince =
+      last === undefined ? Infinity : (nowMs - Date.parse(last)) / 3_600_000;
+    if (hoursSince > ROSTER_STALE_HOURS) {
+      alerts.push({
+        sliceKey,
+        condition: 'roster_stale',
+        detail:
+          last === undefined
+            ? 'roster has never refreshed successfully'
+            : `last successful roster refresh ${last}`,
+      });
+    }
+  }
+  return alerts;
+}
 
 export function evaluateAlerts(
   rows: readonly CoverageRow[],
@@ -59,6 +106,9 @@ export function evaluateAlerts(
   const alerts: Alert[] = [];
   for (const row of rows) {
     const sliceKey = `${row.source}|${row.competitionId}`;
+    // roster-* rows may appear in coverage while their runs are in the
+    // window; they are evaluated from the marker doc instead.
+    if (row.competitionId.startsWith('roster-')) continue;
     if (!demandedSlices.has(sliceKey)) continue;
     const hoursSinceSuccess =
       row.lastSuccessAt === null

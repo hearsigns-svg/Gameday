@@ -994,3 +994,104 @@ competition with no data behind it.
 - 595 tests green under UTC and America/Los_Angeles; both typechecks
   and the functions build clean.
 
+### Prompt 8 — canonical athlete identity and individual-sport browse  [~]
+
+The last modelling gap: an athlete existed only as a side effect of
+being named on a fixture, so "Usyk" between fights returned nothing and
+could never be followed. Deployment state verified first — Prompt 7's
+code was NOT live (catalogue seeded, sweep pre-catalogue, alertsOpen
+absent from sweep docs); direct deploy from this session was blocked by
+the environment's permission layer, so deploys are owner-run commands
+in the Prompt 8 report.
+
+- **THE ATHLETES COLLECTION** (`athletes.ts` + `rosterStore.ts`):
+  canonical ids (`athlete_000184`, transactional counter), provider
+  identity map with per-identity source/lastSeenAt, aliases,
+  provenance (roster/fixture_derived/review), explicit `nameKeyed`,
+  active/missedRefreshes (mark-inactive-never-delete). Follow keys ARE
+  the canonical ids; verified zero legacy `athlete-<slug>` follows on
+  any production device, so the cut is clean and the name-keyed
+  athleteDirectory is retired unread.
+- **MATCHING** (`matchAthlete`/`resolveDrafts`): certain by provider
+  id, confident by unique full name (recorded), ambiguous mints
+  nothing; surname rule unrelaxed. Providers emit DRAFTS
+  (fixture + AthleteRefs); resolution is the one place keys are
+  decided, with per-run counts (certain/confident/ambiguous/created/
+  collisions) on the appearance slice's sourceRuns record. F31 closed
+  (directory membership replaces the word-count gate; title-parsed
+  names never create). F34 detection closed (WTA numeric ids threaded
+  draw+OOP end to end; doc-id collisions refused loudly);
+  representation needs an id-scheme extension gated on an owner ruling.
+- **ROSTERS**: WTA singles top 200 (numeric ids; rank-contiguity
+  verified), Jolpica F1 drivers (total-verified), IBF ratings via the
+  site's own wp-json API (17 male + 16 female classes, crawl-delay 10
+  honoured, all-or-nothing) carrying WBA/WBC/WBO champions as IBF's
+  own fields. WBC robots-refuses (ClaudeBot Disallow /) — dropped;
+  WBA/WBO are HTML-only — declined under standing rule (F35). WA world
+  rankings are NOT on the __NEXT_DATA__ surface (F36) — athletics
+  roster not built, coverageNote says so. Rosters refresh on their own
+  weekly scheduler (`scheduledRoster`/`runRoster`) with roster-*
+  sourceRuns slices and a sweep-evaluated `roster_stale` alert.
+- **F1 DRIVERS**: stamped onto session fixtures (no per-driver
+  appearance docs — every entrant runs every session); driver follows
+  ride the ordinary query path and the existing race-only preference.
+- **BROWSE** (client): AthleteList screen — search-first over the
+  canonical directory, curated groups (boxing by weight class
+  champion-first men-then-women, tennis top 50, F1 grid), competing-
+  soon row; athletes entry row on LeagueList for tennis/boxing/F1;
+  athlete page = Team route with the honest empty state ("No scheduled
+  events. We'll add them when announced."); coverageNotes updated
+  (ATP players absent while ATP tournaments present; MMA and athletics
+  athlete-following honestly unsupported, and why).
+- **§5 VERIFIED END TO END on the emulator** with real providers: a
+  zero-fixture store served Sabalenka from search (findable with no
+  scheduled event — the Usyk failure closed); a device following ten
+  canonical keys with NO pollPaths; the catalogue alone (tennis-wta
+  enabled, all else disabled via the ops mechanism) drove the sweep;
+  133 fixtures minted (49 parents + 84 appearances, ALL canonical-
+  keyed, resolution 66 certain + 18 created WITH wta ids); the change
+  record fanned to the follower; the client-shaped query returned the
+  followed player's confirmed appearance and the REAL compiled planner
+  emitted its create op. Re-poll after the review fixes: 78 certain, 0
+  created (the created athletes now resolve by stored id), 0 retired —
+  idempotent. The EventKit write itself is the engine's ordinary
+  ledgered create path, unchanged and not re-device-verified.
+- **RESOLUTION TABLE measured against production** (read-only replay,
+  2026-08-03): tennis 39/54 appearance names certain now, 15 created-
+  with-id at next draw poll; boxing 16/32 confident vs the IBF-fed
+  directory, 16 display-only; upcoming combat cards: boxing 14
+  confident + 6 ambiguous + 8 unmatched of 28 names; UFC 9 ambiguous +
+  3 unmatched of 12 (23 of 26 upcoming UFC cards have no parseable
+  bout). Would-be directory: 728 athletes (200 WTA + 31 F1 + 497 IBF).
+- **ADVERSARIAL REVIEW ROUND on the 8 diff** (three lenses, refuting
+  probes, every confirmed finding probe-executed): ~14 confirmed
+  across the lenses, all fixed in-round. The two big ones: (1)
+  retirement ran against the RESOLVED appearance set, so a draft
+  dropped by a directory-state change (a new same-named athlete)
+  cancelled a REAL stored bout while a sibling satisfied the evidence
+  guard — retirement evidence is now the DRAFT set (resolution decides
+  followability, drafts are the provider's testimony of existence);
+  (2) roster_stale keyed on coverage rows that age out of the
+  5,000-run window, so the alert auto-resolved exactly when the roster
+  died and could never fire before the first refresh — replaced with a
+  dedicated status/rosters marker evaluated against a static expected
+  list. Also fixed: an id arriving for a name-keyed athlete now
+  UPGRADES instead of minting a twin that poisons the name; WTA
+  name-collisions get no confirmed slot (the surviving doc could carry
+  the refused player's match); zero-entry rosters throw (a January F1
+  page would have deactivated the grid and stripped session keys);
+  IBF empty classes throw (half-fetched roster absence); IBF merge is
+  gender-scoped; jolpica total is required; absence accounting scoped
+  to roster-PLACED athletes (draw players and already-inactive left
+  alone); createAthletes duplicate-checks fresh + batch.create (never
+  overwrites a real athlete on counter drift, which also throws);
+  nextStartUtc writes only improvements (no churn, no single-card
+  regression); deterministic collision tiebreak; client error state no
+  longer renders "No athletes here yet" from a 404. Accepted + stated:
+  F34 representation gated on the id-scheme ruling; a seconds-wide
+  create race window; mid-January partial grids deactivate absent
+  drivers after two refreshes (self-heals on reactivation).
+- 637 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean. Deploy + roster seed are owner-run
+  (see the Prompt 8 report's Run these).
+

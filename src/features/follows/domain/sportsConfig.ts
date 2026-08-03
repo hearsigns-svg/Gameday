@@ -170,11 +170,11 @@ export const SPORTS: SportConfig[] = [
   },
   { key: 'tennis', label: 'Tennis',
     coverageNote:
-      'ATP is tournament-level only — no draws or match times. WTA includes draws and match schedules, with players followable from search.',
+      'WTA players are browsable and followable, with draws and match times. ATP tournaments are covered, but ATP players are not — the ATP publishes no usable player feed.',
     accent: '#65A30D',
     glyph: '🎾',
     enabled: true,
-    browse: ['competition'],
+    browse: ['competition', 'athlete'],
     followTypes: ['competition', 'athlete'],
     // ATP: TOURNAMENT level from the ICS feed Tennis TV publishes for
     // subscription — atptour.com itself refuses this agent and is
@@ -204,7 +204,7 @@ export const SPORTS: SportConfig[] = [
     key: 'athletics',
     label: 'Athletics',
     coverageNote:
-      'Meeting-level coverage. Individual athletes and event slots are not available yet — start lists arrive when federations publish them.',
+      'Meeting-level coverage. Individual athletes are not followable yet — World Athletics publishes rankings only as web pages, and start lists arrive when federations publish them.',
     accent: '#0369A1',
     glyph: '🏃',
     enabled: true,
@@ -526,15 +526,19 @@ export const SPORTS: SportConfig[] = [
     accent: '#E10600',
     glyph: '🏎️',
     enabled: true,
-    browse: [],
-    followTypes: ['series'],
+    // Drivers are browsable and followable (Prompt 8): a driver follow
+    // yields the race weekends — every session, filtered by the same
+    // race-only preference as a series follow, because driver keys ride
+    // ON the session fixtures rather than separate appearance docs.
+    browse: ['athlete'],
+    followTypes: ['series', 'athlete'],
     seriesFollowable: { key: 'f1-series-1', label: 'Formula 1' },
   },
   {
     key: 'boxing',
     label: 'Boxing',
     coverageNote:
-      'Card times are the broadcast start, not ringwalks. Fighters on announced cards are followable from search.',
+      'Card times are the broadcast start, not ringwalks. The fighter directory covers world champions and IBF-rated contenders, plus fighters on announced cards.',
     accent: '#BE123C',
     glyph: '🥊',
     enabled: true,
@@ -542,9 +546,10 @@ export const SPORTS: SportConfig[] = [
     // the CARD start, not the main-event ringwalk, so they arrive nominal
     // and say so rather than pretending to a minute they do not know.
     // Athlete follows attach to APPEARANCE docs (every PBC bout,
-    // undercard included; the headline bout elsewhere) and are reached
-    // through global search, not browse.
-    browse: ['competition'],
+    // undercard included; the headline bout elsewhere). Since Prompt 8
+    // fighters are BROWSABLE — champions and IBF-rated contenders by
+    // weight class from the canonical directory — as well as searchable.
+    browse: ['competition', 'athlete'],
     followTypes: ['competition', 'athlete'],
     staticCompetitions: [
       {
@@ -572,19 +577,19 @@ export const SPORTS: SportConfig[] = [
   {
     key: 'ufc',
     coverageNote:
-      'Card-level coverage. Bout times are not published in advance; fighters become followable when full names are announced.',
+      'Card-level coverage only. Individual fighters cannot be followed: no MMA body publishes a usable roster, so a fighter directory would be guesswork — we would rather be honest than wrong.',
     // Was a UFC-only series row; promotions beyond the UFC carry real
-    // upcoming cards, so this became a browse level. Card-follows plus
-    // athlete-follows via APPEARANCES where a card title names full
-    // names (fighters surface in global search, never in browse — the
-    // provider publishes no bout structure, and UFC's surname-only
-    // titles honestly yield nothing).
+    // upcoming cards, so this became a browse level. Card-follows ONLY
+    // since Prompt 8: with no MMA roster source (no body publishes one;
+    // ufc.com is structured-data-free) the canonical directory holds no
+    // MMA athletes, so search can never offer one and the athlete type
+    // was unreachable config claiming otherwise.
     label: 'MMA',
     accent: '#6D28D9',
     glyph: '🥋',
     enabled: true,
     browse: ['competition'],
-    followTypes: ['competition', 'athlete'],
+    followTypes: ['competition'],
     staticCompetitions: [
       {
         id: '4443',

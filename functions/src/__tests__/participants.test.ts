@@ -6,7 +6,7 @@
 // missing one, because it becomes a followable that silently matches
 // another man's fights.
 
-import { athleteKey, isFollowableName, parseBout } from '../participants';
+import { parseBout } from '../participants';
 
 describe('titles we can parse with confidence', () => {
   test.each([
@@ -66,32 +66,8 @@ describe('titles we DECLINE rather than guess at', () => {
   });
 });
 
-describe('only a full name earns a follow key', () => {
-  test('a surname alone is not an identity', () => {
-    // Nurmagomedov, Rodriguez and Silva are each several fighters. A key
-    // built from one would quietly deliver another man's fights.
-    expect(isFollowableName('Nurmagomedov')).toBe(false);
-    expect(isFollowableName('Rodriguez')).toBe(false);
-  });
-
-  test('a full name is', () => {
-    expect(isFollowableName('Teofimo Lopez')).toBe(true);
-    expect(isFollowableName('Lamont Roach Jr.')).toBe(true);
-  });
-});
-
-describe('athlete keys are stable across spellings', () => {
-  test('diacritics and case fold to one key', () => {
-    expect(athleteKey('Teófimo López')).toBe(athleteKey('Teofimo Lopez'));
-    expect(athleteKey('teofimo lopez')).toBe('athlete-teofimo-lopez');
-  });
-
-  test('punctuation becomes a separator, exactly as the alias table does', () => {
-    // normaliseName maps every non-alphanumeric to a space, so an
-    // apostrophe splits rather than vanishing. Pinned because the athlete
-    // key and the club alias key MUST normalise identically — they are the
-    // same function, and a divergence would resolve one and not the other.
-    expect(athleteKey("Pierce O'Leary")).toBe('athlete-pierce-o-leary');
-    expect(athleteKey('Pierce O’Leary')).toBe('athlete-pierce-o-leary');
-  });
-});
+// The follow-key questions that used to live here — "only a full name
+// earns a key", "keys are stable across spellings" — moved with the
+// mechanism: canonical identity (athletes.ts) owns them now, and
+// athletes.test.ts pins the surname rule against the directory instead
+// of a word count.

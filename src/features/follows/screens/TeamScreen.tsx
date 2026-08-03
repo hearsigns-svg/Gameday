@@ -218,8 +218,12 @@ export default function TeamScreen({ navigation, route }: Props) {
           <Text
             style={[type.body, { color: t.textSecondary, textAlign: 'center' }]}
           >
-            No upcoming fixtures yet — schedules land here as soon as they
-            are announced.
+            {item.type === 'athlete'
+              ? // The honest empty state IS the feature (Prompt 8): an
+                // athlete with nothing announced is still followable, and
+                // the follow is exactly how the user finds out first.
+                "No scheduled events. We'll add them when announced — follow now and they'll reach your calendar."
+              : 'No upcoming fixtures yet — schedules land here as soon as they are announced.'}
           </Text>
         </View>
       ) : (

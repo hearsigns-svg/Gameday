@@ -569,3 +569,88 @@ alone still merges the two for followers. This is the same class as the
 owner ruled must be done once, properly (Prompt 5b, ruling 2), and the
 WTA ids are recorded here as an input to that work, not papered over
 per-connector now.
+
+---
+
+## Found during Prompt 8 (canonical athlete identity, 2026-08-03)
+
+### F31 — CLOSED in Prompt 8: the word-count gate is gone
+Directory membership is the followability test now. Title-parsed names
+resolve against the canonical directory (confident only when the full
+name is unique in the sport) and may NEVER create a directory entry —
+"Machado Garry" parses, drafts, and dies at resolution with the drop
+counted, because he is in no roster and a parsed title is not allowed
+to invent an identity. The cost is honest: a full-named bout between
+two unrated fighters from a TSDB title is display-only until a
+structured source (PBC performer nodes, the review queue) vouches for
+them. Pinned in appearances.test.ts.
+
+### F34 — DETECTION CLOSED in Prompt 8; representation gated on a ruling
+Two distinct provider ids rendering to one name inside one parent no
+longer silently collapse: the WTA pipeline carries PlayerIDA/B and
+Player.id end to end, resolution keys players by id, and the doc-id
+collision (appearance ids are name-built) REFUSES the second ref —
+counted as `nameCollisions` in the appearance slice's run record and
+error-logged for Cloud Error Reporting. The surviving doc carries only
+the surviving player's key, so the other player's follower gets nothing
+rather than someone else's schedule — and because the WTA slot join is
+name-keyed, a collided name gets NO confirmed slot at all (both players
+stay at the provisional parent window): the review round proved the
+surviving doc could otherwise carry the REFUSED player's match, time
+and opponent. REPRESENTING both players needs
+the appearance id scheme to gain an identity-aware component, which the
+brief explicitly gates on an owner ruling — asked in the Prompt 8
+report. Zero live collisions exist in production today.
+
+### F35 — WBC refuses; WBA and WBO publish ratings only as HTML
+Probed individually 2026-08-03, robots.txt first. wbcboxing.com names
+`ClaudeBot` with `Disallow: /` — the atptour/MVP class, permanently
+excluded. www.wbaboxing.com and wboboxing.com permit crawling but their
+ratings/champions pages are WordPress HTML tables/lists with only
+Organization/WebPage JSON-LD, and both lock their WP REST APIs
+(`rest_login_required` / `rest_forbidden`, HTTP 401). HTML-soup —
+declined under the standing rule, not built. The boxing roster is fed
+by the IBF's own JSON API instead (see DECISIONS), which also publishes
+the WBA/WBC/WBO champions per class as IBF's own fields — so all four
+bodies' CHAMPIONS are covered; the missing residue is WBA/WBO/WBC's
+*rated contenders* (15 per class per body), reachable only via HTML.
+
+### F36 — World Athletics world rankings are NOT on the __NEXT_DATA__ surface
+The brief's premise ("same __NEXT_DATA__ surface as the calendar") does
+not hold for rankings: /world-rankings/<event>/<sex> is the LEGACY
+RequireJS/Knockout app — the ranking table is server-rendered HTML rows
+(plain URL; adding query params returns an empty shell), with athlete
+profile links carrying numeric ids. The Next.js route manifest
+(extracted from the athlete-profile buildId) confirms no rankings route
+exists. Athlete PROFILE pages ARE Next.js (`competitor._id`,
+worldRankings, personalBests in pageProps), but profiles cannot
+enumerate a roster. So an athletics roster needs either an owner ruling
+that a semantic HTML `<table>` with id-carrying hrefs is acceptable
+(the ufc.com F26 precedent says such rulings go to the owner), or a
+structured surface not yet found. Athletics athlete-following stays
+NOT IMPLEMENTED, said in its coverageNote; the identity frame is ready
+(source 'wa', numeric profile ids) the day either unblocks. F27's
+entry-list surface remains the fixture-side supplement when it finally
+populates.
+
+### F37 — Golf roster postures, recorded for the follow-on stage
+pgatour.com: robots permits (targeted query-param disallows only, no
+named agents) — and the site is Next.js, so a structured surface is
+plausible; NOT probed further this stage. lpga.com: blanket allow.
+owgr.com: `Disallow: /ranking/`, `/players/`, `/en/Ranking/`,
+`/en/Players/`, `/en/Events/` — the ranking surface itself is refused;
+OWGR is out. dpworldtour.com: robots.txt request timed out (connection
+timeout to the host, twice) — unverifiable posture, treat as
+unavailable (the usopen.org class: nothing to honour, nothing to
+circumvent). Golf build deferred to the follow-on per the brief's
+scope-split provision.
+
+### F38 — ufc.com's roster surfaces are as structured-data-free as its event pages
+/rankings served 271KB with ZERO JSON-LD, no __NEXT_DATA__, and a 3KB
+drupalSettings carrying no fighter data; fighters exist only in Drupal
+views HTML (`view-athlete-rankings` blocks). No internal JSON/API
+routes are referenced by the page. F26's verdict extends to the roster
+surface: nothing structured exists on ufc.com to rule on, so MMA
+athlete-following stays unsupported with an honest coverageNote, and
+the 141 surname-only cards remain unresolvable — acceptable per the
+brief ("do not reach for an aggregator to close it").

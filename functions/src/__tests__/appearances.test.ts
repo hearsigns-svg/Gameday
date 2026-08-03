@@ -5,8 +5,10 @@
 //     so the device ledger updates one entry in place;
 //   - the id keeps the parent's provider prefix, so the reconcile
 //     same-provider guard and coverage source attribution both hold;
-//   - athlete follow keys exist ONLY for full names (a surname is not an
-//     identity), and only on appearances — never on the parent card.
+//   - follow keys are CANONICAL athlete ids, decided by resolution
+//     against the directory (Prompt 8) — certain by provider id,
+//     confident by unique full name, ambiguous mints nothing, and a
+//     surname is still not an identity.
 
 import {
   appearanceFor,
@@ -16,8 +18,18 @@ import {
   deriveBoutAppearances,
   retiredAppearanceIds,
 } from '../appearances';
+import {
+  AppearanceDraft,
+  applyCreatedIds,
+  Athlete,
+  athleteIdFrom,
+  buildAthleteIndex,
+  CreationPolicy,
+  providerKey,
+  resolveDrafts,
+} from '../athletes';
 import { Fixture } from '../fixture';
-import { isSameFixture } from '../identity';
+import { isSameFixture, normaliseName } from '../identity';
 import { enrichBoutParticipants } from '../participants';
 
 const card = (over: Partial<Fixture> = {}): Fixture => ({
@@ -36,13 +48,55 @@ const card = (over: Partial<Fixture> = {}): Fixture => ({
   ...over,
 });
 
+const dirAthlete = (
+  id: string,
+  name: string,
+  sport: string,
+  ids: Record<string, string> = {},
+): Athlete => ({
+  id,
+  displayName: name,
+  searchName: normaliseName(name),
+  aliases: [],
+  sport,
+  providerIds: ids,
+  identities: [],
+  provenance: 'roster',
+  nameKeyed: Object.keys(ids).length === 0,
+  active: true,
+  missedRefreshes: 0,
+  createdAt: '2026-08-01T00:00:00.000Z',
+  updatedAt: '2026-08-01T00:00:00.000Z',
+});
+
+// The full pipeline as index.ts runs it: resolve, then swap created
+// placeholders for deterministic ids (athlete_000001…).
+const resolveForTest = (
+  drafts: (AppearanceDraft | null)[],
+  directory: Athlete[] = [],
+  create: CreationPolicy = 'structured',
+) => {
+  const present = drafts.filter((d): d is AppearanceDraft => d !== null);
+  const r = resolveDrafts(present, buildAthleteIndex(directory), { create });
+  const idOf = new Map<string, string>();
+  let n = 0;
+  for (const s of r.toCreate) {
+    const key =
+      s.ref.source && s.ref.externalId
+        ? providerKey(s.ref.source, s.ref.externalId)
+        : `${s.sport}|${normaliseName(s.ref.name)}`;
+    idOf.set(key, athleteIdFrom(++n));
+  }
+  return { ...r, fixtures: applyCreatedIds(r.appearances, idOf) };
+};
+
 describe('appearance identity', () => {
   test('id embeds the parent id and keeps its provider prefix', () => {
     const a = boutAppearance(
       card(),
       { first: 'Yoenli Hernandez', second: 'Francisco Daniel Veron' },
       '2026-08-02T00:00:00.000Z',
-    )!;
+    )!.fixture;
     expect(a.id).toBe(
       'pbc-fight-night-august-22-2026-app-yoenli-hernandez-francisco-daniel-veron',
     );
@@ -53,16 +107,16 @@ describe('appearance identity', () => {
   test('id is identical across provisional and confirmed builds', () => {
     const parent = card();
     const provisional = appearanceFor(parent, {
-      athletes: ['Iga Swiatek'],
+      refs: [{ name: 'Iga Swiatek' }],
       title: 'Iga Swiatek — US Open',
       updatedAt: '2026-08-02T00:00:00.000Z',
-    })!;
+    })!.fixture;
     const confirmed = appearanceFor(parent, {
-      athletes: ['Iga Swiatek'],
+      refs: [{ name: 'Iga Swiatek' }],
       title: 'Iga Swiatek — US Open',
       updatedAt: '2026-08-27T00:00:00.000Z',
       slot: { startUtc: '2026-08-31T15:00:00.000Z', durationHours: 3 },
-    })!;
+    })!.fixture;
     expect(confirmed.id).toBe(provisional.id);
   });
 
@@ -78,12 +132,12 @@ describe('appearance identity', () => {
       parent,
       { first: 'Rolando Romero', second: 'Teofimo Lopez' },
       '2026-08-02T00:00:00.000Z',
-    )!;
+    )!.fixture;
     const sibling = boutAppearance(
       parent,
       { first: 'Victor Santillan', second: 'Gary Antonio Russell' },
       '2026-08-02T00:00:00.000Z',
-    )!;
+    )!.fixture;
     // Same participants, same competition, same instant as the parent —
     // the exact shape reconcile's clusterer hunts. Only providerOf saves
     // it, so pin it directly.
@@ -98,7 +152,7 @@ describe('provisional carries the parent window', () => {
       card(),
       { first: 'Carlos Utria', second: 'Israel Mercado' },
       '2026-08-02T00:00:00.000Z',
-    )!;
+    )!.fixture;
     expect(a.startUtc).toBe('2026-08-22T22:00:00.000Z');
     expect(a.durationHours).toBe(4);
     expect(a.timePrecision).toBe('nominal');
@@ -120,10 +174,10 @@ describe('provisional carries the parent window', () => {
       confidence: 'confirmed',
     });
     const a = appearanceFor(slam, {
-      athletes: ['Iga Swiatek'],
+      refs: [{ name: 'Iga Swiatek' }],
       title: 'Iga Swiatek — US Open',
       updatedAt: '2026-08-27T00:00:00.000Z',
-    })!;
+    })!.fixture;
     expect(a.startUtc).toBe(slam.startUtc);
     expect(a.durationHours).toBe(360);
     expect(a.timePrecision).toBe('date_only');
@@ -143,11 +197,11 @@ describe('provisional carries the parent window', () => {
       timePrecision: 'date_only',
     });
     const a = appearanceFor(meeting, {
-      athletes: ['Faith Kipyegon'],
+      refs: [{ name: 'Faith Kipyegon' }],
       title: 'Faith Kipyegon — 1500m — Weltklasse Zürich',
       updatedAt: '2026-09-02T00:00:00.000Z',
       slot: { startUtc: '2026-09-03T19:24:00.000Z', durationHours: 1 },
-    })!;
+    })!.fixture;
     expect(a.timePrecision).toBe('exact');
     expect(a.confidence).toBe('confirmed');
     expect(a.startUtc).toBe('2026-09-03T19:24:00.000Z');
@@ -155,42 +209,107 @@ describe('provisional carries the parent window', () => {
   });
 });
 
-describe('follow keys', () => {
-  test('slice key plus one key per FULL-named athlete', () => {
-    const a = boutAppearance(
+describe('follow keys are canonical, decided by resolution', () => {
+  test('structured names create directory athletes and carry their ids', () => {
+    const draft = boutAppearance(
       card(),
       { first: 'Rolando Romero', second: 'Teofimo Lopez' },
       '2026-08-02T00:00:00.000Z',
-    )!;
-    expect(a.followKeys).toEqual([
+    );
+    const { fixtures, counts } = resolveForTest([draft]);
+    expect(fixtures).toHaveLength(1);
+    expect(fixtures[0].followKeys).toEqual([
       'pbc-cards-appearances',
-      'athlete-rolando-romero',
-      'athlete-teofimo-lopez',
+      'athlete_000001',
+      'athlete_000002',
     ]);
-    expect(a.athletes).toEqual(['Rolando Romero', 'Teofimo Lopez']);
+    expect(fixtures[0].athletes).toEqual(['Rolando Romero', 'Teofimo Lopez']);
+    expect(counts.created).toBe(2);
+  });
+
+  test('a directory athlete resolves CONFIDENT by unique full name', () => {
+    const romero = dirAthlete('athlete_000007', 'Rolando Romero', 'boxing');
+    const draft = boutAppearance(
+      card(),
+      { first: 'Rolando Romero', second: 'Teofimo Lopez' },
+      '2026-08-02T00:00:00.000Z',
+    );
+    const { fixtures, counts } = resolveForTest([draft], [romero], 'never');
+    expect(fixtures[0].followKeys).toEqual([
+      'pbc-cards-appearances',
+      'athlete_000007',
+    ]);
+    expect(counts.confident).toBe(1);
+    expect(counts.unknown).toBe(1); // Lopez: not in directory, no create
+  });
+
+  test('a provider id resolves CERTAIN, whatever the rendered name', () => {
+    const sabalenka = dirAthlete('athlete_000010', 'Aryna Sabalenka', 'tennis', {
+      wta: '320760',
+    });
+    const draft = appearanceFor(card({ sport: 'tennis' }), {
+      refs: [{ name: 'A. Sabalenka', source: 'wta', externalId: '320760' }],
+      title: 'A. Sabalenka — somewhere',
+      updatedAt: 'x',
+    });
+    const { fixtures, counts } = resolveForTest([draft], [sabalenka], 'never');
+    expect(fixtures[0].followKeys).toContain('athlete_000010');
+    expect(counts.certain).toBe(1);
   });
 
   test('a surname-only fighter gets no key; the bout still carries both names', () => {
-    const a = boutAppearance(
+    const draft = boutAppearance(
       card({ title: 'Conor Benn vs Eubank' }),
       { first: 'Conor Benn', second: 'Eubank' },
       '2026-08-02T00:00:00.000Z',
-    )!;
-    expect(a.followKeys).toEqual([
+    );
+    const { fixtures, counts } = resolveForTest([draft]);
+    expect(fixtures[0].followKeys).toEqual([
       'pbc-cards-appearances',
-      'athlete-conor-benn',
+      'athlete_000001',
     ]);
-    expect(a.athletes).toEqual(['Conor Benn', 'Eubank']);
+    expect(fixtures[0].athletes).toEqual(['Conor Benn', 'Eubank']);
+    expect(counts.ambiguous).toBe(1);
   });
 
-  test('a bout with NO followable name yields no appearance at all', () => {
-    expect(
-      boutAppearance(
-        card({ title: 'Gaethje vs Pimblett' }),
-        { first: 'Gaethje', second: 'Pimblett' },
-        '2026-08-02T00:00:00.000Z',
-      ),
-    ).toBeNull();
+  test('a bout with NO resolvable participant yields no doc at all', () => {
+    const draft = boutAppearance(
+      card({ title: 'Gaethje vs Pimblett' }),
+      { first: 'Gaethje', second: 'Pimblett' },
+      '2026-08-02T00:00:00.000Z',
+    );
+    const { fixtures, counts } = resolveForTest([draft]);
+    expect(fixtures).toHaveLength(0);
+    expect(counts.droppedNoKeys).toBe(1);
+  });
+
+  test('F31 CLOSED: a compound surname from a parsed title mints nothing', () => {
+    // "Machado Garry" is two words and passes every word-count test —
+    // that gate is gone. Directory membership is the test now: he is in
+    // no directory, and a TITLE-PARSED name may never create one.
+    const draft = boutAppearance(
+      card({ sport: 'ufc', title: 'UFC 330 Makhachev vs Machado Garry' }),
+      { first: 'Makhachev', second: 'Machado Garry' },
+      '2026-08-02T00:00:00.000Z',
+    );
+    const { fixtures, counts } = resolveForTest([draft], [], 'never');
+    expect(fixtures).toHaveLength(0);
+    expect(counts.unknown).toBe(1); // Machado Garry: full name, unknown, uncreatable
+    expect(counts.ambiguous).toBe(1); // Makhachev: surname
+  });
+
+  test('a name matching TWO directory athletes is ambiguous — no link, no key', () => {
+    const a1 = dirAthlete('athlete_000021', 'Maria Garcia', 'tennis', { wta: '1' });
+    const a2 = dirAthlete('athlete_000022', 'Maria Garcia', 'tennis', { wta: '2' });
+    const draft = appearanceFor(card({ sport: 'tennis' }), {
+      refs: [{ name: 'Maria Garcia' }],
+      title: 'Maria Garcia — somewhere',
+      updatedAt: 'x',
+    });
+    const { fixtures, counts } = resolveForTest([draft], [a1, a2], 'structured');
+    expect(fixtures).toHaveLength(0);
+    expect(counts.ambiguous).toBe(1);
+    expect(counts.created).toBe(0);
   });
 
   test('the slice key is derived from the parent competitionId', () => {
@@ -204,13 +323,13 @@ describe('follow keys', () => {
       card({ sessionKind: 'support' }),
       { first: 'Rolando Romero', second: 'Teofimo Lopez' },
       '2026-08-02T00:00:00.000Z',
-    )!;
+    )!.fixture;
     expect(a.sessionKind).toBeUndefined();
   });
 });
 
 describe('deriveBoutAppearances (the TSDB headline consumer)', () => {
-  test('full-named combat titles yield the headline bout; surname titles yield nothing', () => {
+  test('full-named titles resolve against the directory; surname titles yield nothing', () => {
     const cards = [
       card({
         id: 'tsdb-2540001',
@@ -233,14 +352,45 @@ describe('deriveBoutAppearances (the TSDB headline consumer)', () => {
         title: 'UFC Fight Night 290',
       }),
     ];
-    const out = deriveBoutAppearances(cards, '2026-08-02T00:00:00.000Z');
-    expect(out).toHaveLength(1);
-    expect(out[0].parentFixtureId).toBe('tsdb-2540001');
-    expect(out[0].followKeys).toEqual([
+    const drafts = deriveBoutAppearances(cards, '2026-08-02T00:00:00.000Z');
+    // Two parseable bouts draft ("UFC Fight Night 290" names nobody);
+    // the surname bout dies at RESOLUTION now, not at parse time — same
+    // outcome, one gate, and the drop is counted instead of silent.
+    expect(drafts).toHaveLength(2);
+    const directory = [
+      dirAthlete('athlete_000031', 'Rolando Romero', 'boxing'),
+      dirAthlete('athlete_000032', 'Teofimo Lopez', 'boxing'),
+    ];
+    const { fixtures, counts } = resolveForTest(drafts, directory, 'never');
+    expect(fixtures).toHaveLength(1);
+    expect(counts.ambiguous).toBe(2); // Gaethje, Pimblett: surnames
+    expect(fixtures[0].parentFixtureId).toBe('tsdb-2540001');
+    expect(fixtures[0].followKeys).toEqual([
       'tsdb-league-4445-appearances',
-      'athlete-rolando-romero',
-      'athlete-teofimo-lopez',
+      'athlete_000031',
+      'athlete_000032',
     ]);
+  });
+
+  test('a full-named title with NO directory backing stays display-only', () => {
+    // Two journeymen the ratings never met: the bout parses, the draft
+    // exists, and resolution drops it — a parsed title is not allowed
+    // to invent identities (policy "never"), so there is nothing to
+    // follow and no doc is stored.
+    const drafts = deriveBoutAppearances(
+      [
+        card({
+          id: 'tsdb-2599999',
+          competitionId: 'tsdb-league-4445',
+          followKeys: ['tsdb-league-4445'],
+          title: 'Somebody Unrated vs Nobody Ranked',
+        }),
+      ],
+      '2026-08-02T00:00:00.000Z',
+    );
+    const { fixtures, counts } = resolveForTest(drafts, [], 'never');
+    expect(fixtures).toHaveLength(0);
+    expect(counts.unknown).toBe(2);
   });
 
   test('never derives from a non-person sport or from an appearance doc', () => {
@@ -252,7 +402,7 @@ describe('deriveBoutAppearances (the TSDB headline consumer)', () => {
     const already = deriveBoutAppearances(
       [card({ title: 'Rolando Romero vs Teofimo Lopez' })],
       '2026-08-02T00:00:00.000Z',
-    );
+    ).map((d) => d.fixture);
     expect(deriveBoutAppearances([soccer], 'x')).toHaveLength(0);
     expect(deriveBoutAppearances(already, 'x')).toHaveLength(0);
   });
@@ -265,12 +415,12 @@ describe('retirement — the yield proves a bout gone', () => {
     parent,
     { first: 'Alpha Adams', second: 'Bravo Brown' },
     NOW,
-  )!;
+  )!.fixture;
   const boutAC = boutAppearance(
     parent,
     { first: 'Alpha Adams', second: 'Charlie Cruz' },
     NOW,
-  )!;
+  )!.fixture;
 
   test('an opponent replacement retires the old bout doc', () => {
     expect(retiredAppearanceIds([boutAB], [boutAC], NOW)).toEqual([boutAB.id]);
@@ -288,7 +438,7 @@ describe('retirement — the yield proves a bout gone', () => {
       otherParent,
       { first: 'Delta Diaz', second: 'Echo Evans' },
       NOW,
-    )!;
+    )!.fixture;
     // Fresh yield covers only the September card; the August card's
     // bout must survive untouched.
     expect(retiredAppearanceIds([boutAB, otherBout], [otherBout], NOW)).toEqual(
@@ -325,15 +475,15 @@ describe('retirement — the yield proves a bout gone', () => {
       timePrecision: 'date_only',
     });
     const linette = appearanceFor(slam, {
-      athletes: ['Magda Linette'],
+      refs: [{ name: 'Magda Linette' }],
       title: 'Magda Linette — Mubadala DC Open',
       updatedAt: '2026-07-26T00:00:00.000Z',
-    })!;
+    })!.fixture;
     const survivor = appearanceFor(slam, {
-      athletes: ['Alexandra Eala'],
+      refs: [{ name: 'Alexandra Eala' }],
       title: 'Alexandra Eala — Mubadala DC Open',
       updatedAt: '2026-07-28T12:00:00.000Z',
-    })!;
+    })!.fixture;
     // Lost R1 on the 27th; polled mid-tournament on the 28th: retired.
     expect(
       retiredAppearanceIds([linette], [survivor], '2026-07-28T12:00:00.000Z'),

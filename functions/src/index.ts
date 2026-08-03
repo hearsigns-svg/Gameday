@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { canonicalisePollPath, sweepAll } from './sweep';
+import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import {
@@ -13,13 +13,24 @@ import {
 } from './appearances';
 import { normaliseName } from './identity';
 import {
-  athleteKey,
-  enrichBoutParticipants,
-  isFollowableName,
-  namesPeople,
-} from './participants';
+  AppearanceDraft,
+  applyCreatedIds,
+  AthleteProvenance,
+  CreationPolicy,
+  NewAthleteSpec,
+  providerKey,
+  resolveDrafts,
+  stampDriverKeys,
+} from './athletes';
+import {
+  createAthletes,
+  loadAthleteIndex,
+  loadAthletes,
+  updateAthleteNextStart,
+} from './rosterStore';
+import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates } from './reaper';
-import { searchAthletes, searchTeams } from './search';
+import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
@@ -66,6 +77,10 @@ import { fetchPbcCards } from './providers/pbc';
 import { fetchTennisTournaments } from './providers/tennisIcs';
 import { fetchWorldAthletics } from './providers/worldAthletics';
 import { fetchWtaTennis } from './providers/wtaTennis';
+import { fetchWtaRankings } from './providers/wtaRankings';
+import { fetchIbfRatings } from './providers/ibfRatings';
+import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
+import { applyRoster } from './rosterStore';
 import {
   listFdSoccerTeams,
   listMlbTeams,
@@ -268,65 +283,62 @@ async function ingest(
   };
 }
 
-// The athlete directory search reads: one doc per followable athlete,
-// written through whenever a poll ingests appearances. `nextStartUtc` is
-// the soonest FUTURE appearance seen for the athlete this poll — search
-// filters on it, so an athlete with nothing upcoming stops being
-// offered rather than becoming a follow that matches nothing.
-async function upsertAthleteDirectory(
-  appearances: Fixture[],
-  // Review-sourced appearances have no poll route — they refresh only
-  // when an operator decides — so the directory entry carries no path.
-  pollPath: string | null,
-): Promise<void> {
-  const at = new Date().toISOString();
-  const byKey = new Map<
-    string,
-    { name: string; sportKey: string; nextStartUtc: string }
-  >();
-  for (const f of appearances) {
-    if (f.startUtc < at) continue;
-    // A cancelled bout is not an upcoming appearance — search must not
-    // offer an athlete whose follow would deliver nothing.
-    if (f.status === 'cancelled' || f.status === 'postponed') continue;
-    for (const name of f.athletes ?? []) {
-      if (!isFollowableName(name)) continue;
-      const key = athleteKey(name);
-      const prev = byKey.get(key);
-      if (!prev || f.startUtc < prev.nextStartUtc) {
-        byKey.set(key, { name, sportKey: f.sport, nextStartUtc: f.startUtc });
-      }
-    }
-  }
-  if (byKey.size === 0) return;
-  // Only a sweep-valid path may reach the directory: a search hit's
-  // pollPath becomes a device-registered route, and the sweep silently
-  // DROPS routes the allowlist rejects (a season-less manual poll echoes
-  // `season=` into runCtx.pollPath, which the allowlist refuses).
-  const canonicalPath = pollPath ? canonicalisePollPath(pollPath) : null;
-  let batch = db.batch();
-  let pending = 0;
-  for (const [key, v] of byKey) {
-    batch.set(
-      db.collection('athleteDirectory').doc(key),
-      {
-        key,
-        name: v.name,
-        sportKey: v.sportKey,
-        searchName: normaliseName(v.name),
-        ...(canonicalPath ? { pollPath: canonicalPath } : {}),
-        nextStartUtc: v.nextStartUtc,
-        updatedAt: at,
-      },
-      { merge: true },
+// The legacy name-keyed athleteDirectory write-through is RETIRED
+// (Prompt 8): search reads the canonical `athletes` collection, and the
+// nextStartUtc hint appearance ingest maintains lives on the athlete
+// doc itself (rosterStore.updateAthleteNextStart). The old collection
+// is left in place, unwritten, as evidence — nothing reads it.
+//
+// Resolve appearance DRAFTS against the canonical directory, creating
+// fixture-derived athletes where the source's policy allows, and return
+// finished appearance fixtures ready to ingest. The two-phase dance —
+// resolve, create-with-real-ids, swap placeholders — keeps the pure
+// logic in athletes.ts testable while allocation stays transactional.
+async function resolveAppearanceDrafts(
+  drafts: readonly AppearanceDraft[],
+  policy: {
+    create: CreationPolicy;
+    provenance?: AthleteProvenance;
+    grouping?: string;
+    groupingKey?: string;
+  },
+): Promise<{
+  fixtures: Fixture[];
+  resolution: Record<string, unknown>;
+}> {
+  const index = await loadAthleteIndex(db);
+  const resolved = resolveDrafts(drafts, index, policy);
+  let fixtures = resolved.appearances;
+  if (resolved.toCreate.length > 0) {
+    const createKeyOf = (s: NewAthleteSpec): string =>
+      s.ref.source && s.ref.externalId
+        ? providerKey(s.ref.source, s.ref.externalId)
+        : `${s.sport}|${normaliseName(s.ref.name)}`;
+    const idOf = await createAthletes(
+      db,
+      resolved.toCreate,
+      createKeyOf,
+      new Date().toISOString(),
     );
-    if (++pending >= 450) {
-      await batch.commit();
-      batch = db.batch();
-      pending = 0;
-    }
+    fixtures = applyCreatedIds(fixtures, idOf);
   }
-  if (pending > 0) await batch.commit();
+  if (resolved.counts.nameCollisions > 0) {
+    // The F34 shape, live. Loud by design — see athletes.ts.
+    console.error(
+      new Error(
+        `[kickoffcal] appearance name collision(s): ${resolved.collisionDetails.join('; ')}`,
+      ),
+    );
+  }
+  return {
+    fixtures,
+    resolution: {
+      ...resolved.counts,
+      ...(resolved.collisionDetails.length > 0
+        ? { collisions: resolved.collisionDetails }
+        : {}),
+    },
+  };
 }
 
 // Cancel previously-stored appearances that this yield proves gone
@@ -393,12 +405,24 @@ interface PollWork {
   // sweep never got to it. Distinct from an error, which means a provider
   // failed us.
   reason?: RunReason;
-  // Appearance docs riding the same connector invocation, ingested under
-  // their own slice key so (a) promoter/series followers are never
-  // flooded with per-bout events, and (b) coverage reports the
-  // appearance funnel separately from the card funnel. One extra
-  // sourceRuns doc per invocation that carries appearances.
-  appearances?: { followKey: string; rawCount: number; fixtures: Fixture[] };
+  // Appearance DRAFTS riding the same connector invocation, resolved
+  // against the canonical athlete directory and ingested under their own
+  // slice key so (a) promoter/series followers are never flooded with
+  // per-bout events, and (b) coverage reports the appearance funnel
+  // separately from the card funnel. One extra sourceRuns doc per
+  // invocation that carries appearances. `create` is the source's
+  // creation policy: 'structured' for providers that publish structured
+  // participant records (PBC performers, WTA draws), 'never' for
+  // title-parsed names — a parsed title must never invent an identity.
+  appearances?: {
+    followKey: string;
+    rawCount: number;
+    drafts: AppearanceDraft[];
+    create: CreationPolicy;
+    provenance?: AthleteProvenance;
+    grouping?: string;
+    groupingKey?: string;
+  };
   // TRUE only when `fixtures` is the slice's COMPLETE current truth —
   // a whole-season or whole-feed fetch. This is what arms the reaper:
   // a capped fetch (athletics' page budget, PBC's card cap) proves
@@ -461,10 +485,23 @@ async function servePoll(
     if (w.appearances) {
       const a = w.appearances;
       try {
-        const aIngested = await ingest(a.fixtures, a.followKey);
+        // Resolution BEFORE ingest: canonical follow keys are decided
+        // against the directory (creating fixture-derived athletes
+        // where this source's policy allows), and the per-run counts —
+        // certain / confident / ambiguous / created / collisions — ride
+        // the run record, because identity decisions are exactly the
+        // kind of quiet behaviour the funnel exists to make visible.
+        const { fixtures: aFixtures, resolution } =
+          await resolveAppearanceDrafts(a.drafts, {
+            create: a.create,
+            ...(a.provenance ? { provenance: a.provenance } : {}),
+            ...(a.grouping ? { grouping: a.grouping } : {}),
+            ...(a.groupingKey ? { groupingKey: a.groupingKey } : {}),
+          });
+        const aIngested = await ingest(aFixtures, a.followKey);
         const aCounts = countsFrom(
           { fetched: a.rawCount, ...aIngested.counts },
-          a.fixtures,
+          aFixtures,
           startedAt,
         );
         await recordSourceRun(
@@ -475,15 +512,37 @@ async function servePoll(
             seasonsTried: trace.seasonsTried,
             counts: aCounts,
             error: null,
+            resolution,
           },
           startedAt,
         );
-        const retired = await retireAppearances(a.followKey, a.fixtures);
+        // RETIREMENT EVIDENCE IS THE DRAFT SET, not the resolved set.
+        // Resolution decides FOLLOWABILITY; the drafts are the
+        // provider's testimony of what exists. A draft dropped because
+        // its name went ambiguous (directory-state-dependent since
+        // Prompt 8) must still count as evidence its bout is ON the
+        // card — retiring against the resolved set cancelled a real
+        // stored bout the moment a same-named athlete joined the
+        // directory (review round, probe-confirmed).
+        const retired = await retireAppearances(
+          a.followKey,
+          a.drafts.map((d) => d.fixture),
+        );
         appearanceBody = {
           appearances: aIngested.fixtures,
           appearanceChanges: aIngested.changes,
           appearanceRetired: retired,
+          resolution,
         };
+        // The nextStartUtc hint is a SEARCH/browse cache, not fixture
+        // truth: its failure is logged loudly and surfaced, never
+        // allowed to fail a poll whose fixtures are already stored.
+        try {
+          await updateAthleteNextStart(db, aFixtures, startedAt);
+        } catch (e) {
+          console.error(`athlete nextStart update failed for ${a.followKey}:`, e);
+          appearanceBody = { ...appearanceBody, athleteDirectoryError: String(e) };
+        }
       } catch (e) {
         await recordSourceRun(
           { ...runCtx, competitionId: a.followKey },
@@ -497,16 +556,6 @@ async function servePoll(
           startedAt,
         );
         return { status: 502, body: { error: `appearances: ${String(e)}` } };
-      }
-      // The directory is a SEARCH cache, not fixture truth: its failure
-      // is logged loudly and surfaced, never allowed to fail a poll
-      // whose fixtures are already safely stored — and never allowed to
-      // double-record the slice it follows.
-      try {
-        await upsertAthleteDirectory(a.fixtures, runCtx.pollPath);
-      } catch (e) {
-        console.error(`athleteDirectory upsert failed for ${a.followKey}:`, e);
-        appearanceBody = { ...appearanceBody, athleteDirectoryError: String(e) };
       }
     }
     return {
@@ -624,6 +673,26 @@ export const searchEntities = onRequest(async (req, res) => {
       athletes: await searchAthletes(store, q),
     });
   } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+// Individual-sport browse: curated entry points from the canonical
+// directory — champions and rated fighters by weight class, tennis by
+// ranking, the F1 grid — plus the "competing soon" row. Search-first is
+// the client's job; this is what keeps the screen from ever being empty.
+export const listAthletes = onRequest(async (req, res) => {
+  try {
+    const sport = String(req.query.sport ?? '');
+    if (!sport) {
+      res.status(400).json({ error: 'sport is required' });
+      return;
+    }
+    const athletes = await loadAthletes(db);
+    res.json(shapeAthleteBrowse(athletes, sport, new Date().toISOString()));
+  } catch (e) {
+    // An empty athlete list would read as "this sport has nobody".
+    // Fail loudly instead so the client shows an error it can retry.
     res.status(502).json({ error: String(e) });
   }
 });
@@ -905,7 +974,12 @@ export const pollTsdbLeague = onRequest(async (req, res) => {
                 rawCount: chosenFixtures.filter(
                   (f) => f.startUtc >= appearanceFrom,
                 ).length,
-                fixtures: derived,
+                drafts: derived,
+                // TITLE-PARSED names never create directory athletes
+                // (F31's fix): they resolve against the directory —
+                // certain never (no ids), confident when the full name
+                // is unique — or stay display-only.
+                create: 'never' as const,
               },
             }
           : {}),
@@ -990,8 +1064,17 @@ export const pollF1 = onRequest(async (req, res) => {
     async (trace) => {
       trace.seasonsTried.push(String(season));
       const r = await fetchF1SeasonFixtures(season);
+      // Driver follow keys are STAMPED onto the session fixtures: F1 has
+      // no sub-event to hang an appearance on (every entrant runs every
+      // session), so the session is the driver's appearance and a driver
+      // follow rides the ordinary query path — race-only preference
+      // included, since sessionKind is untouched. The driver set comes
+      // from the roster (Jolpica per-season driver list, weekly refresh);
+      // an empty roster stamps nothing and the sessions ingest as before.
+      const athletes = await loadAthletes(db);
       return {
         ...r,
+        fixtures: stampDriverKeys(r.fixtures, athletes),
         followKey: 'f1-series-1',
         seasonResolved: String(season),
         sliceComplete: true,
@@ -1113,6 +1196,156 @@ export const scheduledReconcile = onSchedule(
   },
 );
 
+// ─── Prompt 8: roster refresh — the directory's freshness ────────────
+//
+// Rosters get their OWN scheduler, not a catalogue entry, for load-
+// bearing arithmetic: IBF's Crawl-delay:10 across 33 weight-class
+// requests is ~6 minutes of wall time, which would eat the fixture
+// sweep's 8-minute deadline alive; and rankings change weekly at most
+// (WTA publishes Mondays, IBF monthly, the F1 grid rarely), so weekly
+// is the honest cadence — Tuesday 03:00 UTC catches Monday's rankings
+// within a day. Each source runs independently: one failing must not
+// starve the others, and each writes its own sourceRuns record under a
+// roster-* slice, so the funnel covers the directory the same way it
+// covers fixtures. Staleness is watched by the SWEEP's alert pass
+// (roster_stale in alerts.ts) — the watcher must not share the fate of
+// the thing it watches.
+
+interface RosterSource {
+  slice: string;
+  source: string;
+  sport: string;
+  run: () => Promise<{ rawCount: number; entries: import('./athletes').RosterEntry[] }>;
+}
+
+const rosterSources = (): RosterSource[] => [
+  {
+    slice: 'roster-wta',
+    source: 'wta',
+    sport: 'tennis',
+    run: () => fetchWtaRankings(),
+  },
+  {
+    slice: 'roster-f1',
+    source: 'f1',
+    sport: 'f1',
+    run: () => fetchJolpicaDrivers(new Date().getUTCFullYear()),
+  },
+  {
+    slice: 'roster-ibf',
+    source: 'ibf',
+    sport: 'boxing',
+    run: () => fetchIbfRatings(),
+  },
+];
+
+async function refreshRosters(
+  trigger: RunTrigger,
+): Promise<Record<string, unknown>> {
+  const summary: Record<string, unknown> = {};
+  for (const s of rosterSources()) {
+    const startedAt = new Date().toISOString();
+    const ctx: RunContext = {
+      trigger,
+      source: s.source,
+      sport: s.sport,
+      competitionId: s.slice,
+      pollPath: `roster:${s.source}`,
+      seasonRequested: null,
+    };
+    try {
+      const { rawCount, entries } = await s.run();
+      // ZERO entries is never applied: a roster source answering with
+      // nothing (a January F1 season page before the grid exists, a
+      // filter regression) would mark every athlete absent, deactivate
+      // them within two refreshes, and — for F1 — strip driver keys
+      // from every session, deleting followers' events. Better a loud
+      // error and last week's roster than a silent decimation.
+      if (entries.length === 0) {
+        throw new Error(`${s.source} roster returned zero entries`);
+      }
+      const applied = await applyRoster(db, entries, startedAt);
+      // The staleness marker the sweep's roster_stale rule reads —
+      // written ONLY on a successful, non-empty, fully-applied refresh.
+      await db
+        .collection('status')
+        .doc('rosters')
+        .set(
+          { slices: { [`${s.source}|${s.slice}`]: startedAt } },
+          { merge: true },
+        );
+      await recordSourceRun(
+        ctx,
+        {
+          httpStatus: 200,
+          seasonResolved: null,
+          seasonsTried: [],
+          // Roster counts: fetched = provider rows/classes, parsed =
+          // entries, stored = docs written. futureDated is a fixture
+          // concept and stays 0 — the roster_stale alert keys on
+          // lastSuccessAt, never on zeroYield.
+          counts: {
+            fetched: rawCount,
+            parsed: entries.length,
+            rejected: 0,
+            stored: applied.created + applied.updated,
+            unchanged: 0,
+            futureDated: 0,
+          },
+          error: null,
+          roster: { ...applied },
+        },
+        startedAt,
+      );
+      summary[s.slice] = { entries: entries.length, ...applied };
+    } catch (e) {
+      await recordSourceRun(
+        ctx,
+        {
+          httpStatus: httpStatusFromError(e),
+          seasonResolved: null,
+          seasonsTried: [],
+          counts: EMPTY_COUNTS,
+          error: String(e),
+        },
+        startedAt,
+      );
+      summary[s.slice] = { error: String(e) };
+    }
+  }
+  return summary;
+}
+
+export const scheduledRoster = onSchedule(
+  {
+    schedule: 'every tuesday 03:00',
+    timeZone: 'Etc/UTC',
+    timeoutSeconds: 540,
+    memory: '256MiB',
+  },
+  async () => {
+    await refreshRosters('roster');
+  },
+);
+
+// Manual trigger, same guard-shape as runSweep: fails closed.
+export const runRoster = onRequest(
+  { timeoutSeconds: 540, memory: '256MiB', maxInstances: 1 },
+  async (req, res) => {
+    const expected = process.env.SWEEP_KEY;
+    const provided = req.get('x-sweep-key');
+    if (!expected || !provided || !timingSafeEqualStr(provided, expected)) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
+    try {
+      res.json(await refreshRosters('roster'));
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  },
+);
+
 // ─── Prompt 4: boxing (PBC), tennis, athletics ────────────────────────
 
 export const pollPbc = onRequest(
@@ -1146,7 +1379,11 @@ export const pollPbc = onRequest(
           appearances: {
             followKey: appearanceSliceKey('pbc-cards'),
             rawCount: r.appearanceRawCount,
-            fixtures: r.appearances,
+            drafts: r.appearances,
+            // Performer nodes are the promoter stating who fights —
+            // structured enough to create name-keyed directory athletes
+            // (PBC publishes no fighter ids; the record says so).
+            create: 'structured' as const,
           },
         };
       },
@@ -1210,7 +1447,14 @@ export const pollWtaTennis = onRequest(
           appearances: {
             followKey: appearanceSliceKey('tennis-wta'),
             rawCount: r.appearanceRawCount,
-            fixtures: r.appearances,
+            drafts: r.appearances,
+            // Draw records carry NUMERIC PLAYER IDS, so a player
+            // outside the top-200 roster still becomes an id-backed
+            // athlete the moment she enters a draw — certain identity,
+            // not a guess.
+            create: 'structured' as const,
+            grouping: 'WTA Tour',
+            groupingKey: 'wta',
           },
           body: {
             activeTournaments: r.activeTournaments,
@@ -1361,23 +1605,40 @@ export const decideReview = onRequest(async (req, res) => {
     // appearances the fresh set no longer contains (same evidence guard
     // as the polls). No poll route refreshes review slices, so the
     // directory entries carry no pollPath.
-    const appearances = reviewItemToAppearances(item, now);
+    const drafts = reviewItemToAppearances(item, now);
     let retired = 0;
-    if (appearances.length > 0) {
+    let published: Fixture[] = [];
+    if (drafts.length > 0) {
       const sliceKey = appearanceSliceKey(fixture.competitionId);
-      await ingest(appearances, sliceKey);
-      retired = await retireAppearances(sliceKey, appearances);
-      try {
-        await upsertAthleteDirectory(appearances, null);
-      } catch (e) {
-        console.error('athleteDirectory upsert failed for review slice:', e);
+      // Operator-approved bouts are verified against the promoter's own
+      // page — structured enough to create name-keyed directory
+      // athletes, provenance 'review' so the record says who vouched.
+      const { fixtures: resolvedFixtures } = await resolveAppearanceDrafts(
+        drafts,
+        { create: 'structured', provenance: 'review' },
+      );
+      published = resolvedFixtures;
+      if (resolvedFixtures.length > 0) {
+        await ingest(resolvedFixtures, sliceKey);
+        // Draft set as retirement evidence — same reasoning as the
+        // poll path: a bout the operator listed exists, whether or not
+        // its fighters resolved to followable athletes.
+        retired = await retireAppearances(
+          sliceKey,
+          drafts.map((d) => d.fixture),
+        );
+        try {
+          await updateAthleteNextStart(db, resolvedFixtures, now);
+        } catch (e) {
+          console.error('athlete nextStart update failed for review slice:', e);
+        }
       }
     }
     res.json({
       id,
       status: item.status,
       published: fixture.id,
-      appearances: appearances.map((a) => a.id),
+      appearances: published.map((a) => a.id),
       appearancesRetired: retired,
     });
     return;

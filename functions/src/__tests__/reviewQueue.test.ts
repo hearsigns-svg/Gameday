@@ -142,25 +142,30 @@ describe('nothing unapproved reaches a calendar', () => {
     expect(promoterKey('Matchroom Boxing')).toBe(promoterKey('matchroom  boxing'));
   });
 
-  test('every approved bout — undercard included — becomes an appearance', () => {
-    const apps = reviewItemToAppearances(
+  test('every approved bout — undercard included — becomes an appearance draft', () => {
+    const drafts = reviewItemToAppearances(
       item('confirmed'),
       '2026-08-02T00:00:00.000Z',
     );
-    expect(apps).toHaveLength(2);
-    expect(apps.map((a) => a.title)).toEqual([
+    expect(drafts).toHaveLength(2);
+    expect(drafts.map((d) => d.fixture.title)).toEqual([
       'Mauricio Lara vs Jose Ornelas',
       'Someone Else vs Another Person',
     ]);
-    for (const a of apps) {
-      expect(a.parentFixtureId).toBe('review-abc123');
-      expect(a.id.split('-')[0]).toBe('review'); // source attribution holds
-      expect(a.startUtc).toBe('2026-09-12T19:00:00.000Z'); // parent window
-      expect(a.confidence).toBe('provisional');
-      expect(a.followKeys[0]).toBe('review-matchroom-boxing-appearances');
+    for (const d of drafts) {
+      expect(d.fixture.parentFixtureId).toBe('review-abc123');
+      expect(d.fixture.id.split('-')[0]).toBe('review'); // source attribution holds
+      expect(d.fixture.startUtc).toBe('2026-09-12T19:00:00.000Z'); // parent window
+      expect(d.fixture.confidence).toBe('provisional');
+      expect(d.fixture.followKeys).toEqual([
+        'review-matchroom-boxing-appearances',
+      ]);
     }
-    // The undercard fighter is followable — the point of the exercise.
-    expect(apps[1].followKeys).toContain('athlete-another-person');
+    // The undercard fighter reaches resolution as a ref — operator-
+    // verified names may create directory athletes (policy 'structured'
+    // at the decideReview call site), which is what keeps a prelim
+    // fighter followable.
+    expect(drafts[1].refs.map((r) => r.name)).toContain('Another Person');
   });
 
   test('unapproved bouts produce no appearances', () => {

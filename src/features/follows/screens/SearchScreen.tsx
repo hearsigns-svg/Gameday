@@ -197,7 +197,9 @@ export default function SearchScreen({ navigation }: Props) {
       kind: 'athlete',
       key: hit.key,
       title: hit.name,
-      caption: `Athlete · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
+      // "Heavyweight · Boxing" beats "Athlete · Boxing" when the
+      // directory knows the grouping.
+      caption: `${hit.grouping ?? 'Athlete'} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
       sportKey: hit.sportKey,
       followable: {
         key: hit.key,
