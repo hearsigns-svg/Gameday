@@ -30,7 +30,7 @@ import {
   updateAthleteNextStart,
 } from './rosterStore';
 import { enrichBoutParticipants, namesPeople } from './participants';
-import { reapCandidates } from './reaper';
+import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
 import { CatalogueEntry, sportWeightsOf } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
@@ -236,8 +236,16 @@ async function ingest(
         cascade.push(doc);
       }
     }
+    const held = REAPER_HOLD_SLICES.has(followKey);
+    if (held && decision.candidates.length > 0) {
+      // The owner sees a held slice's would-reap BEFORE anything fans
+      // out — nothing is applied, the run record carries the list.
+      console.error(
+        `[kickoffcal-alert] reap_held: ${followKey} would reap ${decision.candidates.length} (guardTripped=${decision.guardTripped}) — held for owner review`,
+      );
+    }
     const apply =
-      reaperEnabled() && !decision.guardTripped && decision.candidates.length > 0;
+      reaperEnabled() && !decision.guardTripped && decision.candidates.length > 0 && !held;
     if (apply) {
       const cancelWithChange = (e: Fixture) => {
         batch.set(db.collection('fixtures').doc(e.id), {

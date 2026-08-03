@@ -197,8 +197,10 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   SPORT('golf', 'Golf', 66),
   SPORT('ufc', 'MMA', 62),
   SPORT('ice-hockey', 'Ice hockey', 58),
-  SPORT('baseball', 'Baseball', 54),
-  SPORT('motorsport', 'Motorsport', 50),
+  // 11c owner swap: MotoGP alone likely outranks MLB for a UK
+  // audience — baseball has essentially no UK footprint.
+  SPORT('motorsport', 'Motorsport', 54),
+  SPORT('baseball', 'Baseball', 50),
 ];
 
 // Per-sport ordering weight. An EXPLICIT sport row wins outright — its

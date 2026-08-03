@@ -4,7 +4,7 @@
 // this function's conservatism.
 
 import { Fixture } from '../fixture';
-import { reapCandidates, REAP_CEILING } from '../reaper';
+import { reapCandidates, REAP_CEILING, REAPER_HOLD_SLICES } from '../reaper';
 
 const NOW = '2026-08-10T00:00:00.000Z';
 
@@ -129,4 +129,12 @@ test('exactly 20% does not trip — the ceiling is strict', () => {
   const d = reapCandidates(live, returned, 'tsdb', NOW);
   expect(d.guardTripped).toBe(false);
   expect(d.candidates).toHaveLength(2);
+});
+
+test('the athletics slice is HELD from enable-day (Prompt 11c owner condition)', () => {
+  // wa-calendar is where the envelope bug would have soft-cancelled 20
+  // real December meetings under the guard. Held slices record and
+  // page; they never apply. Removing the hold is a deliberate one-line
+  // edit after the owner's two-week watch.
+  expect(REAPER_HOLD_SLICES.has('wa-calendar')).toBe(true);
 });

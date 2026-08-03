@@ -105,3 +105,16 @@ export function reapCandidates(
   // report needs the list; the CALLER must not apply a tripped set.
   return { candidates, liveCount: live.length, guardTripped };
 }
+
+// PER-SLICE HOLD (Prompt 11c, owner condition on enabling): slices
+// here stay effectively DRY-RUN even with REAPER_ENABLED — candidates
+// are recorded in the run record as always, nothing is cancelled, and
+// the caller pages a stable-prefix console.error so the owner sees the
+// would-reap BEFORE any change record could fan out. wa-calendar is
+// held for the first two weeks after enabling: athletics is where the
+// envelope bug would have soft-cancelled 20 real December meetings at
+// 9.9%, comfortably under the guard. Remove the entry (one line +
+// deploy) when the owner clears the watch.
+export const REAPER_HOLD_SLICES: ReadonlySet<string> = new Set([
+  'wa-calendar', // held from enable-day; owner clears after two weeks
+]);
