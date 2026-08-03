@@ -134,10 +134,11 @@ test('sportWeightsOf: explicit sport rows win outright; derived max is only the 
   // Wimbledon no longer speaks for the sport ("has one giant event" ≠
   // "is a big sport", owner review).
   expect(w.soccer).toBe(100);
-  expect(w.tennis).toBe(82);
-  expect(w.cricket).toBe(86);
-  expect(w.rugby).toBe(84);
-  expect(w.athletics).toBe(76);
+  expect(w.tennis).toBe(86);
+  expect(w.cricket).toBe(84);
+  expect(w.basketball).toBe(82); // top-five global league, not below golf (11c)
+  expect(w.rugby).toBe(78);
+  expect(w.athletics).toBe(70);
   // Every enabled browse sport has a weight, so the sports row can
   // order fully once the client consumes it.
   for (const s of SPORTS.filter((s) => s.enabled)) {
@@ -150,7 +151,7 @@ test('sportWeightsOf: explicit sport rows win outright; derived max is only the 
   // Order independence: a sport row seen BEFORE its sport's
   // competitions must not be clobbered by a later derived max.
   const reversed = sportWeightsOf([...CATALOGUE_SEED].reverse());
-  expect(reversed.tennis).toBe(82);
+  expect(reversed.tennis).toBe(86);
 });
 
 test('DRIFT GUARD: every browse-offered competition pollPath is catalogued', () => {

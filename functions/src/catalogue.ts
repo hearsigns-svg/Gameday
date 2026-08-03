@@ -177,24 +177,28 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   RANK('wa-world-athletics-indoor-tour-gold', 'Indoor Tour Gold', 'athletics', 35),
   RANK('wa-world-athletics-cross-country-tour-gold', 'Cross Country Tour Gold', 'athletics', 33),
   RANK('wa-national-senior-outdoor-championships', 'National Championships', 'athletics', 31),
-  // ── Sport rows (Prompt 11b): the sports-grid order, its own knob ────
-  // UK-leaning by owner direction (the app is UK-built; its distinctive
-  // coverage is boxing, tennis and athletics). Competition priorities
-  // above order rows only WITHIN a sport now.
+  // ── Sport rows (Prompt 11b/11c): the sports-grid order, its own knob ─
+  // The 11c shape (owner tune): soccer clearly first; then a cluster of
+  // genuinely global sports — F1, tennis, cricket, basketball (the NBA
+  // is a top-five global league and must not sink below golf); the UK
+  // lean shows in rugby, boxing and athletics sitting ABOVE where a
+  // US-built app would put them — not in the NBA and NFL falling into
+  // the bottom half. Competition priorities above order rows only
+  // WITHIN a sport.
   SPORT('soccer', 'Soccer', 100),
   SPORT('f1', 'Formula 1', 88),
-  SPORT('cricket', 'Cricket', 86),
-  SPORT('rugby', 'Rugby', 84),
-  SPORT('tennis', 'Tennis', 82),
-  SPORT('boxing', 'Boxing', 80),
-  SPORT('athletics', 'Athletics', 76),
-  SPORT('golf', 'Golf', 74),
-  SPORT('nfl', 'American football', 70),
-  SPORT('ufc', 'MMA', 66),
-  SPORT('basketball', 'Basketball', 62),
-  SPORT('motorsport', 'Motorsport', 58),
+  SPORT('tennis', 'Tennis', 86),
+  SPORT('cricket', 'Cricket', 84),
+  SPORT('basketball', 'Basketball', 82),
+  SPORT('rugby', 'Rugby', 78),
+  SPORT('nfl', 'American football', 76),
+  SPORT('boxing', 'Boxing', 74),
+  SPORT('athletics', 'Athletics', 70),
+  SPORT('golf', 'Golf', 66),
+  SPORT('ufc', 'MMA', 62),
+  SPORT('ice-hockey', 'Ice hockey', 58),
   SPORT('baseball', 'Baseball', 54),
-  SPORT('ice-hockey', 'Ice hockey', 50),
+  SPORT('motorsport', 'Motorsport', 50),
 ];
 
 // Per-sport ordering weight. An EXPLICIT sport row wins outright — its
