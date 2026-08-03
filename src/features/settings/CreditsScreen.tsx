@@ -20,6 +20,24 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
         Photographs come from Wikimedia Commons under licences that permit
         reuse. Each is credited to its photographer below.
       </Text>
+      {/* TheSportsDB attribution: their terms require crediting them as
+          the data source — a condition of the service, honoured here
+          (Prompt 9b). */}
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Open TheSportsDB"
+        onPress={() => void Linking.openURL('https://www.thesportsdb.com')}
+      >
+        <Text
+          style={[
+            type.secondary,
+            { color: t.textSecondary, paddingHorizontal: spacing.l, paddingBottom: spacing.m },
+          ]}
+        >
+          Event data for several sports comes from TheSportsDB
+          (thesportsdb.com).
+        </Text>
+      </Pressable>
       {credits.length === 0 ? (
         <Text
           style={[
@@ -38,9 +56,24 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
               <Text style={[type.body, { color: t.textPrimary }]}>
                 {item.subject}
               </Text>
-              <Text style={[type.caption, { color: t.textSecondary }]}>
-                {item.art.artist || 'Wikimedia Commons'} · {item.art.licence}
-              </Text>
+              <Pressable
+                accessibilityRole={item.art.sourceUrl ? 'link' : undefined}
+                accessibilityLabel={
+                  item.art.sourceUrl
+                    ? `Open source page for ${item.subject}`
+                    : undefined
+                }
+                onPress={
+                  item.art.sourceUrl
+                    ? () => void Linking.openURL(item.art.sourceUrl as string)
+                    : undefined
+                }
+              >
+                <Text style={[type.caption, { color: t.textSecondary }]}>
+                  {item.art.artist || 'Wikimedia Commons'} · {item.art.licence}
+                  {item.art.sourceUrl ? ' · source' : ''}
+                </Text>
+              </Pressable>
             </View>
           )}
           ListFooterComponent={

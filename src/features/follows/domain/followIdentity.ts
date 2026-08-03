@@ -11,7 +11,7 @@ export function identityFollow(
 ): Followable | undefined {
   return follows
     .filter(
-      (f) => followKeys.includes(f.key) && (f.brandColour || f.crestUrl),
+      (f) => followKeys.includes(f.key) && f.brandColour,
     )
     .sort(
       (a, b) => (a.type === 'team' ? 0 : 1) - (b.type === 'team' ? 0 : 1),

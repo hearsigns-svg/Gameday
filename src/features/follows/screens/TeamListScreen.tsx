@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FollowButton, ListRow } from '../../../core/components';
+import { monogramOf, FollowButton, ListRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
@@ -72,7 +72,6 @@ export default function TeamListScreen({ navigation, route }: Props) {
       ...(route.params.teamPollPath
         ? { pollPath: teamPollPathFor(route.params.teamPollPath, team.id) }
         : {}),
-      ...(team.crestUrl ? { crestUrl: team.crestUrl } : {}),
       ...(brandColour ? { brandColour } : {}),
     };
     setBusyKey(team.key);
@@ -140,7 +139,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
               colourFromKitText(item.colours) ?? sport?.accent ?? null,
               mode,
             )}
-            crestUrl={item.crestUrl}
+            monogram={monogramOf(item.name)}
             accessibilityLabel={`${item.name}, view fixtures`}
             onPress={() =>
               navigation.navigate('Team', {
@@ -150,7 +149,6 @@ export default function TeamListScreen({ navigation, route }: Props) {
                 ...(route.params.teamPollPath
                   ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
                   : {}),
-                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                 ...(item.colours ? { colours: item.colours } : {}),
               })
             }

@@ -12,6 +12,12 @@ const KEY = 'photoCache.v1';
 // the other. Keyed rather than typed so existing athlete entries survive.
 const VENUE_PREFIX = 'venue:';
 export const venueKey = (team: string): string => `${VENUE_PREFIX}${team}`;
+// Venue-NAME entries (fixture.venue, Prompt 9b) live in their own
+// namespace: they resolve differently (direct entity→P18, no P115
+// hop) and their credit line is the place itself, not "home ground".
+const PLACE_PREFIX = 'place:';
+export const placeKey = (venueName: string): string =>
+  `${PLACE_PREFIX}${venueName}`;
 
 type Entry = { art: VenueArt | null; at: string };
 type Cache = Record<string, Entry>;
@@ -49,7 +55,9 @@ export function photoCredits(): Array<{ subject: string; art: VenueArt }> {
   return Object.entries(load())
     .filter(([, e]) => e.art !== null)
     .map(([key, e]) => ({
-      subject: key.startsWith(VENUE_PREFIX)
+      subject: key.startsWith(PLACE_PREFIX)
+        ? key.slice(PLACE_PREFIX.length)
+        : key.startsWith(VENUE_PREFIX)
         ? `${key.slice(VENUE_PREFIX.length)} — home ground`
         : key,
       art: e.art as VenueArt,

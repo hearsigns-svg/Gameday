@@ -1137,4 +1137,50 @@ in the Prompt 8 report.
   45-day edition window can cosmetically fuse two same-slug events'
   browse dates (0 live cases; calendar unaffected). Fixture id scheme
   UNCHANGED (the stop-gate never tripped). 659 tests, both TZs.
+  DEPLOYED 2026-08-03 under the NEW deploy rule (agent-run): 99 rows
+  live, 4 joint, Toronto canonical.
+
+### Prompt 9b — crests out, generated identity in  [x]
+
+Owner rulings executed. THE DEPLOY RULE CHANGED: the agent deploys
+(AGENTS.md updated — gate: full suite + both typechecks + build +
+review round; incremental only; migrations/destructive scripts remain
+owner-approved; reaper/TTL/console untouchable).
+
+- **CRESTS REMOVED** everywhere — rendering (browse, search, rail,
+  hero watermark, team pages), requesting and storing (fdorg `crest`,
+  TSDB `strBadge`; badge-by-name enrichment deleted; `strLeagueBadge`
+  never requested). Old stored follows tolerate their dead crestUrl
+  key; `identityFollow` ranks on brandColour alone.
+- **GENERATED TREATMENTS shipped in the same change**: `monogramOf`
+  initials as the entity mark (GlyphTile/rail/rows/team header), a
+  typographic hero watermark, and `sportPattern.tsx` — court / pitch /
+  ring / track / diamond line geometry as app-owned Views, rendered
+  over the teamTheme gradient, suppressed over photos. The emoji is no
+  longer an entity fallback; it remains only as SPORT identity.
+  Sim-verified: boxing hero shows ring ropes + "AM" watermark; rail
+  shows MF/WD/AR/PL monogram circles on palette tints.
+- **COLOUR WIRING**: fd.org kit colours now theme search rows AND
+  persist onto the follow; athletes gained `accentHue` (deterministic
+  golden-angle hash of the canonical id — review round caught the
+  1°-apart neighbours of a plain modulo; changed before any value was
+  stored), stored on new docs, derived at serve time for the 749
+  existing, rendered on athlete browse + search and persisted to
+  follows/page theme as hex.
+- **PHOTOGRAPHY**: fetch-time verification (`verifiedArt`) — allowed
+  licence AND named artist required, artist/licence/Commons source
+  page/verifiedAt recorded per image; Credits screen links per-image
+  sources and carries the TSDB data attribution their terms require.
+  `docs/IMAGERY.md`'s wrong "safe TSDB fields" claim corrected.
+- **VENUES**: TSDB `strVenue` → `fixture.venue` (141/148 PGA rounds
+  live-checked) with a DIRECT entity→P18 resolver in its own `place:`
+  cache namespace — the review round proved the team resolver's P115
+  hop dead for venue names before it could poison caches. TENNIS venue
+  photography HELD at the owner gate: ICS LOCATION is city+country,
+  not venues (proposal pending: tournament-name Wikidata lookup).
+- Review round: 7 findings, all fixed pre-deploy (venue resolver,
+  golden-angle hues, athlete colour through to follows/page,
+  Following-tile fallback, place-namespace credits, dead typings).
+  665 tests both TZs; deployed `--only functions`, confirmed live
+  (accentHue serving, crest fields absent from search).
 

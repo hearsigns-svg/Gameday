@@ -1039,3 +1039,45 @@
   identity argument; they converge only at the client dedupe umbrella.
   Server-side merging (one doc instead of collapse-at-render) remains
   unbuilt for both classes — F28's remaining half, its own brief.
+
+## Prompt 9b decisions (owner rulings, 2026-08-03)
+
+- 2026-08-03: CRESTS REMOVED, not deferred. Club badges and competition
+  logos are trademarks; TheSportsDB's terms license their service, not
+  that IP, and App Store 5.2.1 lets Apple demand an authorisation we
+  cannot produce. Crest rendering, requesting and storing are all gone
+  (browse, search, rail, hero watermark, team pages; fdorg `crest`,
+  TSDB `strBadge`; `strLeagueBadge` never requested). The GENERATED
+  TREATMENTS replace them everywhere in the same change: teamTheme
+  palettes (contrast already CI-pinned), typographic monograms as the
+  entity mark, sport-keyed abstract geometry (court/pitch/ring/track/
+  diamond line-patterns as app-owned Views) on the hero. The emoji is
+  no longer an entity fallback — it remains only as the mark for SPORT
+  rows, where it is identity, not fallback.
+- 2026-08-03: ATHLETES GET A COLOUR FIELD — `accentHue`, deterministic
+  from the canonical id, stored on new docs and derived at serve time
+  for pre-9b docs (same hash ⇒ no migration, no disagreement). Athlete
+  rows stopped being text-only. SearchScreen also stopped dropping the
+  fd.org kit colours it already had.
+- 2026-08-03: PHOTOGRAPHY IS "VERIFIED OR NOT AT ALL": fetch-time
+  verification requires an allowed licence AND a named artist, and
+  records artist + licence + Commons source page + verifiedAt per
+  image (an authorless licence tag is exactly the user-asserted
+  metadata that deserves no trust). Coverage is "photo when verifiably
+  licensed, treatment otherwise" — no percentage promised. TSDB data
+  attribution implemented on the Credits screen per their terms.
+- 2026-08-03: TENNIS VENUE PHOTOGRAPHY HELD at the owner's gate: the
+  ICS LOCATION field carries CITY+COUNTRY ("Melbourne Australia"), not
+  venue names — city-keyed photos would be generic-city, not
+  tournament venues. Proposal pending: key on the TOURNAMENT name via
+  Wikidata (location property → venue → image), city as disambiguator.
+  GOLF PROCEEDS: TSDB strVenue carries real venues ("Waialae Country
+  Club", 141/148 PGA 2026 rounds live-checked) — `venue` is now a
+  fixture fact and the hero photo path prefers it over the home-team
+  lookup.
+- 2026-08-03: PRE-LAUNCH PARTNER-IMAGERY LIST (record only — contact
+  NOBODY without an owner go): WTA press office (we run on their
+  approved API), World Athletics media team, the IBF (we consume their
+  ratings), Matchroom and Queensberry for their OWN promotional stills
+  (PBC's photos are Getty-licensed, so asking PBC routes to Getty; TSDB
+  is not a rights-holder — nothing to ask).

@@ -42,8 +42,21 @@ paid subscribers — but the tempting artwork is the dangerous artwork:
   ✓ Verified: Lewis Hamilton and Tyson Fury both HAVE cutouts and both
   have an EMPTY `strCreativeCommons`. Empty is a fail, not a pass.
 
-**Safe TSDB fields**: `strBadge`, `strLogo`, event `strThumb` /
-`strPoster` — used unmodified, credited to TSDB with a link back.
+**CORRECTED 2026-08-03 (Prompt 9b licensing research).** The earlier
+"safe TSDB fields" claim here was WRONG and is superseded:
+- `strBadge` / `strLogo` are club and competition TRADEMARKS. TSDB's
+  terms license their service, not that IP ("trademarked sports logos
+  must be used as-is" is an acknowledgement, not a grant), and App
+  Store guideline 5.2.1 lets Apple demand an authorisation we cannot
+  produce. REMOVED from the app by owner ruling; do not re-wire.
+- event `strThumb` / `strPoster` are user-uploaded, frequently
+  fan-made composites of agency photography with no traceable licence.
+  NOT wired; do not wire them.
+The only TSDB condition we do owe — crediting TSDB as the data source —
+is implemented on the Credits screen. Identity now comes from the
+GENERATED treatments (palette + monogram + sport geometry) plus
+verifiably-licensed Wikimedia photography with per-image
+artist/licence/source recorded at fetch time.
 
 ## The plan: a cached server-side waterfall
 

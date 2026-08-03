@@ -19,7 +19,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import {
+import { monogramOf,
   CalendarOffBanner,
   CarouselDots,
   EmptyState,
@@ -45,7 +45,7 @@ import {
   isFollowed,
   loadFollowables,
 } from '../data/followStore';
-import { useVenuePhoto } from '../useEntityPhoto';
+import { useVenuePhoto, useVenuePlacePhoto } from '../useEntityPhoto';
 import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -122,7 +122,6 @@ export default function HomeScreen({ navigation }: Props) {
             : 'Nothing scheduled',
           glyph: sport?.glyph ?? '🏟️',
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
-          ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
         };
       });
   }, [follows, upcoming, mode]);
@@ -150,15 +149,24 @@ export default function HomeScreen({ navigation }: Props) {
     // where there is one, and to the gradient floor otherwise.
     const homeTeam =
       item.homeTeam ?? (owner?.type === 'team' ? owner.label : null);
-    const art = useVenuePhoto(homeTeam);
+    // Venue NAME beats home-team lookup where a provider publishes one
+    // (TSDB strVenue — golf courses, stadiums): the photo is of the
+    // place, and the place resolves DIRECTLY (entity → P18) — the
+    // team resolver's P115 hop can never satisfy a venue name (review
+    // round). Hooks run unconditionally; the venue result wins.
+    const placeArt = useVenuePlacePhoto(item.venue);
+    const teamArt = useVenuePhoto(item.venue ? null : homeTeam);
+    const art = placeArt ?? teamArt;
     return (
       <HeroCard
         title={item.title}
         competition={item.competition}
         startUtc={item.startUtc}
         status={item.status}
-        glyph={sport?.glyph ?? '🏟️'}
-        crestUrl={owner?.crestUrl}
+        sportKey={item.sport}
+        monogram={monogramOf(
+          owner?.label ?? item.homeTeam ?? item.competition,
+        )}
         photoUrl={art?.url}
         photoCredit={
           art
@@ -259,8 +267,7 @@ export default function HomeScreen({ navigation }: Props) {
                 sportKey: item.sportKey,
                 followType: item.type,
                 ...(item.pollPath ? { pollPath: item.pollPath } : {}),
-                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
-                ...(item.brandColour ? { colours: item.brandColour } : {}),
+                      ...(item.brandColour ? { colours: item.brandColour } : {}),
               });
             }}
           />

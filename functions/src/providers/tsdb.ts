@@ -23,6 +23,11 @@ export interface TsdbEvent {
   strAwayTeam?: string | null;
   idLeague: string;
   strLeague: string;
+  // Real venue names where TSDB has them ("Waialae Country Club" on
+  // 141 of 148 PGA 2026 rounds, live-checked 2026-08-03) — the key the
+  // licensed venue-photography layer uses. A venue NAME is a fact, not
+  // imagery.
+  strVenue?: string | null;
 }
 
 function tsdbStatus(e: TsdbEvent, startUtc: string, hasTime: boolean): FixtureStatus {
@@ -86,6 +91,7 @@ export function normaliseTsdbEvent(
     title: e.strEvent,
     ...(e.strHomeTeam ? { homeTeam: e.strHomeTeam } : {}),
     ...(e.strAwayTeam ? { awayTeam: e.strAwayTeam } : {}),
+    ...(e.strVenue?.trim() ? { venue: e.strVenue.trim() } : {}),
     followKeys,
     startUtc,
     // TheSportsDB gives a venue-local TIME (strTimeLocal) but never a zone
@@ -135,7 +141,6 @@ export async function fetchTsdbLeagueSeasonFixtures(
 export interface TsdbTeamRow {
   id: string;
   name: string;
-  crestUrl?: string;
 }
 
 // lookup_all_teams.php 404s on the premium v1 path (verified live) —
@@ -148,12 +153,11 @@ export async function fetchTsdbLeagueTeams(
     apiKey,
     `search_all_teams.php?l=${encodeURIComponent(leagueName)}`,
   )) as {
-    teams: Array<{ idTeam: string; strTeam: string; strBadge?: string }> | null;
+    teams: Array<{ idTeam: string; strTeam: string }> | null;
   };
   return (body.teams ?? []).map((t) => ({
     id: t.idTeam,
     name: t.strTeam,
-    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
   }));
 }
 
@@ -163,7 +167,6 @@ export interface TsdbSearchHit {
   sport: string; // TSDB strSport, e.g. 'Basketball'
   leagueId: string; // idLeague
   league: string; // strLeague
-  crestUrl?: string;
 }
 
 // Free-text team search across all of TSDB — callers filter to leagues
@@ -182,7 +185,6 @@ export async function searchTsdbTeams(
       strSport?: string;
       idLeague?: string;
       strLeague?: string;
-      strBadge?: string;
     }> | null;
   };
   return (body.teams ?? []).map((t) => ({
@@ -191,6 +193,5 @@ export async function searchTsdbTeams(
     sport: t.strSport ?? '',
     leagueId: t.idLeague ?? '',
     league: t.strLeague ?? '',
-    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
   }));
 }

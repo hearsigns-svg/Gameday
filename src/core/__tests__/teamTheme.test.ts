@@ -86,3 +86,15 @@ it('gradients are dark poster surfaces in both modes', () => {
     }
   }
 });
+
+describe('hueToHex (Prompt 9b athlete accents)', () => {
+  const { hueToHex } = jest.requireActual<typeof import('../teamTheme')>(
+    '../teamTheme',
+  );
+  test('deterministic, hex-shaped, distinct across hues', () => {
+    expect(hueToHex(210)).toBe(hueToHex(210));
+    expect(hueToHex(0)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(hueToHex(0)).not.toBe(hueToHex(120));
+    expect(hueToHex(480)).toBe(hueToHex(120)); // wraps
+  });
+});

@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import {
+import { monogramOf,
   EmptyState,
   FollowButton,
   ListRow,
@@ -132,12 +132,12 @@ export default function FollowingScreen({ navigation }: Props) {
               <ListRow
                 title={item.label}
                 caption={captionFor(item, upcoming[item.key])}
-                glyph={sport?.glyph}
+                glyph={sport?.glyph ?? '·'}
                 tileTheme={teamTheme(
                   item.brandColour ?? sport?.accent ?? null,
                   mode,
                 )}
-                crestUrl={item.crestUrl}
+                monogram={monogramOf(item.label)}
                 accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
                 // A followed thing's own schedule was previously
                 // reachable only from browse or search — you could not
@@ -149,7 +149,6 @@ export default function FollowingScreen({ navigation }: Props) {
                     sportKey: item.sportKey,
                     followType: item.type,
                     ...(item.pollPath ? { pollPath: item.pollPath } : {}),
-                    ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                     ...(item.brandColour ? { colours: item.brandColour } : {}),
                   })
                 }

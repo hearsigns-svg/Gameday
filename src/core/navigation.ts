@@ -35,7 +35,6 @@ export type RootStackParamList = {
     name: string;
     sportKey: string;
     pollPath?: string;
-    crestUrl?: string;
     colours?: string;
     // Mirrors FollowableType (features/follows/domain/sportsConfig) —
     // inlined because core must not import from a feature. Reached from

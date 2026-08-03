@@ -23,7 +23,6 @@ export interface DirectoryTeam {
   id: number | string;
   name: string;
   key: string;
-  crestUrl?: string;
   colours?: string; // free-text kit colours ("Red / White")
 }
 
@@ -32,7 +31,6 @@ export interface SearchTeamHit {
   name: string;
   sportKey: string;
   league: string;
-  crestUrl?: string;
   colours?: string;
   pollPath?: string;
 }
@@ -43,6 +41,7 @@ export interface SearchAthleteHit {
   sportKey: string;
   grouping?: string; // 'Heavyweight' | 'WTA Tour' — caption material
   nextStartUtc?: string;
+  accentHue?: number; // generated colour identity (optional: deploy skew)
   // Pre-Prompt-8 servers sent a pollPath; athlete follows no longer
   // need one (the catalogue keeps their sources warm), but the field is
   // kept optional so deploy skew in either direction stays harmless.
@@ -60,6 +59,7 @@ export interface AthleteCard {
   countryCode?: string;
   grouping?: string;
   nextStartUtc?: string;
+  accentHue?: number; // generated colour identity (optional: deploy skew)
 }
 
 export interface AthleteBrowse {

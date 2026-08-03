@@ -45,7 +45,8 @@ export default function ThemeGalleryScreen() {
               competition="Worst-case League"
               startUtc={new Date(Date.now() + 3 * 86_400_000).toISOString()}
               status="scheduled"
-              glyph={c.glyph}
+              sportKey="soccer"
+              monogram="HT"
               theme={th}
             />
             <View

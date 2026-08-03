@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, SectionList, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
+import { monogramOf,
   CalendarOffBanner,
   EmptyState,
   EventRow,
@@ -169,7 +169,7 @@ export default function ScheduleScreen({ navigation }: Props) {
         timeText={timeLabel(item.startUtc, item.status)}
         tbc={isDateOnly(item.status)}
         glyph={sport?.glyph ?? '🏟️'}
-        crestUrl={owner?.crestUrl}
+        monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
         theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
         excluded={excludedIds.has(item.id)}
         onToggleExcluded={() => toggleExclude(item)}

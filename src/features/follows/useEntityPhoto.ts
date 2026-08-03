@@ -10,9 +10,10 @@ import {
   claimResolve,
   putPhoto,
   releaseResolve,
+  placeKey,
   venueKey,
 } from './data/photoCache';
-import { resolveAthletePhoto, resolveVenuePhoto } from './data/venueArt';
+import { resolveAthletePhoto, resolveVenueByName, resolveVenuePhoto } from './data/venueArt';
 
 type Resolver = (name: string) => Promise<
   Awaited<ReturnType<typeof resolveAthletePhoto>>
@@ -68,4 +69,18 @@ export function useVenuePhoto(
   homeTeam: string | null,
 ): VenueArt | null | undefined {
   return usePhoto(homeTeam ? venueKey(homeTeam) : null, homeTeam, resolveVenuePhoto);
+}
+
+// Venue-NAME photos (Prompt 9b): keyed on the provider-published venue
+// itself (TSDB strVenue — golf courses, stadiums) and resolved as a
+// DIRECT entity → P18 lookup. Separate namespace from the team→home-
+// ground path, whose resolver a venue name can never satisfy.
+export function useVenuePlacePhoto(
+  venueName: string | null | undefined,
+): VenueArt | null | undefined {
+  return usePhoto(
+    venueName ? placeKey(venueName) : null,
+    venueName ?? null,
+    resolveVenueByName,
+  );
 }

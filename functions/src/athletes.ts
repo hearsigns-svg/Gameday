@@ -44,6 +44,10 @@ export type AthleteProvenance = 'roster' | 'fixture_derived' | 'review';
 
 export interface Athlete {
   id: string; // athlete_000184 — provider-agnostic, and THE follow key
+  // Deterministic accent hue (accentHueOf) — the generated colour
+  // identity. Stored on new docs; derived at serve time for docs
+  // created before the field existed.
+  accentHue?: number;
   displayName: string;
   searchName: string; // normalised displayName
   aliases: string[]; // normalised alternate forms, from identities
@@ -82,6 +86,22 @@ export function athleteIdFrom(n: number): string {
 
 export const isCanonicalAthleteKey = (key: string): boolean =>
   /^athlete_\d{6}$/.test(key);
+
+// A stable per-athlete accent hue (0–359), assigned at creation from
+// the canonical id so every athlete gets a distinct, permanent colour
+// treatment with zero provider input (Prompt 9b — athlete rows were
+// text-only). Deterministic: the same id always hashes to the same
+// hue, so a re-serve or a re-derive for pre-9b docs cannot disagree.
+export function accentHueOf(id: string): number {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  // Golden-angle spread: sequential canonical ids hash to NEIGHBOURING
+  // values, and neighbouring hues are perceptually one colour — the
+  // review round measured 1° steps across a seeded roster. Multiplying
+  // by the golden angle puts adjacent ids ~137.5° apart. Safe to change
+  // now and never again: zero accentHue values exist in production yet.
+  return Math.floor((h * 137.508) % 360);
+}
 
 // ─── The index the matcher runs against ───────────────────────────────
 
@@ -389,6 +409,7 @@ export function newAthlete(
   const hasId = Boolean(spec.ref.source && spec.ref.externalId);
   return {
     id,
+    accentHue: accentHueOf(id),
     displayName: spec.ref.name,
     searchName: normaliseName(spec.ref.name),
     aliases: [],
@@ -611,6 +632,7 @@ export function rosterAthlete(
 ): Athlete {
   return {
     id,
+    accentHue: accentHueOf(id),
     displayName: e.name,
     searchName: normaliseName(e.name),
     aliases: [],

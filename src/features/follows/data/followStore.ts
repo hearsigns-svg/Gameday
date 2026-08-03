@@ -16,7 +16,6 @@ export interface Followable {
   // Identity artwork/colour captured at follow time where the provider
   // offers it — the favourites provide the identity. Colour is a raw
   // hex or kit-colour text; it only reaches UI slots via teamTheme().
-  crestUrl?: string;
   brandColour?: string;
   // NOTE: venue photography is no longer cached here. A ground belongs
   // to the HOME team of a given fixture, not to whoever you follow, so

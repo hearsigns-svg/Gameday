@@ -15,6 +15,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { SportPattern } from './sportPattern';
 import { radius, spacing, type, useTheme } from './tokens';
 import { TeamTheme } from './teamTheme';
 import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
@@ -22,25 +23,47 @@ import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
 // ---------------------------------------------------------------------------
 // Identity atoms
 
-// RN Image cannot rasterise SVG; skip those crests and let the glyph
-// fallback carry the identity (the fallback is the design).
-export const usableCrest = (url: string | undefined): string | undefined =>
+// RN Image cannot rasterise SVG; skip those (photo URLs may carry
+// query strings — strip before testing the extension).
+export const usableImage = (url: string | undefined): string | undefined =>
   url && !url.toLowerCase().split('?')[0].endsWith('.svg') ? url : undefined;
 
-// Rounded-square sport/entity mark: quiet container tint + crest where
-// the provider gives us one, glyph otherwise.
+// A typographic monogram: the entity's initials, the generated
+// identity mark that replaced crests (Prompt 9b — badges are the
+// clubs' trademarks; type and palette are ours). Two significant
+// words → two initials; one word → its first two letters.
+export function monogramOf(label: string): string {
+  const words = label.trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w));
+  if (words.length === 0) return '·';
+  const letterOf = (w: string) =>
+    [...w].find((c) => /[\p{L}\p{N}]/u.test(c)) ?? '';
+  if (words.length === 1) {
+    const w = [...words[0]].filter((c) => /[\p{L}\p{N}]/u.test(c));
+    return (w[0] ?? '·').toUpperCase() + (w[1] ?? '').toUpperCase();
+  }
+  return (letterOf(words[0]) + letterOf(words[1])).toUpperCase();
+}
+
+// Rounded-square entity mark: quiet container tint + a licensed photo
+// where one exists (athlete portraits), a MONOGRAM for entities, the
+// sport glyph only where the mark stands for the SPORT itself — the
+// emoji stopped being an entity fallback in Prompt 9b.
 export function GlyphTile(props: {
   glyph: string;
   theme: TeamTheme;
-  crestUrl?: string;
+  // Entity initials — when present, the tile renders these rather than
+  // the glyph. The glyph remains the mark for SPORT rows only.
+  monogram?: string;
+  // Licence-gated photo (athlete portraits). Never a crest.
+  imageUrl?: string;
   size?: number;
   // Circular: reserved for marks that stand for a TEAM OR PERSON rather
   // than an event, so the two never read as the same kind of thing.
   round?: boolean;
 }) {
   const size = props.size ?? 40;
-  const [crestFailed, setCrestFailed] = useState(false);
-  const crest = crestFailed ? undefined : usableCrest(props.crestUrl);
+  const [imageFailed, setImageFailed] = useState(false);
+  const image = imageFailed ? undefined : usableImage(props.imageUrl);
   return (
     <View
       accessible={false}
@@ -53,14 +76,26 @@ export function GlyphTile(props: {
         justifyContent: 'center',
       }}
     >
-      {crest ? (
+      {image ? (
         <Image
-          source={{ uri: crest }}
+          source={{ uri: image }}
           resizeMode="contain"
-          onError={() => setCrestFailed(true)} // broken art → glyph, never a blank tile
+          onError={() => setImageFailed(true)} // broken art → mark, never a blank tile
           style={{ width: size * 0.72, height: size * 0.72 }}
           accessible={false}
         />
+      ) : props.monogram ? (
+        <Text
+          style={{
+            fontSize: size * 0.34,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+            color: props.theme.onContainer,
+          }}
+          accessible={false}
+        >
+          {props.monogram}
+        </Text>
       ) : (
         <Text style={{ fontSize: size * 0.5 }} accessible={false}>
           {props.glyph}
@@ -85,7 +120,6 @@ export interface FollowRailItem {
   caption: string;
   glyph: string;
   theme: TeamTheme;
-  crestUrl?: string;
 }
 
 export function FollowRail(props: {
@@ -113,7 +147,7 @@ export function FollowRail(props: {
           <GlyphTile
             glyph={item.glyph}
             theme={item.theme}
-            crestUrl={item.crestUrl}
+            monogram={monogramOf(item.label)}
             size={64}
             round
           />
@@ -184,9 +218,13 @@ export function HeroCard(props: {
   competition: string;
   startUtc: string;
   status: string;
-  glyph: string;
+  // Sport key drives the generated pattern layer; the monogram is the
+  // typographic identity mark. Crests are gone (Prompt 9b ruling —
+  // trademarks), and the emoji watermark went with them: the generated
+  // treatment IS the identity now.
+  sportKey?: string;
+  monogram?: string;
   theme: TeamTheme;
-  crestUrl?: string;
   // Venue photograph layer (docs/IMAGERY.md): the photo renders
   // UNMODIFIED in its own layer — the gradient scrim and type are
   // separate overlays (baking a composite would create a ShareAlike
@@ -196,7 +234,6 @@ export function HeroCard(props: {
   style?: StyleProp<ViewStyle>; // carousel overrides width/margins
 }) {
   const th = props.theme;
-  const crest = usableCrest(props.crestUrl);
   const [photoFailed, setPhotoFailed] = useState(false);
   const photo = photoFailed ? undefined : props.photoUrl;
   const dateOnly = isDateOnly(props.status);
@@ -224,32 +261,19 @@ export function HeroCard(props: {
         // type as well. Full-strength poster when there is no photo.
         style={[styles.heroFill, photo ? styles.heroScrim : null]}
       />
+      {/* Generated identity layer: sport geometry + type. Suppressed
+          over a photo — a photo needs no texture, and the pattern over
+          photography reads as damage. */}
+      {!photo && props.sportKey ? (
+        <SportPattern sportKey={props.sportKey} color={th.onGradient} />
+      ) : null}
       <View style={styles.hero}>
-        {/* The identity we have, in preference order. A club badge says
-            whose game this is; the sport emoji says only "football",
-            which the competition line above already said. The emoji is
-            the floor, not the default. */}
-        {crest ? (
-          <Image
-            source={{ uri: crest }}
-            resizeMode="contain"
-            style={styles.heroWatermarkCrest}
-            accessible={false}
-          />
-        ) : (
+        {!photo && props.monogram ? (
           <Text style={styles.heroWatermark} accessible={false}>
-            {props.glyph}
+            {props.monogram}
           </Text>
-        )}
+        ) : null}
         <View style={styles.heroTop}>
-          {crest ? (
-            <Image
-              source={{ uri: crest }}
-              resizeMode="contain"
-              style={{ width: 28, height: 28 }}
-              accessible={false}
-            />
-          ) : null}
           <Text
             style={[type.label, { color: th.onGradient, opacity: 0.85, flex: 1 }]}
             numberOfLines={1}
@@ -297,7 +321,8 @@ export function EventRow(props: {
   timeText: string;
   glyph: string;
   theme: TeamTheme;
-  crestUrl?: string;
+  // Entity initials for the tile — the generated mark (Prompt 9b).
+  monogram?: string;
   tbc?: boolean;
   // Per-event opt-out: greyed-but-visible with a restore affordance —
   // a removed event must never just vanish (owner ruling).
@@ -325,7 +350,8 @@ export function EventRow(props: {
         <GlyphTile
           glyph={props.glyph}
           theme={props.theme}
-          crestUrl={props.participantPhotoUrl ?? props.crestUrl}
+          monogram={props.monogram}
+          imageUrl={props.participantPhotoUrl}
         />
         <View style={{ flex: 1 }}>
           <Text
@@ -408,7 +434,8 @@ export function ListRow(props: {
   caption?: string;
   glyph?: string;
   tileTheme?: TeamTheme; // when present the glyph renders in a GlyphTile
-  crestUrl?: string;
+  // Entity initials — the generated mark; rendered instead of the glyph.
+  monogram?: string;
   right?: ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
@@ -435,7 +462,7 @@ export function ListRow(props: {
           <GlyphTile
             glyph={props.glyph}
             theme={props.tileTheme}
-            crestUrl={props.crestUrl}
+            monogram={props.monogram}
           />
         ) : (
           <Text style={[type.heading, styles.glyph]} accessible={false}>
@@ -838,23 +865,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     fontSize: 10,
   },
+  // The typographic watermark: the entity's monogram set huge and
+  // quiet — the generated identity that replaced crest and emoji
+  // watermarks alike (Prompt 9b). Colour comes from the text's own
+  // default; opacity keeps it texture, not content.
   heroWatermark: {
     position: 'absolute',
-    right: -18,
-    bottom: -22,
-    fontSize: 130,
-    opacity: 0.12,
-  },
-  // Same optical weight as the emoji watermark, inset rather than bled
-  // off the edge: a crest cropped in half reads as a rendering fault,
-  // where a cropped emoji reads as texture.
-  heroWatermarkCrest: {
-    position: 'absolute',
-    right: -6,
-    bottom: -10,
-    width: 132,
-    height: 132,
-    opacity: 0.16,
+    right: -10,
+    bottom: -30,
+    fontSize: 150,
+    fontWeight: '800',
+    letterSpacing: -4,
+    opacity: 0.14,
+    color: '#FFFFFF',
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
   eventRow: {

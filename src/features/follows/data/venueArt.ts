@@ -5,12 +5,7 @@
 // Every failure returns null: the tone-mapped gradient is the designed
 // floor, not an error state.
 
-import {
-  commonsThumbUrl,
-  isAllowedLicence,
-  stripHtml,
-  VenueArt,
-} from '../domain/venueArtRules';
+import { VenueArt, verifiedArt } from '../domain/venueArtRules';
 
 const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
@@ -83,16 +78,18 @@ async function artFromCommonsFile(file: string): Promise<VenueArtResult> {
     };
     const pages = info.query?.pages ?? {};
     const meta = Object.values(pages)[0]?.imageinfo?.[0]?.extmetadata;
-    const licence = meta?.LicenseShortName?.value;
-    if (!isAllowedLicence(licence)) return { status: 'none' };
-    return {
-      status: 'found',
-      art: {
-        url: commonsThumbUrl(file),
-        artist: stripHtml(meta?.Artist?.value),
-        licence: licence ?? '',
-      },
-    };
+    // Fetch-time verification (Prompt 9b): licence allowlist AND a
+    // named artist, with the source page recorded per image — an
+    // authorless licence tag is exactly the user-asserted metadata
+    // that deserves no trust.
+    const art = verifiedArt({
+      fileTitle: file,
+      artistHtml: meta?.Artist?.value,
+      licenceShort: meta?.LicenseShortName?.value,
+      nowIso: new Date().toISOString(),
+    });
+    if (!art) return { status: 'none' };
+    return { status: 'found', art };
   } catch {
     // Transient: the gradient floor carries this render, and the next
     // one retries.
@@ -109,6 +106,36 @@ export async function resolveVenuePhoto(
     const file = await claimValue(hit.venue, 'P18');
     if (!file) return { status: 'none' };
     return artFromCommonsFile(file);
+  } catch {
+    return { status: 'failed' };
+  }
+}
+
+// VENUE-NAME photos (Prompt 9b): providers like TSDB publish the real
+// venue name ("Waialae Country Club"), which is a DIRECT entity — no
+// team→P115 hop. The review round proved the team resolver dead for
+// these (venues carry no P115): this one searches the name and takes
+// P18 from a venue-shaped candidate only, so a venue name that
+// happens to match a painting or a band can never supply a "photo of
+// the ground". Coverage is partial by nature (many venues carry no
+// P18) — the framing is photo-when-verifiable, treatment otherwise.
+const VENUE_SHAPED =
+  /stadium|arena|ground|golf|course|club|park|venue|circuit|track|hall|centre|center|field|speedway|links/;
+
+export async function resolveVenueByName(
+  venueName: string,
+): Promise<VenueArtResult> {
+  try {
+    const d = (await getJson(
+      `${WD}?action=wbsearchentities&search=${encodeURIComponent(venueName)}&language=en&type=item&limit=3&format=json&origin=*`,
+    )) as { search?: Array<{ id: string; description?: string }> };
+    for (const cand of d.search ?? []) {
+      const desc = (cand.description ?? '').toLowerCase();
+      if (!VENUE_SHAPED.test(desc)) continue;
+      const file = await claimValue(cand.id, 'P18');
+      if (file) return artFromCommonsFile(file);
+    }
+    return { status: 'none' };
   } catch {
     return { status: 'failed' };
   }

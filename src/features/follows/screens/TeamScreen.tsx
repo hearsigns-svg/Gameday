@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import {
+import { monogramOf,
   EventRow,
   FollowButton,
   GlyphTile,
@@ -45,7 +45,7 @@ type Props = RootScreenProps<'Team'>;
 const polledThisSession = new Set<string>();
 
 export default function TeamScreen({ navigation, route }: Props) {
-  const { teamKey, name, sportKey, pollPath, crestUrl, colours, followType } =
+  const { teamKey, name, sportKey, pollPath, colours, followType } =
     route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -75,7 +75,6 @@ export default function TeamScreen({ navigation, route }: Props) {
     // re-follow from here must not rewrite what it is.
     type: followType ?? 'team',
     ...(pollPath ? { pollPath } : {}),
-    ...(crestUrl ? { crestUrl } : {}),
     ...(brandColour ? { brandColour } : {}),
   };
 
@@ -185,7 +184,7 @@ export default function TeamScreen({ navigation, route }: Props) {
         <GlyphTile
           glyph={sport?.glyph ?? '🏟️'}
           theme={theme}
-          crestUrl={crestUrl}
+          monogram={monogramOf(name)}
           size={56}
         />
         <View style={{ flex: 1 }}>
@@ -238,7 +237,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               timeText={timeLabel(f.startUtc, f.status)}
               tbc={isDateOnly(f.status)}
               glyph={sport?.glyph ?? '🏟️'}
-              crestUrl={crestUrl}
+              monogram={monogramOf(f.homeTeam ?? name)}
               theme={theme}
               excluded={following ? excludedIds.has(f.id) : undefined}
               onToggleExcluded={following ? () => toggleExclude(f) : undefined}

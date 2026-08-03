@@ -460,3 +460,29 @@ describe('F1 driver stamping', () => {
     expect(stampDriverKeys([f], [])[0].followKeys).toEqual(['f1-series-1']);
   });
 });
+
+describe('accentHue — the generated colour identity (Prompt 9b)', () => {
+  const { accentHueOf } = jest.requireActual<typeof import('../athletes')>(
+    '../athletes',
+  );
+  test('deterministic, in range, distinct across neighbours, present on new docs', () => {
+    expect(accentHueOf('athlete_000184')).toBe(accentHueOf('athlete_000184'));
+    for (const id of ['athlete_000001', 'athlete_000002', 'athlete_000750']) {
+      const h = accentHueOf(id);
+      expect(h).toBeGreaterThanOrEqual(0);
+      expect(h).toBeLessThan(360);
+    }
+    // Sequential ids must land PERCEPTUALLY apart, not 1° neighbours
+    // (review round): golden-angle spread guarantees it.
+    const d = Math.abs(
+      accentHueOf('athlete_000001') - accentHueOf('athlete_000002'),
+    );
+    expect(Math.min(d, 360 - d)).toBeGreaterThan(30);
+    const a = rosterAthlete(
+      'athlete_000123',
+      { source: 'wta', externalId: '1', name: 'A B', sport: 'tennis' },
+      NOW,
+    );
+    expect(a.accentHue).toBe(accentHueOf('athlete_000123'));
+  });
+});

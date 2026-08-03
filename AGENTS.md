@@ -98,15 +98,31 @@ source of truth for build state — never chat history.
 - `docs/DECISIONS.md` — append-only decision log
 - `docs/PLAN.md` — dependency-ordered milestones + verification, current state
 
-## Standing conventions (owner, 2026-07-31)
+## Standing conventions (owner, 2026-07-31; deploy rule revised 2026-08-03)
 
 These apply to every stage. They do not need restating in a brief.
 
-1. **Commands are the owner's to run.** Anything the owner needs to run
-   goes in its own fenced block, complete and pasteable — no placeholders,
-   no `<your-project-id>`, one command per block — grouped under a
-   `## Run these` heading at the end of the report. NEVER run a deploy or
-   any outward-facing production change yourself.
+1. **You deploy** (owner ruling 2026-08-03, supersedes the original
+   commands-are-the-owner's rule). Run deploys yourself rather than
+   handing over commands — deploy is a step in the work, not a reflex:
+   - Only after the FULL test suite, both typechecks and the functions
+     build are green, and only after the adversarial review round has
+     run and its findings are fixed.
+   - Announce what and why before; confirm the outcome after, including
+     anything that failed.
+   - Incremental only — `--only functions`, `--only firestore:rules`,
+     `--only firestore:indexes`. Never a bare `firebase deploy`.
+   - **Migrations and destructive scripts stay the owner's.** Anything
+     that deletes, soft-cancels or rewrites existing production
+     documents: dry-run, show the output, wait for explicit approval
+     before `--apply`. Deploying code is the agent's; changing data
+     that already exists is the owner's.
+   - Never enable the reaper (`REAPER_ENABLED` stays false until the
+     owner says so in a message, not a brief). Never touch TTL policies
+     or anything in the Firebase / Google Cloud console.
+   - A failed deploy is reported, not retried blind.
+   Anything else the owner must run personally still goes in a
+   `## Run these` block — complete, pasteable, one command per block.
 2. **Internal gates, not external checkpoints.** Each brief names the
    specific conditions under which to stop and ask. Outside those
    conditions, keep going: do not stop after each sub-item for approval.

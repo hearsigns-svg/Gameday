@@ -20,9 +20,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FollowButton, ListRow, SectionHeader } from '../../../core/components';
+import { FollowButton, ListRow, monogramOf, SectionHeader } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
+import { hueToHex, teamTheme } from '../../../core/teamTheme';
+import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
@@ -70,6 +72,7 @@ function captionFor(a: AthleteCard): string {
 
 export default function AthleteListScreen({ navigation, route }: Props) {
   const t = useTheme();
+  const mode = useColorSchemeMode();
   const sport = sportByKey(route.params.sportKey);
   const [browse, setBrowse] = useState<AthleteSection[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +136,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               sportKey: h.sportKey,
               ...(h.grouping ? { grouping: h.grouping } : {}),
               ...(h.nextStartUtc ? { nextStartUtc: h.nextStartUtc } : {}),
+              ...(h.accentHue !== undefined ? { accentHue: h.accentHue } : {}),
             })),
         );
       })();
@@ -145,6 +149,9 @@ export default function AthleteListScreen({ navigation, route }: Props) {
     label: a.name,
     sportKey: a.sportKey,
     type: 'athlete',
+    ...(a.accentHue !== undefined
+      ? { brandColour: hueToHex(a.accentHue) }
+      : {}),
     // No pollPath, deliberately: athlete follows need no poll route of
     // their own — the catalogue keeps their sources warm, and the
     // appearance carrying this athlete's canonical key reaches the
@@ -236,6 +243,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
             <ListRow
               title={a.name}
               caption={captionFor(a)}
+              glyph={sport?.glyph ?? '·'}
+              monogram={monogramOf(a.name)}
+              tileTheme={teamTheme(
+                a.accentHue !== undefined
+                  ? hueToHex(a.accentHue)
+                  : (sport?.accent ?? null),
+                mode,
+              )}
               accessibilityLabel={`${a.name}, open athlete page`}
               onPress={() =>
                 navigation.navigate('Team', {
@@ -243,6 +258,11 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                   name: a.name,
                   sportKey: a.sportKey,
                   followType: 'athlete',
+                  // Hex rides the colours param; TeamScreen's hex
+                  // detection turns it into the page theme.
+                  ...(a.accentHue !== undefined
+                    ? { colours: hueToHex(a.accentHue) }
+                    : {}),
                 })
               }
               right={

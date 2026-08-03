@@ -15,7 +15,6 @@ export interface SearchTeamHit {
   name: string;
   sportKey: string; // client sportsConfig key
   league: string; // display label
-  crestUrl?: string;
   colours?: string;
   pollPath?: string; // only where the client can't derive it (tsdb)
 }
@@ -48,7 +47,6 @@ interface DirectoryDocTeam {
   name?: string;
   key?: string;
   aliases?: string[];
-  crestUrl?: string;
   colours?: string;
 }
 
@@ -127,7 +125,6 @@ export async function searchTeams(
         name: t.name,
         sportKey: doc.sportKey,
         league: doc.league,
-        ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
         ...(t.colours ? { colours: t.colours } : {}),
         ...(doc.tsdbPollPath ? { pollPath: doc.tsdbPollPath } : {}),
       });
@@ -150,7 +147,6 @@ export async function searchTeams(
         sportKey: served.sportKey,
         league: served.label,
         pollPath: served.pollPath,
-        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
       });
     }
   } catch {
@@ -183,7 +179,7 @@ export async function searchTeams(
 // the appearance carrying this athlete's canonical key flows to the
 // follower through the ordinary query path.
 
-import { Athlete } from './athletes';
+import { accentHueOf, Athlete } from './athletes';
 import { loadAthletes } from './rosterStore';
 
 export interface SearchAthleteHit {
@@ -192,6 +188,7 @@ export interface SearchAthleteHit {
   sportKey: string;
   grouping?: string; // 'Heavyweight' | 'WTA Tour' — the caption source
   nextStartUtc?: string;
+  accentHue: number; // generated colour identity (Prompt 9b)
 }
 
 const athleteHit = (a: Athlete): SearchAthleteHit => ({
@@ -200,6 +197,7 @@ const athleteHit = (a: Athlete): SearchAthleteHit => ({
   sportKey: a.sport,
   ...(a.grouping ? { grouping: a.grouping } : {}),
   ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+  accentHue: a.accentHue ?? accentHueOf(a.id),
 });
 
 // Substring match on the normalised name and aliases, same as team
@@ -251,6 +249,7 @@ export interface AthleteCard {
   countryCode?: string;
   grouping?: string;
   nextStartUtc?: string;
+  accentHue: number; // generated colour identity (Prompt 9b)
 }
 
 export interface AthleteBrowse {
@@ -262,6 +261,7 @@ const card = (a: Athlete): AthleteCard => ({
   key: a.id,
   name: a.displayName,
   sportKey: a.sport,
+  accentHue: a.accentHue ?? accentHueOf(a.id),
   ...(a.rank !== undefined ? { rank: a.rank } : {}),
   ...(a.championOf !== undefined ? { championOf: a.championOf } : {}),
   ...(a.countryCode ? { countryCode: a.countryCode } : {}),

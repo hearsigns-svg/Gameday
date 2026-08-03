@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {
+import { monogramOf,
   FollowButton,
   ListRow,
   SectionHeader,
@@ -21,7 +21,7 @@ import {
 import { RootScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
-import { teamTheme } from '../../../core/teamTheme';
+import { hueToHex, teamTheme } from '../../../core/teamTheme';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
@@ -48,7 +48,6 @@ interface Row {
   caption: string;
   sportKey: string;
   followable?: Followable; // absent → row navigates instead
-  crestUrl?: string;
 }
 
 function localMatches(q: string): { sports: Row[]; comps: Row[] } {
@@ -180,15 +179,13 @@ export default function SearchScreen({ navigation }: Props) {
       title: hit.name,
       caption: `${hit.league} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
       sportKey: hit.sportKey,
-      ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
       followable: {
         key: hit.key,
         label: hit.name,
         sportKey: hit.sportKey,
         type: 'team' as const,
         ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
-        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
-        ...(colourFromKitText(hit.colours)
+          ...(colourFromKitText(hit.colours)
           ? { brandColour: colourFromKitText(hit.colours) as string }
           : {}),
       },
@@ -207,6 +204,11 @@ export default function SearchScreen({ navigation }: Props) {
         sportKey: hit.sportKey,
         type: 'athlete' as const,
         ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
+        // The generated colour identity persists onto the follow, so
+        // the rail, Home and the athlete page inherit it (Prompt 9b).
+        ...(hit.accentHue !== undefined
+          ? { brandColour: hueToHex(hit.accentHue) }
+          : {}),
       },
     }));
     // Competition dedupe: config cups also appear in the soccer
@@ -301,8 +303,13 @@ export default function SearchScreen({ navigation }: Props) {
                 title={item.title}
                 caption={item.caption}
                 glyph={sport?.glyph ?? '🏟️'}
-                tileTheme={teamTheme(sport?.accent ?? null, mode)}
-                crestUrl={item.crestUrl}
+                tileTheme={teamTheme(
+                  item.followable?.brandColour ?? sport?.accent ?? null,
+                  mode,
+                )}
+                monogram={
+                  item.kind === 'sport' ? undefined : monogramOf(item.title)
+                }
                 accessibilityLabel={`${item.title}, ${item.caption}`}
                 onPress={
                   (item.kind === 'team' || item.kind === 'athlete') &&
@@ -321,7 +328,6 @@ export default function SearchScreen({ navigation }: Props) {
                           ...(item.followable!.pollPath
                             ? { pollPath: item.followable!.pollPath }
                             : {}),
-                          ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                         })
                     : item.followable
                       ? undefined

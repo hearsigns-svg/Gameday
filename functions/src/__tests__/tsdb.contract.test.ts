@@ -49,3 +49,26 @@ describe('normaliseTsdbEvent against real payloads', () => {
     expect(f.status).toBe('postponed');
   });
 });
+
+test('strVenue becomes the fixture venue fact (Prompt 9b) — absent stays absent', () => {
+  const { normaliseTsdbEvent } = jest.requireActual<
+    typeof import('../providers/tsdb')
+  >('../providers/tsdb');
+  const base = {
+    idEvent: '99', strEvent: 'Sony Open in Hawaii Round 1',
+    dateEvent: '2026-01-15', strTime: '18:00:00', idLeague: '4425',
+    strLeague: 'PGA Tour',
+  };
+  const withVenue = normaliseTsdbEvent(
+    { ...base, strVenue: 'Waialae Country Club' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  expect(withVenue.venue).toBe('Waialae Country Club');
+  const without = normaliseTsdbEvent(base, 'golf', 5, '2026-08-03T00:00:00.000Z');
+  expect(without.venue).toBeUndefined();
+  const blank = normaliseTsdbEvent(
+    { ...base, strVenue: '  ' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  expect(blank.venue).toBeUndefined();
+});

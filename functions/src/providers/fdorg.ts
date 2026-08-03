@@ -134,7 +134,6 @@ export interface FdDirectoryTeam {
   id: number;
   name: string;
   aliases: string[]; // every published form, for cross-provider matching
-  crestUrl?: string; // fd.org crest (PNG or SVG — client filters)
   colours?: string; // clubColors free text, e.g. "Red / White"
 }
 
@@ -152,7 +151,6 @@ export async function fetchFdCompetitionTeams(
       name: string;
       shortName?: string;
       tla?: string;
-      crest?: string;
       clubColors?: string;
     }>;
   };
@@ -165,7 +163,6 @@ export async function fetchFdCompetitionTeams(
     aliases: [t.name, t.shortName].filter(
       (n): n is string => typeof n === 'string' && n.length > 0,
     ),
-    ...(t.crest ? { crestUrl: t.crest } : {}),
     ...(t.clubColors ? { colours: t.clubColors } : {}),
   }));
 }

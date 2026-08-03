@@ -321,6 +321,10 @@ export interface SnapshotFixture {
   sport: string;
   competition: string;
   followKeys: string[];
+  // Venue NAME where a provider publishes one (TSDB strVenue) — the
+  // key the licensed venue-photography layer prefers over the
+  // home-team lookup (Prompt 9b).
+  venue?: string;
   // Team sports only. Carried so the app can identify a fixture by its
   // PARTICIPANTS rather than by whichever follow happened to pull it in:
   // a competition follow knows the league, not who is playing, which is
@@ -361,5 +365,6 @@ export function upcomingSnapshot(
       followKeys: f.followKeys,
       ...(f.homeTeam !== undefined ? { homeTeam: f.homeTeam } : {}),
       ...(f.awayTeam !== undefined ? { awayTeam: f.awayTeam } : {}),
+      ...(f.venue !== undefined ? { venue: f.venue } : {}),
     }));
 }
