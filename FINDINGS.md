@@ -471,14 +471,26 @@ even a built entries layer stays date_only. The populated startList row
 shape remains unseen. Per the owner's Prompt 5b ruling: stays NOT
 IMPLEMENTED until a WA Series meeting's live week supplies real data.**
 
-### F28 — Cross-source combat appearances would not deduplicate
+### F28 — PARTIALLY CLOSED 2026-08-03: cross-source combat appearances would not deduplicate
 `isSameFixture` requires the same competition string; a PBC bout
 appearance (`competition: 'Premier Boxing Champions'`) and a
 review-queue bout for the same real fight (`competition: <promoter>`)
 would not merge, so an athlete follower could get two events if both
 sources ever covered one card. Today the overlap is empty by
 construction (PBC cards are not submitted to review), so this is
-recorded rather than engineered around.
+recorded rather than engineered around. **OBSERVED ON-DEVICE
+2026-08-03 in a wider variant: a "Major fight cards" (TSDB) follow
+plus fighter follows put the SAME fight in the carousel twice —
+the TSDB card ("Time TBC") beside the PBC bout ("23:00") — and both
+in the calendar. CLOSED at the CLIENT: dedupeSameBout
+(fixtures/domain/sameBout.ts) collapses person-sport fixtures whose
+normalised participant pair matches within 36h to the best-informed
+doc (exact > nominal > date_only, appearance over card, pinned never
+dropped), applied before both the planner and the snapshot — verified
+on-device, carousel and sqlite calendar both converged to one entry.
+The SERVER-side merge remains unbuilt: relaxing the same-competition
+guard for person sports, and a parent-vs-appearance merge, both need
+their own brief.**
 
 ### F29 — Stale athlete keys persist on past cards outside re-poll windows
 Prompt 5 moves athlete followKeys from cards to appearances as each

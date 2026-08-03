@@ -5,6 +5,7 @@
 import { err, messageOf, ok, Result } from '../../core/result';
 import { readJson, writeJson } from '../../core/storage';
 import { Fixture } from '../fixtures/domain/fixture';
+import { dedupeSameBout } from '../fixtures/domain/sameBout';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowKeys } from '../follows/data/followStore';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
@@ -288,8 +289,11 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
   ) {
     return err({ kind: 'suspect-empty' });
   }
+  // One real fight, one entry: a cards-follow and a fighter-follow can
+  // fetch the same bout from two providers (sameBout.ts).
+  const deduped = dedupeSameBout(fixtures.value.fixtures, pinnedIds());
   writePresentationState(
-    fixtures.value.fixtures,
+    deduped,
     follows,
     prefs,
     horizonStartFrom(Date.now()),
@@ -548,8 +552,14 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     const horizonStart = horizonStartFrom(Date.now());
     const excluded = loadExclusions();
     const pins = pinnedIds();
+    // One real fight, one calendar entry: the same bout arriving from
+    // two providers (a TSDB card and a PBC bout doc) must not become
+    // two events — the planner sees only the best-informed doc, and
+    // the other's ledgered event drains as an ordinary delete
+    // (sameBout.ts; pinned docs are never dropped).
+    const planFixtures = dedupeSameBout(fixtures.value.fixtures, pins);
     const ops = planSync(
-      fixtures.value.fixtures,
+      planFixtures,
       ledger,
       follows,
       prefs,
@@ -648,7 +658,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // never shows a fixture the calendar doesn't want (cancelled,
     // race-only excluded), and never runs ahead of a sync that failed.
     writePresentationState(
-      fixtures.value.fixtures,
+      planFixtures,
       follows,
       prefs,
       horizonStart,

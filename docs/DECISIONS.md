@@ -995,3 +995,16 @@
   Athletics world rankings live on the LEGACY server-rendered app, not
   the __NEXT_DATA__ surface — parsing them is HTML-soup and awaits a
   ruling; the athlete-level coverageNote says so.
+- 2026-08-03: ONE REAL FIGHT, ONE CALENDAR ENTRY — deduped at the
+  CLIENT, not by the reconciler. In combat sports the participant pair
+  IS the event's identity (the same two people do not fight twice in a
+  day under different banners), so fixtures in a person sport whose
+  normalised pair matches within 36 hours collapse to the best-informed
+  doc before planning and display: exact > nominal > date_only, an
+  appearance over a parent card, pinned docs never dropped, cancelled
+  docs passed through so deletion propagates. Team sports are never
+  touched — Chelsea v Arsenal in league and cup is two real fixtures,
+  which is exactly why the server's merge-safety rule (same competition
+  string) exists and stays. The server-side alternative — relaxing that
+  guard per-sport and merging a parent with an appearance — reshapes
+  the appearance model and waits for its own brief (F28).
