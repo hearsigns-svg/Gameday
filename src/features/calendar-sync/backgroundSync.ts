@@ -9,6 +9,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
+import { rnfbMessagingAvailable } from './rnfbPresence';
 import { runSync, shouldAutoSync } from './syncEngine';
 
 const REFRESH_TASK = 'gameday-refresh';
@@ -23,7 +24,7 @@ const PUSH_SYNC_TASK = 'gameday-push-sync';
 // it resolves; the actual sync work stays with the expo-notifications
 // task below, so the handler only needs to exist. Guarded lazy require,
 // same rule as deviceRegistry: a pre-RNFB binary must not crash.
-if (Platform.OS === 'ios') {
+if (Platform.OS === 'ios' && rnfbMessagingAvailable()) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { getMessaging, setBackgroundMessageHandler } =

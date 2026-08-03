@@ -9,6 +9,7 @@ import * as Notifications from 'expo-notifications';
 import { doc, setDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { db, ensureSignedIn } from '../../../core/firebase';
+import { rnfbMessagingAvailable } from '../rnfbPresence';
 import { readJson, writeJson } from '../../../core/storage';
 import { collectFollowState } from '../../follows/followActions';
 import {
@@ -51,7 +52,15 @@ export async function registerDevice(): Promise<void> {
     let token: string | null = null;
     let tokenType: string | null = null;
     try {
-      if (Platform.OS === 'ios') {
+      if (Platform.OS === 'ios' && !rnfbMessagingAvailable()) {
+        // A binary built before the RNFB pods: register token-less, and
+        // never touch the require — on the new architecture the failed
+        // TurboModule lookup is reported natively as an uncaught error
+        // (a dev LogBox) even though our catch fires (rnfbPresence.ts).
+        console.warn(
+          '[gameday] RNFB native module absent (pre-RNFB binary) — registering without a push token',
+        );
+      } else if (Platform.OS === 'ios') {
         // expo-notifications hands iOS back a RAW APNs token, which the
         // Admin SDK cannot send to — so iOS push was Android-only from
         // M6 until Prompt 6 (F1 in FINDINGS). React Native Firebase

@@ -654,3 +654,21 @@ surface: nothing structured exists on ufc.com to rule on, so MMA
 athlete-following stays unsupported with an honest coverageNote, and
 the 141 surname-only cards remain unresolvable — acceptable per the
 brief ("do not reach for an aggregator to close it").
+
+### F39 — FIXED same-day: a pre-RNFB binary RedBoxes on follow despite the guarded requires
+Surfaced on-device 2026-08-03: tapping Follow for a boxer raised
+"Uncaught Error: Native module NativeRNFBTurboApp is not registered"
+from backgroundSync.ts's require — which IS inside try/catch, as is
+deviceRegistry's. On the new architecture that guard is insufficient:
+RNFB's TurboModule lookup failure is REPORTED THROUGH THE NATIVE
+EXCEPTION PIPELINE as an uncaught error (a full dev LogBox) even
+though the JS catch fires and the app continues. Trigger timing —
+follow-tap rather than launch — is the lazy import of deviceRegistry
+in followActions. FIXED: rnfbPresence.ts asks first with the
+non-throwing lookup (TurboModuleRegistry.get + NativeModules) and both
+sites skip the require entirely on a pre-RNFB binary, degrading to the
+honest token-less registration as always promised. Device-verified:
+unfollow + follow both clean post-fix. The BINARY note stands: any
+install predating Prompt 6's prebuild lacks the RNFB pods, so iOS push
+still needs `npx expo prebuild -p ios --clean` + a rebuild — until
+then the device registers token-less by design.
