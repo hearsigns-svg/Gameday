@@ -4,7 +4,7 @@
 // Romero–Lopez, both in the carousel and both headed for the calendar.
 
 import { Fixture } from '../fixture';
-import { dedupeSameBout } from '../sameBout';
+import { dedupeSameBout, dedupeSameEvent } from '../sameBout';
 
 const base = (over: Partial<Fixture> & { id: string }): Fixture => ({
   sport: 'boxing',
@@ -193,4 +193,116 @@ describe('joint tennis tournaments — one tournament, two feeds (Prompt 9)', ()
     const legacy = parent({ id: 'tennis-legacydoc', followKeys: ['tennis-atp'] });
     expect(dedupeSameEvent([legacy, wtaDoc])).toHaveLength(2);
   });
+});
+
+// ── Tennis finals slot vs a followed finalist (Prompt 11) ─────────────
+
+const slotDoc = (over: Partial<Fixture> = {}): Fixture => ({
+  id: 'wta-1045-2026-slot-final',
+  sport: 'tennis',
+  competition: 'WTA Tour',
+  competitionId: 'tennis-wta-appearances',
+  title: 'Jessica Pegula vs Alexandra Eala — Mubadala DC Open Final',
+  followKeys: ['tennis-wta-appearances', 'tennis-t-dc-open-finals'],
+  startUtc: '2026-08-02T17:30:00.000Z',
+  status: 'scheduled',
+  durationHours: 3,
+  timePrecision: 'exact',
+  confidence: 'confirmed',
+  parentFixtureId: 'wta-1045-2026',
+  athletes: ['Jessica Pegula', 'Alexandra Eala'],
+  updatedAt: '2026-08-01T00:00:00.000Z',
+  ...over,
+});
+
+const finalistApp = (over: Partial<Fixture> = {}): Fixture => ({
+  id: 'wta-1045-2026-app-jessica-pegula',
+  sport: 'tennis',
+  competition: 'WTA Tour',
+  competitionId: 'tennis-wta-appearances',
+  title: 'Jessica Pegula vs Alexandra Eala — Mubadala DC Open',
+  followKeys: ['tennis-wta-appearances', 'athlete_000100'],
+  startUtc: '2026-08-02T17:30:00.000Z',
+  status: 'scheduled',
+  durationHours: 3,
+  timePrecision: 'exact',
+  confidence: 'confirmed',
+  parentFixtureId: 'wta-1045-2026',
+  athletes: ['Jessica Pegula', 'Alexandra Eala'],
+  updatedAt: '2026-08-01T00:00:00.000Z',
+  ...over,
+});
+
+test('a confirmed finals slot yields to the FOLLOWED finalist’s appearance at the same instant', () => {
+  const out = dedupeSameEvent(
+    [slotDoc(), finalistApp()],
+    new Set(),
+    new Set(['tennis-t-dc-open', 'tennis-t-dc-open-finals', 'athlete_000100']),
+  );
+  expect(out.map((f) => f.id)).toEqual(['wta-1045-2026-app-jessica-pegula']);
+});
+
+test('REGRESSION: an UNWANTED twin never eats the slot — a pin slice key drags the whole tour into the fetch', () => {
+  // The finalist's appearance arrived only because a pinned fixture's
+  // 'tennis-wta-appearances' slice key joined the query; nothing
+  // follows her. Dropping the slot would delete the followed final and
+  // plan no replacement (review round, confirmed trace).
+  const out = dedupeSameEvent(
+    [slotDoc(), finalistApp()],
+    new Set(),
+    new Set(['tennis-t-dc-open', 'tennis-t-dc-open-finals']),
+  );
+  expect(out.map((f) => f.id).sort()).toEqual([
+    'wta-1045-2026-app-jessica-pegula',
+    'wta-1045-2026-slot-final',
+  ]);
+});
+
+test('a PINNED twin counts as wanted', () => {
+  const out = dedupeSameEvent(
+    [slotDoc(), finalistApp()],
+    new Set(['wta-1045-2026-app-jessica-pegula']),
+    new Set(['tennis-t-dc-open', 'tennis-t-dc-open-finals']),
+  );
+  expect(out.map((f) => f.id)).toEqual(['wta-1045-2026-app-jessica-pegula']);
+});
+
+test('without follow-key context the finals rule stands down — keeping both beats deleting a wanted event', () => {
+  const out = dedupeSameEvent([slotDoc(), finalistApp()]);
+  expect(out.map((f) => f.id).sort()).toEqual([
+    'wta-1045-2026-app-jessica-pegula',
+    'wta-1045-2026-slot-final',
+  ]);
+});
+
+test('a provisional slot coexists with a mid-week appearance — different statements, both stay', () => {
+  const provisional = slotDoc({
+    startUtc: '2026-08-02T00:00:00.000Z',
+    timePrecision: 'date_only',
+    confidence: 'provisional',
+    durationHours: 24,
+  });
+  const midWeek = finalistApp({ startUtc: '2026-07-29T15:00:00.000Z' });
+  const out = dedupeSameEvent([provisional, midWeek]);
+  expect(out.map((f) => f.id).sort()).toEqual([
+    'wta-1045-2026-app-jessica-pegula',
+    'wta-1045-2026-slot-final',
+  ]);
+});
+
+test('a slot with no matching appearance in the fetch survives — the tournament-only follower keeps the final', () => {
+  const out = dedupeSameEvent([slotDoc()]);
+  expect(out.map((f) => f.id)).toEqual(['wta-1045-2026-slot-final']);
+});
+
+test('a pinned slot is never dropped, even beside a followed twin', () => {
+  const out = dedupeSameEvent(
+    [slotDoc(), finalistApp()],
+    new Set(['wta-1045-2026-slot-final']),
+    new Set(['tennis-t-dc-open', 'tennis-t-dc-open-finals', 'athlete_000100']),
+  );
+  expect(out.map((f) => f.id).sort()).toEqual([
+    'wta-1045-2026-app-jessica-pegula',
+    'wta-1045-2026-slot-final',
+  ]);
 });

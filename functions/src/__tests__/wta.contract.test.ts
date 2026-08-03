@@ -11,6 +11,7 @@ import matchesSample from './fixtures/wta-matches-sample.json';
 import oopSample from './fixtures/wta-oop-sample.json';
 import tournamentsSample from './fixtures/wta-tournaments-sample.json';
 import {
+  buildFinalSlot,
   buildTournamentAppearances,
   isActive,
   pickLiveSlot,
@@ -257,4 +258,106 @@ test('isActive: live and imminent tournaments qualify; long-past and far-future 
   const usOpen = tournaments.find((t) => t.tournamentGroup?.id === 905)!;
   expect(isActive(usOpen, AT)).toBe(false); // starts Aug 31
   expect(isActive(usOpen, '2026-08-29T00:00:00.000Z')).toBe(true); // 3-day lookahead
+});
+
+// ── Competition-scoped final slot (Prompt 11) ─────────────────────────
+
+test('the final slot confirms from the banked OOP: one doc, scoped key only', () => {
+  const parent = tournamentToFixture(dc, AT)!;
+  const slot = buildFinalSlot(parent, matches, oopSample, AT)!;
+  expect(slot).toEqual({
+    id: 'wta-1045-2026-slot-final',
+    sport: 'tennis',
+    competition: 'WTA Tour',
+    competitionId: 'tennis-wta-appearances',
+    title: 'Jessica Pegula vs Alexandra Eala — Mubadala DC Open Final',
+    // The appearance slice plus the SCOPED tournament key — never the
+    // bare tennis-t-dc-open, which the block follower queries.
+    followKeys: ['tennis-wta-appearances', 'tennis-t-dc-open-finals'],
+    startUtc: '2026-08-02T17:30:00.000Z', // 13:30-0400, the banked final
+    status: 'scheduled',
+    parentFixtureId: 'wta-1045-2026',
+    athletes: ['Jessica Pegula', 'Alexandra Eala'],
+    durationHours: 3,
+    timePrecision: 'exact',
+    confidence: 'confirmed',
+    updatedAt: AT,
+  });
+});
+
+test('REGRESSION: an open earlier-round slot never confirms the final — opponent-checked', () => {
+  // At 07-30 21:00 Pegula has an OPEN slot in an earlier round (the
+  // pickLiveSlot regression above pins it) — soonest-open without the
+  // opponent filter would confirm the FINAL at that earlier match's
+  // time. The slot must come from the Pegula-vs-Eala match only.
+  const parent = tournamentToFixture(dc, AT)!;
+  const slot = buildFinalSlot(parent, matches, oopSample, '2026-07-30T21:00:00.000Z')!;
+  expect(slot.timePrecision).toBe('exact');
+  expect(slot.startUtc).toBe('2026-08-02T17:30:00.000Z');
+});
+
+test('draw only (no OOP): provisional on the parent window LAST day, not a fortnight banner', () => {
+  const parent = tournamentToFixture(dc, AT)!;
+  const slot = buildFinalSlot(parent, matches, null, AT)!;
+  expect(slot.timePrecision).toBe('date_only');
+  expect(slot.confidence).toBe('provisional');
+  expect(slot.startUtc).toBe('2026-08-02T00:00:00.000Z'); // 07-27 + 6d, the 7-day window's last day
+  expect(slot.durationHours).toBe(24);
+  expect(slot.athletes).toEqual(['Jessica Pegula', 'Alexandra Eala']);
+});
+
+test('no final row yet: provisional slot with the tournament title alone', () => {
+  const parent = tournamentToFixture(dc, AT)!;
+  const slot = buildFinalSlot(
+    parent,
+    matches.filter((m) => m.RoundID !== 'F'),
+    oopSample,
+    AT,
+  )!;
+  expect(slot.title).toBe('Mubadala DC Open — Final');
+  expect(slot.confidence).toBe('provisional');
+  expect(slot.athletes).toBeUndefined();
+});
+
+test('a DECIDED final keeps its confirmed shape while the slot is live-or-graced — retirement must keep seeing it', () => {
+  // The review round's HIGH: returning null at Winner-flip left the
+  // finalists' graced rolling appearances as retirement evidence, and
+  // the absent slot was soft-cancelled — deleting the final from
+  // finals-scoped calendars on the night of the final. The slot must
+  // stay in the fresh yield exactly as long as the freeze has not yet
+  // taken over.
+  const parent = tournamentToFixture(dc, AT)!;
+  const decided = matches.map((m) =>
+    m.RoundID === 'F' ? { ...m, Winner: '2' } : m,
+  );
+  const slot = buildFinalSlot(parent, decided, oopSample, AT)!;
+  expect(slot.timePrecision).toBe('exact');
+  expect(slot.confidence).toBe('confirmed');
+  expect(slot.startUtc).toBe('2026-08-02T17:30:00.000Z');
+});
+
+test('a DECIDED final past its grace emits nothing — the stored doc is frozen by then', () => {
+  // Final ended 20:30Z on 08-02; slot grace runs to 02:30Z. By 12:00
+  // the freeze owns the stored doc, so absence can no longer retire it.
+  const parent = tournamentToFixture(dc, AT)!;
+  const decided = matches.map((m) =>
+    m.RoundID === 'F' ? { ...m, Winner: '2' } : m,
+  );
+  expect(
+    buildFinalSlot(parent, decided, oopSample, '2026-08-03T12:00:00.000Z'),
+  ).toBeNull();
+});
+
+test('a DECIDED final never falls back to the provisional banner', () => {
+  const parent = tournamentToFixture(dc, AT)!;
+  const decided = matches.map((m) =>
+    m.RoundID === 'F' ? { ...m, Winner: '2' } : m,
+  );
+  expect(buildFinalSlot(parent, decided, null, AT)).toBeNull();
+});
+
+test('a parent with no tournament key mints no slot', () => {
+  const parent = tournamentToFixture(dc, AT)!;
+  const keyless = { ...parent, followKeys: ['tennis-wta'] };
+  expect(buildFinalSlot(keyless, matches, oopSample, AT)).toBeNull();
 });

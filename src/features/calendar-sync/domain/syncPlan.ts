@@ -77,12 +77,44 @@ function addDaysUtc(dayIso: string, days: number): string {
   return d.toISOString();
 }
 
+// Per-follow F1 sessions override (Prompt 11): follow key → choice.
+// Structural type, deliberately not imported from the follows feature —
+// this module stays pure and feature-local.
+export type SeriesScopeMap = ReadonlyMap<string, 'all' | 'race-only'>;
+
+// The sessions rule for THIS fixture: an EXPLICIT per-follow choice
+// beats the global default (a user who set the F1 follow to race-only
+// meant it, even while a driver follow rides the same fixtures with no
+// opinion of its own), and among explicit choices the most permissive
+// wins — one follow explicitly asking for the full weekend keeps it.
+// Only when no matching follow has spoken does the global pref govern.
+function seriesSessionsFor(
+  f: Fixture,
+  prefs: CalendarPrefs,
+  scopes?: SeriesScopeMap,
+): 'all' | 'race-only' {
+  if (scopes && scopes.size > 0) {
+    let scoped: 'race-only' | null = null;
+    for (const k of f.followKeys) {
+      const s = scopes.get(k);
+      if (s === 'all') return 'all';
+      if (s === 'race-only') scoped = s;
+    }
+    if (scoped) return scoped;
+  }
+  return prefs.seriesSessions === 'race-only' ? 'race-only' : 'all';
+}
+
 export function desiredEventFor(
   f: Fixture,
   prefs: CalendarPrefs,
+  seriesScopes?: SeriesScopeMap,
 ): DesiredEvent | null {
   // Series sports: optionally keep only the race itself in the calendar.
-  if (prefs.seriesSessions === 'race-only' && f.sessionKind === 'support') {
+  if (
+    seriesSessionsFor(f, prefs, seriesScopes) === 'race-only' &&
+    f.sessionKind === 'support'
+  ) {
     return null;
   }
   const matchTitle = f.title;
@@ -187,6 +219,7 @@ export function planSync(
   excluded: ReadonlySet<string> = new Set(),
   pinned: ReadonlySet<string> = new Set(),
   nowMs: number = nowFromHorizon(horizonStartUtc),
+  seriesScopes?: SeriesScopeMap,
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
@@ -202,7 +235,7 @@ export function planSync(
     // update, and not a create if its event has somehow gone. Its ledger
     // entry is retained below so the prune sweep still sees it referenced.
     if (isPast(f, nowMs)) continue;
-    const desired = desiredEventFor(f, prefs);
+    const desired = desiredEventFor(f, prefs, seriesScopes);
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour
     // hundreds of past fixtures into the calendar. Events we already
@@ -339,6 +372,7 @@ export function upcomingSnapshot(
   prefs: CalendarPrefs,
   horizonStartUtc: string,
   cap: number,
+  seriesScopes?: SeriesScopeMap,
 ): SnapshotFixture[] {
   return fixtures
     .filter(
@@ -349,7 +383,7 @@ export function upcomingSnapshot(
         // this differs from the old start-based cut by minutes; for a
         // multi-day span it is the difference between present and gone.)
         fixtureEndUtc(f) > horizonStartUtc &&
-        desiredEventFor(f, prefs) !== null,
+        desiredEventFor(f, prefs, seriesScopes) !== null,
     )
     .sort((a, b) => a.startUtc.localeCompare(b.startUtc))
     .slice(0, cap)

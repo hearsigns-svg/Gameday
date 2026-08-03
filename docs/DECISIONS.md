@@ -1100,3 +1100,78 @@
   WTA city/country) is a fixture FACT used only as disambiguator —
   never a photo key. Cached under 'tournament:' with its own credits
   label.
+
+## Prompt 11 decisions (2026-08-03)
+
+- 2026-08-03: PRIORITY IS CATALOGUE DATA, AND A SEPARATE FIELD FROM
+  TIER. `priority` (0–100, higher first) is how likely a human is to
+  want a competition; `tier` is how often its schedule moves. The World
+  Cup is the proof they must not be one field: top priority, dormant
+  schedule. Ops-tunable in the collection without a deploy; the seed
+  PRESERVES a live doc's `enabled` AND `priority` (--reset-priorities
+  forces the seed's values), because a knob the next re-seed silently
+  resets is not a knob.
+- 2026-08-03: RANKING-ONLY CATALOGUE ROWS (`rankOnly: true`, empty
+  pollPath, disabled) carry weights for browse keys the sweep never
+  polls individually — the four slams, the athletics groups. One
+  collection owns ordering; the sweep filters them before the route
+  allowlist so "a catalogue typo is unfetchable" keeps meaning that.
+- 2026-08-03: SPORT ROWS ORDER BY DERIVED WEIGHT — each sport's best
+  competition speaks for it (sportWeightsOf = max priority per sport,
+  rankOnly rows included, so Wimbledon speaks for tennis). Deliberately
+  not a second knob: tuning a competition's priority is what moves its
+  sport. Client surfaces STABLE-sort by the cached listPriorities
+  payload and keep bundled config order until a cache exists — ordering
+  is a rendering preference, so the empty-map fallback is honest.
+- 2026-08-03: THE ATHLETICS CATCH-ALL IS UNPRICED BY DESIGN. "Everything
+  on the calendar" (wa-calendar, 1,372 future meetings) sorts LAST
+  within athletics precisely because absence of priority means "keep
+  config order at the tail" — the flood row must never outrank a
+  curated group.
+- 2026-08-03: GRANULARITY IS SCOPED FOLLOW KEYS, NOT A NEW FOLLOW MODEL.
+  The server stamps narrow keys on the docs a finer scope wants
+  (`tennis-t-<slug>-finals` on the per-tournament final slot,
+  `<golf league>-final` on the provider-titled Final Round doc,
+  `<combat league>-main`/`pbc-cards-main` on the headline bout); a
+  follow's optional `scope` decides which keys join the fixture query
+  (followQueryKeys). Ledger keying, fixture ids and the
+  provisional→confirmed lifecycle are untouched; a narrowed scope's
+  events drain by the same planner rule an unfollow uses. F1 is the
+  deliberate exception: sessions already filter in desiredEventFor via
+  the global seriesSessions pref, so its scope is a per-follow OVERRIDE
+  of that pref (most permissive wins across matching follows — follows
+  are a union of wants), not a query change.
+- 2026-08-03: THE FINAL SLOT IS ONE DOC PER TOURNAMENT, BORN FINAL
+  (`<parentId>-slot-final`), provisional on the tournament's LAST day
+  (the final is the closing match by construction; a fortnight-wide
+  "Final" banner is noise), confirmed ONLY from an order-of-play match
+  whose opponent is the other finalist (on finals eve a finalist's slot
+  list still holds her semi inside its grace window, and a semi must
+  never confirm the final's time), and NOT EMITTED once the draw marks
+  the final decided — the stored confirmed doc freezes exactly as a
+  played rolling appearance does, instead of demoting to a provisional
+  banner on the next poll. "Semis onward" is NOT offered: no semi
+  marker exists in any banked payload, and building against an unseen
+  payload is the F22 mistake.
+- 2026-08-03: BOXING/MMA GET NO SCOPE SELECTOR, athletics none either.
+  A TSDB card's title IS its main event, so "main event only" changes
+  neither the event count nor (usually) the time — the finer unit users
+  actually want is "my fighters", which athlete follows already
+  deliver. The `-main` keys are stamped anyway (cheap, forward-looking)
+  but no UI offers them. Athletics has no event-level or athlete-level
+  data (F27/F36) — meeting block is the only honest shape, and the
+  coverageNote keeps saying so.
+- 2026-08-03: THE ICS CADENCE IS ENFORCED AT THE CONNECTOR. pollTennis
+  refuses to fetch within 22h of the last SUCCESS (durable
+  status/tennisIcs marker; skip recorded as `skipped_ics_daily_cap` —
+  the `skipped` prefix keeps coverage from counting it as a success),
+  because the once-daily ruling must hold whoever triggers the route —
+  catalogue, device path, or a terminal. Marker-read failure fails
+  CLOSED: honouring the publisher commitment outranks freshness, and
+  the error run record keeps the slice visible. A zero-VEVENT body
+  throws rather than arming the marker — a multi-season tour calendar
+  is never legitimately empty. tennis-atp STAYS tier 1 deliberately:
+  demoting it to tier 2 would leave one attempt per day and turn any
+  transient failure into 48h of data age, while tier 1 plus the guard
+  costs three cheap skip records daily and buys same-day retries
+  (review round) (F41).

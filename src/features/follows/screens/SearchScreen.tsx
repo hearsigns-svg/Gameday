@@ -33,6 +33,7 @@ import {
   SearchAthleteHit,
   SearchTeamHit,
 } from '../data/directoryRepo';
+import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed, Followable } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
@@ -110,6 +111,7 @@ export default function SearchScreen({ navigation }: Props) {
   const requestSeq = useRef(0);
 
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+  useEffect(() => void refreshPriorities(), []);
 
   // Soccer competitions live in the directory, not config — one cached
   // fetch makes them searchable alongside everything else.
@@ -212,16 +214,26 @@ export default function SearchScreen({ navigation }: Props) {
       },
     }));
     // Competition dedupe: config cups also appear in the soccer
-    // directory under the same key.
+    // directory under the same key. MATCHING is untouched by ordering
+    // (Prompt 11): priority reorders the merged rows, nothing more —
+    // so "Champions League" outranks "Championship" for "champion"
+    // whichever source each came from.
     const seen = new Set<string>();
-    const compRows = [...comps, ...soccerRows].filter((r) =>
-      seen.has(r.key) ? false : (seen.add(r.key), true),
+    const compRows = byPriority(
+      [...comps, ...soccerRows].filter((r) =>
+        seen.has(r.key) ? false : (seen.add(r.key), true),
+      ),
+      (r) => r.key,
+      cachedPriorities().priorities,
     );
     return [
       { title: 'Teams', data: teamRows },
       { title: 'Athletes', data: athleteRows },
       { title: 'Competitions', data: compRows },
-      { title: 'Sports', data: sports },
+      {
+        title: 'Sports',
+        data: byPriority(sports, (r) => r.sportKey ?? r.key, cachedPriorities().sportWeights),
+      },
     ].filter((s) => s.data.length > 0);
   }, [query, teams, athletes, soccerLeagues]);
 

@@ -314,6 +314,9 @@ async function loadCataloguePaths(
   const snap = await db.collection('catalogue').get();
   const entries = snap.docs
     .map((d) => d.data() as CatalogueEntry)
+    // rankOnly rows are ORDERING data riding the same collection
+    // (Prompt 11) — never routes; skipping them is not a drop.
+    .filter((e) => !e.rankOnly)
     .filter((e) => e.enabled && tierPollsThisSweep(e.tier, sweepUtcHour))
     .sort((a, b) => a.tier - b.tier || a.label.localeCompare(b.label));
   const paths: string[] = [];

@@ -527,3 +527,79 @@ describe('isRunAbandoned', () => {
     expect(isRunAbandoned(beatBeforeSlowOp, duringSlowOp, STALE)).toBe(false);
   });
 });
+
+describe('per-follow seriesSessions override (Prompt 11)', () => {
+  const support = fixture({
+    id: 'f1-2026-albert_park-fp1',
+    sport: 'f1',
+    competitionId: 'f1-series-1',
+    followKeys: ['f1-series-1', 'athlete_000200'],
+    sessionKind: 'support',
+  });
+  const race = fixture({
+    id: 'f1-2026-albert_park-race',
+    sport: 'f1',
+    competitionId: 'f1-series-1',
+    followKeys: ['f1-series-1', 'athlete_000200'],
+    sessionKind: 'race',
+  });
+
+  test('a race-only follow scope drops support sessions even when the global pref says all', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'all' as const };
+    const scopes = new Map([['f1-series-1', 'race-only' as const]]);
+    expect(desiredEventFor(support, prefs, scopes)).toBeNull();
+    expect(desiredEventFor(race, prefs, scopes)).not.toBeNull();
+  });
+
+  test('an all-sessions follow scope keeps the weekend under a race-only global pref', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
+    const scopes = new Map([['f1-series-1', 'all' as const]]);
+    expect(desiredEventFor(support, prefs, scopes)).not.toBeNull();
+  });
+
+  test('most permissive wins when several matching follows disagree', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
+    const scopes = new Map<string, 'all' | 'race-only'>([
+      ['f1-series-1', 'race-only'],
+      ['athlete_000200', 'all'],
+    ]);
+    expect(desiredEventFor(support, prefs, scopes)).not.toBeNull();
+  });
+
+  test('no scope entry for this fixture: the global pref governs, unchanged', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
+    const scopes = new Map([['some-other-series', 'all' as const]]);
+    expect(desiredEventFor(support, prefs, scopes)).toBeNull();
+    expect(desiredEventFor(support, prefs)).toBeNull();
+  });
+
+  test('planSync threads the override: a scope flip from race-only to all creates the support sessions', () => {
+    const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
+    const raceOnly = planSync(
+      [support, race],
+      {},
+      ['f1-series-1'],
+      prefs,
+      PAST_HORIZON,
+      new Set(),
+      new Set(),
+      undefined,
+      new Map([['f1-series-1', 'race-only' as const]]),
+    );
+    expect(raceOnly.map((o) => o.op === 'create' && o.fixture.id)).toEqual([
+      'f1-2026-albert_park-race',
+    ]);
+    const all = planSync(
+      [support, race],
+      {},
+      ['f1-series-1'],
+      prefs,
+      PAST_HORIZON,
+      new Set(),
+      new Set(),
+      undefined,
+      new Map([['f1-series-1', 'all' as const]]),
+    );
+    expect(all.filter((o) => o.op === 'create')).toHaveLength(2);
+  });
+});

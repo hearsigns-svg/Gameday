@@ -1184,3 +1184,109 @@ owner-approved; reaper/TTL/console untouchable).
   665 tests both TZs; deployed `--only functions`, confirmed live
   (accentHue serving, crest fields absent from search).
 
+
+### Prompt 11 — competition ranking and follow granularity  [x]
+
+Working-tree state settled first: this round INHERITED an unreported,
+uncommitted server-side start (catalogue priority/rankOnly,
+listPriorities, the WTA final slot, the -main/-final scoped keys) with
+five failing tests and no client half. Adopted after adversarial
+reading, then finished; the review round confirmed one CRITICAL defect
+in the inherited design (below).
+
+- **PART A — priority is catalogue data.** `priority` (0–100) beside
+  `tier` — related, not identical (the World Cup: top priority, dormant
+  schedule ⇒ two fields). Ranking-only rows (`rankOnly`, inert thrice
+  over) carry weights for keys the sweep never polls: 4 slams + 6
+  athletics groups, keys drift-pinned to tournamentKey and
+  sportsConfig. `sport` on every entry feeds `sportWeightsOf` (max per
+  sport — the best competition speaks for its sport; derived, not a
+  second knob). Server: listLeagues + listTournaments sort by the
+  5-min-cached map; NEW `listPriorities` serves {priorities,
+  sportWeights}. Client: hourly-cached (MMKV) STABLE sorts on the Home
+  sports grid, the sport picker, the 12 static per-sport lists, and
+  search's Competitions + Sports groups; bundled config order is the
+  offline floor; search MATCHING untouched. The seed script now
+  PRESERVES ops-tuned `enabled` AND `priority` (--reset-priorities
+  forces) and prints a live→seed diff. THE RANKING ITSELF = the seed
+  dry-run in the Prompt 11 report, awaiting owner review; deployed
+  code changes no visible ordering until the seed is applied.
+- **PART B, the confirmed baseline** (production-measured 2026-08-03):
+  tennis tournament follow = ONE date_only banner per edition (joint
+  events collapse client-side); tour follows = every banner (ATP ~60
+  live, WTA ~40); boxing/MMA = cards only (13 boxing future; bouts
+  reach calendars via athlete follows); athletics = meeting banners
+  (catch-all 1,372 future); golf = FOUR date_only round docs per
+  tournament; F1 = per-session docs behind the GLOBAL race-only pref
+  (60 future: 12 race + 48 support); county cricket = one 4-day span.
+- **GRANULARITY = SCOPED FOLLOW KEYS** — no follow-model or ledger
+  change; the brief's stop-gate never tripped. Server stamps
+  `tennis-t-<slug>-finals` on ONE per-tournament FINAL SLOT doc
+  (provisional on the parent's LAST day → OOP-confirmed
+  opponent-checked slot → frozen once decided; the appearanceLifecycle
+  mechanism reused), `<golf league>-final` on provider-titled Final
+  Round docs (\b-anchored), `-main` on headline bouts (stamped, not
+  offered — a TSDB card's title IS its main event, so the option would
+  change nothing; argued in the report). Client: optional
+  `Followable.scope`; followQueryKeys expands the fixture query;
+  registry registers scoped keys (push fan-out reaches slot changes);
+  Following counts and the Home rail re-keyed per follow. F1 scope =
+  per-follow OVERRIDE of seriesSessions inside desiredEventFor
+  (explicit beats global; most-permissive among explicit), aligning
+  with the existing mechanism instead of a second one; tapping the
+  global-default chip clears the override. TeamScreen grows the
+  selector; the ATP asymmetry is stated ON the tennis finals option
+  and in the tennis coverageNote. Options shipped: tennis
+  block / block+final, golf all-rounds / final-round, F1 all /
+  race-only. NOT SHIPPED, argued: semis-onward (no semi marker in any
+  banked payload — the F22 rule), boxing main-event scope, athletics
+  anything (no event-level or athlete-level data exists).
+- **TWO PRODUCTION DEFECTS found by the Part B probes** (F40/F41):
+  ZERO of 78 future ATP parents carried a tennis-t-* key — every
+  ATP-only tournament follow (57 of 99 rows) delivered nothing,
+  because the only post-Prompt-9 ICS fetches were HTTP 429s: the
+  tier-1 catalogue was polling a feed the owner ruled ONCE DAILY, and
+  Prompt 9's "99 rows live" verification measured serve-time rows, not
+  stored keys. FIXED: pollTennis enforces a 22h cadence floor at the
+  connector (status/tennisIcs marker; skips recorded; marker-read
+  failure fails closed; zero-VEVENT bodies throw); tennis-atp stays
+  tier 1 for same-day retry capacity. The key stamp lands with the
+  first successful daily fetch.
+- **VOLUME CHECK**: no new option exceeds 2 events per tournament
+  edition (tennis block+final) or reduces below 1; every >20 figure is
+  a PRE-EXISTING baseline (tour follows ~40–60 banners, F1
+  all-sessions 60, a golf season ~190 rounds, athletics catch-all
+  1,372 — the deliberate F23 flood row, unpriced so it sorts last).
+- **ADVERSARIAL REVIEW ROUND** (three lenses, refuting verifiers,
+  every finding trace-confirmed): 12 confirmed. The big one, caught by
+  two lenses independently: the inherited "decided final returns null"
+  design let appearance RETIREMENT soft-cancel the slot doc on the
+  night of the final (the finalists' still-graced rolling appearances
+  satisfied the per-parent evidence guard) — the push would have
+  DELETED the final from finals-scoped calendars during the trophy
+  ceremony. Fixed: a decided final keeps emitting its confirmed shape
+  exactly as long as its OOP slot is live-or-graced (the rolling
+  appearances' proven exposure; same grace, same strict compare as the
+  retirement freeze), and only then stops — regression-pinned both
+  sides of the boundary. Also fixed: an UNWANTED twin appearance
+  (dragged into the fetch by a pin's slice key) could eat the followed
+  slot — dedupeFinalSlots now requires the twin to be followed or
+  pinned, and stands down entirely without follow-key context; scope
+  UI state derived from the store (unfollow→refollow showed a dead
+  scope); Undo after unfollow restores the scope (in-session memory);
+  golf's Final Round regex \b-anchored to the title end ("Semifinal
+  Round" was scoping); tier-2 demotion reverted (above); zero-VEVENT
+  marker arming; Home-rail next-fixture join uses scoped query keys;
+  seed-script comment contradiction. Accepted + recorded: yield_died
+  can be suppressed for tennis-atp under a specific off-sweep success
+  pattern (monitoring gap only); exclusion-vs-dedupe acts on the
+  fetched doc, not the calendar event (pre-existing class shared with
+  bout pairs); a 200-follow device's registry write can be blocked by
+  one scope change (F9 class). Golf scope-key transition: stored golf
+  docs gain -final keys on their first post-deploy poll — closed
+  operationally by manual re-polls right after deploy, and no client
+  UI exists on devices until the next app build anyway.
+- 709 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean. Deployed --only functions (Prompt 11
+  report has the verification); catalogue seed dry-run AWAITS owner
+  review — nothing user-visible reorders until --apply.

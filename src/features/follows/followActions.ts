@@ -4,7 +4,13 @@
 import { err, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
-import { Followable, loadFollowables, setFollowed } from './data/followStore';
+import {
+  Followable,
+  loadFollowables,
+  setFollowed,
+  setFollowScope,
+} from './data/followStore';
+import { followQueryKeys, FollowScope } from './domain/followScopes';
 import { pollPathFor } from './domain/pollPaths';
 import { pinFollowKeys, pinPollPaths } from '../calendar-sync/data/pinStore';
 
@@ -49,7 +55,12 @@ export function collectFollowState(): {
   // Pinned single fixtures ride along: the server sweep must keep them
   // correct even though nothing they belong to is followed.
   return {
-    followKeys: [...new Set([...follows.map((f) => f.key), ...pinFollowKeys()])],
+    // Scope-expanded (Prompt 11): the sweep's push fan-out matches
+    // change records against these, and a finals-scoped follow must
+    // hear about its slot doc, whose changes carry only scoped keys.
+    followKeys: [
+      ...new Set([...follows.flatMap((f) => followQueryKeys(f)), ...pinFollowKeys()]),
+    ],
     pollPaths: [
       ...new Set([
         ...follows
@@ -95,8 +106,18 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   return runSync();
 }
 
+// Scopes remembered across an unfollow, so the toast's Undo restores
+// the follow AS IT WAS. Screens rebuild the Followable from route
+// params or search rows, which never carry scope — without this, Undo
+// silently widened a final-round golf follow back to every round
+// (review round). In-session only: Undo is a 6-second window.
+const lastScopes = new Map<string, FollowScope>();
+
 export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
+  const stored = loadFollowables().find((f) => f.key === item.key);
+  if (stored?.scope) lastScopes.set(item.key, stored.scope);
+  else lastScopes.delete(item.key);
   setFollowed(item, false);
   updateRegistry();
   return runSync();
@@ -106,7 +127,27 @@ export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
 // so no re-poll — just restore the follow and reconcile.
 export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
-  setFollowed(item, true);
+  const remembered = lastScopes.get(item.key);
+  setFollowed(
+    item.scope === undefined && remembered !== undefined
+      ? { ...item, scope: remembered }
+      : item,
+    true,
+  );
+  updateRegistry();
+  return runSync();
+}
+
+// Change what a follow delivers (Prompt 11). A scope change is an
+// ordinary follow-set change to the planner: a narrower scope's
+// no-longer-fetched events drain by the same rule an unfollow uses, a
+// wider one creates. The registry re-registers so the sweep's push
+// fan-out matches the scoped keys the query now uses.
+export async function setScope(
+  key: string,
+  scope: FollowScope | null,
+): Promise<Result<SyncOutcome>> {
+  setFollowScope(key, scope);
   updateRegistry();
   return runSync();
 }

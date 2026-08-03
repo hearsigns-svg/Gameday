@@ -145,16 +145,68 @@ function dedupeJointTournaments(
   return fixtures.filter((f) => !drop.has(f.id));
 }
 
+// ─── Tennis: the finals slot and a followed finalist ──────────────────
+//
+// A "tournament + final" follow fetches the competition-scoped slot doc
+// (`…-slot-final`, carrying a `tennis-t-…-finals` key); a follower of a
+// FINALIST fetches her rolling appearance, which IS the same match once
+// the order of play confirms it. Both confirmed at the same instant
+// under the same parent ⇒ one real event; the appearance wins (it
+// carries the athlete's identity and her follow key) — but ONLY when
+// somebody actually wants it. A pinned fixture's slice key drags every
+// appearance of the whole tour into the fetch, and an appearance
+// nothing follows must never eat the followed slot: the slot would be
+// dropped, the twin never planned, and the final the user opted into
+// deleted (review round, confirmed trace). While shapes differ — a
+// provisional last-day slot beside a player's mid-week match — they
+// are genuinely different statements and both stay.
+function dedupeFinalSlots(
+  fixtures: readonly Fixture[],
+  pinnedIds: ReadonlySet<string>,
+  wantedKeys: ReadonlySet<string> | null,
+): Fixture[] {
+  // Without the follow-key context there is no safe drop decision —
+  // keeping both is harmless; deleting a wanted event is not.
+  if (wantedKeys === null) return [...fixtures];
+  const drop = new Set<string>();
+  for (const s of fixtures) {
+    if (s.status === 'cancelled' || pinnedIds.has(s.id)) continue;
+    if (!s.parentFixtureId) continue;
+    if (!s.followKeys.some((k) => k.startsWith('tennis-t-') && k.endsWith('-finals'))) {
+      continue;
+    }
+    if (timePrecisionOf(s) !== 'exact') continue;
+    const twin = fixtures.some(
+      (f) =>
+        f.id !== s.id &&
+        f.status !== 'cancelled' &&
+        f.parentFixtureId === s.parentFixtureId &&
+        !f.followKeys.some((k) => k.endsWith('-finals')) &&
+        timePrecisionOf(f) === 'exact' &&
+        f.startUtc === s.startUtc &&
+        (pinnedIds.has(f.id) ||
+          f.followKeys.some((k) => wantedKeys.has(k))),
+    );
+    if (twin) drop.add(s.id);
+  }
+  return drop.size === 0 ? [...fixtures] : fixtures.filter((f) => !drop.has(f.id));
+}
+
 // The umbrella: every same-real-event rule, applied before the planner
-// and the snapshot. Combat pairs and joint tennis tournaments today;
-// any future "one event, two feeds" class belongs here too.
+// and the snapshot. Combat pairs, joint tennis tournaments and the
+// tennis finals slot today; any future "one event, two feeds" class
+// belongs here too. `wantedKeys` is the scope-expanded follow-key set;
+// callers that cannot supply it get the finals rule skipped rather
+// than guessed.
 export function dedupeSameEvent(
   fixtures: readonly Fixture[],
   pinnedIds: ReadonlySet<string> = new Set(),
+  wantedKeys: ReadonlySet<string> | null = null,
 ): Fixture[] {
-  return dedupeJointTournaments(
-    dedupeSameBout(fixtures, pinnedIds),
+  return dedupeFinalSlots(
+    dedupeJointTournaments(dedupeSameBout(fixtures, pinnedIds), pinnedIds),
     pinnedIds,
+    wantedKeys,
   );
 }
 

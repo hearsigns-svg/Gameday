@@ -700,3 +700,48 @@ unfollow + follow both clean post-fix. The BINARY note stands: any
 install predating Prompt 6's prebuild lacks the RNFB pods, so iOS push
 still needs `npx expo prebuild -p ios --clean` + a rebuild — until
 then the device registers token-less by design.
+
+---
+
+## Found during Prompt 11 (competition ranking and follow granularity, 2026-08-03)
+
+### F40 — FIXED this round (self-healing): ATP tournament keys never reached production
+Probed 2026-08-03: **0 of 78 future `tennis-atp` parents carried any
+`tennis-t-*` key** (every WTA parent had one, 40/40), so every ATP-only
+tournament follow — 57 of the 99 browse rows — delivered ZERO calendar
+events, and `tennis-t-wimbledon` existed on no document at all. Browse
+offered the row, Follow worked, the calendar stayed silently empty: the
+half-empty-calendar failure the coverageNote exists to prevent, on the
+flagship rows. Two causes stacked: (a) the Prompt 9 deploy's only
+subsequent ICS fetches were both refused (F41), so the key-stamping
+code never ran against production; (b) Prompt 9's verification measured
+`listTournaments` rows — computed from titles at SERVE time — not the
+stored docs' followKeys, so "99 rows live" proved the wrong layer. The
+"one-time rewrite, 0 fixtureChanges" probe was equally consistent with
+"no rewrite happened", which is what production shows. LESSON: verify
+the layer the follow actually queries, not the layer that renders.
+Fix rides F41: the first successful daily ICS fetch after deploy
+rewrites all ATP parents with their keys (ingest writes followKeys-only
+diffs silently, by design). VERIFICATION OWED post-deploy: re-run the
+key probe after the next successful `tennis-atp` run.
+
+### F41 — FIXED this round: the tier-1 catalogue violated the once-daily ICS ruling, and Google noticed
+The Prompt 4b ruling: the Tennis TV ICS is fetched ONCE DAILY maximum.
+The Prompt 7 catalogue then listed `tennis-atp` (pollTennis) on tier 1 —
+every sweep — and nobody connected the two; the connector itself had no
+throttle, so any trigger fetched. calendar.google.com answered the
+first two catalogue-driven fetches (2026-08-03 04:21Z and 10:26Z) with
+**HTTP 429**: the publisher's server enforcing what our own ruling
+already promised. The last successful fetch (2026-08-02 15:12Z,
+manual) predates the Prompt 9 deploy — hence F40. FIXED at the
+CONNECTOR: pollTennis enforces a 22h floor between FETCHES (durable
+`status/tennisIcs` marker; inside the window it records
+`skipped_ics_daily_cap` and touches nothing; marker-read failure fails
+CLOSED — honouring the cadence commitment outranks freshness; a
+zero-VEVENT body THROWS rather than arming the marker). tennis-atp
+deliberately STAYS tier 1: the review round showed a tier-2 demotion
+would turn one transient failure of the single daily attempt into 48h
+of data age, while tier 1 + the guard costs three cheap skip records a
+day and buys same-day retries. The 429s should clear on the daily
+cadence; if they persist, that is Google throttling the shared
+calendar URL itself and needs an owner decision, not a retry loop.

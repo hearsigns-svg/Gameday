@@ -32,10 +32,16 @@ import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
 import { Fixture } from '../../fixtures/domain/fixture';
-import { ensurePolled, follow, unfollow } from '../followActions';
+import { loadPrefs } from '../../calendar-sync/data/prefsStore';
+import { ensurePolled, follow, setScope, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
-import { isFollowed, Followable } from '../data/followStore';
+import { isFollowed, loadFollowables, Followable } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
+import {
+  followQueryKeys,
+  FollowScope,
+  scopesFor,
+} from '../domain/followScopes';
 import { sportByKey } from '../domain/sportsConfig';
 
 type Props = RootScreenProps<'Team'>;
@@ -79,7 +85,9 @@ export default function TeamScreen({ navigation, route }: Props) {
   };
 
   const loadFixtures = useCallback(async () => {
-    const r = await fetchFixturesForFollows([teamKey]);
+    const stored = loadFollowables().find((f) => f.key === teamKey);
+    const keys = stored ? followQueryKeys(stored) : [teamKey];
+    const r = await fetchFixturesForFollows(keys);
     if (!mounted.current) return;
     if (r.ok) {
       const upcoming = r.value.fixtures
@@ -114,6 +122,40 @@ export default function TeamScreen({ navigation, route }: Props) {
   }, [teamKey]);
 
   const following = isFollowed(teamKey);
+
+  // Per-follow granularity (Prompt 11): only rendered once followed —
+  // scope is a property of the follow, and the options only exist for
+  // sports whose providers give us the finer unit honestly. Derived
+  // from the STORE every render (never cached in state): an unfollow →
+  // re-follow on this same mount drops the scope with the follow, and
+  // the selector must say so rather than remember a dead choice
+  // (review round).
+  const scopeOptions = following ? scopesFor({ ...item, key: teamKey }) : [];
+  const storedScope =
+    loadFollowables().find((f) => f.key === teamKey)?.scope ?? null;
+  // F1 has no null option: the global preference is the default, and
+  // the selected chip reflects the EFFECTIVE value until overridden.
+  const globalDefault: FollowScope | null =
+    item.type === 'series'
+      ? loadPrefs().seriesSessions === 'race-only'
+        ? 'race-only'
+        : 'all-sessions'
+      : null;
+  const effectiveScope: FollowScope | null = storedScope ?? globalDefault;
+
+  const selectScope = async (next: FollowScope | null) => {
+    // Tapping the chip that equals the global default CLEARS a stored
+    // override — the follow goes back to tracking the preference —
+    // and is a no-op only when there is nothing to clear.
+    const target = next === globalDefault && next !== null ? null : next;
+    if (target === storedScope) return;
+    const r = await setScope(teamKey, target);
+    if (!r.ok && r.error.kind !== 'sync-in-progress') {
+      setError(messageOf(r.error));
+    }
+    await loadFixtures();
+    forceRender((n) => n + 1);
+  };
 
   const toggleFollow = async () => {
     setBusy(true);
@@ -208,6 +250,40 @@ export default function TeamScreen({ navigation, route }: Props) {
           {error}
         </Text>
       ) : null}
+      {scopeOptions.length > 0 ? (
+        <View style={[styles.scopeBlock, { borderColor: t.border }]}>
+          <Text style={[type.caption, { color: t.textSecondary, fontWeight: '600' }]}>
+            CALENDAR EVENTS
+          </Text>
+          <View style={styles.scopeRow}>
+            {scopeOptions.map((o) => {
+              const active = (o.scope ?? null) === effectiveScope;
+              return (
+                <Text
+                  key={o.label}
+                  onPress={() => void selectScope(o.scope)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${o.label}${active ? ', selected' : ''}`}
+                  style={[
+                    type.body,
+                    styles.scopeChoice,
+                    active
+                      ? { color: t.primary, fontWeight: '600', borderColor: t.primary }
+                      : { color: t.textSecondary, borderColor: t.border },
+                  ]}
+                >
+                  {o.label}
+                </Text>
+              );
+            })}
+          </View>
+          {scopeOptions.find((o) => (o.scope ?? null) === effectiveScope)?.note ? (
+            <Text style={[type.caption, { color: t.textSecondary }]}>
+              {scopeOptions.find((o) => (o.scope ?? null) === effectiveScope)!.note}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {fixtures === null ? (
         <View style={styles.center}>
           <ActivityIndicator color={t.primary} />
@@ -271,4 +347,18 @@ const styles = StyleSheet.create({
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   footer: { padding: spacing.l, paddingBottom: spacing.xxl, textAlign: 'center' },
+  scopeBlock: {
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
+    gap: spacing.s,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  scopeRow: { flexDirection: 'row', gap: spacing.s, flexWrap: 'wrap' },
+  scopeChoice: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.xs,
+    overflow: 'hidden',
+  },
 });

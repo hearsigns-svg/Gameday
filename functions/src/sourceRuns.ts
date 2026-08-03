@@ -96,7 +96,13 @@ export interface RunOutcome {
 export type RunReason =
   | 'no_future_events'
   | 'skipped_sweep_cap'
-  | 'skipped_sweep_deadline';
+  | 'skipped_sweep_deadline'
+  // The Tennis TV ICS is fetched once daily by owner ruling; an
+  // invocation inside the window records this and fetches nothing.
+  // The 'skipped' prefix matters: coverage counts a reasonless
+  // error-free run as a success, and a cap-skip must never refresh
+  // lastSuccessAt (that is how sweep-skips once masked a dead slice).
+  | 'skipped_ics_daily_cap';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

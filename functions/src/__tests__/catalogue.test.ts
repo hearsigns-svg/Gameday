@@ -7,12 +7,20 @@ import { sportByKey, SPORTS } from '../../../src/features/follows/domain/sportsC
 import {
   CATALOGUE_SEED,
   orderSweepPaths,
+  sportWeightsOf,
   tierPollsThisSweep,
 } from '../catalogue';
+import { tournamentKey } from '../tennisTournaments';
 import { canonicalisePollPath, sliceOfPollPath } from '../sweep';
 
-test('every seed entry canonicalises — a catalogue typo is unfetchable by construction', () => {
-  for (const e of CATALOGUE_SEED) {
+// Ranking-only rows are ordering data, not routes — every route
+// invariant below exempts them and the rankOnly invariants pin what
+// they must be instead.
+const ROUTES = CATALOGUE_SEED.filter((e) => !e.rankOnly);
+const RANK_ROWS = CATALOGUE_SEED.filter((e) => e.rankOnly);
+
+test('every pollable seed entry canonicalises — a catalogue typo is unfetchable by construction', () => {
+  for (const e of ROUTES) {
     expect({ id: e.competitionId, ok: canonicalisePollPath(e.pollPath) }).toEqual({
       id: e.competitionId,
       ok: expect.any(String),
@@ -20,12 +28,97 @@ test('every seed entry canonicalises — a catalogue typo is unfetchable by cons
   }
 });
 
-test('every seed entry names the slice its route actually feeds', () => {
-  for (const e of CATALOGUE_SEED) {
+test('every pollable seed entry names the slice its route actually feeds', () => {
+  for (const e of ROUTES) {
     const slice = sliceOfPollPath(canonicalisePollPath(e.pollPath)!);
     expect(`${e.label}: ${slice?.competitionId}`).toBe(
       `${e.label}: ${e.competitionId}`,
     );
+  }
+});
+
+test('rankOnly rows are inert by construction: no route, disabled, weighted', () => {
+  expect(RANK_ROWS.length).toBeGreaterThan(0);
+  for (const e of RANK_ROWS) {
+    expect({
+      id: e.competitionId,
+      pollPath: e.pollPath,
+      enabled: e.enabled,
+      priority: typeof e.priority,
+    }).toEqual({ id: e.competitionId, pollPath: '', enabled: false, priority: 'number' });
+  }
+});
+
+test('every seed entry names a real client sport — the sport rollup cannot drift', () => {
+  for (const e of CATALOGUE_SEED) {
+    expect(`${e.competitionId}: ${sportByKey(e.sport ?? '')?.key}`).toBe(
+      `${e.competitionId}: ${e.sport}`,
+    );
+  }
+});
+
+test('priorities are 0–100, and within-sport ties are only the documented peers', () => {
+  // Ties are deterministic anyway — every consumer sort is stable, so
+  // tied rows keep source order — but an ACCIDENTAL tie is usually a
+  // data slip. The one deliberate tie: the two tennis tours are peers.
+  const ALLOWED_TIES = new Set(['tennis:66']);
+  const seen = new Map<string, string>();
+  for (const e of CATALOGUE_SEED) {
+    if (e.priority === undefined) continue;
+    expect(e.priority).toBeGreaterThanOrEqual(0);
+    expect(e.priority).toBeLessThanOrEqual(100);
+    const key = `${e.sport}:${e.priority}`;
+    if (!ALLOWED_TIES.has(key)) {
+      expect(`${key} ${seen.get(key) ?? ''}`.trim()).toBe(key);
+    }
+    seen.set(key, e.competitionId);
+  }
+});
+
+test('the tennis slam RANK keys are exactly what the feed titles mint', () => {
+  // Contract with tennisTournaments.tournamentKey: if slug rules or
+  // aliases change, the priority rows must move with them or the slams
+  // silently lose their weight.
+  expect(tournamentKey('Wimbledon')).toBe('tennis-t-wimbledon');
+  expect(tournamentKey('US Open')).toBe('tennis-t-us-open');
+  expect(tournamentKey('Roland Garros')).toBe('tennis-t-roland-garros');
+  expect(tournamentKey('Australian Open')).toBe('tennis-t-australian-open');
+  for (const slug of ['tennis-t-wimbledon', 'tennis-t-us-open', 'tennis-t-roland-garros', 'tennis-t-australian-open']) {
+    expect(CATALOGUE_SEED.some((e) => e.rankOnly && e.competitionId === slug)).toBe(true);
+  }
+});
+
+test('athletics RANK keys mirror the browse rows, and the catch-all is unpriced and last', () => {
+  const athletics = SPORTS.find((s) => s.key === 'athletics')!;
+  const rows = athletics.staticCompetitions ?? [];
+  for (const c of rows) {
+    if (c.key === 'wa-calendar') continue; // the catch-all is a poll entry
+    expect({ row: c.key, ranked: CATALOGUE_SEED.some((e) => e.rankOnly && e.competitionId === c.key) }).toEqual({ row: c.key, ranked: true });
+  }
+  const catchAll = CATALOGUE_SEED.find((e) => e.competitionId === 'wa-calendar')!;
+  expect(catchAll.priority).toBeUndefined();
+});
+
+test('tennis-atp stays tier 1 WITH the connector cadence guard (F41) — the pairing is deliberate', () => {
+  // The once-daily commitment lives in pollTennis (the 22h marker
+  // guard), not in the tier: tier 1 buys same-day retries after a
+  // failed daily fetch, and the guard makes the extra sweeps cheap
+  // skips instead of fetches. Demoting to tier 2 would turn one
+  // transient failure into 48h of data age.
+  const atp = CATALOGUE_SEED.find((e) => e.competitionId === 'tennis-atp')!;
+  expect(atp.tier).toBe(1);
+  expect(atp.enabled).toBe(true);
+});
+
+test('sportWeightsOf: the best competition speaks for its sport, rankOnly included', () => {
+  const w = sportWeightsOf(CATALOGUE_SEED);
+  expect(w.soccer).toBe(100); // World Cup
+  expect(w.tennis).toBe(98); // Wimbledon, a rankOnly row
+  expect(w.athletics).toBe(58); // Diamond League, not the catch-all
+  // Every enabled browse sport has a weight, so the sports row can
+  // order fully once the client consumes it.
+  for (const s of SPORTS.filter((s) => s.enabled)) {
+    expect(`${s.key}: ${typeof w[s.key]}`).toBe(`${s.key}: number`);
   }
 });
 
@@ -55,8 +148,9 @@ test('DRIFT GUARD: every browse-offered competition pollPath is catalogued', () 
 
 test('the seed stays under the stop-gate and the sweep cap with room for devices', () => {
   expect(CATALOGUE_SEED.length).toBeLessThan(150);
-  // 250 slots minus the full catalogue leaves ≥190 for device paths.
-  expect(250 - CATALOGUE_SEED.length).toBeGreaterThanOrEqual(190);
+  // 250 slots minus the POLLABLE catalogue leaves ≥190 for device
+  // paths — rankOnly rows never become sweep paths.
+  expect(250 - ROUTES.length).toBeGreaterThanOrEqual(190);
 });
 
 test('tier 2 polls only on the daily sweep', () => {

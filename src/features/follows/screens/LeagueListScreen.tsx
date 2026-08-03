@@ -17,6 +17,7 @@ import {
   fetchTournaments,
   TournamentRow,
 } from '../data/directoryRepo';
+import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
@@ -53,8 +54,16 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       return;
     }
     if (sport?.staticCompetitions) {
-      // Single-league sports: the competition level is config, not data.
-      setLeagues(sport.staticCompetitions);
+      // Single-league sports: the rows are config; their ORDER is
+      // catalogue-weight data (Prompt 11), config order as fallback.
+      void refreshPriorities();
+      setLeagues(
+        byPriority(
+          sport.staticCompetitions,
+          (c) => c.key,
+          cachedPriorities().priorities,
+        ),
+      );
       return;
     }
     void (async () => {
@@ -182,9 +191,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           ) : null
         }
         // Tournaments below the tour rows: one row per canonical
-        // tournament, soonest first, followed by KEY — a joint event is
-        // one row, and following it needs no pollPath (both tour slices
-        // stay warm on the tier-1 catalogue).
+        // tournament — priority first (the server ranks slams above
+        // 250s from catalogue data), soonest-start within a weight —
+        // followed by KEY: a joint event is one row, and following it
+        // needs no pollPath (both tour slices stay catalogue-warm).
         ListFooterComponent={
           tournaments.length > 0 ? (
             <View>

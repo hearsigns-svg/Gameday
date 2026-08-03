@@ -420,6 +420,119 @@ export function buildTournamentAppearances(
   return out;
 }
 
+// COMPETITION-SCOPED ROUND SLOTS (Prompt 11): "follow Wimbledon,
+// finals only". The FINAL is the one round the feed marks with a
+// verified value (RoundID 'F' in the banked draw; semi markers are
+// UNSEEN in any capture, so "semis onward" waits for real data — the
+// F22 rule). One doc per active tournament, born final
+// (`<parentId>-slot-final`), provisional on the tournament's LAST day
+// until the order of play schedules the RoundID-F match — the
+// established provisional→confirmed in-place update, reused not
+// rebuilt. Carries ONLY the scoped key (`<tournamentKey>-finals`): the
+// block follower must not receive it. No athlete refs — it exists
+// before anyone knows who plays; players join the title when known.
+export function buildFinalSlot(
+  parent: Fixture,
+  matches: readonly WtaMatch[],
+  oopBody: unknown | null,
+  nowIso: string,
+): Fixture | null {
+  const tKey = parent.followKeys.find((k) => k.startsWith('tennis-t-'));
+  if (!tKey) return null;
+  const finalMatch = matches.find(
+    (m) => m.DrawMatchType === 'S' && m.RoundID === 'F',
+  );
+  // A DECIDED final ('0' is the only undecided value the live feed
+  // shows; '2'/'3' are winner sides, '5' a walkover) must end FROZEN
+  // as its confirmed self, never demoted and never retired. Returning
+  // null the moment Winner flips looked right and was the review
+  // round's HIGH: the finalists' rolling appearances stay in the fresh
+  // yield for the grace window, satisfying retirement's per-parent
+  // evidence guard, so an absent slot doc was soft-cancelled — and the
+  // push DELETED the final from finals-scoped calendars on the night
+  // of the final. So a decided final keeps emitting its confirmed
+  // shape for exactly as long as its OOP slot is live-or-graced (the
+  // rolling appearances' own proven exposure — same 6h grace, same
+  // strict compare as the retirement freeze), and only stops once the
+  // stored doc is already inside the freeze. What a decided final may
+  // never do is fall back to the PROVISIONAL banner.
+  const decided =
+    finalMatch?.Winner !== undefined && finalMatch.Winner !== '0';
+  const names = finalMatch
+    ? [
+        fullName(finalMatch.PlayerNameFirstA, finalMatch.PlayerNameLastA),
+        fullName(finalMatch.PlayerNameFirstB, finalMatch.PlayerNameLastB),
+      ].filter((n): n is string => n !== null)
+    : [];
+  // Confirmed slot: an OOP match of finalist A AGAINST finalist B —
+  // opponent-checked, both names required. On finals eve A's slot list
+  // can still hold her semi inside its grace window, and a semi must
+  // never confirm the final's time.
+  let slot: PlayerSlot | undefined;
+  if (oopBody && names.length === 2) {
+    const oop = playerSlots(oopBody);
+    const vsOtherFinalist = (oop.slots.get(names[0]) ?? []).filter(
+      (s) => s.opponent === names[1],
+    );
+    slot = pickLiveSlot(vsOtherFinalist, nowIso);
+  }
+  const title =
+    names.length === 2
+      ? `${names[0]} vs ${names[1]} — ${parent.title} Final`
+      : `${parent.title} — Final`;
+  // Provisional home: the parent window's LAST day, not the whole
+  // span — the final is the closing match by construction, and a
+  // fortnight-wide "Final" banner is noise. If weather moves it, the
+  // confirmed slot corrects the same id in place.
+  const lastDayUtc = new Date(
+    Date.parse(parent.startUtc) +
+      Math.max(0, Math.round((parent.durationHours ?? 24) / 24) - 1) *
+        86_400_000,
+  ).toISOString();
+  const base: Fixture = {
+    id: `${parent.id}-slot-final`,
+    sport: 'tennis',
+    competition: parent.competition,
+    competitionId: `${parent.competitionId}-appearances`,
+    title,
+    followKeys: [`${parent.competitionId}-appearances`, `${tKey}-finals`],
+    startUtc: slot?.startUtc ?? lastDayUtc,
+    status: parent.status,
+    parentFixtureId: parent.id,
+    ...(names.length > 0 ? { athletes: names } : {}),
+    updatedAt: nowIso,
+  };
+  if (slot && !slot.dayOnly) {
+    return {
+      ...base,
+      durationHours: SLOT_DURATION_HOURS,
+      timePrecision: 'exact',
+      confidence: 'confirmed',
+    };
+  }
+  if (slot && slot.dayOnly) {
+    // The OOP names the day but not the time — CONFIRMED date_only,
+    // the same convention rolling appearances use for follow-on
+    // matches. A time is never invented.
+    return {
+      ...base,
+      durationHours: 24,
+      timePrecision: 'date_only',
+      confidence: 'confirmed',
+    };
+  }
+  // No live-or-graced slot. A decided final is history — the stored
+  // doc is frozen by now (see above); an undecided one waits on its
+  // provisional day.
+  if (decided) return null;
+  return {
+    ...base,
+    durationHours: 24,
+    timePrecision: 'date_only',
+    confidence: 'provisional',
+  };
+}
+
 // A tournament whose draw and order of play are worth fetching now. A
 // tournament the API itself calls 'past' never is — finished draws were
 // occupying fetch slots ahead of events starting the next day.
@@ -449,6 +562,8 @@ async function getJson(url: string): Promise<unknown> {
 
 export interface WtaFetch extends ProviderFetch {
   appearances: AppearanceDraft[];
+  // Competition-scoped round slots (no athlete resolution needed).
+  roundSlots: Fixture[];
   // Funnel stage A for the appearance slice: singles draw records seen
   // across the active tournaments, before the still-in and named gates.
   appearanceRawCount: number;
@@ -508,6 +623,7 @@ export async function fetchWtaTennis(
     .sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''));
   const fetchable = active.slice(0, MAX_ACTIVE_TOURNAMENTS);
   const appearances: AppearanceDraft[] = [];
+  const roundSlots: Fixture[] = [];
   let appearanceRawCount = 0;
   for (const t of fetchable) {
     const id = t.tournamentGroup?.id;
@@ -533,11 +649,14 @@ export async function fetchWtaTennis(
     appearances.push(
       ...buildTournamentAppearances(parent, matches, oop, nowIso),
     );
+    const slot = buildFinalSlot(parent, matches, oop, nowIso);
+    if (slot) roundSlots.push(slot);
   }
   return {
     rawCount: tournaments.length,
     fixtures,
     appearances,
+    roundSlots,
     appearanceRawCount,
     activeTournaments: active.length,
     activeSkipped: Math.max(0, active.length - fetchable.length),

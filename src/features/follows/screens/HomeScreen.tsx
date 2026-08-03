@@ -48,6 +48,8 @@ import {
 import { useTournamentVenuePhoto, useVenuePhoto, useVenuePlacePhoto } from '../useEntityPhoto';
 import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
+import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { followQueryKeys } from '../domain/followScopes';
 
 type Props = TabScreenProps<'Home'>;
 
@@ -71,11 +73,26 @@ export default function HomeScreen({ navigation }: Props) {
     };
     const unsub = subscribeSync(refresh);
     const focus = navigation.addListener('focus', refresh);
+    // Ordering weights are data (Prompt 11): refresh the cache in the
+    // background; this render uses whatever is already cached.
+    void refreshPriorities();
     return () => {
       unsub();
       focus();
     };
   }, [navigation]);
+
+  // Sports ordered by catalogue weight — "the top sports should lead
+  // the list" — falling back to config order until a cache exists.
+  const orderedSports = useMemo(
+    () =>
+      byPriority(
+        SPORTS.filter((s) => s.enabled),
+        (s) => s.key,
+        cachedPriorities().sportWeights,
+      ),
+    [follows],
+  );
 
   const upcoming = useMemo(() => {
     // Removed (excluded) events never lead Home — they live greyed on
@@ -102,10 +119,21 @@ export default function HomeScreen({ navigation }: Props) {
       // `upcoming` is already ascending, so first write wins.
       for (const key of f.followKeys) if (!next.has(key)) next.set(key, f);
     }
+    // A follow's next fixture may carry only its SCOPED key (a
+    // finals-slot doc mid-tournament, a final-round golf doc) — judge
+    // by the same query keys the fetch used, or a live follow reads
+    // "nothing scheduled" while its event sits in the carousel.
+    const nextFor = (fw: Followable): UpcomingFixture | undefined => {
+      for (const k of followQueryKeys(fw)) {
+        const hit = next.get(k);
+        if (hit) return hit;
+      }
+      return undefined;
+    };
     return [...follows]
       .sort((a, b) => {
-        const sa = next.get(a.key)?.startUtc;
-        const sb = next.get(b.key)?.startUtc;
+        const sa = nextFor(a)?.startUtc;
+        const sb = nextFor(b)?.startUtc;
         if (sa && sb) return sa.localeCompare(sb);
         // Follows with nothing scheduled sink, alphabetical among
         // themselves — an off-season team is still worth opening.
@@ -113,7 +141,7 @@ export default function HomeScreen({ navigation }: Props) {
       })
       .map((item) => {
         const sport = sportByKey(item.sportKey);
-        const fixture = next.get(item.key);
+        const fixture = nextFor(item);
         return {
           key: item.key,
           label: item.label,
@@ -290,7 +318,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       <SectionHeader title={followCount > 0 ? 'Add sports' : 'Choose a sport'} />
       <View style={styles.grid}>
-        {SPORTS.filter((s) => s.enabled).map((s) => {
+        {orderedSports.map((s) => {
           const series = s.seriesFollowable;
           const following = series ? isFollowed(series.key) : false;
           return (

@@ -78,6 +78,14 @@ export function normaliseTsdbEvent(
   const startUtc = new Date(rawTs).toISOString();
   const competitionId = `tsdb-league-${e.idLeague}`;
   const followKeys = [competitionId];
+  // Golf: the FINAL ROUND carries a scoped key so a tour follower can
+  // choose "final rounds only" (Prompt 11) — the round name is the
+  // provider's own title text, a fact not a guess. Anchored: the round
+  // name ends the title on every live doc across all four golf
+  // leagues, and \b keeps "Semifinal Round" (match play) out.
+  if (sport === 'golf' && /\bfinal round\s*$/i.test(e.strEvent)) {
+    followKeys.push(`${competitionId}-final`);
+  }
   if (e.idHomeTeam) followKeys.unshift(`tsdb-team-${e.idHomeTeam}`);
   if (e.idAwayTeam) followKeys.splice(1, 0, `tsdb-team-${e.idAwayTeam}`);
   return {

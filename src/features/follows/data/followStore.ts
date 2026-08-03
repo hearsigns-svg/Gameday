@@ -3,6 +3,7 @@
 // joins with real auth (post-slice).
 
 import { readJson, writeJson } from '../../../core/storage';
+import { followQueryKeys, FollowScope } from '../domain/followScopes';
 import { FollowableType } from '../domain/sportsConfig';
 
 export interface Followable {
@@ -17,6 +18,10 @@ export interface Followable {
   // offers it — the favourites provide the identity. Colour is a raw
   // hex or kit-colour text; it only reaches UI slots via teamTheme().
   brandColour?: string;
+  // Per-follow granularity (Prompt 11) — what this follow delivers,
+  // where the sport offers a choice (domain/followScopes.ts). Absent =
+  // the default: today's behaviour, unchanged.
+  scope?: FollowScope;
   // NOTE: venue photography is no longer cached here. A ground belongs
   // to the HOME team of a given fixture, not to whoever you follow, so
   // it is keyed by team name in data/photoCache.ts. Stored follows may
@@ -48,8 +53,23 @@ export function loadFollowables(): Followable[] {
   return migrated;
 }
 
+// QUERY keys, scope-expanded: a follow's granularity decides which
+// fixture keys it queries (a finals scope adds the scoped slot key, a
+// final-round scope swaps to the scoped round key). Everything that
+// fetches or matches fixtures must use these, not bare `.key`s.
 export function loadFollowKeys(): string[] {
-  return loadFollowables().map((f) => f.key);
+  return [...new Set(loadFollowables().flatMap((f) => followQueryKeys(f)))];
+}
+
+// Update one stored follow's scope in place. No-op if the follow is
+// gone (unfollowed on another screen while its page was open).
+export function setFollowScope(key: string, scope: FollowScope | null): void {
+  const next = loadFollowables().map((f) => {
+    if (f.key !== key) return f;
+    const { scope: _drop, ...rest } = f;
+    return scope === null ? rest : { ...rest, scope };
+  });
+  writeJson(KEY_V2, next);
 }
 
 export function isFollowed(key: string): boolean {

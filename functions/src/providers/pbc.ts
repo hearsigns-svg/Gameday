@@ -208,10 +208,10 @@ export function cardAppearances(
     (e) => e['@type'] === 'SportsEvent' && e.startDate && e.name,
   );
   const out: AppearanceDraft[] = [];
-  for (const e of events) {
+  events.forEach((e, i) => {
     const performers = (e.performer ?? []).map(performerName);
     if (performers.length !== 2 || performers.some((n) => n === null)) {
-      continue;
+      return;
     }
     const [first, second] = performers as [string, string];
     const a = appearanceFor(card, {
@@ -219,8 +219,14 @@ export function cardAppearances(
       title: `${first} vs ${second}`,
       updatedAt,
     });
-    if (a) out.push(a);
-  }
+    if (a) {
+      // The MAIN EVENT heads the node list (verified in the banked
+      // capture): it also carries the scoped key so a card follower
+      // can choose "main event only" (Prompt 11).
+      if (i === 0) a.fixture.followKeys.push('pbc-cards-main');
+      out.push(a);
+    }
+  });
   return out;
 }
 

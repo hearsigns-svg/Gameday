@@ -365,8 +365,12 @@ describe('deriveBoutAppearances (the TSDB headline consumer)', () => {
     expect(fixtures).toHaveLength(1);
     expect(counts.ambiguous).toBe(2); // Gaethje, Pimblett: surnames
     expect(fixtures[0].parentFixtureId).toBe('tsdb-2540001');
+    // TSDB publishes no bout structure, so the headline IS the only
+    // bout: it carries the main-event scoped key (Prompt 11) so a card
+    // follower can choose "main event only".
     expect(fixtures[0].followKeys).toEqual([
       'tsdb-league-4445-appearances',
+      'tsdb-league-4445-main',
       'athlete_000031',
       'athlete_000032',
     ]);

@@ -31,6 +31,7 @@ import {
 import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
+import { CatalogueEntry, sportWeightsOf } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
@@ -423,6 +424,10 @@ interface PollWork {
     provenance?: AthleteProvenance;
     grouping?: string;
     groupingKey?: string;
+    // Competition-scoped round-slot fixtures (Prompt 11): pre-resolved
+    // — no athlete refs — ingested with the resolved appearances so
+    // retirement's evidence guard covers them per parent.
+    roundSlots?: Fixture[];
   };
   // TRUE only when `fixtures` is the slice's COMPLETE current truth —
   // a whole-season or whole-feed fetch. This is what arms the reaper:
@@ -499,10 +504,11 @@ async function servePoll(
             ...(a.grouping ? { grouping: a.grouping } : {}),
             ...(a.groupingKey ? { groupingKey: a.groupingKey } : {}),
           });
-        const aIngested = await ingest(aFixtures, a.followKey);
+        const withSlots = [...aFixtures, ...(a.roundSlots ?? [])];
+        const aIngested = await ingest(withSlots, a.followKey);
         const aCounts = countsFrom(
           { fetched: a.rawCount, ...aIngested.counts },
-          aFixtures,
+          withSlots,
           startedAt,
         );
         await recordSourceRun(
@@ -525,10 +531,10 @@ async function servePoll(
         // card — retiring against the resolved set cancelled a real
         // stored bout the moment a same-named athlete joined the
         // directory (review round, probe-confirmed).
-        const retired = await retireAppearances(
-          a.followKey,
-          a.drafts.map((d) => d.fixture),
-        );
+        const retired = await retireAppearances(a.followKey, [
+          ...a.drafts.map((d) => d.fixture),
+          ...(a.roundSlots ?? []),
+        ]);
         appearanceBody = {
           appearances: aIngested.fixtures,
           appearanceChanges: aIngested.changes,
@@ -650,7 +656,10 @@ export const pollLeague = onRequest(async (req, res) => {
 export const listLeagues = onRequest(async (_req, res) => {
   try {
     const seasons = await loadFdSeasons(db, requireFdKey());
-    res.json({ leagues: listSoccerLeagues(seasons) });
+    const leagues = listSoccerLeagues(seasons);
+    const pr = await loadPriorities().catch(() => ({} as Record<string, number>));
+    leagues.sort((a, b) => (pr[b.key] ?? 0) - (pr[a.key] ?? 0));
+    res.json({ leagues });
   } catch (e) {
     // An empty league list would read as "soccer has no competitions".
     // Fail loudly instead so the client shows an error it can retry.
@@ -686,6 +695,52 @@ export const searchEntities = onRequest(async (req, res) => {
 const TOURNAMENT_CACHE_MS = 60_000;
 let tournamentCache: { at: number; body: unknown } | null = null;
 
+// Browse/search ordering weights from the catalogue collection —
+// priority is ops-tunable data, not code (Prompt 11). Cached briefly;
+// a read failure serves an empty map (ordering degrades to the
+// existing date/config order, which is a rendering preference, not a
+// data truth — the one place ?? {} is honest).
+let priorityCache: {
+  at: number;
+  map: Record<string, number>;
+  sportWeights: Record<string, number>;
+} | null = null;
+async function loadPriorityData(): Promise<{
+  map: Record<string, number>;
+  sportWeights: Record<string, number>;
+}> {
+  if (priorityCache && Date.now() - priorityCache.at < 300_000) {
+    return priorityCache;
+  }
+  const snap = await db.collection('catalogue').get();
+  const entries = snap.docs.map((d) => d.data() as CatalogueEntry);
+  const map: Record<string, number> = {};
+  for (const e of entries) {
+    if (e.competitionId && typeof e.priority === 'number') {
+      map[e.competitionId] = e.priority;
+    }
+  }
+  priorityCache = {
+    at: Date.now(),
+    map,
+    sportWeights: sportWeightsOf(entries),
+  };
+  return priorityCache;
+}
+
+async function loadPriorities(): Promise<Record<string, number>> {
+  return (await loadPriorityData()).map;
+}
+
+export const listPriorities = onRequest(async (_req, res) => {
+  try {
+    const { map, sportWeights } = await loadPriorityData();
+    res.json({ priorities: map, sportWeights });
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+});
+
 export const listTournaments = onRequest(async (_req, res) => {
   try {
     if (tournamentCache && Date.now() - tournamentCache.at < TOURNAMENT_CACHE_MS) {
@@ -709,7 +764,12 @@ export const listTournaments = onRequest(async (_req, res) => {
         status: f.status,
       };
     });
-    const body = { tournaments: shapeTournamentRows(parents, nowIso) };
+    const rows = shapeTournamentRows(parents, nowIso);
+    // Priority first (slams above 250s), soonest-start as the tiebreak
+    // the shaper already provides.
+    const pr = await loadPriorities().catch(() => ({} as Record<string, number>));
+    rows.sort((a, b) => (pr[b.key] ?? 0) - (pr[a.key] ?? 0) || a.startUtc.localeCompare(b.startUtc));
+    const body = { tournaments: rows };
     tournamentCache = { at: Date.now(), body };
     res.json(body);
   } catch (e) {
@@ -1433,22 +1493,83 @@ export const pollPbc = onRequest(
   },
 );
 
+// The Tennis TV ICS is fetched ONCE DAILY by owner ruling (2026-07-31)
+// — subscribing, not crawling. The catalogue briefly polled it every
+// sweep and calendar.google.com answered 429 (F41), so the cadence
+// commitment is enforced HERE, where every trigger converges, not left
+// to whoever invokes the route. 22h, not 24: the daily tier-2 window
+// drifts inside 00–06 UTC, and yesterday's 05:20 success must not
+// block tomorrow's early attempts.
+const ICS_MIN_INTERVAL_MS = 22 * 3_600_000;
+const ICS_MARKER_DOC = 'status/tennisIcs';
+
 export const pollTennis = onRequest(async (req, res) => {
-  const out = await servePoll(
-    triggerOf(req.get(TRIGGER_HEADER)),
-    {
-      source: 'tennis',
-      sport: 'tennis',
-      competitionId: 'tennis-atp',
-      pollPath: 'pollTennis',
-      seasonRequested: null,
-    },
-    async (trace) => {
-      trace.seasonsTried.push('current');
-      const r = await fetchTennisTournaments();
-      return { ...r, followKey: 'tennis-atp', seasonResolved: 'current', sliceComplete: true };
-    },
-  );
+  const trigger = triggerOf(req.get(TRIGGER_HEADER));
+  const ctx = {
+    source: 'tennis',
+    sport: 'tennis',
+    competitionId: 'tennis-atp',
+    pollPath: 'pollTennis',
+    seasonRequested: null,
+  };
+  const startedAt = new Date().toISOString();
+  let lastSuccessAt: string | null = null;
+  try {
+    const marker = await db.doc(ICS_MARKER_DOC).get();
+    lastSuccessAt = marker.exists
+      ? ((marker.data() as { lastSuccessAt?: string }).lastSuccessAt ?? null)
+      : null;
+  } catch (e) {
+    // A marker READ failure fails CLOSED: fetching anyway could break
+    // the once-daily commitment, and the run record keeps the failure
+    // from reading as a quiet skip (standing invariant).
+    await recordSourceRun(
+      { ...ctx, trigger },
+      {
+        httpStatus: null,
+        seasonResolved: null,
+        seasonsTried: [],
+        counts: EMPTY_COUNTS,
+        error: `ics daily-cap marker read failed: ${String(e)}`,
+      },
+      startedAt,
+    );
+    res.status(502).json({ error: 'ics daily-cap marker read failed' });
+    return;
+  }
+  if (
+    lastSuccessAt !== null &&
+    Date.parse(startedAt) - Date.parse(lastSuccessAt) < ICS_MIN_INTERVAL_MS
+  ) {
+    await recordSourceRun(
+      { ...ctx, trigger },
+      {
+        httpStatus: null,
+        seasonResolved: null,
+        seasonsTried: [],
+        counts: EMPTY_COUNTS,
+        error: null,
+        reason: 'skipped_ics_daily_cap',
+      },
+      startedAt,
+    );
+    res.status(200).json({ skipped: 'ics_daily_cap', lastSuccessAt });
+    return;
+  }
+  const out = await servePoll(trigger, ctx, async (trace) => {
+    trace.seasonsTried.push('current');
+    const r = await fetchTennisTournaments();
+    return { ...r, followKey: 'tennis-atp', seasonResolved: 'current', sliceComplete: true };
+  });
+  if (out.status === 200) {
+    try {
+      await db.doc(ICS_MARKER_DOC).set({ lastSuccessAt: new Date().toISOString() });
+    } catch (e) {
+      // Never fail a successful poll over the marker; the cost of a
+      // lost write is one extra fetch tomorrow, not data loss.
+      console.error(`[kickoffcal] tennis ics marker write failed: ${String(e)}`);
+    }
+  }
   res.status(out.status).json(out.body);
 });
 
@@ -1489,6 +1610,7 @@ export const pollWtaTennis = onRequest(
             followKey: appearanceSliceKey('tennis-wta'),
             rawCount: r.appearanceRawCount,
             drafts: r.appearances,
+            roundSlots: r.roundSlots,
             // Draw records carry NUMERIC PLAYER IDS, so a player
             // outside the top-200 roster still becomes an id-backed
             // athlete the moment she enters a draw — certain identity,

@@ -246,7 +246,12 @@ export function deriveBoutAppearances(
     const bout = parseBout(f.title, f.sport);
     if (!bout) continue;
     const a = boutAppearance(f, bout, updatedAt);
-    if (a) out.push(a);
+    if (a) {
+      // TSDB publishes no bout structure, so the headline IS the only
+      // bout — it carries the main-event scoped key (Prompt 11).
+      a.fixture.followKeys.push(`${f.competitionId}-main`);
+      out.push(a);
+    }
   }
   return out;
 }

@@ -12,6 +12,7 @@ import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
 import { type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
+import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
 import { SPORTS } from '../domain/sportsConfig';
 
@@ -29,11 +30,16 @@ export default function SportPickerScreen({ navigation }: Props) {
     () => navigation.addListener('focus', () => forceRender((n) => n + 1)),
     [navigation],
   );
+  useEffect(() => void refreshPriorities(), []);
+
+  // Catalogue weight orders the sports (Prompt 11); disabled rows keep
+  // config order among themselves at the tail.
+  const ordered = byPriority(SPORTS, (s) => s.key, cachedPriorities().sportWeights);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <FlatList
-        data={SPORTS}
+        data={ordered}
         keyExtractor={(s) => s.key}
         renderItem={({ item }) => {
           const following =

@@ -72,3 +72,47 @@ test('strVenue becomes the fixture venue fact (Prompt 9b) — absent stays absen
   );
   expect(blank.venue).toBeUndefined();
 });
+
+test('golf FINAL ROUND carries the scoped key; other rounds and other sports never do (Prompt 11)', () => {
+  const { normaliseTsdbEvent } = jest.requireActual<
+    typeof import('../providers/tsdb')
+  >('../providers/tsdb');
+  const base = {
+    idEvent: '99', dateEvent: '2026-01-18', strTime: '18:00:00',
+    idLeague: '4425', strLeague: 'PGA Tour',
+  };
+  const finalRound = normaliseTsdbEvent(
+    { ...base, strEvent: 'Sony Open in Hawaii Final Round' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  // The round name is the provider's own title text — a fact, not a
+  // guess — so only the published "Final Round" doc is scoped.
+  expect(finalRound.followKeys).toEqual([
+    'tsdb-league-4425',
+    'tsdb-league-4425-final',
+  ]);
+  const round1 = normaliseTsdbEvent(
+    { ...base, strEvent: 'Sony Open in Hawaii Round 1' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  expect(round1.followKeys).toEqual(['tsdb-league-4425']);
+  // Match-play semifinals and mid-title phrases never scope: the match
+  // is \b-anchored to a title ENDING in "Final Round" (review round).
+  const semi = normaliseTsdbEvent(
+    { ...base, strEvent: 'WGC Match Play Semifinal Round' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  expect(semi.followKeys).toEqual(['tsdb-league-4425']);
+  const midTitle = normaliseTsdbEvent(
+    { ...base, strEvent: 'Final Round Classic Round 1' },
+    'golf', 5, '2026-08-03T00:00:00.000Z',
+  );
+  expect(midTitle.followKeys).toEqual(['tsdb-league-4425']);
+  // A non-golf title containing the words must not be scoped: the key
+  // is a golf-round concept.
+  const boxing = normaliseTsdbEvent(
+    { ...base, idLeague: '4445', strEvent: 'Smith vs Jones: The Final Round' },
+    'boxing', 3, '2026-08-03T00:00:00.000Z',
+  );
+  expect(boxing.followKeys).toEqual(['tsdb-league-4445']);
+});

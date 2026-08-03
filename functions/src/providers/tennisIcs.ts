@@ -124,6 +124,14 @@ export async function fetchTennisTournaments(): Promise<ProviderFetch> {
     throw new Error('tennistv ics: response is not an iCalendar document');
   }
   const events = parseVEvents(body);
+  // The feed spans multiple SEASONS (2022→2027 when captured): zero
+  // VEVENTs is never a plausible tour calendar, only a gutted body
+  // that still says VCALENDAR. Throwing keeps the once-daily marker
+  // unarmed, so the same-day sweeps retry instead of trusting an
+  // empty answer for 22 hours (review round; standing invariant).
+  if (events.length === 0) {
+    throw new Error('tennistv ics: zero VEVENTs — not a plausible tour calendar');
+  }
   const now = new Date().toISOString();
   const fixtures = events
     .map((e) => tournamentToFixture(e, now))

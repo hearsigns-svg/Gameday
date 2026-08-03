@@ -87,16 +87,31 @@ test('every bout becomes an appearance draft, named from performer givenName+fam
   expect(drafts.flatMap((d) => d.fixture.athletes ?? [])).not.toContainEqual(
     expect.stringContaining('"'),
   );
-  for (const d of drafts) {
+  for (const [i, d] of drafts.entries()) {
     expect(d.fixture.parentFixtureId).toBe('pbc-fight-night-august-22-2026');
     expect(d.fixture.startUtc).toBe(card.startUtc); // provisional = parent window
     expect(d.fixture.durationHours).toBe(2); // the card's published window
     expect(d.fixture.confidence).toBe('provisional');
-    expect(d.fixture.followKeys).toEqual(['pbc-cards-appearances']);
+    // The MAIN EVENT heads the node list — the same ordering the card
+    // TITLE already trusts (cardToFixture takes events[0].name, and
+    // this capture's headline is Romero–Lopez). Only that bout carries
+    // the main-event scoped key (Prompt 11); undercard bouts must not.
+    expect(d.fixture.followKeys).toEqual(
+      i === 0
+        ? ['pbc-cards-appearances', 'pbc-cards-main']
+        : ['pbc-cards-appearances'],
+    );
     // PBC publishes no fighter ids: refs are name-only, and canonical
     // resolution (athletes.ts, policy 'structured') decides the keys.
     expect(d.refs.every((r) => r.externalId === undefined)).toBe(true);
   }
+  // The banked truth the -main stamp rests on: node 0 IS the card's
+  // headline pair. If PBC ever reorders its JSON-LD, this fails before
+  // a follower gets an undercard bout labelled as the main event.
+  expect(drafts[0].fixture.title).toBe('Rolando Romero vs Teofimo Lopez');
+  expect(cardToFixture(URL, html, AT)!.title).toBe(
+    'Rolando Romero vs Teofimo Lopez',
+  );
   // The prelim fighter the whole stage exists for: followable from the
   // undercard, not just the marquee.
   expect(drafts[3].refs.map((r) => r.name)).toContain('Israel Mercado');

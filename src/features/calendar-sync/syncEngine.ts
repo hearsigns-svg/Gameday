@@ -7,7 +7,8 @@ import { readJson, writeJson } from '../../core/storage';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
-import { loadFollowKeys } from '../follows/data/followStore';
+import { loadFollowables, loadFollowKeys } from '../follows/data/followStore';
+import { followQueryKeys, seriesScopesFrom } from '../follows/domain/followScopes';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import { loadExclusions, pruneExclusions } from './data/exclusionStore';
 import { pinFollowKeys, pinnedIds, prunePinStore } from './data/pinStore';
@@ -49,6 +50,7 @@ import {
 import {
   horizonStartFrom,
   isRunAbandoned,
+  nowFromHorizon,
   orderOps,
   passBudgetMs,
   planSync,
@@ -242,13 +244,30 @@ function writePresentationState(
   horizonStart: string,
   excluded: ReadonlySet<string>,
 ): void {
+  // Counts are keyed by the FOLLOW's own key (what Following reads),
+  // counted against its scope-expanded QUERY keys — a final-round golf
+  // follow's fixtures carry only the scoped key, and its caption must
+  // not read empty for that (Prompt 11).
+  const followables = loadFollowables();
   const upcoming: Record<string, number> = {};
   for (const key of follows) upcoming[key] = 0;
+  for (const fw of followables) upcoming[fw.key] = 0;
+  const queryKeysByFollow = followables.map(
+    (fw) => [fw.key, followQueryKeys(fw)] as const,
+  );
   for (const f of fixtures) {
     if (f.startUtc < horizonStart) continue;
     if (excluded.has(f.id)) continue; // removed events don't count
+    const seen = new Set<string>();
+    for (const [key, queryKeys] of queryKeysByFollow) {
+      if (queryKeys.some((k) => f.followKeys.includes(k))) {
+        upcoming[key]++;
+        seen.add(key);
+      }
+    }
+    // Pin keys and any other bare entries keep their original rule.
     for (const key of f.followKeys) {
-      if (key in upcoming) upcoming[key]++;
+      if (key in upcoming && !seen.has(key)) upcoming[key]++;
     }
   }
   writeJson(UPCOMING_KEY, upcoming);
@@ -259,6 +278,7 @@ function writePresentationState(
     prefs,
     horizonStart,
     UPCOMING_FIXTURES_CAP,
+    seriesScopesFrom(loadFollowables()),
   );
   writeJson(UPCOMING_FIXTURES_KEY, snapshot);
   // Age-based: an exclusion must survive an unfollow/re-follow cycle
@@ -291,7 +311,11 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
   }
   // One real event, one entry: the same bout or joint tennis
   // tournament can arrive from two providers (sameBout.ts).
-  const deduped = dedupeSameEvent(fixtures.value.fixtures, pinnedIds());
+  const deduped = dedupeSameEvent(
+    fixtures.value.fixtures,
+    pinnedIds(),
+    new Set(follows),
+  );
   writePresentationState(
     deduped,
     follows,
@@ -557,7 +581,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // parents) must not become two events — the planner sees only the
     // best-informed doc, and the other's ledgered event drains as an
     // ordinary delete (sameBout.ts; pinned docs are never dropped).
-    const planFixtures = dedupeSameEvent(fixtures.value.fixtures, pins);
+    const planFixtures = dedupeSameEvent(
+      fixtures.value.fixtures,
+      pins,
+      new Set(follows),
+    );
     const ops = planSync(
       planFixtures,
       ledger,
@@ -566,6 +594,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       horizonStart,
       excluded,
       pins,
+      nowFromHorizon(horizonStart),
+      seriesScopesFrom(loadFollowables()),
     );
 
     // Bounded pass: corrections first, creates after, stopping when the
