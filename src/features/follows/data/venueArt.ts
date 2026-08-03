@@ -5,7 +5,7 @@
 // Every failure returns null: the tone-mapped gradient is the designed
 // floor, not an error state.
 
-import { VenueArt, verifiedArt } from '../domain/venueArtRules';
+import { pickTournamentCandidate, VenueArt, verifiedArt } from '../domain/venueArtRules';
 
 const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
@@ -136,6 +136,35 @@ export async function resolveVenueByName(
       if (file) return artFromCommonsFile(file);
     }
     return { status: 'none' };
+  } catch {
+    return { status: 'failed' };
+  }
+}
+
+// TOURNAMENT venue photos (Prompt 9c, owner-approved): tennis parents
+// carry no venue name — the ICS LOCATION is city+country — so the key
+// is the TOURNAMENT itself: name → tennis-shaped entity (city as
+// disambiguator, both pure in venueArtRules) → P276 location → that
+// venue's P18, falling back to the tournament entity's own P18. Same
+// access path as every other resolver here — one Wikidata client,
+// per the owner's instruction. Chain live-verified 2026-08-03:
+// Wimbledon → Q41520 → P276 Q815369 → P18 "Centre court 2006.JPG".
+export async function resolveTournamentVenue(
+  tournamentName: string,
+  city?: string,
+): Promise<VenueArtResult> {
+  try {
+    const d = (await getJson(
+      `${WD}?action=wbsearchentities&search=${encodeURIComponent(tournamentName)}&language=en&type=item&limit=5&format=json&origin=*`,
+    )) as { search?: Array<{ id: string; description?: string }> };
+    const entity = pickTournamentCandidate(d.search ?? [], city);
+    if (!entity) return { status: 'none' };
+    const venue = await claimValue(entity, 'P276');
+    const file = venue
+      ? ((await claimValue(venue, 'P18')) ?? (await claimValue(entity, 'P18')))
+      : await claimValue(entity, 'P18');
+    if (!file) return { status: 'none' };
+    return artFromCommonsFile(file);
   } catch {
     return { status: 'failed' };
   }

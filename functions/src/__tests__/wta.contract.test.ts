@@ -41,6 +41,9 @@ test('a tournament becomes a date_only span parent under the tennis-wta slice', 
     // ICS says "Mubadala Citi DC Open" — one Washington event, and
     // both slugs fold to tennis-t-dc-open.
     followKeys: ['tennis-wta', 'tennis-t-dc-open'],
+    // City+country from the feed — the tournament-photo disambiguator
+    // (Prompt 9c), never a photo key by itself.
+    venueCity: 'WASHINGTON DC USA', // verbatim feed casing
     startUtc: '2026-07-27T00:00:00.000Z',
     status: 'scheduled',
     durationHours: 7 * 24, // 07-27..08-02, endDate INCLUSIVE

@@ -31,3 +31,37 @@ it('builds a stable sized thumb URL', () => {
     'https://commons.wikimedia.org/wiki/Special:FilePath/Liverpool_anfield_road_stadium.jpg?width=1280',
   );
 });
+
+describe('pickTournamentCandidate (Prompt 9c)', () => {
+  const { pickTournamentCandidate } = jest.requireActual<
+    typeof import('../venueArtRules')
+  >('../venueArtRules');
+  // The live Wimbledon shape: 4 of 5 candidates are transit/geography.
+  const wimbledon = [
+    { id: 'Q113112546', description: 'tube stop on the London Underground in the United Kingdom' },
+    { id: 'Q113112485', description: 'stop on the Croydon Tramlink line in the United Kingdom' },
+    { id: 'Q801616', description: 'railway station in Wimbledon, London Borough of Merton, England, UK' },
+    { id: 'Q736742', description: 'suburb of London' },
+    { id: 'Q41520', description: 'tennis tournament held in London' },
+  ];
+
+  test('only the tennis-shaped candidate qualifies', () => {
+    expect(pickTournamentCandidate(wimbledon)).toBe('Q41520');
+  });
+
+  test('the city breaks ties between tennis-shaped candidates', () => {
+    const two = [
+      { id: 'Q1', description: 'tennis tournament held in Melbourne' },
+      { id: 'Q2', description: 'tennis tournament held in New York City' },
+    ];
+    expect(pickTournamentCandidate(two, 'New York, NY, USA')).toBe('Q2');
+    expect(pickTournamentCandidate(two, 'Melbourne Australia')).toBe('Q1');
+    expect(pickTournamentCandidate(two)).toBe('Q1'); // no city → first shaped
+  });
+
+  test('no tennis-shaped candidate → null, never a tube stop', () => {
+    expect(
+      pickTournamentCandidate(wimbledon.slice(0, 4), 'London UK'),
+    ).toBeNull();
+  });
+});

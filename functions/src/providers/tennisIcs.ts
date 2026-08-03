@@ -102,6 +102,7 @@ export function tournamentToFixture(
       'tennis-atp',
       ...((k) => (k ? [k] : []))(tournamentKey(e.summary)),
     ],
+    ...(e.location?.trim() ? { venueCity: e.location.trim() } : {}),
     startUtc,
     status: 'scheduled',
     durationHours: days * 24,

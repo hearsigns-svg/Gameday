@@ -1081,3 +1081,22 @@
   ratings), Matchroom and Queensberry for their OWN promotional stills
   (PBC's photos are Getty-licensed, so asking PBC routes to Getty; TSDB
   is not a rights-holder — nothing to ask).
+- 2026-08-03: F34 CLOSED WITHOUT A SUFFIX MECHANISM (owner
+  instruction: verify before building — verified). The canonical-
+  identity pipeline already prevents the filed failure: distinct ids
+  never merge, collided names get no slot, and the surviving doc
+  carries only its own athlete's key with the collision counted. The
+  residual (no doc for the second player in a zero-live-occurrence
+  case) is accepted and monitored via nameCollisions in run records.
+- 2026-08-03: TENNIS TOURNAMENT VENUE PHOTOS APPROVED AND BUILT on the
+  ONE existing Wikidata path (no second client): tournament name →
+  tennis-shaped entity (pickTournamentCandidate — the live Wimbledon
+  probe returned four transit stops and one tournament, so the
+  description filter is load-bearing; feed-published city breaks
+  ties) → P276 location → the venue's P18, falling back to the
+  entity's own image; the same verified-or-nothing licence gate.
+  Chain live-verified: Wimbledon → Q41520 → All England Club →
+  "Centre court 2006.JPG". venueCity (city+country, ICS LOCATION and
+  WTA city/country) is a fixture FACT used only as disambiguator —
+  never a photo key. Cached under 'tournament:' with its own credits
+  label.

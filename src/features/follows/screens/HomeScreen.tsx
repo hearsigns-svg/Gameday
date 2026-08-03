@@ -45,7 +45,7 @@ import {
   isFollowed,
   loadFollowables,
 } from '../data/followStore';
-import { useVenuePhoto, useVenuePlacePhoto } from '../useEntityPhoto';
+import { useTournamentVenuePhoto, useVenuePhoto, useVenuePlacePhoto } from '../useEntityPhoto';
 import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -155,8 +155,22 @@ export default function HomeScreen({ navigation }: Props) {
     // team resolver's P115 hop can never satisfy a venue name (review
     // round). Hooks run unconditionally; the venue result wins.
     const placeArt = useVenuePlacePhoto(item.venue);
-    const teamArt = useVenuePhoto(item.venue ? null : homeTeam);
-    const art = placeArt ?? teamArt;
+    // Tennis tournament PARENTS only: no venue name, no home team —
+    // the tournament itself resolves (Prompt 9c). An appearance (a
+    // player's match) rides an -appearances slice key and must never
+    // feed its MATCH title into the tournament lookup.
+    const isTennisParent =
+      item.sport === 'tennis' &&
+      !item.venue &&
+      !item.followKeys.some((k) => k.endsWith('-appearances'));
+    const tournamentArt = useTournamentVenuePhoto(
+      isTennisParent ? item.title : null,
+      item.venueCity,
+    );
+    const teamArt = useVenuePhoto(
+      item.venue || isTennisParent ? null : homeTeam,
+    );
+    const art = placeArt ?? tournamentArt ?? teamArt;
     return (
       <HeroCard
         title={item.title}

@@ -325,6 +325,7 @@ export interface SnapshotFixture {
   // key the licensed venue-photography layer prefers over the
   // home-team lookup (Prompt 9b).
   venue?: string;
+  venueCity?: string; // tournament-photo disambiguator (Prompt 9c)
   // Team sports only. Carried so the app can identify a fixture by its
   // PARTICIPANTS rather than by whichever follow happened to pull it in:
   // a competition follow knows the league, not who is playing, which is
@@ -366,5 +367,6 @@ export function upcomingSnapshot(
       ...(f.homeTeam !== undefined ? { homeTeam: f.homeTeam } : {}),
       ...(f.awayTeam !== undefined ? { awayTeam: f.awayTeam } : {}),
       ...(f.venue !== undefined ? { venue: f.venue } : {}),
+      ...(f.venueCity !== undefined ? { venueCity: f.venueCity } : {}),
     }));
 }

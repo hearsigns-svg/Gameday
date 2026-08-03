@@ -68,3 +68,32 @@ export function commonsThumbUrl(fileTitle: string, width = 1280): string {
   const clean = fileTitle.replace(/^File:/, '').replace(/ /g, '_');
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(clean)}?width=${width}`;
 }
+
+// Tournament-entity candidate selection (Prompt 9c). "Wimbledon"
+// returns tube stops, a tram stop, a suburb AND the tournament — the
+// live probe measured 4 of 5 candidates as transit/geography. Only a
+// tennis-shaped description qualifies, and when several do (a
+// name-sharing golf major, a defunct edition) the CITY the feeds
+// publish breaks the tie. Pure, so the choice is pinned by tests.
+export interface WikidataCandidate {
+  id: string;
+  description?: string;
+}
+
+const TENNIS_SHAPED = /tennis|grand slam/;
+
+export function pickTournamentCandidate(
+  candidates: readonly WikidataCandidate[],
+  city?: string,
+): string | null {
+  const shaped = candidates.filter((c) =>
+    TENNIS_SHAPED.test((c.description ?? '').toLowerCase()),
+  );
+  if (shaped.length === 0) return null;
+  if (shaped.length === 1 || !city) return shaped[0].id;
+  const needle = city.toLowerCase().split(/[,\s]+/)[0];
+  const inCity = shaped.find((c) =>
+    (c.description ?? '').toLowerCase().includes(needle),
+  );
+  return (inCity ?? shaped[0]).id;
+}

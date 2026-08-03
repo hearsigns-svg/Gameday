@@ -597,7 +597,23 @@ two unrated fighters from a TSDB title is display-only until a
 structured source (PBC performer nodes, the review queue) vouches for
 them. Pinned in appearances.test.ts.
 
-### F34 — DETECTION CLOSED in Prompt 8; representation gated on a ruling
+### F34 — CLOSED 2026-08-03 (re-verified on owner instruction; no suffix mechanism built)
+Re-tested against the CURRENT pipeline (Prompt 9b state) with the
+original probe shape — two players, one rendered name, distinct WTA
+ids: the bug AS FILED no longer reproduces. The players stay two
+drafts with their own ids; the name-keyed slot join is SUPPRESSED for
+the collided name, so neither player can receive the other's match,
+time or opponent; resolution stores one doc carrying ONLY the first
+player's canonical key, with nameCollisions counted and detailed in
+the run record. The silent misattribution — another player's schedule
+in a follower's calendar — is structurally gone. RESIDUAL, accepted:
+in the collision case the second player has NO appearance doc for
+that tournament — a loud, counted coverage gap with zero live
+occurrences (0 collisions across every real draw polled to date). The
+collision-suffix id extension is NOT built, per the owner's ruling.
+Original history below.
+
+### F34 (history) — DETECTION CLOSED in Prompt 8; representation was gated on a ruling
 Two distinct provider ids rendering to one name inside one parent no
 longer silently collapse: the WTA pipeline carries PlayerIDA/B and
 Player.id end to end, resolution keys players by id, and the doc-id

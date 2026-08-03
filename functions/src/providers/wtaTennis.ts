@@ -137,6 +137,9 @@ export function tournamentToFixture(
       'tennis-wta',
       ...((k) => (k ? [k] : []))(tournamentKey(shortTitle(t.title))),
     ],
+    ...((t.city ?? t.country)
+      ? { venueCity: [t.city, t.country].filter(Boolean).join(' ') }
+      : {}),
     startUtc: new Date(start).toISOString(),
     status: 'scheduled',
     durationHours: days * 24,

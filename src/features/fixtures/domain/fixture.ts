@@ -26,6 +26,10 @@ export interface Fixture {
   // strVenue — golf courses, stadiums). A fact, not imagery; the
   // licensed venue-photography layer keys on it (Prompt 9b).
   venue?: string;
+  // City + country as the feed publishes it (ICS LOCATION, WTA
+  // city/country) — the tournament-photo disambiguator (Prompt 9c),
+  // never a photo key by itself.
+  venueCity?: string;
   // IANA zone of the VENUE, when the provider actually supplies one.
   // Absent means unknown — it used to be the literal 'UTC' on 10,395 of
   // 10,483 documents, which is a claim, not a default.

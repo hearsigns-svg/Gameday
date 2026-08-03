@@ -18,6 +18,11 @@ export const venueKey = (team: string): string => `${VENUE_PREFIX}${team}`;
 const PLACE_PREFIX = 'place:';
 export const placeKey = (venueName: string): string =>
   `${PLACE_PREFIX}${venueName}`;
+// Tournament-keyed venue photos (Prompt 9c): resolved via the
+// tournament entity, credited as the tournament's ground.
+const TOURNAMENT_PREFIX = 'tournament:';
+export const tournamentPhotoKey = (name: string): string =>
+  `${TOURNAMENT_PREFIX}${name}`;
 
 type Entry = { art: VenueArt | null; at: string };
 type Cache = Record<string, Entry>;
@@ -55,7 +60,9 @@ export function photoCredits(): Array<{ subject: string; art: VenueArt }> {
   return Object.entries(load())
     .filter(([, e]) => e.art !== null)
     .map(([key, e]) => ({
-      subject: key.startsWith(PLACE_PREFIX)
+      subject: key.startsWith(TOURNAMENT_PREFIX)
+        ? `${key.slice(TOURNAMENT_PREFIX.length)} — venue`
+        : key.startsWith(PLACE_PREFIX)
         ? key.slice(PLACE_PREFIX.length)
         : key.startsWith(VENUE_PREFIX)
         ? `${key.slice(VENUE_PREFIX.length)} — home ground`

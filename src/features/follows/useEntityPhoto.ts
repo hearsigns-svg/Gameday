@@ -3,7 +3,7 @@
 // Transient failures are NOT cached, so a network blip does not deny an
 // entity its photo forever (the bug this pattern already cost us once).
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { VenueArt } from './domain/venueArtRules';
 import {
   cachedPhoto,
@@ -11,9 +11,10 @@ import {
   putPhoto,
   releaseResolve,
   placeKey,
+  tournamentPhotoKey,
   venueKey,
 } from './data/photoCache';
-import { resolveAthletePhoto, resolveVenueByName, resolveVenuePhoto } from './data/venueArt';
+import { resolveAthletePhoto, resolveTournamentVenue, resolveVenueByName, resolveVenuePhoto } from './data/venueArt';
 
 type Resolver = (name: string) => Promise<
   Awaited<ReturnType<typeof resolveAthletePhoto>>
@@ -82,5 +83,26 @@ export function useVenuePlacePhoto(
     venueName ? placeKey(venueName) : null,
     venueName ?? null,
     resolveVenueByName,
+  );
+}
+
+// TOURNAMENT venue photos (Prompt 9c): tennis parents have no venue
+// name, so the tournament itself is the key — resolved via its
+// Wikidata entity's location, city as disambiguator.
+export function useTournamentVenuePhoto(
+  tournamentName: string | null | undefined,
+  city?: string,
+): VenueArt | null | undefined {
+  // Memoised: usePhoto's effect depends on resolver identity, and a
+  // fresh closure per render would re-run it every render (the other
+  // hooks pass stable module-level functions).
+  const resolve = useCallback(
+    (name: string) => resolveTournamentVenue(name, city),
+    [city],
+  );
+  return usePhoto(
+    tournamentName ? tournamentPhotoKey(tournamentName) : null,
+    tournamentName ?? null,
+    resolve,
   );
 }
