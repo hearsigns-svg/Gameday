@@ -1355,3 +1355,11 @@
   leads with the four No. 1s we know are playing, and the wider group
   is an owner decision, not an agent's. The route that would settle it
   properly — a live men's ranking — is its own stage.
+- 2026-08-04 (owner, on the Prompt 12 report): THE ACTIVE MEN'S GROUP
+  STAYS AT THE FOUR THAT ARE KNOWN. The alternatives were an
+  age-bounded heuristic (~50 names, ordered by a prominence proxy) or
+  an alphabetical list of everyone not recorded retired; both were
+  declined in favour of shipping only what a source backs. A four-row
+  group is accepted as the cost. The route to a real men's list is a
+  live ATP ranking source, which is its own stage — NOT atptour.com,
+  which stays permanently excluded.

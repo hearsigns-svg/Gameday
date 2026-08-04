@@ -1523,9 +1523,24 @@ RETIRED PLAYERS in an app about upcoming events.
   so Unfollow restored the false promise).
 - 750 tests green under UTC and America/Los_Angeles; both typechecks
   and the functions build clean.
-- OPEN, OWNER'S CALL: whether the active men's group extends beyond
-  the four known-playing No. 1s into the 1,394 unmarked men on a
-  heuristic with an unmeasurable error rate. Until a roster refresh
-  runs, the men's section is one honestly-titled group of 29 — the
-  split appears when the Tuesday scheduler (or a manual runRoster)
-  re-keys the docs.
+- OWNER RULINGS (2026-08-04, in the report): (a) the active men's
+  group STAYS AT THE FOUR that are known — no heuristic extension into
+  the 1,394 unmarked men; (b) runRoster authorised and EXECUTED rather
+  than waiting for the Tuesday scheduler.
+- ROSTER REFRESH EXECUTED 2026-08-04 (owner-authorised): roster-atp
+  1,513 entries, 0 created, 1,513 updated, 0 ambiguous; roster-wta
+  200/203 updated/3 deactivated; roster-ibf 497; roster-f1 31. Live
+  browse then verified: "WTA Tour — Women" 50, "Men's world No. 1s —
+  still playing" 4 (Alcaraz, Medvedev, Sinner, Djokovic), "Men's world
+  No. 1s — retired" 25 with per-row years (Agassi 2006, Murray 2024,
+  Roddick 2012, Borg 1993, Becker 1999). searchEntities returns
+  Federer with careerStatus retired / careerEndYear 2022. Confirmed on
+  the Release simulator build.
+- OBSERVED, NOT FIXED: a browse row whose only caption material is its
+  grouping echoes the section header ("Men's world No. 1s — still
+  playing" under a header saying the same). Pre-existing fallback
+  behaviour (captionFor's last branch), now visible on the 4-row
+  group because those athletes carry no rank, country or date. The
+  retired rows read "Retired 2006" instead, so the echo is confined to
+  the still-playing four. Left alone — suppressing the fallback in
+  browse mode is a caption-policy change nobody asked for.
