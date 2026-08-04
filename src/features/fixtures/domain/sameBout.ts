@@ -79,6 +79,34 @@ function pairKey(f: Fixture): string | null {
   return `${f.sport}|${pair.join('|')}`;
 }
 
+// THE CANONICAL PAIR (Prompt 14). Two combat records are the same
+// event when the same canonical FIGHTER PAIR meets on the same date
+// from different providers — and canonical athlete ids make that safe
+// in a way names never were: `athlete_000003` is one person, "Rolando
+// Romero" is a string two feeds may spell differently ("Rolando 'Rolly'
+// Romero", "Teófimo López"). Normalisation catches the accents; it does
+// not catch a nickname.
+//
+// This is an ADDITIONAL key, not a replacement. Card docs carry no
+// participants BY CONSTRUCTION — a TSDB card's title is its main event
+// and its athletes array is empty — so requiring ids would stop a card
+// merging with the bout it names, which is a merge that already ships
+// and that a cards-plus-fighter follower depends on. Names remain the
+// fallback for exactly that case; ids strictly ADD merges, never remove
+// them.
+const CANONICAL_ATHLETE = /^athlete_\d{6}$/;
+
+function canonicalPairKey(f: Fixture): string | null {
+  if (!PERSON_SPORTS.has(f.sport)) return null;
+  const ids = f.followKeys.filter((k) => CANONICAL_ATHLETE.test(k)).sort();
+  // Exactly two: a bout is two people. One id is an undercard doc we
+  // could only half-identify; three would not be a bout at all, and
+  // guessing which two it means is the failure the surname rule exists
+  // to prevent.
+  if (ids.length !== 2) return null;
+  return `${f.sport}|${ids.join('|')}`;
+}
+
 // ─── Tennis: one tournament, two feeds ────────────────────────────────
 //
 // A joint ATP+WTA event is one tournament in two parent docs (the ICS
@@ -223,15 +251,25 @@ export function dedupeSameBout(
   pinnedIds: ReadonlySet<string> = new Set(),
 ): Fixture[] {
   // Cluster candidates by pair, then by time proximity within the pair.
-  const byPair = new Map<string, Fixture[]>();
+  // TWO KEYINGS, one loop: the canonical id pair (certain, and blind to
+  // how each feed spells a name) and the normalised name pair (the only
+  // key a participant-less card doc can offer). A doc may appear in
+  // both; the drop set is a union, so a merge found either way counts
+  // and neither can undo the other.
+  const buckets = new Map<string, Fixture[]>();
   for (const f of fixtures) {
     if (f.status === 'cancelled') continue;
-    const key = pairKey(f);
-    if (!key) continue;
-    byPair.set(key, [...(byPair.get(key) ?? []), f]);
+    for (const [kind, key] of [
+      ['id', canonicalPairKey(f)],
+      ['name', pairKey(f)],
+    ] as const) {
+      if (!key) continue;
+      const k = `${kind}:${key}`;
+      buckets.set(k, [...(buckets.get(k) ?? []), f]);
+    }
   }
   const drop = new Set<string>();
-  for (const group of byPair.values()) {
+  for (const group of buckets.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) =>
       a.startUtc.localeCompare(b.startUtc),

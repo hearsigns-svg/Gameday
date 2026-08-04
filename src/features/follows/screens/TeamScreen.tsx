@@ -31,6 +31,7 @@ import {
 import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
+import { dedupeSameEvent } from '../../fixtures/domain/sameBout';
 import { Fixture } from '../../fixtures/domain/fixture';
 import { loadPrefs } from '../../calendar-sync/data/prefsStore';
 import { ensurePolled, follow, setScope, unfollow } from '../followActions';
@@ -149,7 +150,20 @@ export default function TeamScreen({ navigation, route }: Props) {
     const r = await fetchFixturesForFollows(keys);
     if (!mounted.current) return;
     if (r.ok) {
-      const upcoming = r.value.fixtures
+      // ONE REAL EVENT, ONE ROW — the same rule the calendar planner and
+      // the Home snapshot already apply (F28, Prompt 14). This screen
+      // rendered the raw fetch, so a fighter followed across two
+      // providers listed his fight twice ("Boxing · Time TBC" beside
+      // "Premier Boxing Champions · 23:00") while the Following rail
+      // one tap away said "1 upcoming" and the calendar held exactly
+      // one event. Same data, two paths, and only this one skipped the
+      // dedupe. `wantedKeys` is this page's own key set, so a pinned
+      // or unrelated twin cannot drag an unwanted slice in.
+      const upcoming = dedupeSameEvent(
+        r.value.fixtures,
+        pinnedIds(),
+        new Set(keys),
+      )
         .filter((f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000)
         .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
       setFixtures(upcoming);

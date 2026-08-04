@@ -1616,3 +1616,41 @@
   so EVERY failure path returns an empty map rather than an error, and a
   failed rebuild never overwrites a populated cache with nothing. The
   takedown switch and the Olympic exclusion both apply.
+
+## Prompt 14 decisions (2026-08-04)
+
+- 2026-08-04: THE CANONICAL FIGHTER PAIR IS AN ADDITIONAL KEY, NOT A
+  REPLACEMENT — and this is a deliberate departure from the letter of
+  the brief, stated so it can be overruled. The owner's rule was "pair
+  on canonical athlete ids, not names; a pair that resolves only by name
+  must not merge". Ids ARE now used and are strictly better: they are
+  blind to how a feed spells a fighter ("Rolando 'Rolly' Romero",
+  "Teófimo López"), where normalisation folds accents but not nicknames.
+  But CARD DOCS CARRY NO PARTICIPANTS BY CONSTRUCTION — a TSDB card's
+  title is its main event and its athletes array is empty — so making
+  ids MANDATORY would stop a card merging with the bout it names, which
+  is a merge that already ships (Prompt 8) and that a cards-plus-fighter
+  follower depends on. Names therefore remain the fallback for exactly
+  that case. Ids only ever ADD merges. The residual limit is pinned by a
+  test rather than left to be discovered: a card whose title spells a
+  fighter differently from the bout feed stays separate.
+- 2026-08-04: A DOC WITH ONE CANONICAL ID NEVER PAIRS ON IDS. Exactly
+  two, or the id key is refused — half-identified is not identified, and
+  guessing which two a three-id doc means is the failure the surname
+  rule exists to prevent.
+- 2026-08-04: THE COMPETITION-KEY REQUIREMENT IN `isSameFixture` IS
+  UNCHANGED. The owner asked that it not be relaxed globally and it was
+  not relaxed at all: the merge happens in the CLIENT dedupe, which is
+  already scoped to PERSON_SPORTS, so soccer's "different competition,
+  same two teams, same week" — a legitimately distinct fixture — cannot
+  start merging. The server reconciler keeps refusing cross-competition
+  pairs exactly as before.
+- 2026-08-04: PAIRING HEURISTICS HAVE A COMMON SHAPE (recorded as F47
+  so a third class is not rediscovered): every rule is IDENTITY KEY ×
+  TIME PROXIMITY × SAME-PROVIDER GUARD, and only the identity term
+  changes. A named recurring event (tennis tournament, athletics
+  meeting, golf tournament) keys on its canonical name-scoped key with
+  span overlap; an event that IS its participants (a bout) keys on the
+  canonical participant pair with a day window. The question for a new
+  class is never "what algorithm" but "what is this event's identity to
+  a user, and does a canonical id for it exist yet".

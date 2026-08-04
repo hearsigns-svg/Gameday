@@ -306,3 +306,114 @@ test('a pinned slot is never dropped, even beside a followed twin', () => {
     'wta-1045-2026-slot-final',
   ]);
 });
+
+
+// ─── F28 / Prompt 14: the canonical fighter pair ──────────────────────
+
+describe('canonical athlete ids pair fights names cannot', () => {
+  const base = {
+    sport: 'boxing' as const,
+    status: 'scheduled' as const,
+    competitionId: 'x',
+  };
+  // The SAME fight, spelled differently by two feeds. Normalisation
+  // folds accents; it does not fold a nickname, so the name pair misses
+  // this and only the canonical ids catch it.
+  const pbc = {
+    ...base,
+    id: 'pbc-night-app-a-b',
+    title: 'Rolando Romero vs Teofimo Lopez',
+    homeTeam: "Rolando 'Rolly' Romero",
+    awayTeam: 'Teófimo López',
+    competition: 'Premier Boxing Champions',
+    startUtc: '2026-08-22T22:00:00.000Z',
+    timePrecision: 'nominal',
+    parentFixtureId: 'pbc-night',
+    followKeys: ['pbc-cards-appearances', 'athlete_000003', 'athlete_000004'],
+  } as never as Fixture;
+  const tsdb = {
+    ...base,
+    id: 'tsdb-2528767-app-a-b',
+    title: 'Rolando Romero vs Teofimo Lopez',
+    homeTeam: 'Rolando Romero',
+    awayTeam: 'Teofimo Lopez',
+    competition: 'Boxing',
+    startUtc: '2026-08-22T00:00:00.000Z',
+    status: 'tbd' as const,
+    timePrecision: 'date_only',
+    parentFixtureId: 'tsdb-2528767',
+    followKeys: ['tsdb-league-4445-appearances', 'athlete_000003', 'athlete_000004'],
+  } as never as Fixture;
+
+  test('one fight survives, and it is the better-informed record', () => {
+    const out = dedupeSameEvent([tsdb, pbc]);
+    expect(out.map((f) => f.id)).toEqual(['pbc-night-app-a-b']);
+  });
+
+  test('a DIFFERENT canonical pair on the same night is left alone', () => {
+    // An undercard bout is two other people — never the main event.
+    const undercard = {
+      ...tsdb,
+      id: 'tsdb-2528767-app-c-d',
+      homeTeam: 'Someone Else',
+      awayTeam: 'Another Person',
+      followKeys: ['tsdb-league-4445-appearances', 'athlete_000007', 'athlete_000008'],
+    } as never as Fixture;
+    const out = dedupeSameEvent([pbc, undercard]);
+    expect(out).toHaveLength(2);
+  });
+
+  test('a doc with only ONE canonical id never pairs on ids', () => {
+    // Half-identified is not identified — the surname rule's shape.
+    const half = {
+      ...pbc,
+      id: 'pbc-night-app-half',
+      followKeys: ['pbc-cards-appearances', 'athlete_000003'],
+      homeTeam: 'Totally Different',
+      awayTeam: 'Names Here',
+    } as never as Fixture;
+    const out = dedupeSameEvent([tsdb, half]);
+    expect(out).toHaveLength(2);
+  });
+
+  test('a participant-less CARD still merges with the bout it names', () => {
+    // Cards carry no athletes by construction, so ids cannot reach
+    // them; the name pair is the only key they have, and making ids
+    // mandatory would have regressed this merge. Names match here
+    // because that is the real-world case — this is the exact shape
+    // production holds (tsdb-2528767 beside the PBC bout).
+    const card = {
+      ...tsdb,
+      id: 'tsdb-2528767',
+      followKeys: ['tsdb-league-4445'],
+    } as never as Fixture;
+    delete (card as { parentFixtureId?: string }).parentFixtureId;
+    const pbcSameNames = {
+      ...pbc,
+      homeTeam: 'Rolando Romero',
+      awayTeam: 'Teofimo Lopez',
+    } as never as Fixture;
+    const out = dedupeSameEvent([card, pbcSameNames]);
+    expect(out.map((f) => f.id)).toEqual(['pbc-night-app-a-b']);
+  });
+
+  test('nickname spellings alone do NOT merge a card — ids are what make it safe', () => {
+    // The honest limit of the name fallback, stated rather than
+    // discovered: a card whose title spells a fighter differently from
+    // the bout feed stays separate, because a card has no id to pair
+    // on. Conservative by design — a missed merge shows a duplicate, a
+    // wrong merge deletes a real event.
+    const card = {
+      ...tsdb,
+      id: 'tsdb-2528767',
+      followKeys: ['tsdb-league-4445'],
+    } as never as Fixture;
+    delete (card as { parentFixtureId?: string }).parentFixtureId;
+    expect(dedupeSameEvent([card, pbc])).toHaveLength(2);
+  });
+
+  test('a pinned duplicate is never dropped, however it paired', () => {
+    const out = dedupeSameEvent([tsdb, pbc], new Set(['tsdb-2528767-app-a-b']));
+    expect(out).toHaveLength(2);
+  });
+});

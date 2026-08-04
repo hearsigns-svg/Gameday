@@ -827,3 +827,70 @@ in 2022 — no upcoming events are expected." back to "No scheduled
 events. We'll add them when announced" — re-making the false promise in
 the exact moment the user is looking at it. Now resolved once per
 athlete (`useMemo` keyed on identity, not on follow state).
+
+
+## Found during Prompt 14 (F28 combat duplicates, 2026-08-04)
+
+### F28 — CLOSED, and it was not where it was recorded
+The duplicate the owner saw was real, but the diagnosis moved twice.
+
+WHAT THE RECORDS ACTUALLY ARE: not two docs but FOUR — two providers ×
+two levels. PBC publishes a card (`pbc-fight-night-august-22-2026`,
+nominal 22:00Z) and a bout appearance under it; TSDB publishes a card
+(`tsdb-2528767`, date_only) and its own appearance. The card-vs-bout
+hypothesis was worth testing and is NOT what the user sees: card docs
+carry only `pbc-cards` / `tsdb-league-4445` in followKeys, so a
+fighter-follower never receives them. Both visible rows were APPEARANCE
+docs carrying `athlete_000003` + `athlete_000004`.
+
+WHY `isSameFixture` REFUSES THEM: confirmed exactly as the owner read it
+— `competitionKey(a) !== competitionKey(b)` ("Boxing" vs "Premier Boxing
+Champions") returns false at identity.ts:111. The empty-participants
+guard at :97 would also have bailed on the card docs. But that function
+is the SERVER reconciler and is not the layer that surfaced this.
+
+THE ACTUAL DEFECT: F28 was already fixed client-side in Prompt 8
+(`dedupeSameBout`, d3bc696), and it works — the three docs the owner's
+follow set fetches collapse to the PBC appearance when run through the
+shipped function. Every consumer applied it EXCEPT `TeamScreen`, which
+rendered the raw fetch. So the fighter's page said "2 upcoming" while
+the Following rail one tap away said "1 upcoming" and the device
+calendar held exactly ONE event (sqlite-verified). Same data, two paths,
+one of them skipping the dedupe.
+
+NO CALENDAR CONSEQUENCE. The brief assumed users had two calendar events
+per fight; they do not, and have not since Prompt 8 — the planner
+dedupes at syncEngine.ts:584 and the presentation snapshot at :314. No
+production data change was needed.
+
+SCALE: 58 future combat fixtures, 9 carrying a canonical athlete pair,
+**1** cross-source duplicate pair (Romero/Lopez). The screenshot was the
+whole population.
+
+### F47 — The pairing heuristics have a common shape; the third class will too
+Prompt 11 said the key-stamping mechanism generalises but the pairing
+heuristic does not. With two written, the shape is visible and worth
+recording so a third is not rediscovered:
+
+  EVERY pairing rule is (IDENTITY KEY) × (TIME PROXIMITY) × (SAME-PROVIDER
+  GUARD). Only the first term changes per sport.
+    - tennis:  identity = the canonical tournament key (tennis-t-<slug>),
+               proximity = overlapping SPANS (multi-day events)
+    - combat:  identity = the canonical fighter PAIR, proximity = a 36h
+               window (a card announced date-only vs 23:00 local can
+               straddle midnight UTC)
+
+WHAT PICKS THE IDENTITY TERM: what the event IS to a user. A tournament
+is a named thing that recurs annually, so its name-scoped key is the
+identity and the span disambiguates editions. A bout is not named at
+all — it IS its two participants — so the pair is the identity and the
+day disambiguates rematches.
+
+SO THE THIRD CLASS IS PREDICTABLE. An athletics meeting is a NAMED
+recurring event → tennis's shape (meeting key × span overlap). A golf
+tournament is the same. A one-off exhibition or a qualifier identified
+only by its entrants would take combat's shape. The open question for
+any new class is never "what algorithm" but "what is this event's
+identity to a user, and does a canonical id exist for it" — and if no
+canonical id exists, the honest answer is to build the identity layer
+first, exactly as Prompt 8 did for athletes before this became safe.
