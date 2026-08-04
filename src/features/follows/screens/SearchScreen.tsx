@@ -35,7 +35,7 @@ import {
 } from '../data/directoryRepo';
 import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed, Followable } from '../data/followStore';
-import { retiredCaption } from '../domain/careerStatus';
+import { isRetired, retiredCaption } from '../domain/careerStatus';
 import { colourFromKitText } from '../domain/entityColour';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -366,8 +366,14 @@ export default function SearchScreen({ navigation }: Props) {
                             sportKey: item.sportKey,
                           })
                 }
+                // A retired athlete is findable but not followable
+                // (owner ruling 2026-08-04) — the caption already says
+                // "Retired 2022", and that IS the row's answer. An
+                // existing follow keeps its control so it can be undone.
                 right={
-                  item.followable ? (
+                  item.followable &&
+                  (!isRetired(item.followable) ||
+                    isFollowed(item.followable.key)) ? (
                     <FollowButton
                       following={isFollowed(item.followable.key)}
                       subject={item.title}

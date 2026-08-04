@@ -30,7 +30,13 @@ import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
-import { retiredCaption } from '../domain/careerStatus';
+import { isRetired, retiredCaption } from '../domain/careerStatus';
+
+// Whether a row shows a follow control at all. Retired athletes do not,
+// unless the user already follows them — see the ruling in
+// domain/careerStatus.ts.
+const followControlFor = (a: { key: string } & Parameters<typeof isRetired>[0]) =>
+  !isRetired(a) || isFollowed(a.key);
 import {
   AthleteCard,
   fetchAthleteBrowse,
@@ -113,7 +119,16 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         return;
       }
       const sections: AthleteSection[] = [];
-      if (r.value.competingSoon.length > 0) {
+      // TENNIS IS TWO SECTIONS: women, men (owner ruling 2026-08-04).
+      // "Competing soon" is redundant there — both groups are already
+      // scoped to players who compete, and everyone it surfaced was
+      // also in the women's group. Boxing and F1 keep it: their groups
+      // are weight classes and a grid, where "who is out this month" is
+      // information the sections genuinely do not carry.
+      if (
+        r.value.competingSoon.length > 0 &&
+        route.params.sportKey !== 'tennis'
+      ) {
         sections.push({ title: 'Competing soon', data: r.value.competingSoon });
       }
       for (const g of r.value.groups) {
@@ -367,13 +382,20 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                     : {}),
                 })
               }
+              // A retired athlete offers NO follow (owner ruling
+              // 2026-08-04): a follow is a promise of future events,
+              // and there are none coming. An EXISTING follow keeps
+              // its control so it can still be undone — hiding that
+              // would strand whoever followed them yesterday.
               right={
-                <FollowButton
-                  following={isFollowed(a.key)}
-                  subject={a.name}
-                  busy={busyKey === a.key}
-                  onPress={() => void toggle(a)}
-                />
+                followControlFor(a) ? (
+                  <FollowButton
+                    following={isFollowed(a.key)}
+                    subject={a.name}
+                    busy={busyKey === a.key}
+                    onPress={() => void toggle(a)}
+                  />
+                ) : null
               }
             />
           )}

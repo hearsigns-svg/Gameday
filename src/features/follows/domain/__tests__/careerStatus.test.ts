@@ -5,7 +5,6 @@ import {
   isRetired,
   retiredCaption,
   retiredEmptyState,
-  retiredFollowNote,
 } from '../careerStatus';
 
 describe('isRetired', () => {
@@ -44,27 +43,17 @@ describe('the three surfaces', () => {
     );
   });
 
-  test('follow note warns without blocking', () => {
-    expect(retiredFollowNote('Roger Federer', federer)).toBe(
-      'Following Roger Federer — retired in 2022, no new events expected',
-    );
-    expect(retiredFollowNote('Roger Federer', noYear)).toBe(
-      'Following Roger Federer — retired, no new events expected',
-    );
-  });
-
   test('every surface returns null for an unmarked athlete, so the caller keeps its own copy', () => {
     // 92% of the ATP directory is unmarked. None of it may be
     // described as retired, and none of it may be described as active
     // either — there is deliberately no "still playing" string here.
     expect(retiredCaption({})).toBeNull();
     expect(retiredEmptyState({})).toBeNull();
-    expect(retiredFollowNote('Somebody', {})).toBeNull();
   });
 
   test('a WTA player, who never carries the field at all, is unaffected', () => {
     // Career status only ever comes from the Wikidata/ATP roster.
     expect(retiredEmptyState({})).toBeNull();
-    expect(retiredFollowNote('Aryna Sabalenka', {})).toBeNull();
+    expect(retiredCaption({})).toBeNull();
   });
 });

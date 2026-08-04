@@ -82,7 +82,7 @@ test('roster entries: Q-id primary, atp+itf extras, curated No. 1s get the ONLY 
 // 1,513 carry P570 — and the death arm is pinned synthetically below
 // rather than by editing a real capture to say something it did not.
 
-test('the No. 1s split on RECORDED career end — and it is right in both directions here', () => {
+test('the curated group is the still-playing No. 1s; retired ones are ungrouped — and it is right in both directions here', () => {
   // Still playing: no P2032 anywhere on the item.
   for (const q of ['Q5812']) {
     const p = byQ.get(q)!;
@@ -92,9 +92,9 @@ test('the No. 1s split on RECORDED career end — and it is right in both direct
     expect(rosterEntryOf(p).careerStatus).toBeUndefined();
   }
   // Retired: P2032 present. Federer 2022, Nadal 2024, Agassi 2006 —
-  // three different eras, one rule. Note the key is atp-no1-RETIRED:
-  // the legacy `atp-no1` is never emitted again, so no production doc
-  // changes meaning under a deploy (review round).
+  // three different eras, one rule. They get NO grouping: retired
+  // players left browse entirely (owner ruling 2026-08-04) and are
+  // reached only by search, marked, with no follow offered.
   for (const [q, year] of [
     ['Q1426', 2022],
     ['Q10132', 2024],
@@ -103,8 +103,9 @@ test('the No. 1s split on RECORDED career end — and it is right in both direct
     const p = byQ.get(q)!;
     expect(isRetired(p)).toBe(true);
     const e = rosterEntryOf(p);
-    expect(e.groupingKey).toBe('atp-no1-retired');
-    expect(e.grouping).toBe("Men's world No. 1s — retired");
+    // NO browse group at all: retired players are search-first.
+    expect(e.groupingKey).toBeUndefined();
+    expect(e.grouping).toBeUndefined();
     expect(e.careerStatus).toBe('retired');
     expect(e.careerEndYear).toBe(year);
   }

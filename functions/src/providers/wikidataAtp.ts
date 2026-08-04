@@ -284,20 +284,16 @@ export function rosterEntryOf(p: AtpPlayer): RosterEntry {
   // alphabetical slice of them would be an arbitrary lie. Everyone else
   // is search-first — findable, followable, ungrouped.
   //
-  // THE SPLIT (Prompt 12): those 29 are now TWO groups, because one
-  // list mixing Alcaraz with Björn Borg — sorted alphabetically, since
-  // none of them carries a rank — opened the men's section on five
-  // players who will never have a fixture, in an app about upcoming
-  // events. The split uses `isRetired`, which is verified 100% correct
-  // on exactly this population; it is NOT extended to the other 1,484,
-  // where the same signal covers 7.9% and would mislabel hundreds.
-  // Both keys are NEW. The legacy `atp-no1` is never emitted again —
-  // see GROUP_TITLES for why reusing it was a lie with a shelf life.
-  const groupingKey = no1
-    ? retired
-      ? 'atp-no1-retired'
-      : 'atp-no1-active'
-    : undefined;
+  // A RETIRED PLAYER GETS NO BROWSE GROUP AT ALL (owner ruling
+  // 2026-08-04). One list mixing Alcaraz with Björn Borg — sorted
+  // alphabetically, since none of them carries a rank — opened the
+  // men's section on five players who will never have a fixture. So
+  // the curated group is the still-playing No. 1s only, and retired
+  // players join the other 1,484 as search-first: findable, marked,
+  // ungrouped. `isRetired` is verified 100% correct on exactly this
+  // population; it is NOT extended to the other 1,484, where the same
+  // signal covers 7.9% and would mislabel hundreds.
+  const groupingKey = no1 && !retired ? 'atp-no1-active' : undefined;
   const endYear = careerEndYearOf(p);
   return {
     source: 'wikidata',

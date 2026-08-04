@@ -272,19 +272,25 @@ describe('group titles', () => {
     }
   });
 
-  test('a partial refresh renders all three keys, each honestly titled', () => {
-    // Some docs moved, some did not — a batch that half-committed, or
-    // a WDQS failure mid-run. Every header must still be true of what
-    // sits under it.
+  test('RETIRED ATHLETES ARE NOT BROWSABLE, whatever key their doc still carries', () => {
+    // Owner ruling 2026-08-04. The filter is at serve time precisely
+    // because a stale groupingKey survives every refresh that stops
+    // emitting one — the doc below still says atp-no1-retired and must
+    // still produce NO section.
     const b = shapeAthleteBrowse(
       [
         men({ id: 'athlete_000940', groupingKey: 'atp-no1-active' }),
-        men({ id: 'athlete_000941', groupingKey: 'atp-no1' }),
         men({
           id: 'athlete_000942',
           groupingKey: 'atp-no1-retired',
           careerStatus: 'retired',
           careerEndYear: 1993,
+        }),
+        men({
+          id: 'athlete_000943',
+          groupingKey: 'wta',
+          rank: 4,
+          careerStatus: 'retired',
         }),
       ],
       'tennis',
@@ -292,8 +298,29 @@ describe('group titles', () => {
     );
     expect(b.groups.map((g) => g.grouping)).toEqual([
       "Men's world No. 1s — still playing",
-      "Men's world No. 1s",
-      "Men's world No. 1s — retired",
+    ]);
+    expect(
+      b.groups.flatMap((g) => g.athletes).some((a) => a.careerStatus),
+    ).toBe(false);
+  });
+
+  test('tennis browse is TWO groups: women, then the men still playing', () => {
+    const b = shapeAthleteBrowse(
+      [
+        men({ id: 'athlete_000944', groupingKey: 'atp-no1-active' }),
+        men({ id: 'athlete_000945', groupingKey: 'wta', rank: 1 }),
+        men({
+          id: 'athlete_000946',
+          groupingKey: 'atp-no1-retired',
+          careerStatus: 'retired',
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    expect(b.groups.map((g) => g.grouping)).toEqual([
+      'WTA Tour — Women',
+      "Men's world No. 1s — still playing",
     ]);
   });
 
@@ -304,12 +331,6 @@ describe('group titles', () => {
       [
         men({ id: 'athlete_000910', groupingKey: 'wta', rank: 1 }),
         men({ id: 'athlete_000911', groupingKey: 'atp-no1-active' }),
-        men({
-          id: 'athlete_000912',
-          groupingKey: 'atp-no1-retired',
-          careerStatus: 'retired',
-          careerEndYear: 1993,
-        }),
       ],
       'tennis',
       NOW,
@@ -317,11 +338,10 @@ describe('group titles', () => {
     expect(b.groups.map((g) => g.grouping)).toEqual([
       'WTA Tour — Women',
       "Men's world No. 1s — still playing",
-      "Men's world No. 1s — retired",
     ]);
   });
 
-  test('recorded retirement rides the card; absence stays absent', () => {
+  test('no card in browse carries a retirement, because none of them can', () => {
     const b = shapeAthleteBrowse(
       [
         men({
@@ -340,16 +360,9 @@ describe('group titles', () => {
       'tennis',
       NOW,
     );
-    const retired = b.groups.find(
-      (g) => g.groupingKey === 'atp-no1-retired',
-    )!;
-    expect(retired.athletes[0]).toMatchObject({
-      careerStatus: 'retired',
-      careerEndYear: 2022,
-    });
-    const active = b.groups.find(
-      (g) => g.groupingKey === 'atp-no1-active',
-    )!;
+    expect(b.groups).toHaveLength(1);
+    const active = b.groups[0];
+    expect(active.athletes.map((a) => a.name)).toEqual(['Unmarked Man']);
     // No `careerStatus: 'active'` is ever emitted — the field can only
     // say "retired", because that is the only thing a source states.
     expect(active.athletes[0].careerStatus).toBeUndefined();

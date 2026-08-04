@@ -10,7 +10,6 @@ import { calendarChoice } from '../calendar-sync/data/calendarChoice';
 import { SyncOutcome } from '../calendar-sync/syncEngine';
 import { refollow, unfollow } from './followActions';
 import { Followable } from './data/followStore';
-import { retiredFollowNote } from './domain/careerStatus';
 
 export function followFeedback(
   r: Result<SyncOutcome>,
@@ -68,15 +67,9 @@ export function followFeedback(
       action: { label: 'Undo', onPress: () => void unfollow(item) },
     });
   } else {
-    // Off-season honesty: followed, nothing to add yet — and, for a
-    // retired athlete, nothing to add EVER, which is a different
-    // sentence and the one moment a user is owed it (Prompt 12).
-    // Following is still allowed; see careerStatus.ts for why warning
-    // beats blocking.
-    showToast({
-      message:
-        retiredFollowNote(item.label, item) ??
-        `Following ${item.label} — no upcoming fixtures yet`,
-    });
+    // Off-season honesty: followed, nothing to add yet. There is no
+    // retired variant of this — a retired athlete has no follow control
+    // to reach it (owner ruling 2026-08-04, careerStatus.ts).
+    showToast({ message: `Following ${item.label} — no upcoming fixtures yet` });
   }
 }

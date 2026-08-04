@@ -43,18 +43,12 @@ export function retiredEmptyState(a: CareerStatusFields): string | null {
     : 'Retired — no upcoming events are expected.';
 }
 
-// The post-follow toast. Following a retired player is ALLOWED and
-// deliberately so: the marker is high-precision but low-recall, so
-// blocking would refuse Federer while waving through the equally
-// retired players Wikidata simply has not marked — an arbitrary line
-// dressed up as a rule. A follow also costs nothing (it writes no
-// calendar event) and exhibition returns happen. So: warn, don't block.
-export function retiredFollowNote(
-  label: string,
-  a: CareerStatusFields,
-): string | null {
-  if (!isRetired(a)) return null;
-  return a.careerEndYear !== undefined
-    ? `Following ${label} — retired in ${a.careerEndYear}, no new events expected`
-    : `Following ${label} — retired, no new events expected`;
-}
+// NOTE ON FOLLOWING (owner ruling 2026-08-04, superseding the
+// warn-don't-block cut): a retired athlete offers NO follow control at
+// all. A follow is a promise of future events and there are none
+// coming, so the row simply says "Retired 2022" and stops. There is
+// therefore no post-follow warning string here — the earlier one became
+// unreachable the moment the control disappeared, and an unreachable
+// string is the dead-code shape this project has been bitten by twice.
+// The ONE exception every surface honours: an athlete the user ALREADY
+// follows keeps a control, so an existing follow can still be undone.

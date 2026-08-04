@@ -45,6 +45,7 @@ import {
 import { sportByKey } from '../domain/sportsConfig';
 import {
   CareerStatusFields,
+  isRetired,
   retiredEmptyState,
 } from '../domain/careerStatus';
 
@@ -287,12 +288,18 @@ export default function TeamScreen({ navigation, route }: Props) {
             {fixtures ? ` · ${fixtures.length} upcoming` : ''}
           </Text>
         </View>
-        <FollowButton
-          following={following}
-          subject={name}
-          busy={busy}
-          onPress={() => void toggleFollow()}
-        />
+        {/* No follow for a retired athlete (owner ruling 2026-08-04) —
+            the page's empty state says "Retired in 2022" and offers
+            nothing to wait for. An existing follow keeps its control so
+            it can still be removed. */}
+        {!isRetired(career) || following ? (
+          <FollowButton
+            following={following}
+            subject={name}
+            busy={busy}
+            onPress={() => void toggleFollow()}
+          />
+        ) : null}
       </View>
       {error ? (
         <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>

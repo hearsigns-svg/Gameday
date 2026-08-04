@@ -134,7 +134,11 @@ export const GROUP_TITLES: Readonly<Record<string, string>> = {
   wta: 'WTA Tour — Women',
   'atp-no1': "Men's world No. 1s", // legacy: the unsplit 29
   'atp-no1-active': "Men's world No. 1s — still playing",
-  'atp-no1-retired': "Men's world No. 1s — retired",
+  // `atp-no1-retired` is deliberately ABSENT. Retired athletes left
+  // browse entirely (owner ruling 2026-08-04) and shapeAthleteBrowse
+  // filters them before grouping, so any document still carrying that
+  // key renders no section at all. A title here would only describe a
+  // group that can no longer exist.
 };
 
 export function groupTitleOf(
@@ -694,8 +698,18 @@ export function reconcileRoster(
       ...(e.rank !== undefined ? { rank: e.rank } : {}),
       ...(e.championOf !== undefined ? { championOf: e.championOf } : {}),
       ...(e.countryCode ? { countryCode: e.countryCode } : {}),
-      ...(e.grouping ? { grouping: e.grouping } : {}),
-      ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
+      // The owning source also owns the GROUPING: a retired player's
+      // entry stops carrying one, and merge semantics would otherwise
+      // leave last week's key on the document forever. (Browse filters
+      // retired athletes anyway, so this is data hygiene rather than
+      // the load-bearing rule — but a key nothing can render is a trap
+      // for the next reader.)
+      ...(opts.ownsCareerStatus
+        ? { grouping: e.grouping, groupingKey: e.groupingKey }
+        : {
+            ...(e.grouping ? { grouping: e.grouping } : {}),
+            ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
+          }),
       ...(e.honours !== undefined ? { honours: e.honours } : {}),
       // CAREER STATUS IS ALL-OR-NOTHING PER REFRESH, for the source
       // that owns it (review round). wikidata evaluates every selected

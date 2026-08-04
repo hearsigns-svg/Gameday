@@ -1544,3 +1544,49 @@ RETIRED PLAYERS in an app about upcoming events.
   retired rows read "Retired 2006" instead, so the echo is confined to
   the still-playing four. Left alone — suppressing the fallback in
   browse mode is a caption-policy change nobody asked for.
+
+### Prompt 12b — owner revision: retired out, two sections  [x] / point 2 BLOCKED
+
+Owner, same day: (1) stop showing retired athletes — a searched retired
+athlete just shows "Retired" with no follow option; (2) show ALL ACTIVE
+men in the men's section, active = played in the last year OR scheduled
+within our window, everyone else search-only; (3) two sections only.
+
+- (1) and (3) SHIPPED. Retired athletes are filtered from browse at
+  SERVE time (shapeAthleteBrowse, before grouping) so a stale
+  groupingKey cannot keep rendering them; the provider also stops
+  emitting a group for them, and reconcileRoster now clears a grouping
+  the owning source omits. No follow control on any of the three
+  surfaces (athlete list, global search, athlete page) — with the one
+  exception that an ALREADY-followed athlete keeps its control so the
+  follow can be undone rather than stranded. The post-follow retirement
+  warning was DELETED, not left unreachable. Tennis is now two
+  sections; "Competing soon" dropped for tennis only (boxing and F1
+  keep it — their groups are weight classes and a grid).
+- (2) BLOCKED ON A SOURCE, NOT ON CODE. Probed directly, production
+  2026-08-04: 340 `tennis-atp` fixtures, **0 with participants**; 120
+  `tennis-wta-appearances`, 118 with participants; 108 distinct athlete
+  followKeys on tennis fixtures resolve to **0 men / 108 women**; 1,513
+  ATP athletes, **0 with a nextStartUtc**. Past-year retention is
+  healthy (178 past fixtures, 106 with participants) and also entirely
+  women. BOTH ARMS OF THE OWNER'S RULE THEREFORE EVALUATE TO ZERO MEN
+  — the rule is right, the data to run it does not exist. Causes are
+  standing rulings: the Tennis TV ICS is tournament-level (fields only,
+  no players) and wtaTennis.ts:268 drops ATP order-of-play entries as
+  skeletons; atptour.com is permanently excluded.
+- WHAT WOULD UNBLOCK IT, cheapest first: a live ATP ranking is not a
+  proxy for the owner's rule, it IS the rule — ATP points are a rolling
+  52-week window, so "ranked" means "played in the last year". The
+  MediaWiki Action API is already approved (DECISIONS, 2026-08-03) and
+  Wikipedia publishes the current ATP top 100. That is a provider stage
+  of its own. The Grand Slam organiser sites (AELTC, FFT, Tennis
+  Australia) remain the route to actual men's draws and match times,
+  and are their own stage per the Prompt 12 brief.
+- 750 tests green both timezones; both typechecks and the functions
+  build clean; deployed --only functions; Release simulator build
+  verified (two sections, no Competing soon, Delbonis shows "Retired
+  2024" with no Follow).
+- HYGIENE OUTSTANDING (harmless, owner's call): 25 documents still
+  carry the now-dead `atp-no1-retired` groupingKey. Browse filters
+  retired athletes regardless, and a test pins that, so nothing renders
+  wrong; the key clears itself on the next roster refresh.

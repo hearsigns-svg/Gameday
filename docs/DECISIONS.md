@@ -1363,3 +1363,25 @@
   group is accepted as the cost. The route to a real men's list is a
   live ATP ranking source, which is its own stage — NOT atptour.com,
   which stays permanently excluded.
+- 2026-08-04 (owner, revising the same day): RETIRED ATHLETES LEAVE
+  BROWSE ENTIRELY AND OFFER NO FOLLOW. This supersedes the
+  warn-don't-block ruling above. A retired player is still findable by
+  name — someone will look for Federer — and the row says "Retired
+  2022" and stops: no follow control, no browse group, no section. THE
+  ONE EXCEPTION every surface honours: an athlete the user ALREADY
+  follows keeps a control, so an existing follow can still be undone
+  rather than stranded. The post-follow warning string was DELETED
+  rather than left in place; it became unreachable the moment the
+  control disappeared, and an unreachable string is the dead-code shape
+  this project has been bitten by twice. ENFORCEMENT IS AT SERVE TIME
+  (shapeAthleteBrowse filters `careerStatus === 'retired'` before
+  grouping), not only at the provider: a groupingKey already written to
+  a document survives every refresh that stops emitting it, so the
+  provider alone would keep rendering last week's retired group until
+  the data caught up.
+- 2026-08-04 (owner): TENNIS BROWSE IS TWO SECTIONS — women, then men.
+  "Competing soon" is dropped FOR TENNIS only: both groups are already
+  scoped to players who compete, and every athlete it surfaced was also
+  in the women's group. Boxing and F1 keep it, because their groups are
+  weight classes and a grid, where "who is out this month" is
+  information the sections genuinely do not carry.

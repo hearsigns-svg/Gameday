@@ -342,6 +342,15 @@ export function shapeAthleteBrowse(
   const byGroup = new Map<string, Athlete[]>();
   for (const a of inSport) {
     if (!a.active || !a.groupingKey) continue;
+    // RETIRED ATHLETES ARE NOT BROWSABLE (owner ruling 2026-08-04).
+    // They stay findable by name — someone will look for Federer — but
+    // a curated list in an app about upcoming events must not surface
+    // people who will never appear on one. Enforced HERE, at serve
+    // time, rather than by withholding the group at the provider:
+    // a groupingKey already written to a document survives every
+    // refresh that stops emitting it, so the provider alone would keep
+    // showing last week's retired group until the data caught up.
+    if (a.careerStatus === 'retired') continue;
     const list = byGroup.get(a.groupingKey) ?? [];
     list.push(a);
     byGroup.set(a.groupingKey, list);
