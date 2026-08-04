@@ -32,6 +32,22 @@ export interface DirectoryTeam {
 // built from these documents could never improve.
 export const DIRECTORY_TTL_MS = 24 * 3_600_000;
 
+// SCHEMA EPOCH — a cache entry written before the shape changed is
+// STALE regardless of its age (Prompt 13). Crests came back in the
+// provider layer, but the 24h directory cache went on serving documents
+// captured between the 9b removal and this restoration: NBA, NFL, the
+// IPL, MLB and the Six Nations all had full team lists with zero
+// crests, and would have kept serving them for another seventeen hours
+// while every league that happened to be cached before 9b, or after
+// this change, looked correct.
+//
+// A field addition is a schema change, and a time-based cache cannot
+// see one. Bumping this timestamp invalidates every entry captured
+// before it, so the next request repopulates from the provider —
+// SELF-HEALING, and no production document has to be deleted by hand.
+// Bump it whenever a field is added to DirectoryTeam or its providers.
+export const DIRECTORY_SCHEMA_EPOCH = Date.parse('2026-08-04T15:00:00.000Z');
+
 export function isDirectoryFresh(
   cachedAt: string | undefined,
   nowMs: number,
@@ -40,6 +56,8 @@ export function isDirectoryFresh(
   if (!cachedAt) return false;
   const at = Date.parse(cachedAt);
   if (Number.isNaN(at)) return false;
+  // Captured before the current shape: stale however recent it is.
+  if (at < DIRECTORY_SCHEMA_EPOCH) return false;
   return nowMs - at < ttlMs;
 }
 

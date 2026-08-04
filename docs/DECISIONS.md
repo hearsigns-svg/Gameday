@@ -1571,3 +1571,29 @@
   40 as a DOCUMENTED TIE: there is no honest basis on which archery
   outranks fencing, and manufacturing 54 distinct weights would dress a
   coin-toss as a judgement.
+- 2026-08-04: A TIME-BASED CACHE CANNOT SEE A SCHEMA CHANGE. The crest
+  restoration reached the providers immediately but NOT the screen: the
+  24h `teamDirectory` cache was still serving documents captured
+  BETWEEN the 9b removal and the restoration, so NBA (0/30), NFL
+  (0/32), the IPL, MLB and the Six Nations had full team lists with
+  zero crests and would have kept serving them for another seventeen
+  hours — while every league cached before 9b, or refreshed after this
+  change, looked correct. `DIRECTORY_SCHEMA_EPOCH` (directory.ts) makes
+  any entry captured before a stated timestamp stale regardless of age,
+  so the next request repopulates from the provider. Chosen over
+  deleting the stale documents by hand because it is SELF-HEALING and
+  needs no production data change. Bump it whenever a field is added to
+  `DirectoryTeam` or its providers; the TTL tests are anchored to it so
+  a future bump cannot silently invalidate them.
+- 2026-08-04: COMPETITION LOGOS JOIN WITHIN A COUNTRY, NEVER BY NAME
+  ALONE. TSDB carries a "Serie A" in Brazil, Ecuador and Italy, a
+  "Ligue 1" in Algeria, DR Congo and France, and a "Championship" in
+  Australia, Canada and England — a global name index handed English
+  competitions Algerian and Brazilian badges. `leagueBadgeFor` resolves
+  by TSDB league id where the caller has one (the only fully safe
+  join), then by exact country-scoped name or alternate, then by
+  containment within the same country, shortest candidate first. That
+  turns fd.org's "Championship" into "English League Championship" and
+  its "Serie A" into "Italian Serie A" without ever crossing a border.
+  19 of 20 resolve; Eredivisie has no TSDB match and falls back to the
+  generated treatment.

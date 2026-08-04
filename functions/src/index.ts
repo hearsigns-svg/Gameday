@@ -14,7 +14,11 @@ import {
 } from './appearances';
 import { normaliseName } from './identity';
 import { withImageryPolicy } from './imagery';
-import { fetchTsdbLeagueBadges, TsdbLeagueArt } from './providers/tsdb';
+import {
+  fetchTsdbLeagueBadges,
+  leagueBadgeFor,
+  TsdbLeagueArt,
+} from './providers/tsdb';
 import {
   AppearanceDraft,
   applyCreatedIds,
@@ -678,7 +682,11 @@ export const pollLeague = onRequest(async (req, res) => {
 // Best-effort by construction: the league list must never depend on
 // artwork resolving.
 let soccerBadgeCache: { at: number; art: TsdbLeagueArt } | null = null;
-const EMPTY_ART: TsdbLeagueArt = { byId: new Map(), byName: new Map() };
+const EMPTY_ART: TsdbLeagueArt = {
+  byId: new Map(),
+  byCountryName: new Map(),
+  namesByCountry: new Map(),
+};
 async function soccerLeagueBadges(): Promise<TsdbLeagueArt> {
   if (soccerBadgeCache && Date.now() - soccerBadgeCache.at < 6 * 3_600_000) {
     return soccerBadgeCache.art;
@@ -715,7 +723,11 @@ export const listLeagues = onRequest(async (_req, res) => {
     const off = await loadImageryOff();
     res.json({
       leagues: leagues.map((l) => {
-        const badge = art.byName.get(normaliseName(l.name));
+        const badge = leagueBadgeFor(
+          art,
+          { id: String(l.id), name: l.name, country: l.country },
+          normaliseName,
+        );
         const withBadge: typeof l & { crestUrl?: string } = badge
           ? { ...l, crestUrl: badge }
           : l;

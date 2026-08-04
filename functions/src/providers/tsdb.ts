@@ -229,7 +229,17 @@ export async function searchTsdbTeams(
 // find TSDB's "English Premier League".
 export interface TsdbLeagueArt {
   byId: Map<string, string>;
-  byName: Map<string, string>;
+  // `${country}|${name}` → badge, over strLeague AND every alternate.
+  // COUNTRY-SCOPED because names alone are hopelessly ambiguous: TSDB
+  // carries a "Serie A" in Brazil, Ecuador and Italy, a "Ligue 1" in
+  // Algeria, DR Congo and France, and a "Championship" in Australia,
+  // Canada and England. A global name index handed the Premier
+  // League's neighbours somebody else's badge.
+  byCountryName: Map<string, string>;
+  // Same key space, but the candidate NAMES a country offers, so a
+  // caller can fall back to containment ("Championship" inside
+  // "English League Championship") without matching across borders.
+  namesByCountry: Map<string, Array<{ name: string; badge: string }>>;
 }
 
 export async function fetchTsdbLeagueBadges(
@@ -245,25 +255,54 @@ export async function fetchTsdbLeagueBadges(
       idLeague?: string;
       strLeague?: string;
       strLeagueAlternate?: string;
+      strCountry?: string;
       strBadge?: string;
     }> | null;
   };
   const byId = new Map<string, string>();
-  const byName = new Map<string, string>();
+  const byCountryName = new Map<string, string>();
+  const namesByCountry = new Map<string, Array<{ name: string; badge: string }>>();
   for (const l of body.countries ?? []) {
     if (!l.strBadge) continue;
     if (l.idLeague) byId.set(l.idLeague, l.strBadge);
-    const names = [
-      l.strLeague,
-      ...(l.strLeagueAlternate ?? '').split(','),
-    ];
-    for (const n of names) {
-      const k = normalise((n ?? '').trim());
-      // First writer wins: TSDB's alternates include country names
-      // ("England"), and a later league must not steal an earlier
-      // league's key.
-      if (k.length > 2 && !byName.has(k)) byName.set(k, l.strBadge);
+    const country = normalise((l.strCountry ?? '').trim());
+    if (!country) continue;
+    const names = [l.strLeague, ...(l.strLeagueAlternate ?? '').split(',')];
+    const bucket = namesByCountry.get(country) ?? [];
+    for (const raw of names) {
+      const n = normalise((raw ?? '').trim());
+      if (n.length <= 2) continue;
+      const k = `${country}|${n}`;
+      if (!byCountryName.has(k)) byCountryName.set(k, l.strBadge);
+      bucket.push({ name: n, badge: l.strBadge });
     }
+    namesByCountry.set(country, bucket);
   }
-  return { byId, byName };
+  return { byId, byCountryName, namesByCountry };
+}
+
+// Resolve one competition's logo. Tries, in order: the TSDB league id
+// where the caller has one (exact, and the only fully safe join); an
+// exact country-scoped name or alternate; then containment WITHIN THE
+// SAME COUNTRY, shortest candidate first, which is what turns fd.org's
+// "Championship" into "English League Championship" and its "Serie A"
+// into "Italian Serie A" without ever reaching Brazil's.
+export function leagueBadgeFor(
+  art: TsdbLeagueArt,
+  opts: { id?: string; name: string; country: string },
+  normalise: (s: string) => string,
+): string | undefined {
+  if (opts.id && /^\d+$/.test(opts.id)) {
+    const byId = art.byId.get(opts.id);
+    if (byId) return byId;
+  }
+  const country = normalise(opts.country.trim());
+  const name = normalise(opts.name.trim());
+  if (!country || !name) return undefined;
+  const exact = art.byCountryName.get(`${country}|${name}`);
+  if (exact) return exact;
+  const candidates = (art.namesByCountry.get(country) ?? [])
+    .filter((c) => c.name.includes(name))
+    .sort((a, b) => a.name.length - b.name.length);
+  return candidates[0]?.badge;
 }
