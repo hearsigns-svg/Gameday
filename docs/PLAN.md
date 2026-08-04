@@ -238,6 +238,30 @@ listings, screenshots, name availability check.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 
+## Pre-launch: physical-device-only verification (simulators structurally cannot prove these)
+
+Recorded 2026-08-03 (Prompt 11c close-out) so neither gets mistaken
+for done. Both need a PHYSICAL device with a real iCloud or Google
+account attached; both sit beside the APNs auth key upload (owner,
+Firebase console → Cloud Messaging) that iOS push already owes.
+
+- [ ] **iOS push delivery on hardware.** Silent push cannot fire on
+      the iOS simulator (M6 lore), so the RNFB messaging work —
+      registration, onTokenRefresh, the background handler — is
+      UNPROVEN end to end. The standing caution: its first version
+      compiled cleanly while being dead code (Prompt 6 review; the
+      modular-only import). Proof = a real device receiving a sweep's
+      silent push and correcting a calendar event without foreground.
+- [ ] **Cloud-backed calendar write throughput.** Simulator calendars
+      are device-local: no write in this project's history has ever
+      crossed a sync adapter. Every throughput figure we have (iOS
+      ~150 ops/s, Android ~15 ops/s) and the 60% time-budget fraction
+      derived from them are calibrated against a best case real users
+      will not have. Measure a first-sync burst and a scope-change
+      drain against an iCloud calendar and a Google calendar; retune
+      passBudgetMs if the real rates demand it. (Same debt as the M4
+      calendar-target addendum's unticked device items.)
+
 ## External lead times (facts, not schedule)
 
 - Apple organisational enrolment (D-U-N-S): commonly 1–4 weeks — owner
@@ -1450,3 +1474,58 @@ nor is roster_stale-expected until flipped):
   source is inert in prod). MINT AWAITS the owner's read of the
   counts: on approval I flip ATP_ROSTER_ENABLED, deploy, and invoke
   runRoster in the same action — then the Tuesday scheduler owns it.
+
+### Prompt 12 — tennis athlete groups: labels, the men's split, retirement  [x]
+
+Owner report: the women's group read "WTA Tour" with no indication it
+was women, the men's read "Former world No. 1s" with no indication it
+was men or the ATP — and, the real problem, the men's group was
+RETIRED PLAYERS in an app about upcoming events.
+
+- DIAGNOSIS (six read-only agents, live prod + live WDQS). The men's
+  group was worse than reported: with no `rank` the comparator falls
+  to `displayName`, so it opened Agassi, Murray, Roddick, Borg, Becker
+  with Alcaraz sixth, and all 29 rows captioned with the group name
+  because 0 of 29 carry rank, countryCode or nextStartUtc (F41).
+  Confirmed the owner's model of the sources exactly: WTA top 50 from
+  the live rankings API, men's 29 from a curated Wikidata-derived
+  constant, no approved ATP ranking source.
+- THE ACTIVE/RETIRED MEASUREMENT, re-derived through the repo's own
+  parser: universe 6,559 → selected 1,513. Wikidata records a career
+  end for 117 (7.7%) and a death for 9; union 119 (7.9%). Newest end
+  year anywhere is 2024 — ZERO carry 2025 or 2026. Of the 29 No. 1s,
+  25 retired and 4 still playing (Djokovic, Alcaraz, Sinner,
+  Medvedev), and P2032 is 100% correct in both directions on exactly
+  that population. Everything else measured is unusable: P1344 is
+  ANTI-correlated with currency (Alcaraz 0, Sinner 0, retired Murray
+  23), P1352-with-dates is retrospective (Djokovic's newest is 2019),
+  P1317 covers 0 of 1,513, P793 covers 10, P5027 is an unrelated
+  property. Our own store holds ZERO men's participation records
+  (F42). VERDICT: a high-precision retired MARKER is buildable; a
+  trustworthy active PARTITION of 1,513 is not.
+- SHIPPED: group titles state their population and resolve from
+  `groupingKey` server-side (a rename is a deploy, not a migration);
+  the 29 split into still-playing and retired on recorded retirement;
+  `careerStatus`/`careerEndYear` first-class on athlete docs, browse
+  cards and search hits for all 1,513; retired caption, honest empty
+  state and a follow WARNING (not a block) from one pure client module;
+  the tennis coverageNote extended and now rendered on the athlete
+  screen too. DECISIONS carries the naming convention and the
+  boxing-not-restyled hold.
+- ADVERSARIAL REVIEW (4 dimensions, 19 raised, 8 confirmed after a
+  refutation pass): four distinct root causes, all fixed before
+  deploy. The severe one was mine and is now F44 — reusing `atp-no1`
+  for the narrowed "retired" meaning put Alcaraz under a "retired"
+  header for up to eight days, demonstrated by running the new shaper
+  over live production documents. Also F45 (three new consumers, and
+  the one map building their input dropped the field — dead code that
+  typechecks) and F46 (a fact about a person read from follow state,
+  so Unfollow restored the false promise).
+- 750 tests green under UTC and America/Los_Angeles; both typechecks
+  and the functions build clean.
+- OPEN, OWNER'S CALL: whether the active men's group extends beyond
+  the four known-playing No. 1s into the 1,394 unmarked men on a
+  heuristic with an unmeasurable error rate. Until a roster refresh
+  runs, the men's section is one honestly-titled group of 29 — the
+  split appears when the Tuesday scheduler (or a manual runRoster)
+  re-keys the docs.

@@ -22,6 +22,13 @@ export interface Followable {
   // where the sport offers a choice (domain/followScopes.ts). Absent =
   // the default: today's behaviour, unchanged.
   scope?: FollowScope;
+  // Recorded retirement, captured at follow time (Prompt 12) so the
+  // athlete's page is still honest when it is reached from the
+  // Following rail, which carries no directory data of its own. Absent
+  // on every follow made before Prompt 12 — and absent means unknown,
+  // so the page simply falls back to the ordinary empty state.
+  careerStatus?: 'retired';
+  careerEndYear?: number;
   // NOTE: venue photography is no longer cached here. A ground belongs
   // to the HOME team of a given fixture, not to whoever you follow, so
   // it is keyed by team name in data/photoCache.ts. Stored follows may

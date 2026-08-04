@@ -29,7 +29,9 @@ describe('WTA rankings', () => {
       externalId: '320760',
       name: 'Aryna Sabalenka',
       sport: 'tennis',
-      grouping: 'WTA Tour',
+      // Resolved from GROUP_TITLES, not a literal in the provider —
+      // the population marker is part of the title (Prompt 12).
+      grouping: 'WTA Tour — Women',
       groupingKey: 'wta',
       rank: 1,
       countryCode: 'BLR',

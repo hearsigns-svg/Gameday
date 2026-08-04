@@ -31,7 +31,7 @@
 // matched and every one passed; the miss (a wildcard with no Wikidata
 // item at all) is a universe bound, not a threshold drop.
 
-import { RosterEntry } from '../athletes';
+import { groupTitleOf, RosterEntry } from '../athletes';
 
 // THE MINT GATE — OPENED 2026-08-03 on the owner's approval of the
 // validated counts (Prompt 10c: universe 6,559 → selected 1,513;
@@ -48,7 +48,7 @@ const WDQS = 'https://query.wikidata.org/sparql';
 // (the aggregate form 502s; this form answered 6,603 rows in ~18s).
 // Rows repeat when a player carries multiple dob/career statements —
 // folded in code, never in SPARQL.
-export const ATP_ENUM_QUERY = `SELECT ?p ?label ?atp ?dob ?start ?end ?links ?top10 ?wta ?itf WHERE {
+export const ATP_ENUM_QUERY = `SELECT ?p ?label ?atp ?dob ?start ?end ?links ?top10 ?wta ?itf ?death WHERE {
   ?p wdt:P536 ?atp .
   OPTIONAL { ?p rdfs:label ?labelEn FILTER(LANG(?labelEn) = "en") }
   BIND(COALESCE(?labelEn, STR(?atp)) AS ?label)
@@ -58,10 +58,12 @@ export const ATP_ENUM_QUERY = `SELECT ?p ?label ?atp ?dob ?start ?end ?links ?to
   OPTIONAL { ?p wikibase:sitelinks ?links }
   OPTIONAL { ?p wdt:P597 ?wta }
   OPTIONAL { ?p wdt:P599 ?itf }
+  OPTIONAL { ?p wdt:P570 ?deathRaw }
   BIND(EXISTS { ?p p:P1352/ps:P1352 ?r0 . FILTER(?r0 <= 10) } AS ?top10)
   BIND(YEAR(?dobRaw) AS ?dob)
   BIND(YEAR(?startRaw) AS ?start)
   BIND(YEAR(?endRaw) AS ?end)
+  BIND(YEAR(?deathRaw) AS ?death)
 }`;
 
 // THE 29 ATP SINGLES WORLD No. 1s — CURATED, not queried. P1352 cannot
@@ -119,6 +121,7 @@ export interface AtpPlayer {
   everTop10: boolean;
   wtaId?: string;
   itfId?: string;
+  died?: number; // P570 — 9 of the selected 1,513 carry one
 }
 
 interface SparqlBinding {
@@ -163,6 +166,7 @@ export function parseAtpPlayers(body: unknown): AtpPlayer[] {
       careerEnd: maxDef(prev?.careerEnd, num('end')),
       sitelinks: Math.max(prev?.sitelinks ?? 0, num('links') ?? 0),
       everTop10: (prev?.everTop10 ?? false) || raw.top10?.value === 'true',
+      died: minDef(prev?.died, num('death')),
       ...(prev?.wtaId ?? raw.wta?.value
         ? { wtaId: prev?.wtaId ?? raw.wta?.value }
         : {}),
@@ -192,6 +196,41 @@ export function plausiblyCurrent(p: AtpPlayer): boolean {
     return true;
   }
   return (p.dob ?? 0) >= 1985;
+}
+
+// ─── Recorded retirement (Prompt 12) ──────────────────────────────────
+//
+// SEPARATE FROM `plausiblyCurrent`, deliberately. That predicate is an
+// IMPORT threshold — "is this person worth putting in the directory" —
+// and it answers with a guess by design: its last arm is `dob >= 1985`,
+// which calls 594 unmarked men aged 33–40 current and calls Rohan
+// Bopanna (doubles world No. 1 in 2024, aged 43) retired. Asking it the
+// product question would ship that guess as a fact.
+//
+// This predicate only reports what a SOURCE STATES: an end-of-work-
+// period year (P2032) or a date of death (P570). Measured against the
+// live enumeration on 2026-08-04: 117 of the selected 1,513 carry
+// P2032, 9 carry P570, union 119 (7.9%). Against the 29 curated singles
+// No. 1s — the one population where the truth is independently known —
+// it is 100% correct in BOTH directions: all 25 retirees carry an end
+// year, all four still playing (Djokovic, Alcaraz, Sinner, Medvedev)
+// carry none.
+//
+// SO: HIGH PRECISION, LOW RECALL, AND ABSENCE IS NOT A CLAIM. The
+// newest end-year anywhere in the roster is 2024 — zero players carry
+// 2025 or 2026 — so a recent retirement is invisible for a year or
+// more, and Berdych, Gasquet, Wawrinka and Dolgopolov all sit unmarked.
+// `undefined` here means "no source says", never "still competing", and
+// no caller may invert it.
+export function isRetired(p: AtpPlayer): boolean {
+  return p.died !== undefined || p.careerEnd !== undefined;
+}
+
+// The year to show beside "Retired". A death year is not a career end,
+// so it is never displayed as one — a player with only P570 gets the
+// bare marker.
+export function careerEndYearOf(p: AtpPlayer): number | undefined {
+  return p.careerEnd;
 }
 
 export function passesThreshold(p: AtpPlayer): boolean {
@@ -239,17 +278,41 @@ export function atpRosterEntries(players: readonly AtpPlayer[]): RosterEntry[] {
 
 export function rosterEntryOf(p: AtpPlayer): RosterEntry {
   const no1 = ATP_SINGLES_NO1_QIDS.has(p.qid);
+  const retired = isRetired(p);
+  // ONLY the curated singles No. 1s get a browse group: there is no
+  // honest live rank to cut the other ~1,500 by, and a 50-cap
+  // alphabetical slice of them would be an arbitrary lie. Everyone else
+  // is search-first — findable, followable, ungrouped.
+  //
+  // THE SPLIT (Prompt 12): those 29 are now TWO groups, because one
+  // list mixing Alcaraz with Björn Borg — sorted alphabetically, since
+  // none of them carries a rank — opened the men's section on five
+  // players who will never have a fixture, in an app about upcoming
+  // events. The split uses `isRetired`, which is verified 100% correct
+  // on exactly this population; it is NOT extended to the other 1,484,
+  // where the same signal covers 7.9% and would mislabel hundreds.
+  // Both keys are NEW. The legacy `atp-no1` is never emitted again —
+  // see GROUP_TITLES for why reusing it was a lie with a shelf life.
+  const groupingKey = no1
+    ? retired
+      ? 'atp-no1-retired'
+      : 'atp-no1-active'
+    : undefined;
+  const endYear = careerEndYearOf(p);
   return {
     source: 'wikidata',
     externalId: p.qid,
     name: p.label,
     sport: 'tennis',
-    // ONLY the curated singles No. 1s get a browse group: there is no
-    // honest live rank to cut the other ~1,500 by, and a 50-cap
-    // alphabetical slice of them would be an arbitrary lie. Everyone
-    // else is search-first — findable, followable, ungrouped.
-    ...(no1 ? { grouping: 'Former world No. 1s', groupingKey: 'atp-no1' } : {}),
+    ...(groupingKey
+      ? { grouping: groupTitleOf(groupingKey)!, groupingKey }
+      : {}),
     ...(no1 ? { honours: ['former-no1'] } : {}),
+    // Carried for EVERY selected player, not just the No. 1s: the
+    // marker is what makes a retired man's page and follow honest, and
+    // 1,484 of the 1,513 are only ever reached by search.
+    ...(retired ? { careerStatus: 'retired' as const } : {}),
+    ...(retired && endYear !== undefined ? { careerEndYear: endYear } : {}),
     extraIdentities: [
       { source: 'atp', externalId: p.atpId },
       ...(p.itfId ? [{ source: 'itf', externalId: p.itfId }] : []),

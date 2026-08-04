@@ -1269,3 +1269,89 @@
   no longer become binding silently: the approach pages first, with
   65% organic-growth room over the validated 1,513. The follow-cap and
   sweep-ceiling lesson, applied at design time instead of after weeks.
+
+## Prompt 12 decisions (2026-08-04)
+
+- 2026-08-04: A BROWSE GROUP STATES ITS POPULATION, AND THE TITLE IS A
+  FUNCTION OF THE KEY. Two changes in one ruling. (1) NAMING: the only
+  prior precedent was boxing — `Women's <Class>` for women, bare
+  `<Class>` for men (ibfRatings.ts:88), i.e. marked-female and
+  unmarked-male, which is exactly the shape the owner objected to in
+  tennis ("WTA Tour" said nothing about women; "Former world No. 1s"
+  said nothing about men or the ATP). It also does not extend to
+  organisation names — "Women's WTA Tour" is redundant. THE
+  CONVENTION: a group names its population, possessively where the
+  label is descriptive ("Men's world No. 1s") and after an em dash
+  where the label is a governing body's own name ("WTA Tour — Women").
+  BOXING IS DELIBERATELY NOT RESTYLED: its groups are already
+  gender-marked and sorted men-block-then-women-block, so no ambiguity
+  exists to fix, and rewriting 33 labels inside a tennis stage is scope
+  the brief did not ask for. Recorded so it reads as a hold, not drift.
+  (2) MECHANISM: titles now resolve from `groupingKey` through
+  `GROUP_TITLES`/`groupTitleOf` (athletes.ts), not from the `grouping`
+  string stored on whichever athlete sorts first. The old shape made
+  every rename a data migration that reached only the docs a roster
+  refresh touched — the 26 draw-minted `wta` athletes are written once
+  at creation and never patched, so they would have carried the old
+  string indefinitely. Browse and search resolve through the same
+  function, so a card's caption and its section header cannot disagree.
+- 2026-08-04: A KEY WHOSE MEANING NARROWS MUST BE A NEW KEY. The first
+  cut of the men's split reused `atp-no1` for the retired subset. The
+  title resolves on DEPLOY while membership only moves on the WEEKLY
+  ROSTER REFRESH, so every one of the 29 curated No. 1s — Alcaraz and
+  Sinner included — would have sat under the header "Men's world
+  No. 1s — retired" for up to eight days. Demonstrated, not theorised:
+  the new shaper was run over the live production documents and printed
+  Alcaraz inside a group titled "retired". The split therefore mints
+  TWO new keys (`atp-no1-active`, `atp-no1-retired`) and leaves
+  `atp-no1` meaning exactly what it always meant — the unsplit 29 —
+  under a title true of that set whatever it holds. No document changes
+  meaning under a deploy, no migration is owed, and all three windows
+  (pre-refresh, post-refresh, partially refreshed) render honestly.
+  Pinned by a test built from production's actual shape.
+- 2026-08-04: RETIREMENT IS RECORDED, NEVER INFERRED — and absence of
+  the marker is silence, not a claim. `careerStatus: 'retired'` +
+  `careerEndYear` are set only where a source states one: Wikidata's
+  end-of-work-period (P2032) or a date of death (P570). Measured
+  against the live enumeration: 117 of the selected 1,513 carry P2032,
+  9 carry P570, union 119 (7.9%); the newest end year anywhere in the
+  roster is 2024, so a recent retirement is invisible for a year or
+  more, and Berdych, Gasquet, Wawrinka and Dolgopolov all sit unmarked.
+  The field can therefore only ever say "retired" — there is no
+  "active" value and no client string for one, because for 92% of the
+  roster the app does not know. This is the standing invariant applied
+  to a career. The one place the split IS trusted is the 29 curated
+  singles No. 1s, where P2032 was verified 100% correct in both
+  directions (25 retirees all carry an end year; Djokovic, Alcaraz,
+  Sinner and Medvedev carry none) — a population-specific proof, not a
+  general licence.
+- 2026-08-04: CAREER STATUS IS ALL-OR-NOTHING FOR THE SOURCE THAT OWNS
+  IT. `reconcileRoster` takes `ownsCareerStatus`, set only for the
+  Wikidata ATP roster, which evaluates every selected player on every
+  run. An entry arriving without a marker is then a positive statement
+  that no retirement is recorded, and the stale field is deleted rather
+  than left behind by merge semantics — otherwise a man the same
+  refresh moved into "still playing" would keep a "Retired 2024"
+  caption on three surfaces at once. Sources that never report career
+  status (WTA, IBF, F1) leave the flag off and touch nothing.
+- 2026-08-04: FOLLOWING A RETIRED ATHLETE IS ALLOWED, AND WARNED. Not
+  blocked: the marker is high-precision but low-recall, so a block
+  would refuse Federer while waving through the equally retired players
+  Wikidata has not marked — an arbitrary line dressed as a rule. A
+  follow also writes no calendar event, and exhibition returns happen
+  (Nadal's recorded end is 2024). The warning rides the EXISTING
+  post-follow toast; no new mechanism.
+- 2026-08-04: NO ACTIVE MEN'S GROUP BEYOND THE FOUR THAT ARE KNOWN.
+  The brief asked for a group of active men ordered by a stated
+  signal. The measurement says no such signal exists for the wider
+  directory: P1344 "participant in" is ANTI-correlated with currency
+  (Alcaraz 0 statements, Sinner 0, retired Murray 23; zero players have
+  a 2026 event), P1352 with dates is retrospective (Djokovic's newest
+  is 2019), P1317 floruit covers 0 of 1,513, P793 covers 10, and our
+  own store holds ZERO men's participation records because the ICS is
+  tournament-level and the WTA order-of-play skips ATP skeletons. Any
+  rule over the 1,394 unmarked men mislabels several hundred with an
+  error rate nothing in the repo can measure. So the men's section
+  leads with the four No. 1s we know are playing, and the wider group
+  is an owner decision, not an agent's. The route that would settle it
+  properly — a live men's ranking — is its own stage.

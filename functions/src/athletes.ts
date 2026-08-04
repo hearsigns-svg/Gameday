@@ -52,8 +52,12 @@ export interface Athlete {
   searchName: string; // normalised displayName
   aliases: string[]; // normalised alternate forms, from identities
   sport: string;
-  grouping?: string; // display: 'Heavyweight' | 'WTA Tour' | 'Formula 1'
-  groupingKey?: string; // browse slug: 'ibf-heavyweight' | 'wta' | 'f1'
+  // Display title. STORED, but no longer authoritative: browse and
+  // search both resolve the header through `groupTitleOf(groupingKey)`
+  // below, and this field is only the fallback for a key that map does
+  // not know. See the comment there for why.
+  grouping?: string; // display: 'Heavyweight' | 'WTA Tour — Women'
+  groupingKey?: string; // browse slug: 'boxing-heavyweight' | 'wta' | 'f1'
   // source → externalId, only where one exists: { wta: '320760' }.
   providerIds: Record<string, string>;
   identities: AthleteIdentity[];
@@ -74,9 +78,71 @@ export interface Athlete {
   // about a career, never a claim about current form.
   honours?: string[];
   countryCode?: string;
+  // RECORDED retirement, never inferred (Prompt 12). Present only where
+  // a source states it — Wikidata's end-of-work-period or a date of
+  // death. ABSENT MEANS UNKNOWN, NOT ACTIVE: the marker covers 7.9% of
+  // the ATP roster, so reading absence as "still playing" would be the
+  // standing invariant's failure mode applied to a career. Nothing may
+  // render "active" off this field; it can only ever say "retired".
+  careerStatus?: 'retired';
+  careerEndYear?: number; // the year the source records, for display
   nextStartUtc?: string; // soonest future appearance; search/browse hint
   createdAt: string;
   updatedAt: string;
+}
+
+// ─── Browse group titles ──────────────────────────────────────────────
+//
+// The section title is a function of `groupingKey`, NOT of whatever
+// string happens to sit on the first athlete document. Until Prompt 12
+// `shapeAthleteBrowse` read `sorted[0].grouping`, which made every
+// rename a data migration that only reached the docs a roster refresh
+// touched: the 26 draw-derived `wta` athletes carry a grouping written
+// at creation and never patched again, so they would have kept the old
+// string forever while the header — sourced from rank 1, always a
+// roster doc — flipped. Titles now change with a DEPLOY, and browse and
+// search cannot disagree because both resolve through here.
+//
+// NAMING (Prompt 12). The repo's only prior precedent is boxing:
+// `Women's <Class>` for women, bare `<Class>` for men — marked-female,
+// unmarked-male (ibfRatings.ts:88). It does not extend to organisation
+// names ("Women's WTA Tour" is redundant), and unmarked-male is the
+// thing this stage exists to fix. The convention adopted: a group
+// states its population explicitly, either possessively where the label
+// is descriptive ("Men's world No. 1s") or after an em dash where the
+// label is a governing body's own name ("WTA Tour — Women"). Boxing is
+// NOT restyled here — its groups are already gender-marked and sorted
+// men-block-then-women-block, so no ambiguity exists to fix, and
+// rewriting 33 labels inside a tennis stage would be scope the owner
+// did not ask for. Recorded in DECISIONS as a deliberate hold.
+// A KEY WHOSE MEANING NARROWS MUST BE A NEW KEY (review round, and it
+// was a demonstrated on-screen lie, not a theory). The first cut reused
+// `atp-no1` for the retired subset — but the title resolves on DEPLOY
+// while group membership only moves on the WEEKLY ROSTER REFRESH, so
+// every one of the 29 curated No. 1s still stored under that key would
+// have sat under the header "…— retired", Alcaraz and Sinner included,
+// for up to eight days. Absence of the marker rendered as a retirement
+// claim: the standing invariant, inverted.
+//
+// So the split mints TWO new keys and `atp-no1` stays exactly what it
+// has always been — the whole curated 29 — with a title that is true of
+// that set whatever it currently holds. No document moves, no migration
+// is owed, and nothing on screen is wrong in ANY of the three windows:
+// before the refresh (legacy key alone), after it (the two new keys),
+// or during a partial one (all three, each honestly titled).
+export const GROUP_TITLES: Readonly<Record<string, string>> = {
+  wta: 'WTA Tour — Women',
+  'atp-no1': "Men's world No. 1s", // legacy: the unsplit 29
+  'atp-no1-active': "Men's world No. 1s — still playing",
+  'atp-no1-retired': "Men's world No. 1s — retired",
+};
+
+export function groupTitleOf(
+  groupingKey: string | undefined,
+  stored?: string,
+): string | undefined {
+  if (groupingKey === undefined) return stored;
+  return GROUP_TITLES[groupingKey] ?? stored ?? groupingKey;
 }
 
 // athlete_000184. The counter lives in a Firestore doc; allocation is the
@@ -500,6 +566,10 @@ export interface RosterEntry {
   championOf?: string[];
   countryCode?: string;
   honours?: string[];
+  // Recorded retirement, where the source states one. Absent = the
+  // source says nothing, which is NOT a claim that the athlete competes.
+  careerStatus?: 'retired';
+  careerEndYear?: number;
   // Additional provider identities the SAME source vouches for in one
   // record (Prompt 10b: a Wikidata row carries the ATP id and the ITF
   // id beside the Q-id). They join the identity map exactly like the
@@ -531,6 +601,11 @@ export function reconcileRoster(
     // draw-name matching honestly ambiguous), never attach a man's
     // identity and honours to a woman's follow.
     nameMatchExcludesSources?: string[];
+    // This source is AUTHORITATIVE on career status: its entries carry
+    // the complete current truth, so a field it omits is cleared rather
+    // than left to rot. Only the Wikidata ATP roster sets it — it
+    // evaluates every selected player on every run.
+    ownsCareerStatus?: boolean;
   } = {},
 ): RosterReconciliation {
   const index = buildAthleteIndex(existing);
@@ -622,6 +697,24 @@ export function reconcileRoster(
       ...(e.grouping ? { grouping: e.grouping } : {}),
       ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
       ...(e.honours !== undefined ? { honours: e.honours } : {}),
+      // CAREER STATUS IS ALL-OR-NOTHING PER REFRESH, for the source
+      // that owns it (review round). wikidata evaluates every selected
+      // player each week, so an entry arriving WITHOUT a marker is a
+      // positive statement that the source no longer records a
+      // retirement — and merge semantics would otherwise leave the old
+      // one behind, putting a "Retired 2024" caption on a man the very
+      // same refresh moved into the still-playing group. `undefined`
+      // here becomes a real field delete in applyRoster. Sources that
+      // never report career status at all (WTA, IBF, F1) leave the
+      // flag off and touch nothing.
+      ...(opts.ownsCareerStatus
+        ? {
+            careerStatus: e.careerStatus,
+            careerEndYear: e.careerEndYear,
+          }
+        : e.careerStatus !== undefined
+          ? { careerStatus: e.careerStatus, careerEndYear: e.careerEndYear }
+          : {}),
       active: true,
       missedRefreshes: 0,
       nameKeyed:
@@ -717,6 +810,10 @@ export function rosterAthlete(
     ...(e.championOf !== undefined ? { championOf: e.championOf } : {}),
     ...(e.countryCode ? { countryCode: e.countryCode } : {}),
     ...(e.honours !== undefined ? { honours: e.honours } : {}),
+    ...(e.careerStatus !== undefined ? { careerStatus: e.careerStatus } : {}),
+    ...(e.careerEndYear !== undefined
+      ? { careerEndYear: e.careerEndYear }
+      : {}),
     createdAt: nowIso,
     updatedAt: nowIso,
   };

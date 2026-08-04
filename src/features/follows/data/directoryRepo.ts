@@ -39,9 +39,15 @@ export interface SearchAthleteHit {
   key: string; // CANONICAL athlete id (athlete_000184) — the follow key
   name: string;
   sportKey: string;
-  grouping?: string; // 'Heavyweight' | 'WTA Tour' — caption material
+  grouping?: string; // 'Heavyweight' | 'WTA Tour — Women' — the caption
   nextStartUtc?: string;
   accentHue?: number; // generated colour identity (optional: deploy skew)
+  // Recorded retirement (Prompt 12). Optional in BOTH directions: a
+  // pre-Prompt-12 server never sends it, and a source that says nothing
+  // about a career end never sets it. ABSENT MEANS UNKNOWN — never
+  // render it as "active", and never infer the opposite.
+  careerStatus?: 'retired';
+  careerEndYear?: number;
   // Pre-Prompt-8 servers sent a pollPath; athlete follows no longer
   // need one (the catalogue keeps their sources warm), but the field is
   // kept optional so deploy skew in either direction stays harmless.
@@ -60,6 +66,8 @@ export interface AthleteCard {
   grouping?: string;
   nextStartUtc?: string;
   accentHue?: number; // generated colour identity (optional: deploy skew)
+  careerStatus?: 'retired'; // recorded retirement; absent = unknown
+  careerEndYear?: number;
 }
 
 export interface AthleteBrowse {

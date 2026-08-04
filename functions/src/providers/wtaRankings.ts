@@ -18,7 +18,7 @@
 // card. ALL-OR-NOTHING: a failed page fails the whole roster run, so
 // absence accounting can never run against a half-fetched truth.
 
-import { RosterEntry } from '../athletes';
+import { groupTitleOf, RosterEntry } from '../athletes';
 import { requireArray } from './fetchResult';
 
 const BASE = 'https://api.wtatennis.com/tennis';
@@ -59,7 +59,10 @@ export function rankedRowsToEntries(
       externalId: String(id),
       name,
       sport: 'tennis',
-      grouping: 'WTA Tour',
+      // The title itself lives in GROUP_TITLES (athletes.ts) so browse,
+      // search and the draw-mint path cannot drift apart; this is the
+      // stored fallback.
+      grouping: groupTitleOf('wta')!,
       groupingKey: 'wta',
       rank,
       ...(r.player?.countryCode ? { countryCode: r.player.countryCode } : {}),

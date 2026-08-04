@@ -35,6 +35,7 @@ import {
 } from '../data/directoryRepo';
 import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { isFollowed, Followable } from '../data/followStore';
+import { retiredCaption } from '../domain/careerStatus';
 import { colourFromKitText } from '../domain/entityColour';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 
@@ -197,8 +198,10 @@ export default function SearchScreen({ navigation }: Props) {
       key: hit.key,
       title: hit.name,
       // "Heavyweight · Boxing" beats "Athlete · Boxing" when the
-      // directory knows the grouping.
-      caption: `${hit.grouping ?? 'Athlete'} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
+      // directory knows the grouping — and "Retired 2022 · Tennis"
+      // beats both, because search is the ONLY route to the 1,484 ATP
+      // men who carry no browse group at all (Prompt 12).
+      caption: `${retiredCaption(hit) ?? hit.grouping ?? 'Athlete'} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
       sportKey: hit.sportKey,
       followable: {
         key: hit.key,
@@ -210,6 +213,10 @@ export default function SearchScreen({ navigation }: Props) {
         // the rail, Home and the athlete page inherit it (Prompt 9b).
         ...(hit.accentHue !== undefined
           ? { brandColour: hueToHex(hit.accentHue) }
+          : {}),
+        ...(hit.careerStatus ? { careerStatus: hit.careerStatus } : {}),
+        ...(hit.careerEndYear !== undefined
+          ? { careerEndYear: hit.careerEndYear }
           : {}),
       },
     }));
@@ -341,6 +348,15 @@ export default function SearchScreen({ navigation }: Props) {
                             : {}),
                           ...(item.followable!.pollPath
                             ? { pollPath: item.followable!.pollPath }
+                            : {}),
+                          ...(item.followable!.careerStatus
+                            ? { careerStatus: item.followable!.careerStatus }
+                            : {}),
+                          ...(item.followable!.careerEndYear !== undefined
+                            ? {
+                                careerEndYear:
+                                  item.followable!.careerEndYear,
+                              }
                             : {}),
                         })
                     : item.followable

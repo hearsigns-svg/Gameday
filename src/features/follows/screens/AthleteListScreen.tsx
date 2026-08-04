@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   SectionList,
   StyleSheet,
   Text,
@@ -29,6 +30,7 @@ import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
+import { retiredCaption } from '../domain/careerStatus';
 import {
   AthleteCard,
   fetchAthleteBrowse,
@@ -44,12 +46,29 @@ const DEBOUNCE_MS = 350;
 interface AthleteSection {
   title: string;
   data: AthleteCard[];
+  // Rows in the FULL group, before the collapsed preview slice. Present
+  // only on browse sections; search results are never collapsed.
+  fullCount?: number;
 }
+
+// EVERY group must be discoverable without archaeology (Prompt 11c fix,
+// found on the simulator): tennis opened as ~20 "competing soon" women
+// + the WTA top 50, which buried the men's group seventy rows deep —
+// read by the owner, reasonably, as "there are no men". Long sections
+// collapse to a preview with an explicit "Show all N" row, so every
+// section HEADER lands within the first couple of screenfuls.
+const SECTION_PREVIEW = 6;
 
 // "Champion · WBA, WBC" / "#3 · GBR" / "Competes 16 Aug" — the caption
 // says why this row is on a curated list.
 function captionFor(a: AthleteCard): string {
   const parts: string[] = [];
+  // Retirement leads. For the ATP directory it is usually the only
+  // thing known about a row — those athletes carry no rank, no country
+  // and no scheduled event — so without it the caption falls all the
+  // way through to the group name and every row reads identically.
+  const retired = retiredCaption(a);
+  if (retired) parts.push(retired);
   if (a.championOf && a.championOf.length > 0) {
     parts.push(`Champion · ${a.championOf.join(', ')}`);
   } else if (a.rank !== undefined) {
@@ -80,6 +99,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
   const [results, setResults] = useState<AthleteCard[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [, forceRender] = useState(0);
   const requestSeq = useRef(0);
 
@@ -137,6 +157,18 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               ...(h.grouping ? { grouping: h.grouping } : {}),
               ...(h.nextStartUtc ? { nextStartUtc: h.nextStartUtc } : {}),
               ...(h.accentHue !== undefined ? { accentHue: h.accentHue } : {}),
+              // The retirement marker MUST survive this hop (review
+              // round). This screen's own search box is the only route
+              // to the 1,484 ATP men who carry no browse group at all
+              // — exactly the population the marker was added for —
+              // and dropping it here left three consumers below
+              // (caption, navigation params, the stored follow)
+              // unreachable for them: code that typechecks and never
+              // runs, which is how the dead iOS push import shipped.
+              ...(h.careerStatus ? { careerStatus: h.careerStatus } : {}),
+              ...(h.careerEndYear !== undefined
+                ? { careerEndYear: h.careerEndYear }
+                : {}),
             })),
         );
       })();
@@ -151,6 +183,12 @@ export default function AthleteListScreen({ navigation, route }: Props) {
     type: 'athlete',
     ...(a.accentHue !== undefined
       ? { brandColour: hueToHex(a.accentHue) }
+      : {}),
+    // Captured at follow time so the Following rail — which has no
+    // directory read of its own — still reaches an honest page.
+    ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
+    ...(a.careerEndYear !== undefined
+      ? { careerEndYear: a.careerEndYear }
       : {}),
     // No pollPath, deliberately: athlete follows need no poll route of
     // their own — the catalogue keeps their sources warm, and the
@@ -181,7 +219,15 @@ export default function AthleteListScreen({ navigation, route }: Props) {
   const sections: AthleteSection[] =
     results !== null
       ? [{ title: searching ? 'Searching…' : 'Results', data: results }]
-      : (browse ?? []);
+      : (browse ?? []).map((s) =>
+          expanded.has(s.title) || s.data.length <= SECTION_PREVIEW
+            ? { ...s, fullCount: s.data.length }
+            : {
+                title: s.title,
+                data: s.data.slice(0, SECTION_PREVIEW),
+                fullCount: s.data.length,
+              },
+        );
 
   // A failed directory read is an ERROR SCREEN, never the empty state:
   // "No athletes here yet" rendered from a 404 is a read failure
@@ -217,6 +263,28 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           {error}
         </Text>
       ) : null}
+      {/* The sport's coverage note, shown HERE as well as on the
+          competitions screen (Prompt 12). It is the same string and the
+          same mechanism — it was simply never visible on the screen it
+          describes: what the athlete groups are and are not built from
+          is athlete-browse information, and a user reading "Men's world
+          No. 1s" deserves to know in the same glance that no ATP
+          ranking source is approved. Browse only — a search has moved
+          past the question. */}
+      {results === null && sport?.coverageNote ? (
+        <Text
+          style={[
+            type.caption,
+            {
+              color: t.textSecondary,
+              paddingHorizontal: spacing.l,
+              paddingBottom: spacing.s,
+            },
+          ]}
+        >
+          {sport.coverageNote}
+        </Text>
+      ) : null}
       {browse === null && results === null && !error ? (
         <View style={styles.center}>
           <ActivityIndicator color={t.primary} />
@@ -239,6 +307,34 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           renderSectionHeader={({ section }) => (
             <SectionHeader title={section.title} />
           )}
+          renderSectionFooter={({ section }) => {
+            const full = section.fullCount ?? section.data.length;
+            if (results !== null || full <= SECTION_PREVIEW) return null;
+            const isOpen = expanded.has(section.title);
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isOpen
+                    ? `Show fewer in ${section.title}`
+                    : `Show all ${full} in ${section.title}`
+                }
+                onPress={() =>
+                  setExpanded((prev) => {
+                    const next = new Set(prev);
+                    if (isOpen) next.delete(section.title);
+                    else next.add(section.title);
+                    return next;
+                  })
+                }
+                style={styles.showAll}
+              >
+                <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
+                  {isOpen ? 'Show fewer' : `Show all ${full}`}
+                </Text>
+              </Pressable>
+            );
+          }}
           renderItem={({ item: a }) => (
             <ListRow
               title={a.name}
@@ -262,6 +358,12 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                   // detection turns it into the page theme.
                   ...(a.accentHue !== undefined
                     ? { colours: hueToHex(a.accentHue) }
+                    : {}),
+                  ...(a.careerStatus
+                    ? { careerStatus: a.careerStatus }
+                    : {}),
+                  ...(a.careerEndYear !== undefined
+                    ? { careerEndYear: a.careerEndYear }
                     : {}),
                 })
               }
@@ -289,5 +391,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: spacing.m,
     fontSize: 16,
+  },
+  showAll: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.l,
   },
 });

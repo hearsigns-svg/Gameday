@@ -179,24 +179,35 @@ export async function searchTeams(
 // the appearance carrying this athlete's canonical key flows to the
 // follower through the ordinary query path.
 
-import { accentHueOf, Athlete } from './athletes';
+import { accentHueOf, Athlete, groupTitleOf } from './athletes';
 import { loadAthletes } from './rosterStore';
 
 export interface SearchAthleteHit {
   key: string; // the CANONICAL athlete id (athlete_000184)
   name: string;
   sportKey: string;
-  grouping?: string; // 'Heavyweight' | 'WTA Tour' — the caption source
+  grouping?: string; // 'Heavyweight' | 'WTA Tour — Women' — the caption
   nextStartUtc?: string;
   accentHue: number; // generated colour identity (Prompt 9b)
+  // Recorded retirement (Prompt 12) — search is the ONLY way most
+  // retired men are ever reached (1,484 of the 1,513 carry no browse
+  // group at all), so the marker matters more here than in browse.
+  careerStatus?: 'retired';
+  careerEndYear?: number;
 }
 
 const athleteHit = (a: Athlete): SearchAthleteHit => ({
   key: a.id,
   name: a.displayName,
   sportKey: a.sport,
-  ...(a.grouping ? { grouping: a.grouping } : {}),
+  ...(groupTitleOf(a.groupingKey, a.grouping)
+    ? { grouping: groupTitleOf(a.groupingKey, a.grouping)! }
+    : {}),
   ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+  ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
+  ...(a.careerEndYear !== undefined
+    ? { careerEndYear: a.careerEndYear }
+    : {}),
   accentHue: a.accentHue ?? accentHueOf(a.id),
 });
 
@@ -250,6 +261,11 @@ export interface AthleteCard {
   grouping?: string;
   nextStartUtc?: string;
   accentHue: number; // generated colour identity (Prompt 9b)
+  // Recorded retirement (Prompt 12). Present only where a source states
+  // it; absent means UNKNOWN, and no consumer may render absence as
+  // "active".
+  careerStatus?: 'retired';
+  careerEndYear?: number;
 }
 
 export interface AthleteBrowse {
@@ -265,8 +281,16 @@ const card = (a: Athlete): AthleteCard => ({
   ...(a.rank !== undefined ? { rank: a.rank } : {}),
   ...(a.championOf !== undefined ? { championOf: a.championOf } : {}),
   ...(a.countryCode ? { countryCode: a.countryCode } : {}),
-  ...(a.grouping ? { grouping: a.grouping } : {}),
+  // Resolved through GROUP_TITLES rather than read raw: a card's
+  // caption and its section header must be the same words.
+  ...(groupTitleOf(a.groupingKey, a.grouping)
+    ? { grouping: groupTitleOf(a.groupingKey, a.grouping)! }
+    : {}),
   ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+  ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
+  ...(a.careerEndYear !== undefined
+    ? { careerEndYear: a.careerEndYear }
+    : {}),
 });
 
 // Boxing weight classes browse heavy → light, men then women — the
@@ -289,10 +313,19 @@ export function groupOrderKey(groupingKey: string): string {
   if (womens >= 0 && groupingKey.startsWith('boxing-w-')) {
     return `1${String(womens).padStart(2, '0')}`;
   }
-  // Tennis: the WTA top 50 (full live coverage) leads; the men's
-  // curated Former-No. 1s group follows it (Prompt 10b).
+  // Tennis: the WTA top 50 (full live coverage) leads; then the men's
+  // No. 1s who are STILL PLAYING; then the retired ones last. The
+  // middle rank is the point of the ordering — the men's section used
+  // to open on Agassi, Borg and Becker because the group had no rank
+  // and fell to an alphabetical sort, which in an app about upcoming
+  // events read as "there is nothing here for men" (Prompt 12).
+  // The legacy unsplit key sorts BETWEEN the two it becomes, so a
+  // partial refresh — some docs moved, some not — still reads top to
+  // bottom as playing → unsplit → retired rather than interleaving.
   if (groupingKey === 'wta') return '20';
-  if (groupingKey === 'atp-no1') return '21';
+  if (groupingKey === 'atp-no1-active') return '21';
+  if (groupingKey === 'atp-no1') return '22';
+  if (groupingKey === 'atp-no1-retired') return '23';
   return `5${groupingKey}`;
 }
 
@@ -327,7 +360,9 @@ export function shapeAthleteBrowse(
         return a.displayName.localeCompare(b.displayName);
       });
       return {
-        grouping: sorted[0].grouping ?? groupingKey,
+        // The header comes from the KEY, not from whichever athlete
+        // happened to sort first — see GROUP_TITLES in athletes.ts.
+        grouping: groupTitleOf(groupingKey, sorted[0].grouping)!,
         groupingKey,
         athletes: sorted.slice(0, GROUP_CAP).map(card),
       };

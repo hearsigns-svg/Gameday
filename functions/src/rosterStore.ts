@@ -171,7 +171,10 @@ export async function applyRoster(
   db: Firestore,
   entries: readonly RosterEntry[],
   nowIso: string,
-  opts: { nameMatchExcludesSources?: string[] } = {},
+  opts: {
+    nameMatchExcludesSources?: string[];
+    ownsCareerStatus?: boolean;
+  } = {},
 ): Promise<RosterApplyResult> {
   const existing = await loadAthletes(db);
   const rec = reconcileRoster(existing, entries, nowIso, opts);

@@ -745,3 +745,85 @@ of data age, while tier 1 + the guard costs three cheap skip records a
 day and buys same-day retries. The 429s should clear on the daily
 cadence; if they persist, that is Google throttling the shared
 calendar URL itself and needs an owner decision, not a retry loop.
+
+
+## Found during Prompt 12 (tennis athlete groups, 2026-08-04)
+
+### F41 — CLOSED in Prompt 12: the men's group was retired players in alphabetical order
+The 29 curated ATP singles No. 1s carry no `rank`, so
+`shapeAthleteBrowse`'s comparator (champions → rank → name) fell to
+`displayName`: the live group opened Agassi, Murray, Roddick, Borg,
+Becker, with Alcaraz sixth. Every row also rendered a caption of the
+GROUP NAME — verified live, 0 of 29 carry rank, countryCode or
+nextStartUtc, so `captionFor` fell through to `a.grouping` for all of
+them. In an app about upcoming events the men's section therefore read
+as a list of people who will never have one. Closed by splitting the 29
+on recorded retirement and ordering the still-playing group first.
+
+### F42 — Men can never reach "Competing soon", and `active` carries no information for them
+Two structural facts, both probed in production rather than inferred.
+(a) `competingSoon` is built from `nextStartUtc`, which appearance
+ingest maintains — and there are ZERO men's appearance records: 340
+`tennis-atp` fixtures, none with participants; 108 distinct athlete
+follow keys on tennis fixtures, all 108 WTA-sourced. F33's structural
+consequence, now measured. (b) `athlete.active` means "present in the
+last roster refresh", and Wikidata returns the identical 1,513 every
+week, so no ATP athlete can ever be marked inactive. All 1,513 are
+`active: true` permanently, which means search's active/nextStartUtc/
+rank tiebreaks (search.ts) give ZERO discrimination between Björn Borg
+and Carlos Alcaraz. Not fixed here — recorded so it is not mistaken for
+a working signal.
+
+### F43 — `plausiblyCurrent()` calls Nadal and Murray current, and its constants have no clock
+`plausiblyCurrent` (wikidataAtp.ts) hard-codes `careerEnd < 2023`, so
+the 13 selected players whose recorded end is 2023 or 2024 — including
+**Rafael Nadal (2024) and Andy Murray (2024)** — classify as "plausibly
+current" today. It is an IMPORT THRESHOLD and answers with a guess by
+design (its last arm is `dob >= 1985`, which admits 594 unmarked men
+aged 33–40 and excludes Rohan Bopanna, doubles world No. 1 in 2024 at
+43). Prompt 12 did NOT reuse it for the product question — career
+status is a separate, recorded-only predicate, and a test pins the two
+apart. The drift remains: 2023, 2005 and 1985 are literals with no
+clock, and the threshold's precision decays yearly with no alarm.
+Left alone deliberately — retuning an import threshold changes who is
+in the directory at all, which is its own stage.
+
+### F44 — FIXED before deploy: a key whose meaning narrows lies for a week
+Found by the adversarial review and independently by probe. The first
+cut of the men's split reused the existing `atp-no1` key for the new,
+narrower "retired" meaning. Because the title resolves on DEPLOY and
+group membership only moves on the WEEKLY ROSTER REFRESH, running the
+new shaper over the actual production documents printed a section
+headed "Men's world No. 1s — retired" containing **Carlos Alcaraz,
+Jannik Sinner, Novak Djokovic and Daniil Medvedev** — and, because
+those docs carry nothing else, each row's caption read the same false
+string, as did their global-search captions. Up to eight days of it,
+since one throttled WDQS run defers the refresh another week. Fixed by
+minting two NEW keys and leaving `atp-no1` meaning what it always
+meant. THE GENERALISABLE LESSON, and it is the sibling of the
+"derived view agreeing is not proof" rule: when a title becomes a
+function of a key, the key's MEANING becomes part of the schema —
+narrowing it is a migration, and a migration that only the weekly
+scheduler performs has a window measured in days.
+
+### F45 — FIXED before ship: three consumers of a new field, and the one map that builds their input dropped it
+`AthleteListScreen` gained three readers of `careerStatus` in this
+change (the row caption, the navigation params, the stored follow) —
+while the map that turns its OWN in-screen search hits into cards
+still copied six fields and not those two. That screen's search box is
+the only route to the 1,484 ATP men who carry no browse group at all,
+i.e. exactly the population the marker was added for, so all three
+readers were unreachable for them: searching "Federer" there gave an
+EMPTY caption, an athlete page still promising "we'll add them when
+announced", and a marker-less stored follow. Dead code that typechecks
+— the same shape as the Prompt 6 iOS push import. A compile is not a
+proof, and neither is a passing suite when nothing exercises the path.
+
+### F46 — FIXED before ship: a fact about a person must not be read from follow state
+`TeamScreen` resolved recorded retirement by reading the follow store
+during RENDER. Tapping Unfollow deletes that record, the screen
+repaints via `forceRender`, and the empty state flipped from "Retired
+in 2022 — no upcoming events are expected." back to "No scheduled
+events. We'll add them when announced" — re-making the false promise in
+the exact moment the user is looking at it. Now resolved once per
+athlete (`useMemo` keyed on identity, not on follow state).

@@ -3,7 +3,7 @@
 // the same rows grow the per-event remove/restore toggles — so "follow
 // Liverpool but skip the matches I don't care about" happens right here.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -43,6 +43,10 @@ import {
   scopesFor,
 } from '../domain/followScopes';
 import { sportByKey } from '../domain/sportsConfig';
+import {
+  CareerStatusFields,
+  retiredEmptyState,
+} from '../domain/careerStatus';
 
 type Props = RootScreenProps<'Team'>;
 
@@ -51,8 +55,16 @@ type Props = RootScreenProps<'Team'>;
 const polledThisSession = new Set<string>();
 
 export default function TeamScreen({ navigation, route }: Props) {
-  const { teamKey, name, sportKey, pollPath, colours, followType } =
-    route.params;
+  const {
+    teamKey,
+    name,
+    sportKey,
+    pollPath,
+    colours,
+    followType,
+    careerStatus,
+    careerEndYear,
+  } = route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
   const sport = sportByKey(sportKey);
@@ -72,6 +84,42 @@ export default function TeamScreen({ navigation, route }: Props) {
   const [, forceRender] = useState(0);
   const mounted = useRef(true);
 
+  // Recorded retirement reaches this screen two ways and needs both:
+  // browse and search pass it as route params, while the Following rail
+  // and Home navigate with none of it — so an already-followed athlete
+  // falls back to what was captured on the stored follow. Route params
+  // win: they came from the directory this session, the stored copy may
+  // be months old. Absent from both = unknown, and the page says
+  // nothing.
+  //
+  // RESOLVED ONCE, NOT PER RENDER (review round). Reading the follow
+  // store inline made a FACT ABOUT A PERSON depend on whether you
+  // currently follow them: tapping Unfollow dropped the stored record,
+  // the next render found nothing, and the empty state flipped from
+  // "Retired in 2022" back to "We'll add them when announced" —
+  // re-making the promise this stage exists to stop making, in the one
+  // moment the user is looking straight at it. The memo's deps are the
+  // athlete's identity, so follow/unfollow (which repaints via
+  // forceRender) cannot disturb it. Both fields come from the SAME
+  // side of the fallback, so a year can never be attributed to the
+  // wrong person's marker.
+  const career: CareerStatusFields = useMemo(() => {
+    const stored = loadFollowables().find((f) => f.key === teamKey);
+    const src =
+      careerStatus !== undefined
+        ? { careerStatus, careerEndYear }
+        : {
+            careerStatus: stored?.careerStatus,
+            careerEndYear: stored?.careerEndYear,
+          };
+    return {
+      ...(src.careerStatus ? { careerStatus: src.careerStatus } : {}),
+      ...(src.careerStatus && src.careerEndYear !== undefined
+        ? { careerEndYear: src.careerEndYear }
+        : {}),
+    };
+  }, [teamKey, careerStatus, careerEndYear]);
+
   const item: Followable = {
     key: teamKey,
     label: name,
@@ -82,6 +130,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     type: followType ?? 'team',
     ...(pollPath ? { pollPath } : {}),
     ...(brandColour ? { brandColour } : {}),
+    ...career,
   };
 
   const loadFixtures = useCallback(async () => {
@@ -297,7 +346,11 @@ export default function TeamScreen({ navigation, route }: Props) {
               ? // The honest empty state IS the feature (Prompt 8): an
                 // athlete with nothing announced is still followable, and
                 // the follow is exactly how the user finds out first.
-                "No scheduled events. We'll add them when announced — follow now and they'll reach your calendar."
+                // Unless they have RETIRED — then "we'll add them when
+                // announced" is a promise nobody can keep, and saying so
+                // is the whole point (Prompt 12).
+                (retiredEmptyState(career) ??
+                "No scheduled events. We'll add them when announced — follow now and they'll reach your calendar.")
               : 'No upcoming fixtures yet — schedules land here as soon as they are announced.'}
           </Text>
         </View>

@@ -18,6 +18,7 @@ import {
   applyCreatedIds,
   AthleteProvenance,
   CreationPolicy,
+  groupTitleOf,
   NewAthleteSpec,
   providerKey,
   resolveDrafts,
@@ -1413,7 +1414,10 @@ interface RosterSource {
   source: string;
   sport: string;
   run: () => Promise<{ rawCount: number; entries: import('./athletes').RosterEntry[] }>;
-  applyOpts?: { nameMatchExcludesSources?: string[] };
+  applyOpts?: {
+    nameMatchExcludesSources?: string[];
+    ownsCareerStatus?: boolean;
+  };
 }
 
 const rosterSources = (): RosterSource[] => [
@@ -1447,7 +1451,12 @@ const rosterSources = (): RosterSource[] => [
           source: 'wikidata',
           sport: 'tennis',
           run: () => fetchAtpRoster(),
-          applyOpts: { nameMatchExcludesSources: ['wta'] },
+          applyOpts: {
+            nameMatchExcludesSources: ['wta'],
+            // Wikidata evaluates career status for every selected
+            // player every run, so what it omits is cleared, not kept.
+            ownsCareerStatus: true,
+          },
         },
       ]
     : []),
@@ -1732,7 +1741,7 @@ export const pollWtaTennis = onRequest(
             // athlete the moment she enters a draw — certain identity,
             // not a guess.
             create: 'structured' as const,
-            grouping: 'WTA Tour',
+            grouping: groupTitleOf('wta')!,
             groupingKey: 'wta',
           },
           body: {

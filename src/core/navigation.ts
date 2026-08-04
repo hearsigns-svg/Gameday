@@ -42,6 +42,12 @@ export type RootStackParamList = {
     // be a competition or series, and re-following from here would
     // otherwise silently rewrite its type.
     followType?: 'team' | 'competition' | 'athlete' | 'series';
+    // Recorded retirement, carried from browse/search so the page can
+    // say something truthful before any follow exists. Mirrors
+    // CareerStatusFields (features/follows/domain/careerStatus) —
+    // inlined because core must not import from a feature.
+    careerStatus?: 'retired';
+    careerEndYear?: number;
   };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to

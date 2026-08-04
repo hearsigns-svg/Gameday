@@ -7,9 +7,11 @@
 
 import sample from './fixtures/wikidata-atp-sample.json';
 import {
+  ATP_ENUM_QUERY,
   ATP_SINGLES_NO1_QIDS,
   atpRosterEntries,
   AtpPlayer,
+  isRetired,
   MIN_SELECTED,
   parseAtpPlayers,
   passesThreshold,
@@ -59,8 +61,8 @@ test('roster entries: Q-id primary, atp+itf extras, curated No. 1s get the ONLY 
     externalId: 'Q5812',
     name: 'Novak Djokovic',
     sport: 'tennis',
-    grouping: 'Former world No. 1s',
-    groupingKey: 'atp-no1',
+    grouping: "Men's world No. 1s — still playing",
+    groupingKey: 'atp-no1-active',
     honours: ['former-no1'],
     extraIdentities: [
       { source: 'atp', externalId: 'D643' },
@@ -70,6 +72,105 @@ test('roster entries: Q-id primary, atp+itf extras, curated No. 1s get the ONLY 
   const hm = rosterEntryOf(byQ.get('Q106962940')!);
   expect(hm.grouping).toBeUndefined(); // search-first, no arbitrary group
   expect(hm.groupingKey).toBeUndefined();
+});
+
+// ─── Prompt 12: recorded retirement, and the men's split ──────────────
+//
+// NOTE ON THE FIXTURE: this capture predates the P570 (date of death)
+// column added to ATP_ENUM_QUERY, so every player here parses with
+// `died: undefined`. That is the honest majority case — 9 of the live
+// 1,513 carry P570 — and the death arm is pinned synthetically below
+// rather than by editing a real capture to say something it did not.
+
+test('the No. 1s split on RECORDED career end — and it is right in both directions here', () => {
+  // Still playing: no P2032 anywhere on the item.
+  for (const q of ['Q5812']) {
+    const p = byQ.get(q)!;
+    expect(p.careerEnd).toBeUndefined();
+    expect(isRetired(p)).toBe(false);
+    expect(rosterEntryOf(p).groupingKey).toBe('atp-no1-active');
+    expect(rosterEntryOf(p).careerStatus).toBeUndefined();
+  }
+  // Retired: P2032 present. Federer 2022, Nadal 2024, Agassi 2006 —
+  // three different eras, one rule. Note the key is atp-no1-RETIRED:
+  // the legacy `atp-no1` is never emitted again, so no production doc
+  // changes meaning under a deploy (review round).
+  for (const [q, year] of [
+    ['Q1426', 2022],
+    ['Q10132', 2024],
+    ['Q7407', 2006],
+  ] as const) {
+    const p = byQ.get(q)!;
+    expect(isRetired(p)).toBe(true);
+    const e = rosterEntryOf(p);
+    expect(e.groupingKey).toBe('atp-no1-retired');
+    expect(e.grouping).toBe("Men's world No. 1s — retired");
+    expect(e.careerStatus).toBe('retired');
+    expect(e.careerEndYear).toBe(year);
+  }
+});
+
+test('NADAL AND MURRAY: retired here even though plausiblyCurrent says otherwise', () => {
+  // The import threshold hard-codes `careerEnd < 2023`, so a 2024
+  // retirement reads as "plausibly current" to it. Career status must
+  // NOT inherit that bug — the two predicates answer different
+  // questions and this pins them apart.
+  const nadal = byQ.get('Q10132')!;
+  expect(nadal.careerEnd).toBe(2024);
+  expect(plausiblyCurrent(nadal)).toBe(true); // the threshold's view
+  expect(isRetired(nadal)).toBe(true); // the product's view
+});
+
+test('a man the roster does not group still carries his retirement', () => {
+  // 1,484 of the 1,513 have no browse group at all and are reached
+  // only by search — the marker is what makes those pages honest.
+  const ferrero = byQ.get('Q463719')!; // Larry Stefanki, end 1988
+  expect(ferrero.careerEnd).toBe(1988);
+  const e = rosterEntryOf(ferrero);
+  expect(e.groupingKey).toBeUndefined();
+  expect(e.careerStatus).toBe('retired');
+  expect(e.careerEndYear).toBe(1988);
+});
+
+test('a date of death retires a player with no recorded career end, and shows no year', () => {
+  const dead: AtpPlayer = {
+    qid: 'Q999999',
+    label: 'Deceased Player',
+    atpId: 'Z001',
+    dob: 1930,
+    sitelinks: 4,
+    everTop10: false,
+    died: 2019,
+  };
+  expect(isRetired(dead)).toBe(true);
+  const e = rosterEntryOf(dead);
+  expect(e.careerStatus).toBe('retired');
+  // A death year is NOT a career end and is never displayed as one.
+  expect(e.careerEndYear).toBeUndefined();
+});
+
+test('absence of every retirement statement is UNKNOWN, never a claim', () => {
+  // The standing invariant, applied to a career: 92% of the roster
+  // carries no marker, and that must produce no assertion at all.
+  const unmarked: AtpPlayer = {
+    qid: 'Q888888',
+    label: 'Unmarked Player',
+    atpId: 'Z002',
+    dob: 1988,
+    sitelinks: 12,
+    everTop10: false,
+  };
+  expect(isRetired(unmarked)).toBe(false);
+  const e = rosterEntryOf(unmarked);
+  expect(e.careerStatus).toBeUndefined();
+  expect(e.careerEndYear).toBeUndefined();
+});
+
+test('the enumeration query asks for the death column the status rule reads', () => {
+  // A rule reading a field the query never requests is dead code that
+  // typechecks — the Prompt 6 lesson, in its cheapest possible form.
+  expect(ATP_ENUM_QUERY).toContain('wdt:P570');
+  expect(ATP_ENUM_QUERY).toContain('?death');
 });
 
 test('the curated singles-No. 1 list is exactly 29 and P1352 alone would get it wrong both ways', () => {

@@ -165,4 +165,193 @@ describe('groupOrderKey', () => {
       'wta',
     ]);
   });
+
+  test('tennis: women, then the men still playing, then the retired', () => {
+    // The middle rank is the fix (Prompt 12). Shuffled input, because
+    // the ordering must come from the comparator and not from whatever
+    // order Firestore happened to return.
+    const order = [
+      'atp-no1-retired',
+      'wta',
+      'atp-no1',
+      'atp-no1-active',
+    ].sort((a, b) => groupOrderKey(a).localeCompare(groupOrderKey(b)));
+    // The legacy unsplit key sorts between the two it becomes.
+    expect(order).toEqual([
+      'wta',
+      'atp-no1-active',
+      'atp-no1',
+      'atp-no1-retired',
+    ]);
+  });
+});
+
+// ─── Prompt 12: titles come from the KEY, not from a stored string ────
+
+describe('group titles', () => {
+  const men = (over: Partial<Athlete> & { id: string }): Athlete =>
+    athlete({ sport: 'tennis', ...over });
+
+  test('the header is resolved from groupingKey, overriding a stale stored grouping', () => {
+    // The draw-mint path writes `grouping` once at creation and never
+    // patches it, so a doc CAN carry last release's string forever.
+    // The header must not be at its mercy.
+    const b = shapeAthleteBrowse(
+      [
+        men({
+          id: 'athlete_000900',
+          displayName: 'Stale Doc',
+          grouping: 'WTA Tour', // the pre-Prompt-12 string, still stored
+          groupingKey: 'wta',
+          rank: 1,
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    expect(b.groups[0].grouping).toBe('WTA Tour — Women');
+    expect(b.groups[0].athletes[0].grouping).toBe('WTA Tour — Women');
+  });
+
+  test('an unknown key falls back to the stored string, then to the key', () => {
+    // Deploy skew in the other direction: a group this build has never
+    // heard of must still render something, and must never render
+    // `undefined`.
+    const b = shapeAthleteBrowse(
+      [
+        men({
+          id: 'athlete_000901',
+          displayName: 'Future Group',
+          grouping: 'Some Future Group',
+          groupingKey: 'atp-future',
+        }),
+        men({
+          id: 'athlete_000902',
+          displayName: 'Naked Key',
+          groupingKey: 'atp-nameless',
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    const titles = b.groups.map((g) => g.grouping);
+    expect(titles).toContain('Some Future Group');
+    expect(titles).toContain('atp-nameless');
+  });
+
+  test('THE DEPLOY WINDOW: unmigrated docs never render a retirement claim', () => {
+    // Exactly production's shape on the day this deploys — 29 docs
+    // still on the legacy key, none carrying a marker, because only
+    // the weekly roster refresh writes the split. The first cut titled
+    // this group "…— retired" and put Alcaraz under it. Nothing in
+    // this test may ever say "retired".
+    const legacy = [
+      'Andre Agassi',
+      'Björn Borg',
+      'Carlos Alcaraz',
+      'Jannik Sinner',
+      'Novak Djokovic',
+      'Daniil Medvedev',
+    ].map((displayName, i) =>
+      men({
+        id: `athlete_00093${i}`,
+        displayName,
+        grouping: 'Former world No. 1s', // the string stored today
+        groupingKey: 'atp-no1',
+      }),
+    );
+    const b = shapeAthleteBrowse(legacy, 'tennis', NOW);
+    expect(b.groups).toHaveLength(1);
+    expect(b.groups[0].grouping).toBe("Men's world No. 1s");
+    expect(b.groups[0].grouping).not.toMatch(/retired|still playing/);
+    // And every CARD caption too — the row is where the lie was
+    // actually readable, because these docs carry nothing else.
+    for (const a of b.groups[0].athletes) {
+      expect(a.grouping).toBe("Men's world No. 1s");
+      expect(a.careerStatus).toBeUndefined();
+    }
+  });
+
+  test('a partial refresh renders all three keys, each honestly titled', () => {
+    // Some docs moved, some did not — a batch that half-committed, or
+    // a WDQS failure mid-run. Every header must still be true of what
+    // sits under it.
+    const b = shapeAthleteBrowse(
+      [
+        men({ id: 'athlete_000940', groupingKey: 'atp-no1-active' }),
+        men({ id: 'athlete_000941', groupingKey: 'atp-no1' }),
+        men({
+          id: 'athlete_000942',
+          groupingKey: 'atp-no1-retired',
+          careerStatus: 'retired',
+          careerEndYear: 1993,
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    expect(b.groups.map((g) => g.grouping)).toEqual([
+      "Men's world No. 1s — still playing",
+      "Men's world No. 1s",
+      "Men's world No. 1s — retired",
+    ]);
+  });
+
+  test('every tennis group a user can land on names its population', () => {
+    // The complaint this stage answers: "WTA Tour" said nothing about
+    // women and "Former world No. 1s" said nothing about men.
+    const b = shapeAthleteBrowse(
+      [
+        men({ id: 'athlete_000910', groupingKey: 'wta', rank: 1 }),
+        men({ id: 'athlete_000911', groupingKey: 'atp-no1-active' }),
+        men({
+          id: 'athlete_000912',
+          groupingKey: 'atp-no1-retired',
+          careerStatus: 'retired',
+          careerEndYear: 1993,
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    expect(b.groups.map((g) => g.grouping)).toEqual([
+      'WTA Tour — Women',
+      "Men's world No. 1s — still playing",
+      "Men's world No. 1s — retired",
+    ]);
+  });
+
+  test('recorded retirement rides the card; absence stays absent', () => {
+    const b = shapeAthleteBrowse(
+      [
+        men({
+          id: 'athlete_000920',
+          displayName: 'Retired Man',
+          groupingKey: 'atp-no1-retired',
+          careerStatus: 'retired',
+          careerEndYear: 2022,
+        }),
+        men({
+          id: 'athlete_000921',
+          displayName: 'Unmarked Man',
+          groupingKey: 'atp-no1-active',
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    const retired = b.groups.find(
+      (g) => g.groupingKey === 'atp-no1-retired',
+    )!;
+    expect(retired.athletes[0]).toMatchObject({
+      careerStatus: 'retired',
+      careerEndYear: 2022,
+    });
+    const active = b.groups.find(
+      (g) => g.groupingKey === 'atp-no1-active',
+    )!;
+    // No `careerStatus: 'active'` is ever emitted — the field can only
+    // say "retired", because that is the only thing a source states.
+    expect(active.athletes[0].careerStatus).toBeUndefined();
+  });
 });

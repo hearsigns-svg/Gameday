@@ -506,6 +506,82 @@ describe('ATP roster reconciliation (Prompt 10b)', () => {
     ...over,
   });
 
+  // ── Prompt 12: career status is all-or-nothing for the owning source ──
+
+  test('a refresh that no longer records a retirement CLEARS it, group and caption together', () => {
+    // The contradiction this prevents: a doc sitting in "still
+    // playing" whose every caption reads "Retired 2024". Firestore
+    // merge only touches keys present in the patch, so an omitted
+    // field would otherwise survive forever — applyRoster turns the
+    // `undefined` below into a real field delete.
+    const existing = rosterAthlete(
+      'athlete_000950',
+      atpEntry({
+        groupingKey: 'atp-no1-retired',
+        grouping: "Men's world No. 1s — retired",
+        careerStatus: 'retired',
+        careerEndYear: 2024,
+      }),
+      nowIso,
+    );
+    const rec = reconcileRoster(
+      [existing],
+      [
+        atpEntry({
+          groupingKey: 'atp-no1-active',
+          grouping: "Men's world No. 1s — still playing",
+        }),
+      ],
+      '2026-08-10T00:00:00.000Z',
+      { ownsCareerStatus: true },
+    );
+    const patch = rec.toUpdate.find((u) => u.id === 'athlete_000950')!.patch;
+    expect(patch.groupingKey).toBe('atp-no1-active');
+    // Present-and-undefined, NOT absent: absent would mean "leave it".
+    expect('careerStatus' in patch).toBe(true);
+    expect(patch.careerStatus).toBeUndefined();
+    expect('careerEndYear' in patch).toBe(true);
+    expect(patch.careerEndYear).toBeUndefined();
+  });
+
+  test('a source that does NOT own career status leaves an existing marker alone', () => {
+    // A WTA or IBF refresh must never blank a marker it knows nothing
+    // about. Without the flag, nothing is written either way.
+    const existing = rosterAthlete(
+      'athlete_000951',
+      atpEntry({ careerStatus: 'retired', careerEndYear: 2012 }),
+      nowIso,
+    );
+    const rec = reconcileRoster(
+      [existing],
+      [atpEntry()],
+      '2026-08-10T00:00:00.000Z',
+    );
+    const patch = rec.toUpdate.find((u) => u.id === 'athlete_000951')!.patch;
+    expect('careerStatus' in patch).toBe(false);
+    expect('careerEndYear' in patch).toBe(false);
+  });
+
+  test('a newly recorded retirement lands with its year', () => {
+    const existing = rosterAthlete('athlete_000952', atpEntry(), nowIso);
+    const rec = reconcileRoster(
+      [existing],
+      [
+        atpEntry({
+          groupingKey: 'atp-no1-retired',
+          careerStatus: 'retired',
+          careerEndYear: 2026,
+        }),
+      ],
+      '2026-08-10T00:00:00.000Z',
+      { ownsCareerStatus: true },
+    );
+    const patch = rec.toUpdate.find((u) => u.id === 'athlete_000952')!.patch;
+    expect(patch.careerStatus).toBe('retired');
+    expect(patch.careerEndYear).toBe(2026);
+    expect(patch.groupingKey).toBe('atp-no1-retired');
+  });
+
   test('a created athlete carries all three identities and the honours', () => {
     const rec = reconcileRoster([], [atpEntry()], nowIso);
     expect(rec.toCreate).toHaveLength(1);

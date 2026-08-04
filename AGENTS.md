@@ -73,7 +73,13 @@ source of truth for build state — never chat history.
   TZ=America/Los_Angeles. Every timezone bug the 2026-07-29 audit found
   was invisible in a UTC-only run — never reduce this back to one pass.
   (`npm run test:fast` = single current-zone pass for quick iteration.)
-- `cd functions && npm test` — backend tests (once functions exist)
+- Backend tests are NOT a separate command: `functions/package.json` has
+  only a `build` script, and the ROOT jest run collects
+  `functions/src/__tests__` (it ignores only `functions/lib`). `npm test`
+  at the root is the whole surface, backend and client — 58 suites.
+  Note `npm test` ALREADY runs both timezones (`TZ=UTC jest &&
+  TZ=America/Los_Angeles jest`), so one invocation satisfies the
+  run-twice rule.
 - `firebase emulators:start` — local Firestore/Functions/Auth
 
 ## Conventions
@@ -151,6 +157,13 @@ These apply to every stage. They do not need restating in a brief.
    titles at serve time — while the stored docs' followKeys, the layer
    follows actually query, carried nothing. A derived view agreeing is
    not proof; probe the store the feature depends on.
+9. **Any stage that touches client code ends with a simulator rebuild
+   and a stated list of what changed on screen** (owner ruling
+   2026-08-03). Six client commits drifted unshipped across five
+   stages because server deploys happened within minutes and client
+   builds happened never. A Release-configuration simulator build
+   (embedded bundle) counts; a Metro session does not — it dies with
+   the terminal.
 
 ## Concurrency against production
 
