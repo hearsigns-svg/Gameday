@@ -1590,3 +1590,43 @@ within our window, everyone else search-only; (3) two sections only.
   carry the now-dead `atp-no1-retired` groupingKey. Browse filters
   retired athletes regardless, and a test pins that, so nothing renders
   wrong; the key clears itself on the next roster refresh.
+
+### Prompt 12b — hardening the ranking, deepening the men's list  [x] (1,2) / (3) BLOCKED ON A DIFFERENT FACT
+
+- (1) THE WIKIPEDIA TABLE IS GATED HARDER THAN ANY MACHINE FEED. Four
+  refuse-the-write gates: exactly 20 rows, contiguous 1..N, every name
+  resolving to a non-WTA-id-backed directory athlete, and ≥14 of the
+  previous 20 carried over. On failure the previous ranking stands. The
+  slice joined EXPECTED_ROSTER_SLICES, and because the staleness marker
+  only advances on a fully-applied refresh, repeated gate failures raise
+  roster_stale by themselves — the hold the gates create is watched.
+  Churn floor argued from the 52-week rollover, not from observation.
+- (2) SECOND MEN'S GROUP: "More ATP players — A–Z", 1,374 men, same
+  active signal as the sectioning work, served whole and collapsed by
+  the client. Browse rows no longer echo their own section header.
+  MEASURED COST: the tennis browse payload went 13KB → 185KB. Note that
+  NOTHING on this project's endpoints is gzipped — boxing already ships
+  79KB raw — so a compression middleware is a one-line cross-cutting
+  win, flagged for an owner decision rather than taken unasked.
+- (3) THE SLAM SEQUENCING CANNOT BE EXECUTED AS PLANNED, and the reason
+  is not access — it is retention. Probed 2026-08-04:
+  · usopen.org REFUSES US at the edge (Akamai resets the HTTP/2 stream),
+    so the 27-August US Open target is dead regardless of anything else.
+  · wimbledon.com disallows /api/.
+  · rolandgarros.com/en-us/draws 302s to the homepage; the site has been
+    reset for the next edition and links no draws, results or scores.
+  · ausopen.com is the most permissive AND exposes its own scores API
+    (prod-scores-api.ausopen.com/year/{year}/period/{period}/day/{day}/
+    schedule, no auth, well-formed JSON) — but every past-date request
+    returns {"heading":"No Schedules"}: the data is cleared between
+    editions.
+  SO: NO ACCESSIBLE SLAM RETAINS A PAST DRAW TO VERIFY A PARSER
+  AGAINST. The slam sites are live-only. The next accessible slam window
+  is the Australian Open, January 2027.
+- THE BETTER ROUTE, evidence-backed: the individual TOUR-STOP organisers
+  are creators publishing their own order of play, they run ~40 weeks a
+  year rather than 8, and they permit us — cincinnatiopen.com robots is
+  `Disallow:` (empty) with Crawl-delay 10, miamiopen.com likewise. One
+  live tournament is verifiable NOW instead of in five months.
+- 770 tests both timezones; typechecks and functions build clean;
+  deployed; roster refreshed through the new gates; simulator verified.
