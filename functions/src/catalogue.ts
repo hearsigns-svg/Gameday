@@ -48,6 +48,15 @@ export interface CatalogueEntry {
   // how likely a human is to want it (the World Cup outranks nearly
   // everything). Ops-tunable in the collection without a deploy.
   priority?: number;
+  // TAKEDOWN SWITCH (Prompt 13). `imagery: false` suppresses crests and
+  // logos for this competition WITHOUT A DEPLOY — the same ops shape as
+  // `enabled`, which already cools a poller from the console. Absent or
+  // true means artwork flows. This is the response that makes
+  // "trademark risk accepted" a defensible position rather than a hope:
+  // a rights holder complains, an operator flips one field, the artwork
+  // is gone on the next serve. Olympic marks are NOT governed by this —
+  // they are excluded in code (src/imagery.ts).
+  imagery?: boolean;
   // Ranking-only rows (tennis slams, athletics groups): browse keys the
   // sweep never polls individually — their tour/calendar slice is what
   // warms. Carried here so ONE collection owns ordering, never polled.
@@ -201,6 +210,78 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // audience — baseball has essentially no UK footprint.
   SPORT('motorsport', 'Motorsport', 54),
   SPORT('baseball', 'Baseball', 50),
+  // ── THE OLYMPICS (Prompt 13) ──────────────────────────────────────
+  // RANK-ONLY, every row: there is no poller and no published schedule
+  // to poll. Wikidata carries the discipline list (verified 2026-08-04:
+  // 39 summer, 15 winter) and NOTHING with a start date — the IOC
+  // releases session times closer to the Games. So these rows exist to
+  // ORDER a browse list, and the sweep never touches them.
+  //
+  // HIGH PRIORITY, LOW PLACEMENT — deliberately, and the machinery
+  // already does it. The Games outrank almost everything a human might
+  // want (priority 96), and DORMANCY DEMOTION (Prompt 11b) sorts a key
+  // with zero future fixtures below every live one, so the Olympics
+  // cannot lead a list into an empty screen between Games. It is the
+  // World Cup case exactly: keep the weight, let dormancy hold it back
+  // until the fixtures are real.
+  RANK('olympics-2028', 'Los Angeles 2028', 'olympics', 96),
+  RANK('olympics-2030', 'Milano-Cortina 2030', 'olympics', 94),
+  RANK('olympics-2028-archery', 'Archery 2028', 'olympics', 40),
+  RANK('olympics-2028-artistic-swimming', 'Artistic swimming 2028', 'olympics', 40),
+  RANK('olympics-2028-athletics', 'Athletics 2028', 'olympics', 40),
+  RANK('olympics-2028-badminton', 'Badminton 2028', 'olympics', 40),
+  RANK('olympics-2028-baseball', 'Baseball 2028', 'olympics', 40),
+  RANK('olympics-2028-basketball', 'Basketball 2028', 'olympics', 40),
+  RANK('olympics-2028-beach-volleyball', 'Beach volleyball 2028', 'olympics', 40),
+  RANK('olympics-2028-boxing', 'Boxing 2028', 'olympics', 40),
+  RANK('olympics-2028-canoeing', 'Canoeing 2028', 'olympics', 40),
+  RANK('olympics-2028-cricket', 'Cricket 2028', 'olympics', 40),
+  RANK('olympics-2028-cycling', 'Cycling 2028', 'olympics', 40),
+  RANK('olympics-2028-diving', 'Diving 2028', 'olympics', 40),
+  RANK('olympics-2028-equestrian', 'Equestrian 2028', 'olympics', 40),
+  RANK('olympics-2028-fencing', 'Fencing 2028', 'olympics', 40),
+  RANK('olympics-2028-field-hockey', 'Field hockey 2028', 'olympics', 40),
+  RANK('olympics-2028-football', 'Football 2028', 'olympics', 40),
+  RANK('olympics-2028-golf', 'Golf 2028', 'olympics', 40),
+  RANK('olympics-2028-gymnastics', 'Gymnastics 2028', 'olympics', 40),
+  RANK('olympics-2028-handball', 'Handball 2028', 'olympics', 40),
+  RANK('olympics-2028-judo', 'Judo 2028', 'olympics', 40),
+  RANK('olympics-2028-lacrosse', 'Lacrosse 2028', 'olympics', 40),
+  RANK('olympics-2028-modern-pentathlon', 'Modern pentathlon 2028', 'olympics', 40),
+  RANK('olympics-2028-rowing', 'Rowing 2028', 'olympics', 40),
+  RANK('olympics-2028-rugby-sevens', 'Rugby sevens 2028', 'olympics', 40),
+  RANK('olympics-2028-sailing', 'Sailing 2028', 'olympics', 40),
+  RANK('olympics-2028-shooting', 'Shooting 2028', 'olympics', 40),
+  RANK('olympics-2028-skateboarding', 'Skateboarding 2028', 'olympics', 40),
+  RANK('olympics-2028-softball', 'Softball 2028', 'olympics', 40),
+  RANK('olympics-2028-sport-climbing', 'Sport climbing 2028', 'olympics', 40),
+  RANK('olympics-2028-surfing', 'Surfing 2028', 'olympics', 40),
+  RANK('olympics-2028-swimming', 'Swimming 2028', 'olympics', 40),
+  RANK('olympics-2028-table-tennis', 'Table tennis 2028', 'olympics', 40),
+  RANK('olympics-2028-taekwondo', 'Taekwondo 2028', 'olympics', 40),
+  RANK('olympics-2028-tennis', 'Tennis 2028', 'olympics', 40),
+  RANK('olympics-2028-triathlon', 'Triathlon 2028', 'olympics', 40),
+  RANK('olympics-2028-volleyball', 'Volleyball 2028', 'olympics', 40),
+  RANK('olympics-2028-water-polo', 'Water polo 2028', 'olympics', 40),
+  RANK('olympics-2028-weightlifting', 'Weightlifting 2028', 'olympics', 40),
+  RANK('olympics-2028-wrestling', 'Wrestling 2028', 'olympics', 40),
+  RANK('olympics-2030-alpine-skiing', 'Alpine skiing 2030', 'olympics', 40),
+  RANK('olympics-2030-biathlon', 'Biathlon 2030', 'olympics', 40),
+  RANK('olympics-2030-bobsleigh', 'Bobsleigh 2030', 'olympics', 40),
+  RANK('olympics-2030-cross-country-skiing', 'Cross-country skiing 2030', 'olympics', 40),
+  RANK('olympics-2030-curling', 'Curling 2030', 'olympics', 40),
+  RANK('olympics-2030-figure-skating', 'Figure skating 2030', 'olympics', 40),
+  RANK('olympics-2030-freestyle-skiing', 'Freestyle skiing 2030', 'olympics', 40),
+  RANK('olympics-2030-ice-hockey', 'Ice hockey 2030', 'olympics', 40),
+  RANK('olympics-2030-luge', 'Luge 2030', 'olympics', 40),
+  RANK('olympics-2030-nordic-combined', 'Nordic combined 2030', 'olympics', 40),
+  RANK('olympics-2030-skeleton', 'Skeleton 2030', 'olympics', 40),
+  RANK('olympics-2030-ski-jumping', 'Ski jumping 2030', 'olympics', 40),
+  RANK('olympics-2030-ski-mountaineering', 'Ski mountaineering 2030', 'olympics', 40),
+  RANK('olympics-2030-snowboarding', 'Snowboarding 2030', 'olympics', 40),
+  RANK('olympics-2030-speed-skating', 'Speed skating 2030', 'olympics', 40),
+  SPORT('olympics', 'Olympics', 46),
+
 ];
 
 // Per-sport ordering weight. An EXPLICIT sport row wins outright — its

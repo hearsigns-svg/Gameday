@@ -13,6 +13,8 @@ import {
   retiredAppearanceIds,
 } from './appearances';
 import { normaliseName } from './identity';
+import { withImageryPolicy } from './imagery';
+import { fetchTsdbLeagueBadges, TsdbLeagueArt } from './providers/tsdb';
 import {
   AppearanceDraft,
   applyCreatedIds,
@@ -669,6 +671,25 @@ export const pollLeague = onRequest(async (req, res) => {
   res.status(out.status).json(out.body);
 });
 
+// Competition logos, cached per warm instance. ONE TSDB call for the
+// whole sport (search_all_leagues.php?s=Soccer returns 670 leagues,
+// every one carrying strBadge — measured 2026-08-04); the per-league
+// lookup route 404s on the premium v1 path, like lookup_all_teams.
+// Best-effort by construction: the league list must never depend on
+// artwork resolving.
+let soccerBadgeCache: { at: number; art: TsdbLeagueArt } | null = null;
+const EMPTY_ART: TsdbLeagueArt = { byId: new Map(), byName: new Map() };
+async function soccerLeagueBadges(): Promise<TsdbLeagueArt> {
+  if (soccerBadgeCache && Date.now() - soccerBadgeCache.at < 6 * 3_600_000) {
+    return soccerBadgeCache.art;
+  }
+  const key = optionalTsdbKey();
+  if (!key) return EMPTY_ART;
+  const art = await fetchTsdbLeagueBadges(key, 'Soccer', normaliseName);
+  soccerBadgeCache = { at: Date.now(), art };
+  return art;
+}
+
 export const listLeagues = onRequest(async (_req, res) => {
   try {
     const seasons = await loadFdSeasons(db, requireFdKey());
@@ -680,6 +701,7 @@ export const listLeagues = onRequest(async (_req, res) => {
       map: {} as Record<string, number>,
       sportWeights: {},
       dormant: [] as string[],
+      imageryOff: [] as string[],
     }));
     const dormantSet = new Set(data.dormant);
     leagues.sort(
@@ -687,7 +709,19 @@ export const listLeagues = onRequest(async (_req, res) => {
         (dormantSet.has(a.key) ? 1 : 0) - (dormantSet.has(b.key) ? 1 : 0) ||
         (data.map[b.key] ?? 0) - (data.map[a.key] ?? 0),
     );
-    res.json({ leagues });
+    // Competition logos (Prompt 13, restored) — best-effort: a badge
+    // lookup failure must never cost the league list itself.
+    const art = await soccerLeagueBadges().catch(() => EMPTY_ART);
+    const off = await loadImageryOff();
+    res.json({
+      leagues: leagues.map((l) => {
+        const badge = art.byName.get(normaliseName(l.name));
+        const withBadge: typeof l & { crestUrl?: string } = badge
+          ? { ...l, crestUrl: badge }
+          : l;
+        return withImageryPolicy(withBadge, l.key, off);
+      }),
+    });
   } catch (e) {
     // An empty league list would read as "soccer has no competitions".
     // Fail loudly instead so the client shows an error it can retry.
@@ -733,19 +767,33 @@ let priorityCache: {
   map: Record<string, number>;
   sportWeights: Record<string, number>;
   dormant: string[];
+  imageryOff: string[];
 } | null = null;
+
+// FAIL CLOSED. A sentinel set that reports EVERY key as suppressed, so
+// a catalogue read failure removes switchable artwork rather than
+// restoring artwork somebody may have asked us to take down. The
+// standing invariant says a read failure must never look like an empty
+// result; for a legal control the safe direction is "everything off",
+// not "nothing suppressed".
+const SUPPRESS_ALL: ReadonlySet<string> = {
+  has: () => true,
+  size: Number.POSITIVE_INFINITY,
+} as unknown as ReadonlySet<string>;
 // In-flight dedup: a cold cache under concurrent callers must fire the
 // ~67 dormancy counts once, not once per caller (review round).
 let priorityInflight: Promise<{
   map: Record<string, number>;
   sportWeights: Record<string, number>;
   dormant: string[];
+  imageryOff: string[];
 }> | null = null;
 
 async function loadPriorityData(): Promise<{
   map: Record<string, number>;
   sportWeights: Record<string, number>;
   dormant: string[];
+  imageryOff: string[];
 }> {
   if (priorityCache && Date.now() - priorityCache.at < 300_000) {
     return priorityCache;
@@ -761,10 +809,19 @@ async function loadPriorityDataUncached(): Promise<{
   map: Record<string, number>;
   sportWeights: Record<string, number>;
   dormant: string[];
+  imageryOff: string[];
 }> {
   const snap = await db.collection('catalogue').get();
   const entries = snap.docs.map((d) => d.data() as CatalogueEntry);
   const map: Record<string, number> = {};
+  // The takedown switch (Prompt 13). Rides the catalogue cache that
+  // already exists, so suppressing a rights holder's artwork costs one
+  // console edit and takes effect within the 5-minute cache window —
+  // no deploy. Only an EXPLICIT false suppresses: a missing field is
+  // not a takedown.
+  const imageryOff = entries
+    .filter((e) => e.imagery === false && typeof e.competitionId === 'string')
+    .map((e) => e.competitionId);
   for (const e of entries) {
     if (e.competitionId && typeof e.priority === 'number') {
       map[e.competitionId] = e.priority;
@@ -826,12 +883,28 @@ async function loadPriorityDataUncached(): Promise<{
     map,
     sportWeights: sportWeightsOf(entries),
     dormant,
+    imageryOff,
   };
   return priorityCache;
 }
 
 async function loadPriorities(): Promise<Record<string, number>> {
   return (await loadPriorityData()).map;
+}
+
+// The set the imagery policy tests against. A catalogue read failure
+// must NOT silently re-enable artwork somebody asked us to take down —
+// it fails CLOSED, suppressing everything switchable, which is the
+// conservative direction for a legal control.
+async function loadImageryOff(): Promise<ReadonlySet<string>> {
+  try {
+    return new Set((await loadPriorityData()).imageryOff);
+  } catch (e) {
+    console.error(
+      `[kickoffcal-alert] imagery_policy_unreadable: ${String(e)} — suppressing all switchable imagery`,
+    );
+    return SUPPRESS_ALL;
+  }
 }
 
 export const listPriorities = onRequest(async (_req, res) => {
@@ -907,24 +980,32 @@ export const listTeams = onRequest(async (req, res) => {
     // serves a team directory — rugby, WNBA, KHL, NPB, internationals —
     // the same way NBA/NFL/IPL always did (verified live: every entry
     // returns a full badge-complete team list).
-    const tsdbLeague = TSDB_TEAM_LEAGUES[String(req.query.leagueId ?? '')];
+    const off = await loadImageryOff();
+    const leagueKey = String(req.query.leagueId ?? '');
+    const policed = <T extends { crestUrl?: string }>(teams: T[]): T[] =>
+      teams.map((t) => withImageryPolicy(t, leagueKey, off));
+    const tsdbLeague = TSDB_TEAM_LEAGUES[leagueKey];
     if (tsdbLeague) {
       res.json({
-        teams: await listTsdbTeams(
-          requireTsdbKey(),
-          tsdbLeague.tsdbName,
-          tsdbLeague.cacheKey,
+        teams: policed(
+          await listTsdbTeams(
+            requireTsdbKey(),
+            tsdbLeague.tsdbName,
+            tsdbLeague.cacheKey,
+          ),
         ),
       });
       return;
     }
     if (sport === 'baseball') {
       const season = Number(req.query.season ?? new Date().getFullYear());
-      res.json({ teams: await listMlbTeams(season, optionalTsdbKey()) });
+      res.json({
+        teams: policed(await listMlbTeams(season, optionalTsdbKey())),
+      });
       return;
     }
     if (sport === 'ice-hockey') {
-      res.json({ teams: await listNhlTeams(optionalTsdbKey()) });
+      res.json({ teams: policed(await listNhlTeams(optionalTsdbKey())) });
       return;
     }
     if (sport === 'basketball') {

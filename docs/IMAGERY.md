@@ -1,5 +1,49 @@
 # Hero imagery — sources, licensing, and what we may actually ship
 
+> **CURRENT POSITION (Prompt 13, owner ruling 2026-08-04).** This
+> document has now been wrong in BOTH directions — it once described
+> crests as shippable, then described their removal as settled. What
+> follows is the position as of 2026-08-04.
+>
+> **The identity chain is: crest or competition logo → verified photo →
+> generated treatment.**
+>
+> 1. **Club crests and competition logos — SHIPPED, risk accepted.**
+>    The 9b removal is reversed. Trademark enforcement is discretionary
+>    and complaint-driven, and the accepted risk is paired with a
+>    takedown switch that works without a deploy: set `imagery: false`
+>    on the competition's `catalogue` document and artwork stops within
+>    the 5-minute serve cache. Full procedure in `docs/DECISIONS.md`.
+>    Restored server-side too — fd.org `crest`, TSDB `strBadge`, the
+>    NHL/MLB badge-by-name enrichment, and `strLeagueBadge` for
+>    competition logos.
+> 2. **Athlete images — Wikimedia Commons ONLY.** The verified-at-fetch
+>    gate stands unchanged: an allowed licence AND a named artist AND a
+>    recorded source, or no image. WTA, World Athletics and PBC
+>    photography remain UNWIRED — those are agency images, which is
+>    copyright rather than trademark, and agencies pursue it
+>    commercially as a matter of course. Measured coverage: 979 of the
+>    1,513 ATP directory men (64.7%) have a Commons image; the rest get
+>    the generated treatment permanently.
+> 3. **Olympic marks — EXCLUDED ENTIRELY, and not by the switch.** The
+>    rings, Games emblems and torch iconography are protected by
+>    dedicated statute (in the UK, the Olympic Symbol etc. (Protection)
+>    Act 1995), not ordinary trademark law, and the IOC enforces against
+>    non-commercial use. `IMAGERY_NEVER_PREFIXES` in
+>    `functions/src/imagery.ts` refuses artwork for every `olympics*`
+>    and `paralympics*` key; no catalogue edit can re-enable it, and
+>    provider artwork arriving for an Olympic key is dropped rather than
+>    passed through. Naming the events factually is fine.
+>
+> The generated treatments are NOT deprecated by any of this. They are
+> the fallback layer and they cover every entity with no image.
+>
+> TheSportsDB data attribution stays on the Credits screen.
+>
+> The research below (2026-07-29) remains accurate about LICENSING; it
+> predates both rulings, so read its conclusions about what we *ship*
+> against this box.
+
 Researched 2026-07-29 (agent sweep + direct verification of every claim
 marked ✓ below). NOT legal advice; the athlete-likeness question should
 get a lawyer's eye before store submission, alongside crest rights.
@@ -28,6 +72,10 @@ impact with none of the exposure.
    risky shape; showing it beside factual fixture data is far safer.
 
 ## ⚠️ Do NOT ship these TSDB fields
+<!-- Prompt 13: still accurate. These are the USER-UPLOADED composite
+     art fields (strThumb / strPoster / strFanart), which are a
+     different thing from `strBadge` and `strLeagueBadge` — the badge
+     fields ARE now shipped under the reversal above. -->
 
 We pay for TheSportsDB and its terms do permit app-store publication by
 paid subscribers — but the tempting artwork is the dangerous artwork:

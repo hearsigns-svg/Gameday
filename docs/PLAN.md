@@ -1630,3 +1630,63 @@ within our window, everyone else search-only; (3) two sections only.
   live tournament is verifiable NOW instead of in five months.
 - 770 tests both timezones; typechecks and functions build clean;
   deployed; roster refreshed through the new gates; simulator verified.
+
+### Prompt 13 — crests reinstated, and the Olympics  [x]
+
+PART A — RESTORATION. The 9b removal is reversed with the trademark
+risk accepted. It had gone server-side, so this restored FETCH AND
+STORAGE: fd.org `crest`, TSDB `strBadge`, the deleted NHL/MLB
+badge-by-name enrichment, and `strLeagueBadge` for competition logos
+(never previously requested — `lookup_league.php` 404s on the premium
+v1 path exactly like `lookup_all_teams.php`, so the working route is
+`search_all_leagues.php?s=<sport>`: one call per sport, 670 soccer
+leagues, every one carrying a badge). Client render path survived 9b
+intact (`usableImage`/`imageUrl`), so the client half was plumbing —
+plus one real gap: competition rows had NO tile at all, because with no
+crest there was nothing to put in one.
+- LIVE-VERIFIED: 20/20 Premier League crests, 32/32 NHL crests (the
+  restored enrichment), 11/20 competition logos — the name join catches
+  the majors and misses Serie A, Ligue 1, Championship and others, which
+  fall back to the generated treatment. Partial by measurement, not by
+  claim.
+- THREE CATEGORIES, THREE CALLS: crests/logos restored and
+  ops-switchable; athlete images Commons-only behind the unchanged
+  verified-at-fetch gate (WTA/WA/PBC agency photography deliberately
+  NOT wired); Olympic marks excluded in code.
+- PHOTO COVERAGE, MEASURED: 979 of 1,513 ATP directory men (64.7%) have
+  a Wikimedia Commons image; 878 of the 1,394 browsable ones (63.0%).
+  Boxing (503) and F1 (31) are not Q-id-backed and are not claimed.
+- TAKEDOWN: `imagery: false` on the competition's catalogue document,
+  effective within the 5-minute serve cache, no deploy. FAILS CLOSED —
+  an unreadable catalogue suppresses all switchable imagery rather than
+  serving it. Exact steps in DECISIONS.
+
+PART B — THE OLYMPICS. Modelled as its own sport whose competitions are
+the disciplines. NO change to the fixture id scheme or the follow
+model: `olympics-2028-athletics` is an ordinary competition follow key.
+- SOURCING, VERIFIED NOT ASSUMED (Wikidata, 2026-08-04): LA 2028
+  (Q1451505) carries 39 disciplines typed `Olympic sports discipline`,
+  Milano-Cortina 2030 (Q29389034) carries 15, and ZERO carry a start
+  date — 5 have a venue, 8 have sub-events. Games dates only: 14–30 Jul
+  2028, 1–17 Feb 2030. The 2028 Paralympics (Q36585550) has no dates
+  and no parts, so it is named in the coverage note and not listed.
+  The owner's assumption — sport-and-date level — was right.
+  **olympics.com REFUSES US at the edge** (Akamai HTTP/2 reset,
+  identical to usopen.org): not a source, not routed around.
+- The discipline list is BAKED as a dated constant with a stated update
+  trigger, like the 29-No.-1s list: a weekly fetch of a list that
+  changes once a quadrennium buys nothing and adds a failure mode.
+- DORMANCY uses the existing machinery unchanged: priority 96/94, every
+  row `rankOnly` (no poller exists), and 11b demotion keeps a
+  zero-fixture key below every live one. Verified on device: the
+  Olympics sits LAST in the sports grid.
+- FOLLOW SURVIVAL VERIFIED: followed "Athletics 2028" on the simulator
+  and confirmed `"key":"olympics-2028-athletics"` persisted to the MMKV
+  follow store; a test pins that `followQueryKeys` yields that exact
+  key unchanged, which is the contract the fixture query reads. The
+  delivery half is the identical path athlete follows already use.
+- CROSS-LINKING IS CHEAP and is carried as data
+  (`StaticCompetition.crossSport`, 10 of 54 disciplines map to sports
+  we already have). The second surface is left as a UI decision.
+- 782 tests both timezones; typechecks and functions build clean;
+  deployed --only functions; Release simulator build verified.

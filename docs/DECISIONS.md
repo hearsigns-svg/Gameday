@@ -1469,3 +1469,105 @@
   grouping fallback caption now applies to SEARCH results only, where
   there is no header to repeat. With the A–Z group it was 1,374 rows
   each captioned with the heading directly above them.
+
+## Prompt 13 decisions (owner, 2026-08-04)
+
+- 2026-08-04: **THE 9b CREST REMOVAL IS REVERSED. Club crests and
+  competition logos are RESTORED, with the trademark risk ACCEPTED.**
+  The reasoning, recorded so it is not re-litigated from memory: 9b
+  removed them on trademark-exposure grounds (TheSportsDB's terms
+  license their service, not the clubs' IP; App Store 5.2.1 lets Apple
+  demand an authorisation we cannot produce). The counterweight the
+  owner now weighs heavier: the app looks materially worse without
+  them, and trademark enforcement is DISCRETIONARY AND
+  COMPLAINT-DRIVEN — unlike copyright, it is not pursued
+  systematically, and the ordinary remedy for a first complaint is
+  "stop using it". THE RISK IS ACCEPTED ON THE CONDITION THAT WE CAN
+  STOP FAST; see the takedown procedure below. The removal had gone
+  server-side as well as client-side, so this restored FETCH AND
+  STORAGE, not just rendering: fd.org `crest`, TSDB `strBadge`, the
+  deleted badge-by-name enrichment for NHL/MLB, and `strLeagueBadge`
+  for competition logos (never previously requested).
+- 2026-08-04: THE IDENTITY CHAIN IS crest-or-logo → verified photo →
+  GENERATED TREATMENT. The generated layer stays, and stays load-
+  bearing: it is the reason nothing regressed to emoji in 9b and it
+  still covers every entity with no image — including, permanently,
+  the Olympics.
+- 2026-08-04: **THREE CATEGORIES, THREE DIFFERENT CALLS.** "Everything
+  should have a logo" spans distinct legal regimes and they are NOT
+  implemented alike. (1) Club crests and competition logos — restored,
+  risk accepted, ops-switchable. (2) ATHLETE IMAGES — WIKIMEDIA COMMONS
+  ONLY, keeping the verified-at-fetch gate (allowed licence AND named
+  artist AND recorded source). WTA, World Athletics and PBC photography
+  stay UNWIRED: those are Getty-class agency images, which is COPYRIGHT
+  not trademark, and agencies pursue it commercially as a matter of
+  course. A different bet, deliberately not taken. (3) OLYMPIC MARKS —
+  excluded entirely, in code.
+- 2026-08-04: **THE TAKEDOWN PROCEDURE.** Accepting a risk is only
+  defensible if the response is faster than a deploy, so the control is
+  the ops surface that already cools a poller — a field on the
+  catalogue document. THE EXACT STEPS: (1) open Firestore console →
+  `catalogue` collection; (2) find the document whose `competitionId`
+  is the affected competition key (e.g. `fdorg-comp-PL`, or the
+  `tsdb-league-<id>` row for a TSDB-served league); (3) set
+  `imagery: false`; (4) the change takes effect within the 5-minute
+  serve cache — no deploy, no build, no release. Crests and logos for
+  that competition stop being sent and every surface falls back to the
+  generated treatment. To confirm: `curl .../listLeagues` and check the
+  row carries no `crestUrl`. To reverse, delete the field or set it
+  true. FAIL-CLOSED: if the catalogue cannot be read at all, ALL
+  switchable imagery is suppressed rather than served — for a legal
+  control the safe direction is "everything off".
+- 2026-08-04: **OLYMPIC MARKS ARE EXCLUDED IN CODE, NOT BY THE SWITCH.**
+  The rings, the Games emblems and torch iconography are protected in
+  the UK by the Olympic Symbol etc. (Protection) Act 1995 and by
+  dedicated statute elsewhere — NOT by ordinary trademark law — and the
+  IOC enforces against non-commercial use. Part A's "enforcement is
+  discretionary" reasoning does not reach a special statutory regime.
+  So `IMAGERY_NEVER_PREFIXES` in functions/src/imagery.ts refuses
+  artwork for every `olympics*` and `paralympics*` key, an operator
+  cannot switch it back on, and provider artwork arriving for an
+  Olympic key is DROPPED rather than passed through Part A's
+  restoration. Pinned by tests. Naming the events factually is fine;
+  reproducing the marks is not.
+- 2026-08-04: MEASURED PHOTO COVERAGE, so "every person has an image"
+  is a number rather than a hope. Of the 1,513 ATP directory men,
+  **979 (64.7%) have a Wikimedia Commons image (P18)**; of the 1,394
+  browsable ones, 878 (63.0%). The other third gets the generated
+  treatment, permanently, unless Commons gains an image. Boxing (503
+  athletes) and F1 (31) are not Q-id-backed, so their coverage is not
+  measurable the same way and is not claimed here.
+- 2026-08-04: **THE OLYMPICS IS ITS OWN SPORT; ITS DISCIPLINES ARE ITS
+  COMPETITIONS.** The alternative — a competition spanning existing
+  sports — breaks the model: a fixture carries ONE `sport`, so a
+  cross-sport competition would need a new multi-sport concept. The
+  chosen shape needs NO change to the fixture id scheme and NO change
+  to the follow model: `olympics-2028-athletics` is an ordinary
+  competition follow key. CROSS-LINKING IS CHEAP and is carried as data
+  (`StaticCompetition.crossSport`): a follow key is just a string, so
+  showing Olympic athletics under athletics as well costs one extra row
+  and no new mechanism — 10 of the 54 disciplines map to sports we
+  already have. The second surface is left as a UI decision.
+- 2026-08-04: OLYMPIC SOURCING — WIKIDATA ONLY, AND IT IS A CURATED
+  SNAPSHOT. Verified 2026-08-04: LA 2028 (Q1451505) carries 39
+  disciplines typed `Olympic sports discipline`, Milano-Cortina 2030
+  (Q29389034) carries 15, and **ZERO of them carry a start date** — 5
+  have a venue, 8 have sub-events. Games-level dates only: 14–30 July
+  2028, 1–17 February 2030. The 2028 Paralympics (Q36585550) has no
+  dates and no parts at all. So the discipline list is BAKED as a dated
+  constant with a stated update trigger (the IOC adds or drops a
+  discipline — world news, rare), exactly like the 29-No.-1s list: a
+  weekly fetch of a list that changes once a quadrennium would buy
+  nothing and add a failure mode. **olympics.com REFUSES US at the
+  edge** (Akamai, HTTP/2 stream reset — identical to usopen.org), so
+  the IOC's own site is not a source and is not to be routed around.
+- 2026-08-04: THE OLYMPICS IS THE ARCHETYPAL DORMANT COMPETITION AND
+  USES THE EXISTING MACHINERY UNCHANGED. Catalogue priority 96/94 (the
+  Games outrank nearly everything), every row `rankOnly` because there
+  is no poller and nothing to poll, and DORMANCY DEMOTION (11b) keeps a
+  key with zero future fixtures below every live one — so it is
+  findable and followable without ever leading a list into an empty
+  screen. The World Cup case exactly. The 54 disciplines share priority
+  40 as a DOCUMENTED TIE: there is no honest basis on which archery
+  outranks fencing, and manufacturing 54 distinct weights would dress a
+  coin-toss as a judgement.

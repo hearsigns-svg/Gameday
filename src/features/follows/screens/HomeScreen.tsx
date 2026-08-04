@@ -209,6 +209,7 @@ export default function HomeScreen({ navigation }: Props) {
         monogram={monogramOf(
           owner?.label ?? item.homeTeam ?? item.competition,
         )}
+        {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
         photoUrl={art?.url}
         photoCredit={
           art

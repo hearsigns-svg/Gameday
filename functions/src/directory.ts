@@ -20,6 +20,7 @@ export interface DirectoryTeam {
   // Every other name this club is published under, so fixtures from a
   // different provider can be matched back to this key.
   aliases?: string[];
+  crestUrl?: string; // provider artwork (client filters SVG)
   colours?: string; // free-text kit colours, e.g. "Red / White"
 }
 
@@ -180,6 +181,7 @@ export async function listFdSoccerTeams(
       name: t.name,
       key: `fdorg-team-${t.id}`,
       aliases: t.aliases,
+      ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
       ...(t.colours ? { colours: t.colours } : {}),
     })),
   );
@@ -224,33 +226,61 @@ export async function listSoccerTeams(
   return teams;
 }
 
-// CREST/BADGE ENRICHMENT REMOVED (Prompt 9b, owner ruling): club
-// badges are the clubs' trademarks — TheSportsDB's terms license their
-// service, not that IP, and App Store 5.2.1 lets Apple demand an
-// authorisation we cannot produce. Identity is colour + generated
-// treatments now.
+// CREST/BADGE ENRICHMENT — RESTORED (Prompt 13, owner reversal of the
+// 9b removal; risk accepted, takedown procedure in DECISIONS). NHL and
+// MLB publish official logos as SVG only, which RN Image cannot
+// render, so club badges come from TheSportsDB (PNG), joined by
+// normalised name onto the official team list. Enrichment must never
+// break the directory: any TSDB failure just means no badges, exactly
+// as before — a badge-less directory beats a broken one.
+
+async function tsdbBadgesByName(
+  tsdbKey: string | undefined,
+  leagueName: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!tsdbKey) return map;
+  try {
+    for (const t of await fetchTsdbLeagueTeams(tsdbKey, leagueName)) {
+      if (t.crestUrl) map.set(normaliseName(t.name), t.crestUrl);
+    }
+  } catch {
+    // badge-less directory beats a broken one
+  }
+  return map;
+}
 
 export async function listMlbTeams(
   season: number,
   tsdbKey?: string,
 ): Promise<DirectoryTeam[]> {
-  return cachedTeams(`baseball-mlb-${season}`, async () =>
-    (await fetchMlbTeams(season)).map((t) => ({
-      id: t.id,
-      name: t.name,
-      key: `mlb-team-${t.id}`,
-    })),
-  );
+  return cachedTeams(`baseball-mlb-${season}`, async () => {
+    const badges = await tsdbBadgesByName(tsdbKey, 'MLB');
+    return (await fetchMlbTeams(season)).map((t) => {
+      const crestUrl = badges.get(normaliseName(t.name));
+      return {
+        id: t.id,
+        name: t.name,
+        key: `mlb-team-${t.id}`,
+        ...(crestUrl ? { crestUrl } : {}),
+      };
+    });
+  });
 }
 
 export async function listNhlTeams(tsdbKey?: string): Promise<DirectoryTeam[]> {
-  return cachedTeams('ice-hockey-nhl', async () =>
-    (await fetchNhlTeams()).map((t) => ({
-      id: t.abbrev,
-      name: t.name,
-      key: `nhl-team-${t.abbrev}`,
-    })),
-  );
+  return cachedTeams('ice-hockey-nhl', async () => {
+    const badges = await tsdbBadgesByName(tsdbKey, 'NHL');
+    return (await fetchNhlTeams()).map((t) => {
+      const crestUrl = badges.get(normaliseName(t.name));
+      return {
+        id: t.abbrev,
+        name: t.name,
+        key: `nhl-team-${t.abbrev}`,
+        ...(crestUrl ? { crestUrl } : {}),
+      };
+    });
+  });
 }
 
 export async function listTsdbTeams(
@@ -263,6 +293,7 @@ export async function listTsdbTeams(
       id: t.id,
       name: t.name,
       key: `tsdb-team-${t.id}`,
+      ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
     })),
   );
 }

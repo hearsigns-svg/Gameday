@@ -104,6 +104,15 @@ export default function TeamScreen({ navigation, route }: Props) {
   // forceRender) cannot disturb it. Both fields come from the SAME
   // side of the fallback, so a year can never be attributed to the
   // wrong person's marker.
+  // The crest for THIS entity, captured when it was followed (Prompt
+  // 13). Browse reaches this screen with route params and no crest, so
+  // an unfollowed team shows its generated treatment until it is
+  // followed — honest, and it never blocks on a directory read.
+  const storedFollowCrest = useMemo(
+    () => loadFollowables().find((f) => f.key === teamKey)?.crestUrl,
+    [teamKey],
+  );
+
   const career: CareerStatusFields = useMemo(() => {
     const stored = loadFollowables().find((f) => f.key === teamKey);
     const src =
@@ -277,6 +286,7 @@ export default function TeamScreen({ navigation, route }: Props) {
           glyph={sport?.glyph ?? '🏟️'}
           theme={theme}
           monogram={monogramOf(name)}
+          {...(storedFollowCrest ? { imageUrl: storedFollowCrest } : {})}
           size={56}
         />
         <View style={{ flex: 1 }}>

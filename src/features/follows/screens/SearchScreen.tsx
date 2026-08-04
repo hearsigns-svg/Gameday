@@ -49,6 +49,8 @@ interface Row {
   title: string;
   caption: string;
   sportKey: string;
+  // Crest / competition logo where the provider has one (Prompt 13).
+  imageUrl?: string;
   followable?: Followable; // absent → row navigates instead
 }
 
@@ -172,6 +174,7 @@ export default function SearchScreen({ navigation }: Props) {
                 label: l.name,
                 sportKey: 'soccer',
                 type: 'competition' as const,
+                ...(l.crestUrl ? { crestUrl: l.crestUrl } : {}),
                 ...(l.pollPath ? { pollPath: l.pollPath } : {}),
               },
             }))
@@ -182,11 +185,13 @@ export default function SearchScreen({ navigation }: Props) {
       title: hit.name,
       caption: `${hit.league} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
       sportKey: hit.sportKey,
+      ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
       followable: {
         key: hit.key,
         label: hit.name,
         sportKey: hit.sportKey,
         type: 'team' as const,
+        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
         ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
           ...(colourFromKitText(hit.colours)
           ? { brandColour: colourFromKitText(hit.colours) as string }
@@ -331,6 +336,7 @@ export default function SearchScreen({ navigation }: Props) {
                 monogram={
                   item.kind === 'sport' ? undefined : monogramOf(item.title)
                 }
+                {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
                 accessibilityLabel={`${item.title}, ${item.caption}`}
                 onPress={
                   (item.kind === 'team' || item.kind === 'athlete') &&

@@ -4,9 +4,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { FollowButton, ListRow } from '../../../core/components';
+import { FollowButton, ListRow, monogramOf } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
+import { teamTheme } from '../../../core/teamTheme';
+import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
@@ -25,6 +27,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
+  const mode = useColorSchemeMode();
   const sport = sportByKey(route.params.sportKey);
   const [leagues, setLeagues] = useState<DirectoryLeague[] | null>(null);
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
@@ -246,6 +249,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           <ListRow
             title={item.name}
             caption={item.country}
+            // Competition rows carried NO tile before Prompt 13 — with
+            // no crest to show there was nothing to put in one. Now
+            // there is, so the row gets the same tile every other
+            // entity row has: logo where the provider has one, the
+            // generated monogram treatment where it does not.
+            glyph={sport?.glyph ?? '🏟️'}
+            tileTheme={teamTheme(sport?.accent ?? null, mode)}
+            monogram={monogramOf(item.name)}
+            {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
             accessibilityLabel={
               item.followOnly ? item.name : `${item.name}, browse teams`
             }

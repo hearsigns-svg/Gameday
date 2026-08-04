@@ -18,6 +18,12 @@ export interface Followable {
   // offers it — the favourites provide the identity. Colour is a raw
   // hex or kit-colour text; it only reaches UI slots via teamTheme().
   brandColour?: string;
+  // Crest / competition logo captured at follow time (Prompt 13), so
+  // the Following rail, Home and the entity page inherit it without a
+  // directory read. Absent on every follow made before Prompt 13 and on
+  // anything the imagery policy suppresses — the generated treatment
+  // covers both.
+  crestUrl?: string;
   // Per-follow granularity (Prompt 11) — what this follow delivers,
   // where the sport offers a choice (domain/followScopes.ts). Absent =
   // the default: today's behaviour, unchanged.

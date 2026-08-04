@@ -15,6 +15,7 @@ export interface SearchTeamHit {
   name: string;
   sportKey: string; // client sportsConfig key
   league: string; // display label
+  crestUrl?: string;
   colours?: string;
   pollPath?: string; // only where the client can't derive it (tsdb)
 }
@@ -47,6 +48,7 @@ interface DirectoryDocTeam {
   name?: string;
   key?: string;
   aliases?: string[];
+  crestUrl?: string;
   colours?: string;
 }
 
@@ -125,6 +127,7 @@ export async function searchTeams(
         name: t.name,
         sportKey: doc.sportKey,
         league: doc.league,
+        ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
         ...(t.colours ? { colours: t.colours } : {}),
         ...(doc.tsdbPollPath ? { pollPath: doc.tsdbPollPath } : {}),
       });
@@ -147,6 +150,7 @@ export async function searchTeams(
         sportKey: served.sportKey,
         league: served.label,
         pollPath: served.pollPath,
+        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
       });
     }
   } catch {

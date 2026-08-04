@@ -63,7 +63,13 @@ test('priorities are 0–100, and within-sport ties are only the documented peer
   // data slip. The one deliberate tie: the two tennis tours are peers.
   // Sport rows are a separate namespace (they order the sports grid,
   // never a competition list) and are excluded.
-  const ALLOWED_TIES = new Set(['tennis:66']);
+  // Documented peer sets: priorities that are EQUAL because ranking
+  // them would be an invention. 'tennis:66' is the two tours. The
+  // Olympic disciplines are the larger case — there is no honest basis
+  // on which archery outranks fencing, and manufacturing 54 distinct
+  // weights would dress a coin-toss as a judgement. They tie, and the
+  // list falls back to source order (alphabetical, as seeded).
+  const ALLOWED_TIES = new Set(['tennis:66', 'olympics:40']);
   const seen = new Map<string, string>();
   for (const e of CATALOGUE_SEED) {
     if (e.priority === undefined) continue;

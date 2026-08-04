@@ -138,6 +138,7 @@ export default function FollowingScreen({ navigation }: Props) {
                   mode,
                 )}
                 monogram={monogramOf(item.label)}
+                {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
                 accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
                 // A followed thing's own schedule was previously
                 // reachable only from browse or search — you could not

@@ -54,7 +54,11 @@ export function GlyphTile(props: {
   // Entity initials — when present, the tile renders these rather than
   // the glyph. The glyph remains the mark for SPORT rows only.
   monogram?: string;
-  // Licence-gated photo (athlete portraits). Never a crest.
+  // Artwork for this entity: a club crest, a competition logo (both
+  // RESTORED in Prompt 13), or a licence-gated athlete photo. Whatever
+  // it is, it sits ABOVE the generated treatment in the chain and the
+  // treatment still renders underneath — so a broken or absent image
+  // degrades to the monogram, never to a blank tile.
   imageUrl?: string;
   size?: number;
   // Circular: reserved for marks that stand for a TEAM OR PERSON rather
@@ -219,11 +223,13 @@ export function HeroCard(props: {
   startUtc: string;
   status: string;
   // Sport key drives the generated pattern layer; the monogram is the
-  // typographic identity mark. Crests are gone (Prompt 9b ruling —
-  // trademarks), and the emoji watermark went with them: the generated
-  // treatment IS the identity now.
+  // typographic identity mark. Prompt 13 restored the CREST as the
+  // watermark where the followed entity has one — it sits above the
+  // generated treatment and below the venue photograph, and its absence
+  // simply falls back to the monogram, exactly as before.
   sportKey?: string;
   monogram?: string;
+  crestUrl?: string;
   theme: TeamTheme;
   // Venue photograph layer (docs/IMAGERY.md): the photo renders
   // UNMODIFIED in its own layer — the gradient scrim and type are
@@ -268,7 +274,15 @@ export function HeroCard(props: {
         <SportPattern sportKey={props.sportKey} color={th.onGradient} />
       ) : null}
       <View style={styles.hero}>
-        {!photo && props.monogram ? (
+        {!photo && usableImage(props.crestUrl) ? (
+          <Image
+            accessible={false}
+            source={{ uri: usableImage(props.crestUrl)! }}
+            style={styles.heroWatermarkCrest}
+            resizeMode="contain"
+          />
+        ) : null}
+        {!photo && !usableImage(props.crestUrl) && props.monogram ? (
           <Text style={styles.heroWatermark} accessible={false}>
             {props.monogram}
           </Text>
@@ -436,6 +450,9 @@ export function ListRow(props: {
   tileTheme?: TeamTheme; // when present the glyph renders in a GlyphTile
   // Entity initials — the generated mark; rendered instead of the glyph.
   monogram?: string;
+  // Crest / competition logo / athlete photo. Top of the identity
+  // chain: image → generated treatment (Prompt 13).
+  imageUrl?: string;
   right?: ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
@@ -463,6 +480,7 @@ export function ListRow(props: {
             glyph={props.glyph}
             theme={props.tileTheme}
             monogram={props.monogram}
+            imageUrl={props.imageUrl}
           />
         ) : (
           <Text style={[type.heading, styles.glyph]} accessible={false}>
@@ -865,10 +883,22 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     fontSize: 10,
   },
+  // The CREST watermark (restored, Prompt 13). Inset rather than bled
+  // off the edge: a crest cropped in half reads as a rendering fault
+  // where a cropped letterform reads as design. Same quiet opacity as
+  // the monogram it sits in front of — texture, not content.
+  heroWatermarkCrest: {
+    position: 'absolute',
+    right: spacing.l,
+    bottom: spacing.l,
+    width: 96,
+    height: 96,
+    opacity: 0.22,
+  },
   // The typographic watermark: the entity's monogram set huge and
-  // quiet — the generated identity that replaced crest and emoji
-  // watermarks alike (Prompt 9b). Colour comes from the text's own
-  // default; opacity keeps it texture, not content.
+  // quiet — the generated identity, still the fallback whenever there
+  // is no crest. Colour comes from the text's own default; opacity
+  // keeps it texture, not content.
   heroWatermark: {
     position: 'absolute',
     right: -10,

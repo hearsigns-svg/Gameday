@@ -149,6 +149,7 @@ export async function fetchTsdbLeagueSeasonFixtures(
 export interface TsdbTeamRow {
   id: string;
   name: string;
+  crestUrl?: string; // strBadge — restored, Prompt 13
 }
 
 // lookup_all_teams.php 404s on the premium v1 path (verified live) —
@@ -161,11 +162,16 @@ export async function fetchTsdbLeagueTeams(
     apiKey,
     `search_all_teams.php?l=${encodeURIComponent(leagueName)}`,
   )) as {
-    teams: Array<{ idTeam: string; strTeam: string }> | null;
+    teams: Array<{
+      idTeam: string;
+      strTeam: string;
+      strBadge?: string;
+    }> | null;
   };
   return (body.teams ?? []).map((t) => ({
     id: t.idTeam,
     name: t.strTeam,
+    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
   }));
 }
 
@@ -175,6 +181,7 @@ export interface TsdbSearchHit {
   sport: string; // TSDB strSport, e.g. 'Basketball'
   leagueId: string; // idLeague
   league: string; // strLeague
+  crestUrl?: string;
 }
 
 // Free-text team search across all of TSDB — callers filter to leagues
@@ -193,6 +200,7 @@ export async function searchTsdbTeams(
       strSport?: string;
       idLeague?: string;
       strLeague?: string;
+      strBadge?: string;
     }> | null;
   };
   return (body.teams ?? []).map((t) => ({
@@ -201,5 +209,61 @@ export async function searchTsdbTeams(
     sport: t.strSport ?? '',
     leagueId: t.idLeague ?? '',
     league: t.strLeague ?? '',
+    ...(t.strBadge ? { crestUrl: t.strBadge } : {}),
   }));
+}
+
+// ─── Competition logos (Prompt 13) ────────────────────────────────────
+//
+// `lookup_league.php` 404s on the premium v1 path, exactly like
+// `lookup_all_teams.php` (both verified live). The working route is
+// `search_all_leagues.php?s=<sport>`, which returns EVERY league for a
+// sport WITH `strBadge` — 670 soccer leagues, 670 badges, measured
+// 2026-08-04. One call per sport, not per league, so the whole league
+// set costs a handful of requests.
+// Returns BOTH indexes because the two consumers key differently: the
+// client's static competitions carry TSDB league ids, while the served
+// soccer list is football-data.org and keys by competition NAME. The
+// name index includes strLeagueAlternate ("Premier League, EPL,
+// England"), which is what actually lets fd.org's "Premier League"
+// find TSDB's "English Premier League".
+export interface TsdbLeagueArt {
+  byId: Map<string, string>;
+  byName: Map<string, string>;
+}
+
+export async function fetchTsdbLeagueBadges(
+  apiKey: string,
+  tsdbSport: string,
+  normalise: (s: string) => string,
+): Promise<TsdbLeagueArt> {
+  const body = (await tsdbGet(
+    apiKey,
+    `search_all_leagues.php?s=${encodeURIComponent(tsdbSport)}`,
+  )) as {
+    countries: Array<{
+      idLeague?: string;
+      strLeague?: string;
+      strLeagueAlternate?: string;
+      strBadge?: string;
+    }> | null;
+  };
+  const byId = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const l of body.countries ?? []) {
+    if (!l.strBadge) continue;
+    if (l.idLeague) byId.set(l.idLeague, l.strBadge);
+    const names = [
+      l.strLeague,
+      ...(l.strLeagueAlternate ?? '').split(','),
+    ];
+    for (const n of names) {
+      const k = normalise((n ?? '').trim());
+      // First writer wins: TSDB's alternates include country names
+      // ("England"), and a later league must not steal an earlier
+      // league's key.
+      if (k.length > 2 && !byName.has(k)) byName.set(k, l.strBadge);
+    }
+  }
+  return { byId, byName };
 }

@@ -8,6 +8,10 @@ export interface DirectoryLeague {
   name: string;
   country: string;
   key: string;
+  // Competition logo (Prompt 13). Optional in both directions: an old
+  // server never sends it, and the imagery takedown switch can remove
+  // it at any time without a client change.
+  crestUrl?: string;
   followOnly?: boolean;
   // Explicit false = browse its teams, but the competition itself has no
   // poller and must not offer "Follow all".
@@ -23,6 +27,7 @@ export interface DirectoryTeam {
   id: number | string;
   name: string;
   key: string;
+  crestUrl?: string; // club crest (Prompt 13)
   colours?: string; // free-text kit colours ("Red / White")
 }
 
@@ -31,6 +36,7 @@ export interface SearchTeamHit {
   name: string;
   sportKey: string;
   league: string;
+  crestUrl?: string;
   colours?: string;
   pollPath?: string;
 }

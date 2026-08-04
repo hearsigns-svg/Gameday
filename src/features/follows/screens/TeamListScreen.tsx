@@ -69,6 +69,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
       label: team.name,
       sportKey: route.params.sportKey,
       type: 'team' as const,
+      ...(team.crestUrl ? { crestUrl: team.crestUrl } : {}),
       ...(route.params.teamPollPath
         ? { pollPath: teamPollPathFor(route.params.teamPollPath, team.id) }
         : {}),
@@ -134,6 +135,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
         renderItem={({ item }) => (
           <ListRow
             title={item.name}
+            {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
             glyph={sport?.glyph ?? '🏟️'}
             tileTheme={teamTheme(
               colourFromKitText(item.colours) ?? sport?.accent ?? null,

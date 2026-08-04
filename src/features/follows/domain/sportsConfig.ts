@@ -19,6 +19,13 @@ export interface StaticCompetition {
   followable?: boolean;
   pollPath?: string; // functions path polled when this follow syncs
   teamPollPath?: string; // path attached to team-follows made inside it
+  // CROSS-LINK (Prompt 13): the existing sport this competition also
+  // belongs to. Olympic athletics is athletics — and because a follow
+  // key is just a string, surfacing `olympics-2028-athletics` under the
+  // athletics sport as well costs one extra row and no new mechanism.
+  // Carried as data now; the second surface is a UI decision, not a
+  // modelling one.
+  crossSport?: string;
 }
 
 export interface SportConfig {
@@ -692,6 +699,89 @@ export const SPORTS: SportConfig[] = [
       },
     ],
   },
+  {
+    key: 'olympics',
+    label: 'Olympics',
+    // A generic first-place medal, NOT an Olympic mark. The rings, the
+    // Games emblems and torch iconography are protected by dedicated
+    // statute — the Olympic Symbol etc. (Protection) Act 1995 in the
+    // UK — rather than by ordinary trademark law, and the IOC enforces
+    // against non-commercial use. Prompt 13 restored club crests with
+    // that risk accepted; that reasoning does NOT reach a special
+    // statutory regime, so Olympic identity is generated treatment
+    // only and the exclusion is enforced in code (functions/src/
+    // imagery.ts), where no catalogue edit can undo it.
+    glyph: '🏅',
+    accent: '#7C3AED',
+    coverageNote:
+      'The next Games are Los Angeles 2028 (14–30 July) and the Milano-Cortina winter Games in 2030. Every discipline is listed and followable now, but no schedule has been published yet — the IOC releases session times closer to the Games, so a follow made today delivers its events the moment they exist. No Olympic emblems are shown: the marks are protected by dedicated legislation, so the app names the events and generates its own artwork.',
+    enabled: true,
+    browse: ['competition'],
+    followTypes: ['competition'],
+    staticCompetitions: [
+      // THE GAMES THEMSELVES, followable wholesale — and first, because
+      // "follow LA28" is what most people actually want.
+      { id: 'oly-2028', name: 'Los Angeles 2028', country: 'Summer Games', key: 'olympics-2028', followOnly: true },
+      { id: 'oly-2030', name: 'Milano-Cortina 2030', country: 'Winter Games', key: 'olympics-2030', followOnly: true },
+  // ── 2028 — 39 disciplines ──
+  { id: 'oly-2028-archery', name: 'Archery', country: '2028', key: 'olympics-2028-archery', followOnly: true },
+  { id: 'oly-2028-artistic-swimming', name: 'Artistic swimming', country: '2028', key: 'olympics-2028-artistic-swimming', followOnly: true },
+  { id: 'oly-2028-athletics', name: 'Athletics', country: '2028', key: 'olympics-2028-athletics', followOnly: true, crossSport: 'athletics' },
+  { id: 'oly-2028-badminton', name: 'Badminton', country: '2028', key: 'olympics-2028-badminton', followOnly: true },
+  { id: 'oly-2028-baseball', name: 'Baseball', country: '2028', key: 'olympics-2028-baseball', followOnly: true, crossSport: 'baseball' },
+  { id: 'oly-2028-basketball', name: 'Basketball', country: '2028', key: 'olympics-2028-basketball', followOnly: true, crossSport: 'basketball' },
+  { id: 'oly-2028-beach-volleyball', name: 'Beach volleyball', country: '2028', key: 'olympics-2028-beach-volleyball', followOnly: true },
+  { id: 'oly-2028-boxing', name: 'Boxing', country: '2028', key: 'olympics-2028-boxing', followOnly: true, crossSport: 'boxing' },
+  { id: 'oly-2028-canoeing', name: 'Canoeing', country: '2028', key: 'olympics-2028-canoeing', followOnly: true },
+  { id: 'oly-2028-cricket', name: 'Cricket', country: '2028', key: 'olympics-2028-cricket', followOnly: true, crossSport: 'cricket' },
+  { id: 'oly-2028-cycling', name: 'Cycling', country: '2028', key: 'olympics-2028-cycling', followOnly: true },
+  { id: 'oly-2028-diving', name: 'Diving', country: '2028', key: 'olympics-2028-diving', followOnly: true },
+  { id: 'oly-2028-equestrian', name: 'Equestrian', country: '2028', key: 'olympics-2028-equestrian', followOnly: true },
+  { id: 'oly-2028-fencing', name: 'Fencing', country: '2028', key: 'olympics-2028-fencing', followOnly: true },
+  { id: 'oly-2028-field-hockey', name: 'Field hockey', country: '2028', key: 'olympics-2028-field-hockey', followOnly: true },
+  { id: 'oly-2028-football', name: 'Football', country: '2028', key: 'olympics-2028-football', followOnly: true, crossSport: 'soccer' },
+  { id: 'oly-2028-golf', name: 'Golf', country: '2028', key: 'olympics-2028-golf', followOnly: true, crossSport: 'golf' },
+  { id: 'oly-2028-gymnastics', name: 'Gymnastics', country: '2028', key: 'olympics-2028-gymnastics', followOnly: true },
+  { id: 'oly-2028-handball', name: 'Handball', country: '2028', key: 'olympics-2028-handball', followOnly: true },
+  { id: 'oly-2028-judo', name: 'Judo', country: '2028', key: 'olympics-2028-judo', followOnly: true },
+  { id: 'oly-2028-lacrosse', name: 'Lacrosse', country: '2028', key: 'olympics-2028-lacrosse', followOnly: true },
+  { id: 'oly-2028-modern-pentathlon', name: 'Modern pentathlon', country: '2028', key: 'olympics-2028-modern-pentathlon', followOnly: true },
+  { id: 'oly-2028-rowing', name: 'Rowing', country: '2028', key: 'olympics-2028-rowing', followOnly: true },
+  { id: 'oly-2028-rugby-sevens', name: 'Rugby sevens', country: '2028', key: 'olympics-2028-rugby-sevens', followOnly: true, crossSport: 'rugby' },
+  { id: 'oly-2028-sailing', name: 'Sailing', country: '2028', key: 'olympics-2028-sailing', followOnly: true },
+  { id: 'oly-2028-shooting', name: 'Shooting', country: '2028', key: 'olympics-2028-shooting', followOnly: true },
+  { id: 'oly-2028-skateboarding', name: 'Skateboarding', country: '2028', key: 'olympics-2028-skateboarding', followOnly: true },
+  { id: 'oly-2028-softball', name: 'Softball', country: '2028', key: 'olympics-2028-softball', followOnly: true },
+  { id: 'oly-2028-sport-climbing', name: 'Sport climbing', country: '2028', key: 'olympics-2028-sport-climbing', followOnly: true },
+  { id: 'oly-2028-surfing', name: 'Surfing', country: '2028', key: 'olympics-2028-surfing', followOnly: true },
+  { id: 'oly-2028-swimming', name: 'Swimming', country: '2028', key: 'olympics-2028-swimming', followOnly: true },
+  { id: 'oly-2028-table-tennis', name: 'Table tennis', country: '2028', key: 'olympics-2028-table-tennis', followOnly: true },
+  { id: 'oly-2028-taekwondo', name: 'Taekwondo', country: '2028', key: 'olympics-2028-taekwondo', followOnly: true },
+  { id: 'oly-2028-tennis', name: 'Tennis', country: '2028', key: 'olympics-2028-tennis', followOnly: true, crossSport: 'tennis' },
+  { id: 'oly-2028-triathlon', name: 'Triathlon', country: '2028', key: 'olympics-2028-triathlon', followOnly: true },
+  { id: 'oly-2028-volleyball', name: 'Volleyball', country: '2028', key: 'olympics-2028-volleyball', followOnly: true },
+  { id: 'oly-2028-water-polo', name: 'Water polo', country: '2028', key: 'olympics-2028-water-polo', followOnly: true },
+  { id: 'oly-2028-weightlifting', name: 'Weightlifting', country: '2028', key: 'olympics-2028-weightlifting', followOnly: true },
+  { id: 'oly-2028-wrestling', name: 'Wrestling', country: '2028', key: 'olympics-2028-wrestling', followOnly: true },
+  // ── 2030 — 15 disciplines ──
+  { id: 'oly-2030-alpine-skiing', name: 'Alpine skiing', country: '2030', key: 'olympics-2030-alpine-skiing', followOnly: true },
+  { id: 'oly-2030-biathlon', name: 'Biathlon', country: '2030', key: 'olympics-2030-biathlon', followOnly: true },
+  { id: 'oly-2030-bobsleigh', name: 'Bobsleigh', country: '2030', key: 'olympics-2030-bobsleigh', followOnly: true },
+  { id: 'oly-2030-cross-country-skiing', name: 'Cross-country skiing', country: '2030', key: 'olympics-2030-cross-country-skiing', followOnly: true },
+  { id: 'oly-2030-curling', name: 'Curling', country: '2030', key: 'olympics-2030-curling', followOnly: true },
+  { id: 'oly-2030-figure-skating', name: 'Figure skating', country: '2030', key: 'olympics-2030-figure-skating', followOnly: true },
+  { id: 'oly-2030-freestyle-skiing', name: 'Freestyle skiing', country: '2030', key: 'olympics-2030-freestyle-skiing', followOnly: true },
+  { id: 'oly-2030-ice-hockey', name: 'Ice hockey', country: '2030', key: 'olympics-2030-ice-hockey', followOnly: true, crossSport: 'ice-hockey' },
+  { id: 'oly-2030-luge', name: 'Luge', country: '2030', key: 'olympics-2030-luge', followOnly: true },
+  { id: 'oly-2030-nordic-combined', name: 'Nordic combined', country: '2030', key: 'olympics-2030-nordic-combined', followOnly: true },
+  { id: 'oly-2030-skeleton', name: 'Skeleton', country: '2030', key: 'olympics-2030-skeleton', followOnly: true },
+  { id: 'oly-2030-ski-jumping', name: 'Ski jumping', country: '2030', key: 'olympics-2030-ski-jumping', followOnly: true },
+  { id: 'oly-2030-ski-mountaineering', name: 'Ski mountaineering', country: '2030', key: 'olympics-2030-ski-mountaineering', followOnly: true },
+  { id: 'oly-2030-snowboarding', name: 'Snowboarding', country: '2030', key: 'olympics-2030-snowboarding', followOnly: true },
+  { id: 'oly-2030-speed-skating', name: 'Speed skating', country: '2030', key: 'olympics-2030-speed-skating', followOnly: true },
+    ],
+  },
+
 ];
 
 export const sportByKey = (key: string): SportConfig | undefined =>
