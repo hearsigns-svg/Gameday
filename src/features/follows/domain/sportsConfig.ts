@@ -174,7 +174,7 @@ export const SPORTS: SportConfig[] = [
   },
   { key: 'tennis', label: 'Tennis',
     coverageNote:
-      'Both lists come from a live ranking: the women’s from the WTA’s own feed, the men’s from Wikipedia’s weekly table, which publishes the top 20 only. Women get draws and match times; men’s match times have no approved source yet, so following a man delivers his events the moment one exists. Retired players stay findable by name, but are not browsable and cannot be followed. Finals as calendar events come from the WTA feed only.',
+      'Both ranked lists are live: the women’s from the WTA’s own feed, the men’s from Wikipedia’s weekly table, which publishes the top 20 only. Every other man we hold is listed A–Z below them — we are not told which of those are still competing. Women get draws and match times; men’s have no approved source yet, so following a man delivers his events the moment one exists. Retired players stay findable by name, but are not browsable and cannot be followed.',
     accent: '#65A30D',
     glyph: '🎾',
     enabled: true,

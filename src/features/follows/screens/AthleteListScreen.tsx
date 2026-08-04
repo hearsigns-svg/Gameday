@@ -67,7 +67,7 @@ const SECTION_PREVIEW = 6;
 
 // "Champion · WBA, WBC" / "#3 · GBR" / "Competes 16 Aug" — the caption
 // says why this row is on a curated list.
-function captionFor(a: AthleteCard): string {
+function captionFor(a: AthleteCard, showGrouping: boolean): string {
   const parts: string[] = [];
   // Retirement leads. For the ATP directory it is usually the only
   // thing known about a row — those athletes carry no rank, no country
@@ -89,9 +89,12 @@ function captionFor(a: AthleteCard): string {
       );
     }
   }
-  // A searched athlete with no rank or date still deserves a caption:
-  // the grouping says who they are ("WTA Tour", "Heavyweight").
-  if (parts.length === 0 && a.grouping) parts.push(a.grouping);
+  // A SEARCHED athlete with no rank or date still deserves a caption —
+  // the grouping says who they are ("Heavyweight", "ATP Tour — Men").
+  // In BROWSE the section header two rows up already says it, so
+  // repeating it per row is noise: with the A–Z directory group that
+  // was 1,374 rows each captioned with their own heading.
+  if (showGrouping && parts.length === 0 && a.grouping) parts.push(a.grouping);
   return parts.join(' · ');
 }
 
@@ -353,7 +356,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           renderItem={({ item: a }) => (
             <ListRow
               title={a.name}
-              caption={captionFor(a)}
+              caption={captionFor(a, results !== null)}
               glyph={sport?.glyph ?? '·'}
               monogram={monogramOf(a.name)}
               tileTheme={teamTheme(

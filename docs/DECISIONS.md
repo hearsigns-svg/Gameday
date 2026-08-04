@@ -1421,3 +1421,51 @@
   the HTTP/2 stream is reset (INTERNAL_ERROR) on every request. Getting
   round that means UA spoofing or browser automation, which is a settled
   prohibition — so the US Open is recorded as refused, not retried.
+
+## Prompt 12b decisions (2026-08-04)
+
+- 2026-08-04: THE WIKIPEDIA RANKING IS GATED HARDER THAN ANY MACHINE
+  FEED, because it is the only source that is a volunteer-maintained
+  wiki table — it can go stale, be vandalised, be reformatted or be
+  moved, and none of those look like a failure. Gates, all refusing the
+  write rather than performing it: EXACTLY 20 rows (a deepened table is
+  a deliberate one-line change plus its contract test, like the
+  29-No.-1s constant); ranks contiguous 1..N with no repeats; EVERY name
+  resolving to a non-WTA-id-backed directory athlete; and a CARRY-OVER
+  floor of 14 of the previous 20. On any failure the previous ranking
+  stands untouched — A STALE CORRECT LIST BEATS A FRESH CORRUPTED ONE.
+- 2026-08-04: THE CHURN THRESHOLD IS ARGUED FROM MECHANICS, NOT
+  OBSERVATION. ATP points roll over a 52-week window, so one refresh can
+  only move what one week's results add and one year-old week's
+  subtract; leaving a 20-deep list means shedding more in that week than
+  the gap to #20, which happens to a handful of players after a slam and
+  almost nobody otherwise. Six changes is already an extraordinary week.
+  MIN_CARRY_OVER = 14 therefore leaves real movement far more headroom
+  than it needs while catching what actually threatens us: the WTA table
+  parsed as the men's, the doubles table, a mass revert, a reformat that
+  shifts every cell. It is a CORRUPTION gate, not a churn detector.
+- 2026-08-04: THE GATES' OWN FAILURE IS WATCHED. `roster-atp-rank` is in
+  EXPECTED_ROSTER_SLICES, and the staleness marker only advances on a
+  fully-applied refresh — so a table failing its gates week after week
+  raises roster_stale rather than holding quietly. `yield_died` cannot
+  cover it: that keys on futureDated, a fixture concept.
+- 2026-08-04: A SECOND MEN'S GROUP, ALPHABETICAL — "More ATP players —
+  A–Z". Twenty ranked men left ~1,374 directory men invisible unless
+  searched. Membership reuses the SAME signal as the sectioning work
+  (not recorded retired) rather than inventing a second one, which means
+  some of these men have in fact stopped playing and Wikidata has not
+  said so — hence a label that claims only who they are and how they are
+  ordered, never current form. It is served WHOLE, never capped: a
+  ranked list truncates honestly, an alphabetical one at 50 would be
+  everyone called Aaron presented as a selection. The client's existing
+  "Show all N" collapse carries the length.
+- 2026-08-04: rosterSources() ORDER IS LOAD-BEARING. The Wikidata
+  directory pass places every non-retired man in the A–Z group; the
+  ranking pass runs AFTER it and promotes its top 20 into the ranked
+  one. Consequently `sliceRoster` absence clears the RANK only and never
+  the grouping — clearing it would delete the placement the directory
+  pass just made, every week, permanently.
+- 2026-08-04: A BROWSE ROW NO LONGER ECHOES ITS OWN SECTION HEADER. The
+  grouping fallback caption now applies to SEARCH results only, where
+  there is no header to repeat. With the A–Z group it was 1,374 rows
+  each captioned with the heading directly above them.

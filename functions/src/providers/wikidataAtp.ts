@@ -31,7 +31,7 @@
 // matched and every one passed; the miss (a wildcard with no Wikidata
 // item at all) is a universe bound, not a threshold drop.
 
-import { RosterEntry } from '../athletes';
+import { groupTitleOf, RosterEntry } from '../athletes';
 
 // THE MINT GATE — OPENED 2026-08-03 on the owner's approval of the
 // validated counts (Prompt 10c: universe 6,559 → selected 1,513;
@@ -294,6 +294,16 @@ export function rosterEntryOf(p: AtpPlayer): RosterEntry {
     externalId: p.qid,
     name: p.label,
     sport: 'tennis',
+    // The alphabetical directory group (Prompt 12b) — every man we are
+    // not told has retired. The live-ranking pass runs AFTER this one
+    // in the same refresh and promotes its top 20 out of here into the
+    // ranked group, so the order of rosterSources() is load-bearing.
+    ...(retired
+      ? {}
+      : {
+          grouping: groupTitleOf('atp-directory')!,
+          groupingKey: 'atp-directory',
+        }),
     // Carried for EVERY selected player, not just the No. 1s: the
     // marker is what makes a retired man's page and follow honest, and
     // 1,484 of the 1,513 are only ever reached by search.

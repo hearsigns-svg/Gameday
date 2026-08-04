@@ -78,6 +78,14 @@ export const EXPECTED_ROSTER_SLICES = [
   // open — listed earlier, roster_stale would page about a source that
   // has never been allowed to run.
   ...(ATP_ROSTER_ENABLED ? ['wikidata|roster-atp'] : []),
+  // The live ATP ranking (Prompt 12b). It needs this MORE than the
+  // machine feeds do, not less: it is the one source whose gates
+  // deliberately REFUSE an update rather than write it, and a refusal
+  // leaves the marker un-advanced. So a table that has been vandalised,
+  // reformatted or moved for long enough to fail its gates repeatedly
+  // surfaces here as roster_stale — the failure the gates create is
+  // itself watched, rather than being a quiet hold.
+  'atp-rank|roster-atp-rank',
 ];
 
 export function evaluateRosterAlerts(

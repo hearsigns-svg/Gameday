@@ -54,25 +54,29 @@ test('the threshold: current+notable in, 19th-century journeymen out, No. 1s alw
   expect(passesThreshold(agassi)).toBe(true);
 });
 
-test('roster entries: Q-id primary, atp+itf extras, and NO browse group at all', () => {
-  // This roster is the DIRECTORY now, not a browse source: the men's
-  // section comes from the live ATP ranking (providers/atpRankings.ts).
-  // The curated world-No.-1s group and the `honours` field that existed
-  // only to build it were deleted with it.
+test('roster entries: Q-id primary, atp+itf extras, alphabetical directory group', () => {
+  // This roster is the DIRECTORY: it places every man we are not told
+  // has retired into the alphabetical group, and the live-ranking pass
+  // that runs after it promotes its top 20 into the ranked one. The
+  // curated world-No.-1s group and the `honours` field that existed
+  // only to build it are gone.
   const dj = rosterEntryOf(byQ.get('Q5812')!);
   expect(dj).toEqual({
     source: 'wikidata',
     externalId: 'Q5812',
     name: 'Novak Djokovic',
     sport: 'tennis',
+    grouping: 'More ATP players — A–Z',
+    groupingKey: 'atp-directory',
     extraIdentities: [
       { source: 'atp', externalId: 'D643' },
       { source: 'itf', externalId: '100004087' },
     ],
   });
-  const hm = rosterEntryOf(byQ.get('Q106962940')!);
-  expect(hm.grouping).toBeUndefined();
-  expect(hm.groupingKey).toBeUndefined();
+  // A retired man gets NO group — he is search-only, marked.
+  const federer = rosterEntryOf(byQ.get('Q1426')!);
+  expect(federer.groupingKey).toBeUndefined();
+  expect(federer.careerStatus).toBe('retired');
 });
 
 // ─── Prompt 12: recorded retirement, and the men's split ──────────────
@@ -106,6 +110,7 @@ test('recorded retirement is right in both directions on this capture', () => {
     // NO browse group at all: retired players are search-first.
     expect(e.groupingKey).toBeUndefined();
     expect(e.grouping).toBeUndefined();
+    expect(e.rank).toBeUndefined();
     expect(e.careerStatus).toBe('retired');
     expect(e.careerEndYear).toBe(year);
   }
@@ -125,12 +130,18 @@ test('NADAL AND MURRAY: retired here even though plausiblyCurrent says otherwise
 test('a man the roster does not group still carries his retirement', () => {
   // 1,484 of the 1,513 have no browse group at all and are reached
   // only by search — the marker is what makes those pages honest.
-  const ferrero = byQ.get('Q463719')!; // Larry Stefanki, end 1988
-  expect(ferrero.careerEnd).toBe(1988);
-  const e = rosterEntryOf(ferrero);
+  const stefanki = byQ.get('Q463719')!; // Larry Stefanki, end 1988
+  expect(stefanki.careerEnd).toBe(1988);
+  const e = rosterEntryOf(stefanki);
   expect(e.groupingKey).toBeUndefined();
   expect(e.careerStatus).toBe('retired');
   expect(e.careerEndYear).toBe(1988);
+});
+
+test('an unmarked man lands in the alphabetical group, ungrouped only if retired', () => {
+  const hm = rosterEntryOf(byQ.get('Q106962940')!); // Hamad Međedović
+  expect(hm.groupingKey).toBe('atp-directory');
+  expect(hm.careerStatus).toBeUndefined();
 });
 
 test('a date of death retires a player with no recorded career end, and shows no year', () => {

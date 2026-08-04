@@ -166,13 +166,13 @@ describe('groupOrderKey', () => {
     ]);
   });
 
-  test('tennis: women, then men — two ranked tours', () => {
+  test('tennis: women, the ranked men, then the alphabetical rest', () => {
     // Shuffled input, because the ordering must come from the
     // comparator and not from whatever order Firestore returned.
-    const order = ['atp', 'wta'].sort((a, b) =>
+    const order = ['atp-directory', 'atp', 'wta'].sort((a, b) =>
       groupOrderKey(a).localeCompare(groupOrderKey(b)),
     );
-    expect(order).toEqual(['wta', 'atp']);
+    expect(order).toEqual(['wta', 'atp', 'atp-directory']);
   });
 });
 
@@ -330,6 +330,54 @@ describe('group titles', () => {
       'WTA Tour — Women',
       'ATP Tour — Men',
     ]);
+  });
+
+  test('the alphabetical directory group is served WHOLE, not capped', () => {
+    // A ranked list truncates honestly; an alphabetical one does not —
+    // 50 of 1,400 A–Z is everyone called Aaron, dressed as a selection.
+    const many = Array.from({ length: 120 }, (_, i) =>
+      men({
+        id: `athlete_${String(i + 300).padStart(6, '0')}`,
+        displayName: `Player Number${String(i).padStart(3, '0')}`,
+        groupingKey: 'atp-directory',
+      }),
+    );
+    const b = shapeAthleteBrowse(many, 'tennis', NOW);
+    expect(b.groups[0].athletes).toHaveLength(120);
+    expect(b.groups[0].grouping).toBe('More ATP players — A–Z');
+    // …and alphabetically, since none of them carries a rank.
+    expect(b.groups[0].athletes[0].name).toBe('Player Number000');
+  });
+
+  test('the ranked men are still capped — a ranking truncates honestly', () => {
+    const many = Array.from({ length: 120 }, (_, i) =>
+      men({
+        id: `athlete_${String(i + 500).padStart(6, '0')}`,
+        displayName: `Ranked ${i}`,
+        groupingKey: 'atp',
+        rank: i + 1,
+      }),
+    );
+    const b = shapeAthleteBrowse(many, 'tennis', NOW);
+    expect(b.groups[0].athletes).toHaveLength(GROUP_CAP);
+  });
+
+  test('a retired man never reaches the alphabetical group either', () => {
+    const b = shapeAthleteBrowse(
+      [
+        men({ id: 'athlete_000960', groupingKey: 'atp-directory' }),
+        men({
+          id: 'athlete_000961',
+          groupingKey: 'atp-directory',
+          careerStatus: 'retired',
+          careerEndYear: 2019,
+        }),
+      ],
+      'tennis',
+      NOW,
+    );
+    expect(b.groups).toHaveLength(1);
+    expect(b.groups[0].athletes).toHaveLength(1);
   });
 
   test('no card in browse carries a retirement, because none of them can', () => {

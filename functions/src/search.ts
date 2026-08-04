@@ -318,10 +318,19 @@ export function groupOrderKey(groupingKey: string): string {
   // depends on it.
   if (groupingKey === 'wta') return '20';
   if (groupingKey === 'atp') return '21';
+  if (groupingKey === 'atp-directory') return '22';
   return `5${groupingKey}`;
 }
 
 export const GROUP_CAP = 50; // tennis top 50 — the curated cut, not the roster's
+
+// Groups the cap must NOT touch. A ranked list truncates honestly —
+// "the top 50 of a ranking" is a real thing. An ALPHABETICAL list
+// truncated at 50 is not: it would be everyone whose name begins with
+// A, presented as though it were a selection. So the directory group is
+// served whole and the CLIENT collapses it behind "Show all N", which
+// is the affordance that exists for exactly this.
+const UNCAPPED_GROUPS = new Set(['atp-directory']);
 export const COMPETING_SOON_DAYS = 45;
 export const COMPETING_SOON_CAP = 20;
 
@@ -365,7 +374,10 @@ export function shapeAthleteBrowse(
         // happened to sort first — see GROUP_TITLES in athletes.ts.
         grouping: groupTitleOf(groupingKey, sorted[0].grouping)!,
         groupingKey,
-        athletes: sorted.slice(0, GROUP_CAP).map(card),
+        athletes: (UNCAPPED_GROUPS.has(groupingKey)
+          ? sorted
+          : sorted.slice(0, GROUP_CAP)
+        ).map(card),
       };
     });
   const horizon = new Date(

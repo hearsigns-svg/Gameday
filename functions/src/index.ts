@@ -83,7 +83,11 @@ import { fetchWorldAthletics } from './providers/worldAthletics';
 import { fetchWtaTennis } from './providers/wtaTennis';
 import { fetchWtaRankings } from './providers/wtaRankings';
 import { ATP_ROSTER_ENABLED, fetchAtpRoster } from './providers/wikidataAtp';
-import { ATP_RANK_SOURCE, fetchAtpRankings } from './providers/atpRankings';
+import {
+  ATP_RANK_SOURCE,
+  fetchAtpRankings,
+  gateRanking,
+} from './providers/atpRankings';
 import { fetchIbfRatings } from './providers/ibfRatings';
 import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
 import { applyRoster } from './rosterStore';
@@ -1415,6 +1419,15 @@ interface RosterSource {
   source: string;
   sport: string;
   run: () => Promise<{ rawCount: number; entries: import('./athletes').RosterEntry[] }>;
+  // Runs BETWEEN the fetch and the write, with the directory in hand.
+  // Throwing here means the update is not applied and whatever is
+  // already stored stands — a stale correct list beats a fresh
+  // corrupted one. The throw is recorded in this slice's own run record
+  // exactly like a fetch failure.
+  gate?: (
+    entries: readonly import('./athletes').RosterEntry[],
+    existing: readonly import('./athletes').Athlete[],
+  ) => void;
   applyOpts?: {
     nameMatchExcludesSources?: string[];
     ownsCareerStatus?: boolean;
@@ -1476,6 +1489,27 @@ const rosterSources = (): RosterSource[] => [
     source: ATP_RANK_SOURCE,
     sport: 'tennis',
     run: () => fetchAtpRankings(),
+    // THE MOST FRAGILE SOURCE IN THE SYSTEM gets the strictest gates:
+    // every name must resolve to a directory athlete, and the top 20
+    // must overlap the previous top 20 by at least MIN_CARRY_OVER.
+    gate: (entries, existing) => {
+      const tennis = existing.filter((a) => a.sport === 'tennis');
+      // Resolvable = a tennis athlete that is NOT WTA-id-backed. That
+      // mirrors the population guard reconcileRoster applies, so the
+      // gate cannot pass a name the reconciler would then refuse.
+      const resolvableNames = new Set(
+        tennis
+          .filter((a) => a.providerIds.wta === undefined)
+          .flatMap((a) => [a.searchName, ...a.aliases])
+          .filter((n) => n.length > 0),
+      );
+      const previous = new Map(
+        tennis
+          .filter((a) => a.groupingKey === 'atp' && a.rank !== undefined)
+          .map((a) => [a.searchName, a.rank!] as const),
+      );
+      gateRanking(entries, { resolvableNames, previous }, normaliseName);
+    },
     applyOpts: {
       // Same population guard as the directory: a men's ranking name
       // colliding with a WTA woman must never attach to her doc.
@@ -1502,6 +1536,10 @@ async function refreshRosters(
     };
     try {
       const { rawCount, entries } = await s.run();
+      // Gate BEFORE the zero check and before any write: a source that
+      // fails its own sanity rules must leave production exactly as it
+      // was.
+      if (s.gate) s.gate(entries, await loadAthletes(db));
       // ZERO entries is never applied: a roster source answering with
       // nothing (a January F1 season page before the grid exists, a
       // filter regression) would mark every athlete absent, deactivate

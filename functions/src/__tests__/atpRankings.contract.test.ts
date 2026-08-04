@@ -10,9 +10,12 @@
 //     scanned the whole page would fold women into the men's roster.
 
 import sample from './fixtures/wikipedia-atp-rankings-sample.json';
+import { normaliseName } from '../identity';
 import {
   ATP_RANK_SOURCE,
-  MIN_RANKED,
+  EXPECTED_ROWS,
+  gateRanking,
+  MIN_CARRY_OVER,
   parseAsOf,
   parseAtpRankings,
   rankingEntries,
@@ -101,10 +104,124 @@ test('a non-contiguous table throws rather than publishing a false top-N', () =>
   expect(() => parseAtpRankings(gappy)).toThrow(/rank 2 missing/);
 });
 
-test('a table outside the expected band is not applied', () => {
+test('a table that is not EXACTLY twenty rows is not applied', () => {
   const tiny = { rows: [{ rank: 1, name: 'Only One' }] };
-  expect(() => rankingEntries(tiny)).toThrow(/outside \[/);
-  expect(MIN_RANKED).toBeGreaterThan(1);
+  expect(() => rankingEntries(tiny)).toThrow(/expected exactly 20/);
+  // A deepened table is refused too — welcome upstream, but it is a
+  // deliberate one-line change here, not a silent one.
+  const deep = {
+    rows: Array.from({ length: 50 }, (_, i) => ({
+      rank: i + 1,
+      name: `Player ${i} X`,
+    })),
+  };
+  expect(() => rankingEntries(deep)).toThrow(/expected exactly 20/);
+  expect(EXPECTED_ROWS).toBe(20);
+});
+
+// ─── The gates that need the directory (Prompt 12b) ───────────────────
+
+const entriesOf = (names: readonly string[]) =>
+  names.map((name, i) => ({
+    source: ATP_RANK_SOURCE,
+    externalId: null,
+    name,
+    sport: 'tennis',
+    rank: i + 1,
+  }));
+
+const NAMES_20 = Array.from({ length: 20 }, (_, i) => `Player ${i} Surname`);
+const resolvable = (names: readonly string[]) =>
+  new Set(names.map((n) => normaliseName(n)));
+const previousOf = (names: readonly string[]) =>
+  new Map(names.map((n, i) => [normaliseName(n), i + 1] as const));
+
+test('a name that resolves to no directory athlete refuses the whole update', () => {
+  const entries = entriesOf([...NAMES_20.slice(0, 19), 'Vandalised Nonsense']);
+  expect(() =>
+    gateRanking(
+      entries,
+      {
+        resolvableNames: resolvable(NAMES_20),
+        previous: previousOf(NAMES_20),
+      },
+      normaliseName,
+    ),
+  ).toThrow(/resolve to no directory athlete/);
+});
+
+test('a WTA-only name does not count as resolved — the men must join to men', () => {
+  // resolvableNames is built from tennis athletes WITHOUT a wta id, so
+  // a name that exists only as a woman is absent from the set.
+  const entries = entriesOf([...NAMES_20.slice(0, 19), 'Aryna Sabalenka']);
+  expect(() =>
+    gateRanking(
+      entries,
+      { resolvableNames: resolvable(NAMES_20), previous: new Map() },
+      normaliseName,
+    ),
+  ).toThrow(/resolve to no directory athlete/);
+});
+
+test('wholesale replacement is refused as a different table, not a week of movement', () => {
+  const fresh = Array.from({ length: 20 }, (_, i) => `Other ${i} Person`);
+  expect(() =>
+    gateRanking(
+      entriesOf(fresh),
+      {
+        resolvableNames: resolvable([...NAMES_20, ...fresh]),
+        previous: previousOf(NAMES_20),
+      },
+      normaliseName,
+    ),
+  ).toThrow(/different table/);
+});
+
+test('a realistic post-slam week passes: six in, six out, order churned', () => {
+  const churned = [
+    ...NAMES_20.slice(6).reverse(),
+    ...Array.from({ length: 6 }, (_, i) => `Riser ${i} Surname`),
+  ];
+  expect(churned).toHaveLength(20);
+  expect(() =>
+    gateRanking(
+      entriesOf(churned),
+      {
+        resolvableNames: resolvable([...NAMES_20, ...churned]),
+        previous: previousOf(NAMES_20),
+      },
+      normaliseName,
+    ),
+  ).not.toThrow();
+  // 14 carried of 20 — exactly the floor, so the floor is reachable by
+  // real movement and not set below it.
+  expect(MIN_CARRY_OVER).toBe(14);
+});
+
+test('the first ever run has nothing to compare against and is not blocked', () => {
+  expect(() =>
+    gateRanking(
+      entriesOf(NAMES_20),
+      { resolvableNames: resolvable(NAMES_20), previous: new Map() },
+      normaliseName,
+    ),
+  ).not.toThrow();
+});
+
+test('the real captured table passes both gates against a matching directory', () => {
+  const entries = rankingEntries(table);
+  expect(() =>
+    gateRanking(
+      entries,
+      {
+        resolvableNames: resolvable(entries.map((e) => e.name)),
+        previous: new Map(
+          entries.map((e) => [normaliseName(e.name), e.rank!] as const),
+        ),
+      },
+      normaliseName,
+    ),
+  ).not.toThrow();
 });
 
 test('a table that stopped being maintained pages the owner but still serves', () => {

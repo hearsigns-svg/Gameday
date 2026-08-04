@@ -119,6 +119,15 @@ export interface Athlete {
 export const GROUP_TITLES: Readonly<Record<string, string>> = {
   wta: 'WTA Tour — Women',
   atp: 'ATP Tour — Men',
+  // The men below the ranked 20 (Prompt 12b). The label has to promise
+  // exactly what we can back: "More ATP players" is a fact about who
+  // these men are, "A–Z" states the ordering so nothing reads as a
+  // standing, and nothing in it claims current form — because for this
+  // group we do not know it. Membership is the SAME signal the
+  // sectioning work uses (not recorded retired), which covers 7.9% of
+  // the roster, so some of these men have in fact stopped playing and
+  // Wikidata has not said so. The label must not imply otherwise.
+  'atp-directory': 'More ATP players — A–Z',
 };
 
 export function groupTitleOf(
@@ -756,10 +765,13 @@ export function reconcileRoster(
         ? {
             missedRefreshes: misses,
             updatedAt: nowIso,
+            // Rank only. The GROUPING is deliberately untouched: the
+            // Wikidata directory pass runs earlier in the same refresh
+            // and has already put this man back in the alphabetical
+            // group, so clearing it here would delete the placement
+            // that was just made and leave him in no group at all —
+            // every week, permanently.
             ...(a.rank !== undefined ? { rank: undefined } : {}),
-            ...(a.groupingKey !== undefined
-              ? { grouping: undefined, groupingKey: undefined }
-              : {}),
           }
         : {
             missedRefreshes: misses,

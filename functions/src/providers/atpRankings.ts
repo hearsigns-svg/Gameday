@@ -38,18 +38,36 @@ const API = 'https://en.wikipedia.org/w/api.php';
 export const RANKINGS_PAGE = 'Current tennis rankings';
 export const ATP_SECTION = 'ATP singles ranking';
 
-// A top-20 table is the whole source. The band is a tripwire, not a
-// cap: fewer means the table was truncated or the section label moved,
-// more means the editors deepened it (welcome — raise this
-// deliberately). Either way, DO NOT publish a roster whose size the
-// code did not expect.
-export const MIN_RANKED = 10;
-export const MAX_RANKED = 250;
+// EXACTLY twenty. This is the most fragile source in the system — every
+// other one is a machine feed from an organisation with an interest in
+// its own correctness, and this is a volunteer-maintained wiki table
+// that can go stale, be vandalised, be reformatted or be moved, none of
+// which looks like a failure. So the size is an EXPECTATION, not a
+// band: if the editors deepen the table (welcome), that is a deliberate
+// one-line change here plus its contract test, exactly like the
+// 29-No.-1s constant. A silent size change is the failure mode.
+export const EXPECTED_ROWS = 20;
 
-// The table is maintained weekly. Past this, it is not being maintained
-// and we are serving a decaying ranking under a live-sounding heading —
-// page the owner, but keep serving: last month's top 20 is stale, not
-// false, and an empty men's section helps nobody.
+// CHURN GATE. Justified from the ranking's own mechanics rather than
+// from observed weeks, because the mechanics are the stronger argument:
+// ATP points roll over a 52-WEEK WINDOW, so a single refresh can only
+// move whatever one week's results add and one week's year-old results
+// subtract. To leave a 20-deep list you must shed more points in that
+// one week than the gap to #20 — which happens to a handful of players
+// after a slam or a Masters, and to almost nobody otherwise. Six
+// changes in one week is already an extraordinary week; twenty is not a
+// week, it is a different table. So: at least 14 of the previous 20
+// must still be present.
+//
+// This is a CORRUPTION gate, not a churn detector. It is sized to catch
+// the failures that actually threaten us — the WTA table parsed as the
+// men's, the doubles table, a mass revert, a reformat that shifts every
+// cell — while leaving real movement far more headroom than it needs.
+export const MIN_CARRY_OVER = 14;
+
+// The table is edited weekly. A date that has not advanced in three
+// weeks means nobody is maintaining it, and we would be serving a
+// decaying ranking under a live-sounding heading.
 export const STALE_AFTER_DAYS = 21;
 
 export interface AtpRankRow {
@@ -143,9 +161,9 @@ export function parseAtpRankings(body: unknown): AtpRankingTable {
 export const ATP_RANK_SOURCE = 'atp-rank';
 
 export function rankingEntries(table: AtpRankingTable): RosterEntry[] {
-  if (table.rows.length < MIN_RANKED || table.rows.length > MAX_RANKED) {
+  if (table.rows.length !== EXPECTED_ROWS) {
     throw new Error(
-      `atp rankings: ${table.rows.length} rows outside [${MIN_RANKED}, ${MAX_RANKED}] — feed or label drift, not applied`,
+      `atp rankings: ${table.rows.length} rows, expected exactly ${EXPECTED_ROWS} — table reformatted, truncated or deepened; not applied`,
     );
   }
   return table.rows.map((r) => ({
@@ -158,6 +176,65 @@ export function rankingEntries(table: AtpRankingTable): RosterEntry[] {
     rank: r.rank,
     ...(r.countryCode ? { countryCode: r.countryCode } : {}),
   }));
+}
+
+// ─── The gates that need the directory ────────────────────────────────
+//
+// Everything above can be judged from the payload alone. These two need
+// to know what we already hold, so they run between the fetch and the
+// write — and they THROW, which in refreshRosters means the update is
+// not applied and the previous ranking stands untouched. That is the
+// rule: A STALE CORRECT LIST BEATS A FRESH CORRUPTED ONE. The failure
+// is recorded in this slice's own sourceRuns record, and because the
+// staleness marker only advances on a fully-applied refresh, a run of
+// failures raises `roster_stale` on its own.
+//
+// Pure, so every branch is testable without Firestore.
+
+export interface RankingGateContext {
+  // Normalised names of the tennis athletes a ranking row may join to.
+  // Built from the men's directory — a men's ranking name that only
+  // matches a WTA-id-backed woman has NOT resolved.
+  resolvableNames: ReadonlySet<string>;
+  // Normalised name → rank, from the ranking we are about to replace.
+  // Empty on the first ever run, which skips the churn gate.
+  previous: ReadonlyMap<string, number>;
+}
+
+export function gateRanking(
+  entries: readonly RosterEntry[],
+  ctx: RankingGateContext,
+  normalise: (name: string) => string,
+): void {
+  // EVERY NAME MUST RESOLVE. An unresolvable name is the signature of
+  // vandalism or a reformat, and letting it through would mint a
+  // name-keyed junk athlete that then poisons that name for real
+  // matching. Note the ordering that makes this survivable: the
+  // Wikidata directory refresh runs BEFORE this source in the same
+  // pass, so a genuinely new top-20 entrant is imported minutes earlier
+  // and resolves normally. A name that fails here is one Wikidata does
+  // not know either.
+  const unresolved = entries
+    .map((e) => e.name)
+    .filter((n) => !ctx.resolvableNames.has(normalise(n)));
+  if (unresolved.length > 0) {
+    throw new Error(
+      `atp rankings: ${unresolved.length} name(s) resolve to no directory athlete (${unresolved
+        .slice(0, 5)
+        .join(', ')}) — keeping the previous ranking`,
+    );
+  }
+  // CHURN. Skipped with no previous ranking to compare against: the
+  // first run has nothing to be implausible relative to.
+  if (ctx.previous.size === 0) return;
+  const now = new Set(entries.map((e) => normalise(e.name)));
+  let carried = 0;
+  for (const name of ctx.previous.keys()) if (now.has(name)) carried++;
+  if (carried < MIN_CARRY_OVER) {
+    throw new Error(
+      `atp rankings: only ${carried} of the previous ${ctx.previous.size} players remain (min ${MIN_CARRY_OVER}) — this is a different table, not a week's movement; keeping the previous ranking`,
+    );
+  }
 }
 
 export function warnIfStale(asOf: string | undefined, nowIso: string): void {
