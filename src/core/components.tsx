@@ -547,9 +547,16 @@ export function SportCard(props: {
     >
       <GlyphTile glyph={props.glyph} theme={props.theme} size={36} />
       <View style={{ flex: 1 }}>
+        {/* TWO LINES, not one. A sport name is content, not chrome —
+            "American football" truncated to "American f…" long before
+            regional terminology existed, and "Track and field" made it
+            visible. The grid's cards already stretch to the tallest in
+            their wrapped row (alignItems defaults to stretch), so a
+            wrapping label costs a slightly taller row, never a ragged
+            one. */}
         <Text
           style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {props.label}
         </Text>
