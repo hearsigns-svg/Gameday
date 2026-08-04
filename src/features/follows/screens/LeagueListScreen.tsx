@@ -20,7 +20,7 @@ import {
   TournamentRow,
 } from '../data/directoryRepo';
 import { byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
-import { isFollowed } from '../data/followStore';
+import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
@@ -62,28 +62,37 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       // ones (11b), config order as the offline fallback.
       void refreshPriorities();
       const pr = cachedPriorities();
-      setLeagues(
-        byPriorityLive(
-          sport.staticCompetitions,
-          (c) => c.key,
-          pr.priorities,
-          new Set(pr.dormant),
-        ).map((c) => {
+      const rows = byPriorityLive(
+        sport.staticCompetitions,
+        (c) => c.key,
+        pr.priorities,
+        new Set(pr.dormant),
+      ).map((c) => {
           // Competition logo by TSDB league id (Prompt 13 follow-up).
           // These rows are CONFIG, never served by listLeagues, which
           // is why they alone still rendered a monogram while their
           // soccer neighbours had logos. The id IS the TSDB id, so the
           // join needs no name matching.
-          const art = pr.competitionArt[String(c.id)];
-          return art ? { ...c, crestUrl: art } : c;
-        }),
-      );
+        const art = pr.competitionArt[String(c.id)];
+        return art ? { ...c, crestUrl: art } : c;
+      });
+      setLeagues(rows);
+      // These rows are CONFIG rather than a served list, so they were
+      // the one browse surface hydration never reached — which meant an
+      // imagery takedown could not reach a stored boxing/NBA/NFL
+      // competition follow at all.
+      hydrateFollowArt(rows);
       return;
     }
     void (async () => {
       const r = await fetchLeagues();
-      if (r.ok) setLeagues(r.value);
-      else setError(messageOf(r.error));
+      if (r.ok) {
+        setLeagues(r.value);
+        // Fresh directory rows are also the only chance to repair a
+        // stored follow's artwork: the follow store captures a crest
+        // once and never revisits it (domain/followArt.ts).
+        hydrateFollowArt(r.value);
+      } else setError(messageOf(r.error));
     })();
   }, [sport]);
 
@@ -123,6 +132,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       sportKey: route.params.sportKey,
       type: isSeries ? ('series' as const) : ('competition' as const),
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
+      // The row one line below already renders this logo; not putting it
+      // on the follow is why a followed competition lost it everywhere
+      // else (Prompt 16 C).
+      ...(league.crestUrl ? { crestUrl: league.crestUrl } : {}),
     };
     setBusyKey(league.key);
     const wasFollow = !isFollowed(league.key);

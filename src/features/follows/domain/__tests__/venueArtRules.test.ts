@@ -65,3 +65,128 @@ describe('pickTournamentCandidate (Prompt 9c)', () => {
     ).toBeNull();
   });
 });
+
+// ─── Person candidates (Prompt 16 B) ──────────────────────────────────
+//
+// Measured against production names on 2026-08-04: the old rule — first
+// candidate carrying an image, competition-shaped descriptions excluded
+// — returned the WRONG PERSON for 3 of 10 boxing hits. Each case below
+// is one of those, verbatim from Wikidata.
+
+describe('pickAthleteCandidate', () => {
+  const { pickAthleteCandidate, isAthleteCandidate } =
+    jest.requireActual<typeof import('../venueArtRules')>('../venueArtRules');
+
+  test('refuses the famous namesake', () => {
+    expect(
+      pickAthleteCandidate(
+        [{ id: 'Q182047', description: 'writer' }],
+        'boxing',
+      ),
+    ).toBeNull();
+    expect(
+      pickAthleteCandidate(
+        [
+          {
+            id: 'Q2831211',
+            description: 'American computer hacker and computer criminal',
+          },
+        ],
+        'boxing',
+      ),
+    ).toBeNull();
+    // A rhythmic gymnast shares a name with the tennis player.
+    expect(
+      pickAthleteCandidate(
+        [{ id: 'Q15710756', description: 'British rhythmic gymnast' }],
+        'tennis',
+      ),
+    ).toBeNull();
+  });
+
+  test('accepts the athlete when the description says so', () => {
+    expect(
+      pickAthleteCandidate(
+        [
+          { id: 'Q1', description: 'American computer criminal' },
+          { id: 'Q2', description: 'American professional boxer' },
+        ],
+        'boxing',
+      ),
+    ).toBe('Q2');
+  });
+
+  test('two plausible people is ambiguity, not a tie to break', () => {
+    expect(
+      pickAthleteCandidate(
+        [
+          { id: 'Q1', description: 'British boxer' },
+          { id: 'Q2', description: 'American professional boxer' },
+        ],
+        'boxing',
+      ),
+    ).toBeNull();
+  });
+
+  test('an undescribed candidate is unverifiable, so it is refused', () => {
+    expect(isAthleteCandidate(undefined, 'boxing')).toBe(false);
+    expect(isAthleteCandidate('', 'boxing')).toBe(false);
+  });
+
+  test('a bout is not a boxer, and a statistics item is not a player', () => {
+    // Live-measured 2026-08-04: searching "Tyson Fury" returns the
+    // fighter AND his bouts ("boxing competition", "Cancelled boxing
+    // bout"); every top tennis player has "professional statistics of
+    // …" and "2025 tennis player season" items. All of them match a
+    // sport-shaped test, and without this filter the uniqueness rule
+    // refused the correct portrait for almost every famous athlete.
+    expect(
+      pickAthleteCandidate(
+        [
+          { id: 'Q1000592', description: 'British boxer (born 1988)' },
+          { id: 'Q106972137', description: 'boxing competition' },
+          { id: 'Q24024788', description: 'Cancelled boxing bout' },
+        ],
+        'boxing',
+        'Tyson Fury',
+      ),
+    ).toBe('Q1000592');
+    expect(
+      pickAthleteCandidate(
+        [
+          { id: 'Q23448791', description: 'Belarusian tennis player' },
+          { id: 'Q60753798', description: 'professional statistics of a tennis player' },
+          { id: 'Q131850945', description: '2025 tennis player season' },
+        ],
+        'tennis',
+        'Aryna Sabalenka',
+      ),
+    ).toBe('Q23448791');
+  });
+
+  test('a surname alone resolves to nobody', () => {
+    // Combat titles carry them ("UFC 330 Makhachev vs Machado Garry"),
+    // and a confident single match on one word is where a wrong person
+    // is most likely. Same rule as minting an athlete (F31).
+    expect(
+      pickAthleteCandidate(
+        [{ id: 'Q1', description: 'Russian mixed martial artist' }],
+        'ufc',
+        'Makhachev',
+      ),
+    ).toBeNull();
+    expect(
+      pickAthleteCandidate(
+        [{ id: 'Q18637676', description: 'Russian mixed martial artist' }],
+        'ufc',
+        'Islam Makhachev',
+      ),
+    ).toBe('Q18637676');
+  });
+
+  test('a sport with no shape gets no photo rather than a guess', () => {
+    expect(isAthleteCandidate('American professional boxer', 'soccer')).toBe(
+      false,
+    );
+  });
+});

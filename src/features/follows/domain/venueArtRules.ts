@@ -82,6 +82,78 @@ export interface WikidataCandidate {
 
 const TENNIS_SHAPED = /tennis|grand slam/;
 
+// PERSON-candidate selection (Prompt 16 B). The resolver used to take
+// the first candidate carrying an image, having only ruled out
+// competition-shaped descriptions — so a name shared with somebody else
+// famous returned THEIR face. Measured against production names,
+// 2026-08-04: 3 of 10 boxing "hits" were the wrong person — "Gary
+// Russell" resolved to a writer, "Albert Gonzalez" to a computer
+// criminal, "Sara Bailey" to an ice dancer — and 1 of 26 WTA hits was a
+// rhythmic gymnast who shares a name with the tennis player.
+//
+// A wrong face is worse than no face, and it is the same failure the
+// no-generated-likeness ruling exists to avoid: something nearly right
+// reads as broken to the fans who know the person. So a candidate must
+// be describable as this sport's kind of competitor, and when none is,
+// the answer is NONE.
+// NOT A PERSON. Wikidata's answer to "Tyson Fury" includes the fighter
+// AND the bouts he is famous for ("Tyson Fury vs. Deontay Wilder",
+// described as a boxing match), and every one of those matches a
+// sport-shaped test. Without this the uniqueness rule below refuses a
+// correct portrait for almost every famous fighter — a false negative
+// that would empty the feature out.
+// Measured against the live search on 2026-08-04, these are the shapes
+// that share an athlete's name and their sport's vocabulary: the bouts
+// ("Tyson Fury vs. Deontay Wilder", a boxing match), the per-season
+// statistics items every top tennis player has ("professional statistics
+// of …", "2025 tennis player season"), and Wikimedia's own plumbing.
+const NOT_A_PERSON =
+  /\bmatch\b|\bbout\b|fight card|fight night|\bevent\b|competition|championship match|\bseason\b|\bseries\b|statistic|\brivalry\b|head-to-head|\blist of\b|\bresults\b|\brecords\b|\btimeline\b|disambiguation|wikimedia|\bfilm\b|\balbum\b|\bsong\b|video game|\bcard\b/;
+
+const SPORT_SHAPED: Readonly<Record<string, RegExp>> = {
+  boxing: /\bboxer\b|\bboxing\b|\bpugilist\b/,
+  ufc: /mixed martial|\bmma\b|martial artist|\bfighter\b|kickbox/,
+  tennis: /tennis/,
+  f1: /racing driver|formula one|formula 1|motorsport|race car driver/,
+  athletics: /athlet|sprinter|runner|hurdler|jumper|thrower|track and field|marathon/,
+};
+
+export function isAthleteCandidate(
+  description: string | undefined,
+  sportKey: string,
+): boolean {
+  const shape = SPORT_SHAPED[sportKey];
+  // A sport we have no shape for gets no photo rather than a guess.
+  if (!shape) return false;
+  const desc = (description ?? '').toLowerCase();
+  if (desc.length === 0) return false; // undescribed ⇒ unverifiable
+  if (NOT_A_PERSON.test(desc)) return false;
+  return shape.test(desc);
+}
+
+// A SURNAME IS NOT AN IDENTITY — the repo's standing rule (F31), and it
+// applies to photographs as much as to minting athletes. Combat titles
+// often carry only surnames ("UFC 330 Makhachev vs Machado Garry"), and
+// a one-word search is exactly where a confident single match is most
+// likely to be the wrong person.
+export function isNameSpecificEnough(name: string): boolean {
+  return name.trim().split(/\s+/).filter((w) => w.length > 1).length >= 2;
+}
+
+export function pickAthleteCandidate(
+  candidates: readonly WikidataCandidate[],
+  sportKey: string,
+  personName?: string,
+): string | null {
+  if (personName !== undefined && !isNameSpecificEnough(personName)) return null;
+  const shaped = candidates.filter((c) =>
+    isAthleteCandidate(c.description, sportKey),
+  );
+  // Ambiguity is not a tie to break: two plausible boxers of the same
+  // name give us no way to know which one is fighting tonight.
+  return shaped.length === 1 ? shaped[0].id : null;
+}
+
 export function pickTournamentCandidate(
   candidates: readonly WikidataCandidate[],
   city?: string,

@@ -52,9 +52,22 @@ export function whenLabel(
 
 // Kick-off time — or the honest state when there isn't one. Postponed
 // says so: 'Time TBC' hides the one fact the fan most needs.
-export function timeLabel(iso: string, status: string): string {
+//
+// `precision` is the authoritative signal and STATUS IS THE LEGACY ONE.
+// 1,511 future fixtures are `timePrecision: 'date_only'` while still
+// `status: 'scheduled'` — almost every athletics meeting — and reading
+// the status alone printed their midnight day sentinel as a local clock
+// time: an invented kick-off, and the wrong DAY west of UTC. Passing the
+// precision is how a caller that holds a fixture says "this is a day,
+// not an instant"; callers that only have a status keep their old
+// behaviour.
+export function timeLabel(
+  iso: string,
+  status: string,
+  precision?: 'exact' | 'nominal' | 'date_only',
+): string {
   if (status === 'postponed') return 'Postponed';
-  if (status === 'tbd') return 'Time TBC';
+  if (status === 'tbd' || precision === 'date_only') return 'Time TBC';
   return new Date(iso).toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
@@ -99,6 +112,11 @@ export function dayHeading(
   return base;
 }
 
-// Fixtures whose start is a day sentinel, not an instant.
-export const isDateOnly = (status: string): boolean =>
-  status === 'tbd' || status === 'postponed';
+// Fixtures whose start is a day sentinel, not an instant. Same rule as
+// timeLabel above: precision decides where the caller has it, status is
+// the fallback for callers that do not.
+export const isDateOnly = (
+  status: string,
+  precision?: 'exact' | 'nominal' | 'date_only',
+): boolean =>
+  precision === 'date_only' || status === 'tbd' || status === 'postponed';

@@ -50,6 +50,7 @@ import {
   retiredEmptyState,
 } from '../domain/careerStatus';
 import { sportLabelFor } from '../domain/sportTerms';
+import { nationLabelOf } from '../../../core/nationality';
 import { activeRegion } from '../../../core/regionStore';
 
 type Props = RootScreenProps<'Team'>;
@@ -68,6 +69,8 @@ export default function TeamScreen({ navigation, route }: Props) {
     followType,
     careerStatus,
     careerEndYear,
+    crestUrl: routeCrest,
+    countryCode,
   } = route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -111,9 +114,12 @@ export default function TeamScreen({ navigation, route }: Props) {
   // 13). Browse reaches this screen with route params and no crest, so
   // an unfollowed team shows its generated treatment until it is
   // followed — honest, and it never blocks on a directory read.
+  // Route params win — they came from a directory read this session,
+  // while the stored copy may be months old (and may be absent
+  // entirely, for follows made before crests existed).
   const storedFollowCrest = useMemo(
-    () => loadFollowables().find((f) => f.key === teamKey)?.crestUrl,
-    [teamKey],
+    () => routeCrest ?? loadFollowables().find((f) => f.key === teamKey)?.crestUrl,
+    [teamKey, routeCrest],
   );
 
   const career: CareerStatusFields = useMemo(() => {
@@ -143,6 +149,11 @@ export default function TeamScreen({ navigation, route }: Props) {
     type: followType ?? 'team',
     ...(pollPath ? { pollPath } : {}),
     ...(brandColour ? { brandColour } : {}),
+    // PRESERVE THE CREST. `setFollowed` writes this object WHOLE, so an
+    // unfollow→re-follow here (or the toast's Undo) used to replace a
+    // crested follow with a crest-less one — the artwork was destroyed
+    // by the act of undoing something.
+    ...(storedFollowCrest ? { crestUrl: storedFollowCrest } : {}),
     ...career,
   };
 
@@ -310,8 +321,18 @@ export default function TeamScreen({ navigation, route }: Props) {
             {name}
           </Text>
           <Text style={[type.caption, { color: t.textSecondary }]}>
-            {sport ? sportLabelFor(sport.key, sport.label, activeRegion()) : sportKey}
-            {fixtures ? ` · ${fixtures.length} upcoming` : ''}
+            {[
+              // Nationality first for an athlete (Prompt 16 B): with no
+              // likeness allowed and a photo available for a minority,
+              // the flag is what tells two fighters apart.
+              nationLabelOf(countryCode),
+              sport
+                ? sportLabelFor(sport.key, sport.label, activeRegion())
+                : sportKey,
+              fixtures ? `${fixtures.length} upcoming` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         </View>
         {/* No follow for a retired athlete (owner ruling 2026-08-04) —
@@ -395,12 +416,19 @@ export default function TeamScreen({ navigation, route }: Props) {
           renderItem={({ item: f }) => (
             <EventRow
               title={f.title}
-              caption={`${whenLabel(f.startUtc, isDateOnly(f.status))} · ${f.competition}`}
-              timeText={timeLabel(f.startUtc, f.status)}
-              tbc={isDateOnly(f.status)}
+              caption={`${whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision))} · ${f.competition}`}
+              timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
+              tbc={isDateOnly(f.status, f.timePrecision)}
               glyph={sport?.glyph ?? '🏟️'}
               monogram={monogramOf(f.homeTeam ?? name)}
+              {...(storedFollowCrest ? { imageUrl: storedFollowCrest } : {})}
               theme={theme}
+              onPress={() =>
+                navigation.navigate('Fixture', {
+                  fixtureId: f.id,
+                  title: f.title,
+                })
+              }
               excluded={following ? excludedIds.has(f.id) : undefined}
               onToggleExcluded={following ? () => toggleExclude(f) : undefined}
               pinned={!following ? pinIds.has(f.id) : undefined}

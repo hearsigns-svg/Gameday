@@ -44,12 +44,18 @@ export function movedEntry(
   entry: LedgerEntry,
   newEventId: string,
   targetCalendarId: string,
+  // What the rebuilt event was actually given. The move re-applies the
+  // CURRENT reminder (per-event override first), which may differ from
+  // whatever the old entry recorded — carrying the stale value forward
+  // would make the planner see a phantom change on the next pass.
+  reminderMinutes?: number | null,
 ): LedgerEntry {
   return {
     ...entry,
     eventId: newEventId,
     calendarId: targetCalendarId,
     strayEventId: entry.eventId,
+    ...(reminderMinutes !== undefined ? { reminderMinutes } : {}),
   };
 }
 

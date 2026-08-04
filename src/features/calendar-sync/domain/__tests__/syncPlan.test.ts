@@ -43,6 +43,9 @@ function entryFor(f: Fixture): LedgerEntry {
     endUtc: desired.endUtc,
     title: desired.title,
     allDay: desired.allDay,
+    // The engine records the reminder it applied; a ledger entry that
+    // does not is UNKNOWN and replans as a mismatch (syncPlan.ts).
+    reminderMinutes: desired.reminderMinutes,
   };
 }
 
@@ -57,6 +60,7 @@ function applied(ledger: Ledger, ops: SyncOp[]): Ledger {
         endUtc: op.desired.endUtc,
         title: op.desired.title,
         allDay: op.desired.allDay,
+        reminderMinutes: op.desired.reminderMinutes,
       };
     } else {
       delete next[op.fixtureId];
@@ -73,6 +77,7 @@ describe('desiredEventFor', () => {
       startUtc: '2023-10-21T11:30:00.000Z',
       endUtc: '2023-10-21T13:30:00.000Z',
       allDay: false,
+      reminderMinutes: DEFAULT_PREFS.reminderMinutes,
     });
   });
 
@@ -83,6 +88,7 @@ describe('desiredEventFor', () => {
       startUtc: '2023-10-21T00:00:00.000Z',
       endUtc: '2023-10-22T00:00:00.000Z',
       allDay: true,
+      reminderMinutes: null,
     });
   });
 
@@ -151,6 +157,7 @@ describe('planSync', () => {
         startUtc: '2023-12-20T20:00:00.000Z',
         endUtc: '2023-12-20T22:00:00.000Z',
         allDay: false,
+        reminderMinutes: DEFAULT_PREFS.reminderMinutes,
       });
     }
   });
@@ -244,6 +251,7 @@ describe('planSync', () => {
       startUtc: '2023-10-21T00:00:00.000Z',
       endUtc: '2023-10-26T00:00:00.000Z',
       allDay: true,
+      reminderMinutes: null,
     });
   });
 
@@ -262,6 +270,7 @@ describe('planSync', () => {
       startUtc: '2023-07-01T00:00:00.000Z',
       endUtc: '2023-07-05T00:00:00.000Z',
       allDay: true,
+      reminderMinutes: null,
     });
   });
 
@@ -274,6 +283,10 @@ describe('planSync', () => {
       endUtc: '2023-10-21T13:30:00.000Z',
       title: 'Liverpool v Everton',
       // no allDay key — written by the M1 engine
+      // (reminderMinutes IS present: the engine stamps every legacy
+      // entry with the assumption before planning, so an entry reaching
+      // the planner without one is the reinstall case below, not this.)
+      reminderMinutes: DEFAULT_PREFS.reminderMinutes,
     };
     expect(
       planSync([f], { [f.id]: legacy }, [LIV], DEFAULT_PREFS, PAST_HORIZON),
@@ -369,6 +382,7 @@ const createOp = (id: string): SyncOp => ({
     startUtc: '2026-12-25T15:00:00.000Z',
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
+    reminderMinutes: 60,
   },
 });
 const deleteOp = (id: string): SyncOp => ({
@@ -390,6 +404,7 @@ const updateOp = (id: string): SyncOp => ({
     startUtc: '2026-12-25T15:00:00.000Z',
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
+    reminderMinutes: 60,
   },
   entry: {
     eventId: `ev-${id}`,

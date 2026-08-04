@@ -1690,3 +1690,124 @@ model: `olympics-2028-athletics` is an ordinary competition follow key.
   we already have). The second surface is left as a UI decision.
 - 782 tests both timezones; typechecks and functions build clean;
   deployed --only functions; Release simulator build verified.
+
+### Prompt 16 — the expanded card, athlete identity, Following logos  [x]
+
+PART A — THE HERO CARD EXPANDS. Tapping the poster pushes a screen whose
+header is THE SAME `HeroCard` component (extracted to
+`follows/FixtureHero.tsx`, so the carousel card and the expanded card
+cannot drift apart): same photo→scrim→pattern→watermark layers, same
+identity resolution, same credit line. Actions first, facts second.
+Reachable from Home's carousel, Schedule rows and a team/athlete page's
+fixture rows.
+
+- **A1 — per-event calendar settings.** Reminders are now OURS: chosen by
+  the planner, recorded in the ledger, re-applied on every write. THIS
+  FIXES THE LIVE BUG the brief named — an all-day↔timed flip is a delete
+  and a recreate, and the recreate previously reset the alarm to the
+  global preference. It is pinned by name in
+  `domain/__tests__/eventSettings.test.ts` ("the reminder survives
+  delete-and-recreate"), which walks the real sequence: Time TBC banner →
+  user sets 15 minutes → time announced → kind flip → the plan still
+  carries 15. A per-event choice also survives a calendar-target switch
+  (`inputFor` reads the override, not just the preference) and now makes
+  a GLOBAL preference change reach events that already exist, which it
+  never did. All-day entries take no alarm at all — 15 minutes before a
+  midnight day sentinel is an alert at 23:45 for an event whose time
+  nobody has published — and the setting is KEPT and applied the moment a
+  real time lands. Removing one event without unfollowing is the existing
+  exclusion, surfaced here.
+  - **Per-event colour is NOT shipped, and iOS is not the reason.**
+    expo-calendar 57.0.1 exposes no per-event colour on EITHER platform
+    (`EVENT_COLOR` appears nowhere in the package; the Android record
+    carries no colour field). The card states the asymmetry and offers
+    the calendar's own colour, which is real. See DECISIONS.
+  - Ledger migration: entries written before this carry no reminder, and
+    unknown replans as a mismatch, so the engine stamps them once with
+    the assumed applied value rather than rewriting every event in every
+    calendar on first sync.
+- **A2 — the full card.** `parentFixtureId` is queried directly (single
+  field equality, no index needed, `fixtures` is world-readable; adding
+  any `startUtc` order or range would need a composite index that does
+  not exist, so ordering happens in memory). Each bout carries the
+  existing pin control, so one fight can go in the calendar with no
+  follow at all, and each opens as its own expanded card.
+  MEASURED FIRST, and the measurement shapes the feature: production
+  holds exactly ONE combat parent with a real undercard
+  (`pbc-fight-night-august-22-2026`, 4 bouts), while 10 of 14 combat
+  parents have a single child that is the headline re-parsed from the
+  parent's own title — so a card whose only entry is the event itself
+  renders NOTHING rather than repeating it. Main event comes from the
+  `-main` key OR the parent's title-parsed pair (present on 14/14 combat
+  parents, and the better signal today). Generic by construction: a WTA
+  tournament's matches use the same path, with the one-doc-per-player
+  duplication collapsed by participant pair.
+- **A3 — "Time TBC" explained.** From `timePrecision`, `confidence`,
+  span and `parentFixtureId`: only-the-day, a placeholder time that will
+  move, a multi-day span that is the event's shape rather than a missing
+  kick-off, a slot borrowed from a parent until the order of play lands.
+  Attribution names ORGANISERS ("not yet announced by Premier Boxing
+  Champions") and never blames a relay for a silence that is not theirs.
+  "Checked N ago" reads a NEW world-readable doc, `status/sources`, that
+  the sweep writes from the skip-aware coverage rows it already computes
+  — the existing freshness doc could not answer it (keyed by a
+  follow-derived poll path, refreshed by any 2xx, and with no PBC entry
+  at all). No timestamp ⇒ nothing said. No date is ever given for when a
+  time will firm up, because no payload carries one.
+- **Broadcaster: measured, not built.** TheSportsDB publishes no
+  broadcaster field at all; NHL publishes one for 94/94 games of a
+  completed season but 1/88 of the one now selling, all US/CA networks.
+  Recorded in DECISIONS rather than shipped empty.
+
+PART B — ATHLETE IDENTITY WITHOUT A LIKENESS.
+
+- **Commons coverage, measured (not extrapolated):** ATP men 979/1,513
+  = **64.7%** (census, via the stored Q-ids); F1 **31/31** (census);
+  WTA women **83.3% correct-person** in a 30-name sample; boxers
+  **17.5% correct-person** in a 40-name sample — 25% raw, but 3 of 10
+  raw hits were the wrong person. Athletics is **undefined**: zero
+  athletes exist, because the World Athletics connector is meeting-level
+  and its payload contains no person records. Licensing is NOT the
+  constraint anywhere (25/25 sampled files pass the verified-at-fetch
+  gate); entity resolution is.
+- That measurement produced a real fix: the resolver now requires a
+  sport-plausible, unambiguous candidate, so "Gary Russell" stops
+  resolving to a writer.
+- **Nationality as identity.** Flag + division colour + monogram.
+  Coverage today: boxing **495/503 = 98.4%**, WTA **203/226 = 89.8%**,
+  ATP ranked 18/20, F1 0/31, ATP directory 0/1,374. After the next
+  roster refresh with the new passes: ATP directory ~**87.3%** (P27 →
+  P984, measured 1,321/1,513), F1 **22/31 = 71%** (Jolpica's demonym;
+  the other 9 are reserve drivers the feed says nothing about). Both are
+  data we were already receiving and dropping.
+- Codes arrive in two standards (boxing ISO-3, tennis IOC) and both are
+  honoured; England/Scotland/Wales get subdivision flags, Northern
+  Ireland gets its name and no flag.
+- **Resulting per-sport picture** — photo / flag+treatment / monogram
+  alone: boxing 17.5% / 98.4% / ~1.6%; ATP men 64.7% (unused today —
+  the client resolves by name and tennis never reaches the resolver) /
+  87.3% after refresh / ~13%; WTA 83.3% / 89.8% / ~10%; F1 100% / 71%
+  after refresh / 0%; athletics has no athletes to give anything to.
+
+PART C — THE FOLLOWING LOGOS. Root cause found and fixed, plus a sweep.
+- The reported surface is Home's **Following rail**: `FollowRailItem`
+  had no image field at all, so every tile was a monogram — including
+  NBA teams whose crest was in the store the whole time, which is
+  exactly why the same team showed one "once opened".
+- Three follow-creation routes captured no crest even though they held
+  one (competition rows, search's static competitions, the team page),
+  and `setFollowed` writes the object WHOLE — so re-following from the
+  team page, or the toast's own Undo, DESTROYED a stored crest.
+- There was no refresh path at all: a follow made before Prompt 13 could
+  never gain a crest. Directory reads now repair stored follows, and a
+  crest absent from a crest-carrying response is cleared so the imagery
+  takedown switch still propagates.
+- `identityFollow` required a brand COLOUR, which only football-data
+  publishes (20/20 PL teams, 0/30 NBA teams) — so no TSDB team follow
+  could ever own a hero card. A crest now counts as identity.
+- Also swept: Schedule rows (crest where there is no participant photo),
+  team-page fixture rows, search's row/follow asymmetry in both
+  directions. Athlete rows and tennis tournament rows remain
+  mark-less-by-data and are recorded, not silently left.
+
+879 tests both timezones; both typechecks and the functions build clean.

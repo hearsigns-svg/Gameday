@@ -33,6 +33,7 @@ function entryFor(f: Fixture): LedgerEntry {
     endUtc: desired.endUtc,
     title: desired.title,
     allDay: desired.allDay,
+    reminderMinutes: desired.reminderMinutes,
   };
 }
 
@@ -48,6 +49,7 @@ function applied(ledger: Ledger, ops: SyncOp[]): Ledger {
         endUtc: op.desired.endUtc,
         title: op.desired.title,
         allDay: op.desired.allDay,
+        reminderMinutes: op.desired.reminderMinutes,
       };
     } else {
       delete next[op.fixtureId];

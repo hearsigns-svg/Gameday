@@ -47,6 +47,7 @@ const ledger: Ledger = Object.fromEntries(
       endUtc: '2026-12-25T17:00:00.000Z',
       title: f.title,
       allDay: false,
+      reminderMinutes: DEFAULT_PREFS.reminderMinutes,
     },
   ]),
 );

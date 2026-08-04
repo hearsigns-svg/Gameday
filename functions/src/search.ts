@@ -193,6 +193,11 @@ export interface SearchAthleteHit {
   grouping?: string; // 'Heavyweight' | 'WTA Tour — Women' — the caption
   nextStartUtc?: string;
   accentHue: number; // generated colour identity (Prompt 9b)
+  // Nationality (Prompt 16 B). Browse cards have carried it since
+  // Prompt 8; search hits did not, so the flag that now IS an athlete's
+  // identity mark was missing on the surface most fighters are found
+  // through. Absent when the roster never published one.
+  countryCode?: string;
   // Recorded retirement (Prompt 12) — search is the ONLY way most
   // retired men are ever reached (1,484 of the 1,513 carry no browse
   // group at all), so the marker matters more here than in browse.
@@ -208,6 +213,7 @@ const athleteHit = (a: Athlete): SearchAthleteHit => ({
     ? { grouping: groupTitleOf(a.groupingKey, a.grouping)! }
     : {}),
   ...(a.nextStartUtc ? { nextStartUtc: a.nextStartUtc } : {}),
+  ...(a.countryCode ? { countryCode: a.countryCode } : {}),
   ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
   ...(a.careerEndYear !== undefined
     ? { careerEndYear: a.careerEndYear }

@@ -23,3 +23,27 @@ export function removeLedgerEntry(fixtureId: string): void {
   delete ledger[fixtureId];
   writeJson(KEY, ledger);
 }
+
+// ONE-TIME per entry: record what a pre-reminder-tracking entry is
+// assumed to be carrying, so the planner has something to compare
+// against (see LedgerEntry.reminderMinutes and the assumption stated in
+// domain/eventSettings.ts::assumedAppliedReminder).
+//
+// Without this, every entry in every existing ledger would read as
+// UNKNOWN on the first sync after this ships and be rewritten — which
+// would also wipe any alarm a user had added by hand in their own
+// calendar. Returns how many entries were stamped; zero on every
+// subsequent run, so it is a no-op the moment it has done its job.
+export function stampMissingReminders(
+  assumed: (entry: LedgerEntry) => number | null,
+): number {
+  const ledger = loadLedger();
+  let stamped = 0;
+  for (const [fixtureId, entry] of Object.entries(ledger)) {
+    if (entry.reminderMinutes !== undefined) continue;
+    ledger[fixtureId] = { ...entry, reminderMinutes: assumed(entry) };
+    stamped++;
+  }
+  if (stamped > 0) writeJson(KEY, ledger);
+  return stamped;
+}

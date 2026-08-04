@@ -15,6 +15,7 @@
 // "all of them, verified" is the strongest ordering there is.
 
 import { RosterEntry } from '../athletes';
+import { codeFromDemonym } from '../nationality';
 import { requireArray } from './fetchResult';
 
 const BASE = 'https://api.jolpi.ca/ergast/f1';
@@ -44,6 +45,15 @@ export function driversToEntries(
       sport: 'f1',
       grouping: 'Formula 1',
       groupingKey: 'f1',
+      // Nationality (Prompt 16 B). Jolpica publishes a DEMONYM, not a
+      // code — "Thai", "Monegasque" — and it is present on 22 of the 31
+      // 2026 drivers (the tail is reserve/rookie entries with a null).
+      // The driver's `code` field is NOT a country: it is the TV
+      // abbreviation, and reading it that way would put Albania on
+      // Alexander Albon.
+      ...(codeFromDemonym(d.nationality)
+        ? { countryCode: codeFromDemonym(d.nationality) as string }
+        : {}),
     });
   }
   return out;

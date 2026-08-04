@@ -64,6 +64,11 @@ export function GlyphTile(props: {
   // Circular: reserved for marks that stand for a TEAM OR PERSON rather
   // than an event, so the two never read as the same kind of thing.
   round?: boolean;
+  // A small mark in the corner — today, an athlete's flag (Prompt 16 B).
+  // It sits ON the tile rather than in the caption because within a
+  // weight class every fighter now shares one division tone, and the
+  // flag is what distinguishes them.
+  badge?: string;
 }) {
   const size = props.size ?? 40;
   const [imageFailed, setImageFailed] = useState(false);
@@ -105,6 +110,19 @@ export function GlyphTile(props: {
           {props.glyph}
         </Text>
       )}
+      {props.badge ? (
+        <Text
+          accessible={false}
+          style={{
+            position: 'absolute',
+            right: -2,
+            bottom: -2,
+            fontSize: size * 0.36,
+          }}
+        >
+          {props.badge}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -124,6 +142,10 @@ export interface FollowRailItem {
   caption: string;
   glyph: string;
   theme: TeamTheme;
+  // Crest / competition logo, when the follow captured one. The rail
+  // had no field for it at all, which is why the same NBA team showed
+  // its crest on its own page and a bare monogram here (Prompt 16 C).
+  imageUrl?: string;
 }
 
 export function FollowRail(props: {
@@ -152,6 +174,7 @@ export function FollowRail(props: {
             glyph={item.glyph}
             theme={item.theme}
             monogram={monogramOf(item.label)}
+            {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
             size={64}
             round
           />
@@ -230,6 +253,10 @@ export function HeroCard(props: {
   sportKey?: string;
   monogram?: string;
   crestUrl?: string;
+  // A day sentinel is not a kick-off. Without this the poster printed a
+  // local clock time for every date_only fixture whose status is still
+  // 'scheduled' — 1,511 of them, almost all athletics.
+  timePrecision?: 'exact' | 'nominal' | 'date_only';
   theme: TeamTheme;
   // Venue photograph layer (docs/IMAGERY.md): the photo renders
   // UNMODIFIED in its own layer — the gradient scrim and type are
@@ -237,17 +264,36 @@ export function HeroCard(props: {
   // adaptation) — and the credit line is a licence condition.
   photoUrl?: string;
   photoCredit?: string;
+  // Opens the expanded card (Prompt 16). The poster does not change —
+  // tapping it shows MORE OF THE SAME THING, so the same component
+  // renders in both places and only its container becomes pressable.
+  onPress?: () => void;
+  // Suppresses the "Next up" framing where the card is not answering
+  // "what's next" — on the expanded surface it IS the event.
+  standalone?: boolean;
   style?: StyleProp<ViewStyle>; // carousel overrides width/margins
 }) {
   const th = props.theme;
   const [photoFailed, setPhotoFailed] = useState(false);
   const photo = photoFailed ? undefined : props.photoUrl;
-  const dateOnly = isDateOnly(props.status);
-  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status)}`;
+  const dateOnly = isDateOnly(props.status, props.timePrecision);
+  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
+  const label = props.standalone
+    ? `${props.title}, ${when}`
+    : `Next up: ${props.title}, ${when}`;
+  // ONE accessibility container, whichever it is: a pressable card that
+  // also carried an inner `accessible` view would read twice.
+  const Container = (props.onPress ? Pressable : View) as typeof Pressable;
   return (
-    <View
+    <Container
       accessible
-      accessibilityLabel={`Next up: ${props.title}, ${when}`}
+      {...(props.onPress
+        ? {
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: `${label}. Open event`,
+            onPress: props.onPress,
+          }
+        : { accessibilityLabel: label })}
       style={[styles.heroShadow, props.style]}
     >
       {photo ? (
@@ -322,7 +368,7 @@ export function HeroCard(props: {
           </Text>
         ) : null}
       </View>
-    </View>
+    </Container>
   );
 }
 
@@ -345,53 +391,125 @@ export function EventRow(props: {
   // Per-event opt-IN: add ONE fixture without following anything.
   pinned?: boolean;
   onTogglePinned?: () => void;
-  // Licence-gated photo of a participant NAMED in this fixture
-  // (combat sports). Identifies who is fighting; credited on the
-  // Photo credits screen, never used as decoration elsewhere.
-  participantPhotoUrl?: string;
+  // The row's mark: a licence-gated photo of a participant NAMED in
+  // this fixture (combat sports — it identifies who is fighting, is
+  // credited on the Photo credits screen, and is never decoration), or
+  // the owning follow's crest. Whatever it is, it degrades to the
+  // monogram, never to a blank tile.
+  imageUrl?: string;
+  // Opens the expanded card. The row's own +/× controls sit OUTSIDE
+  // this press target so a mis-tap can never toggle the calendar.
+  onPress?: () => void;
+  // Marks the headline of a card ("Main event"), where the data says so.
+  badge?: string;
+  // Corner mark on the tile — an athlete's flag.
+  tileBadge?: string;
 }) {
   const t = useTheme();
   const dimmed = props.excluded === true;
-  return (
-    <View
-      accessible
-      accessibilityLabel={`${props.title}, ${props.caption}, ${
-        dimmed ? 'removed from calendar' : props.timeText
-      }`}
-      style={[styles.eventRow, { borderColor: t.border }]}
-    >
-      <View style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.m, flex: 1 }, dimmed && { opacity: 0.4 }]}>
-        <GlyphTile
-          glyph={props.glyph}
-          theme={props.theme}
-          monogram={props.monogram}
-          imageUrl={props.participantPhotoUrl}
-        />
-        <View style={{ flex: 1 }}>
+  // A View cannot take a function style, so the two cases are built
+  // separately rather than casting one component into the other.
+  const contentStyle: StyleProp<ViewStyle>[] = [
+    {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.m,
+      flex: 1,
+      // The row is 60pt but its content is only as tall as the 40pt
+      // tile; a press target has to clear 44 on its own, with no dead
+      // band above and below it.
+      minHeight: 44,
+    },
+    dimmed ? { opacity: 0.4 } : null,
+  ];
+  const label = `${props.title}, ${props.caption}, ${
+    dimmed ? 'removed from calendar' : props.timeText
+  }${props.onPress ? '. Open event' : ''}`;
+  const content = (
+    <>
+      <GlyphTile
+        glyph={props.glyph}
+        theme={props.theme}
+        monogram={props.monogram}
+        imageUrl={props.imageUrl}
+        {...(props.tileBadge ? { badge: props.tileBadge } : {})}
+      />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.s,
+          }}
+        >
           <Text
-            style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}
+            style={[
+              type.body,
+              { color: t.textPrimary, fontWeight: '600', flexShrink: 1 },
+            ]}
             numberOfLines={1}
           >
             {props.title}
           </Text>
-          <Text
-            style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}
-            numberOfLines={1}
-          >
-            {dimmed ? 'Removed — not in your calendar' : props.caption}
-          </Text>
+          {props.badge ? (
+            <Text
+              numberOfLines={1}
+              style={[
+                type.caption,
+                styles.rowBadge,
+                {
+                  color: props.theme.onContainer,
+                  backgroundColor: props.theme.container,
+                  // Never squeezed and never overlapping the time: the
+                  // title shrinks, the badge keeps its size.
+                  flexShrink: 0,
+                },
+              ]}
+              accessible={false}
+            >
+              {props.badge}
+            </Text>
+          ) : null}
         </View>
         <Text
-          style={[
-            type.secondary,
-            props.tbc || dimmed
-              ? { color: t.textSecondary, fontStyle: 'italic' }
-              : { color: t.textPrimary, fontWeight: '600' },
-          ]}
+          style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}
+          numberOfLines={1}
         >
-          {props.timeText}
+          {dimmed ? 'Removed — not in your calendar' : props.caption}
         </Text>
       </View>
+      <Text
+        style={[
+          type.secondary,
+          props.tbc || dimmed
+            ? { color: t.textSecondary, fontStyle: 'italic' }
+            : { color: t.textPrimary, fontWeight: '600' },
+        ]}
+      >
+        {props.timeText}
+      </Text>
+    </>
+  );
+  return (
+    <View style={[styles.eventRow, { borderColor: t.border }]}>
+      {props.onPress ? (
+        <Pressable
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          onPress={props.onPress}
+          style={({ pressed }) => [
+            ...contentStyle,
+            pressed ? { opacity: 0.6 } : null,
+          ]}
+        >
+          {content}
+        </Pressable>
+      ) : (
+        <View accessible accessibilityLabel={label} style={contentStyle}>
+          {content}
+        </View>
+      )}
       {props.onTogglePinned ? (
         <Pressable
           accessibilityRole="button"
@@ -453,6 +571,8 @@ export function ListRow(props: {
   // Crest / competition logo / athlete photo. Top of the identity
   // chain: image → generated treatment (Prompt 13).
   imageUrl?: string;
+  // Corner mark on the tile — an athlete's flag (Prompt 16 B).
+  tileBadge?: string;
   right?: ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
@@ -481,6 +601,7 @@ export function ListRow(props: {
             theme={props.tileTheme}
             monogram={props.monogram}
             imageUrl={props.imageUrl}
+            {...(props.tileBadge ? { badge: props.tileBadge } : {})}
           />
         ) : (
           <Text style={[type.heading, styles.glyph]} accessible={false}>
@@ -936,6 +1057,15 @@ const styles = StyleSheet.create({
     gap: spacing.m,
   },
   glyph: { width: 32, textAlign: 'center' },
+  // "Main event" beside a bout's name — a quiet chip in the entity's own
+  // container tone, never a colour of its own.
+  rowBadge: {
+    paddingHorizontal: spacing.s,
+    paddingVertical: 1,
+    borderRadius: radius.chip,
+    overflow: 'hidden',
+    fontWeight: '700',
+  },
   pillButton: {
     flexDirection: 'row',
     alignItems: 'center',

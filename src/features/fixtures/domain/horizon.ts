@@ -35,7 +35,12 @@ const DATE_ONLY_STATUS = new Set(['tbd', 'postponed']);
 // sentinel. Once football-data SCHEDULED became provisional-but-nominal,
 // treating provisional as date-only would have turned 3,011 real
 // kick-offs back into all-day banners — the exact bug this replaces.
-export function timePrecisionOf(f: Fixture): TimePrecision {
+// Structural, not `Fixture`: the app's own display snapshot carries the
+// same two fields and must resolve precision identically.
+export function timePrecisionOf(f: {
+  timePrecision?: TimePrecision;
+  status: string;
+}): TimePrecision {
   if (f.timePrecision) return f.timePrecision;
   return DATE_ONLY_STATUS.has(f.status) ? 'date_only' : 'exact';
 }

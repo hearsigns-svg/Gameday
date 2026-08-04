@@ -31,6 +31,8 @@ import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { isRetired, retiredCaption } from '../domain/careerStatus';
+import { athleteIdentity, nationCaption } from '../domain/athleteIdentity';
+import { flagEmojiOf } from '../../../core/nationality';
 
 // Whether a row shows a follow control at all. Retired athletes do not,
 // unless the user already follows them — see the ruling in
@@ -80,7 +82,12 @@ function captionFor(a: AthleteCard, showGrouping: boolean): string {
   } else if (a.rank !== undefined) {
     parts.push(`#${a.rank}`);
   }
-  if (a.countryCode) parts.push(a.countryCode);
+  // Nationality leads with its flag (Prompt 16 B) — the athlete
+  // equivalent of a crest, and the mark a boxing fan actually reads.
+  // The code stays beside it so a font without flag glyphs still says
+  // what this row always said.
+  const nation = nationCaption(a.countryCode);
+  if (nation) parts.push(nation);
   if (a.nextStartUtc) {
     const d = new Date(a.nextStartUtc);
     if (d.getTime() > Date.now()) {
@@ -359,10 +366,31 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               caption={captionFor(a, results !== null)}
               glyph={sport?.glyph ?? '·'}
               monogram={monogramOf(a.name)}
+              {...(flagEmojiOf(a.countryCode)
+                ? { tileBadge: flagEmojiOf(a.countryCode) as string }
+                : {})}
               tileTheme={teamTheme(
-                a.accentHue !== undefined
-                  ? hueToHex(a.accentHue)
-                  : (sport?.accent ?? null),
+                (() => {
+                  // Division colour where the grouping IS a category
+                  // (a boxer's weight class); the per-athlete hue
+                  // otherwise. Never a raw hex from here — teamTheme
+                  // tone-maps it and guarantees the contrast.
+                  const identity = athleteIdentity({
+                    sportKey: a.sportKey,
+                    ...(a.countryCode ? { countryCode: a.countryCode } : {}),
+                    // The card carries the division's DISPLAY name
+                    // ('Heavyweight'), which is the category itself —
+                    // no need for the server to start sending the slug
+                    // as well, and no deploy skew to handle.
+                    ...(a.grouping ? { groupingKey: a.grouping } : {}),
+                    ...(a.accentHue !== undefined
+                      ? { accentHue: a.accentHue }
+                      : {}),
+                  });
+                  return identity.hue !== null
+                    ? hueToHex(identity.hue)
+                    : (sport?.accent ?? null);
+                })(),
                 mode,
               )}
               accessibilityLabel={`${a.name}, open athlete page`}
@@ -377,6 +405,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                   ...(a.accentHue !== undefined
                     ? { colours: hueToHex(a.accentHue) }
                     : {}),
+                  ...(a.countryCode ? { countryCode: a.countryCode } : {}),
                   ...(a.careerStatus
                     ? { careerStatus: a.careerStatus }
                     : {}),

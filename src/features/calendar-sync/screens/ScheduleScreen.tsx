@@ -48,7 +48,7 @@ interface DaySection {
 function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
   const byDay = new Map<string, UpcomingFixture[]>();
   for (const f of fixtures) {
-    const key = dayKey(f.startUtc, isDateOnly(f.status));
+    const key = dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision));
     const bucket = byDay.get(key);
     if (bucket) bucket.push(f);
     else byDay.set(key, [f]);
@@ -56,7 +56,7 @@ function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, data]) => ({
-      title: dayHeading(data[0].startUtc, isDateOnly(data[0].status)),
+      title: dayHeading(data[0].startUtc, isDateOnly(data[0].status, data[0].timePrecision)),
       data,
     }));
 }
@@ -118,7 +118,7 @@ export default function ScheduleScreen({ navigation }: Props) {
     const map = new Map<string, number>();
     for (const f of ahead) {
       if (excludedIds.has(f.id)) continue;
-      const key = dayKey(f.startUtc, isDateOnly(f.status));
+      const key = dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision));
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
@@ -128,7 +128,9 @@ export default function ScheduleScreen({ navigation }: Props) {
     () =>
       selectedDay
         ? ahead.filter(
-            (f) => dayKey(f.startUtc, isDateOnly(f.status)) === selectedDay,
+            (f) =>
+              dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision)) ===
+              selectedDay,
           )
         : [],
     [ahead, selectedDay],
@@ -156,26 +158,25 @@ export default function ScheduleScreen({ navigation }: Props) {
     void runSync();
   };
 
-  // Rows are a component so the participant-photo hook is legal.
-  const Row = ({ item }: { item: UpcomingFixture }) => {
-    const sport = sportByKey(item.sport);
-    const owner = identityFollow(item.followKeys, follows);
-    const photo = useAthletePhoto(headlineParticipant(item.title, item.sport));
-    return (
-      <EventRow
-        participantPhotoUrl={photo?.url}
-        title={item.title}
-        caption={item.competition}
-        timeText={timeLabel(item.startUtc, item.status)}
-        tbc={isDateOnly(item.status)}
-        glyph={sport?.glyph ?? '🏟️'}
-        monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
-        theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
-        excluded={excludedIds.has(item.id)}
-        onToggleExcluded={() => toggleExclude(item)}
-      />
-    );
-  };
+  // Rows are a component so the participant-photo hook is legal — and it
+  // is defined at MODULE level (below), not here: a component created
+  // inside the render is a new type on every sync tick, so every row
+  // unmounted and remounted and its resolved photo was thrown away.
+  const Row = ({ item }: { item: UpcomingFixture }) => (
+    <ScheduleRow
+      item={item}
+      follows={follows}
+      mode={mode}
+      excluded={excludedIds.has(item.id)}
+      onToggleExcluded={() => toggleExclude(item)}
+      onOpen={() =>
+        navigation.navigate('Fixture', {
+          fixtureId: item.id,
+          title: item.title,
+        })
+      }
+    />
+  );
 
   const changed = last ? last.created + last.updated + last.deleted : 0;
   const calendarOff = calendarChoice() !== 'enabled';
@@ -303,6 +304,43 @@ export default function ScheduleScreen({ navigation }: Props) {
         />
       )}
     </View>
+  );
+}
+
+// One fixture row. Module level so its identity is stable across
+// renders (see the note at the call site).
+function ScheduleRow(props: {
+  item: UpcomingFixture;
+  follows: Followable[];
+  mode: 'light' | 'dark';
+  excluded: boolean;
+  onToggleExcluded: () => void;
+  onOpen: () => void;
+}) {
+  const { item } = props;
+  const sport = sportByKey(item.sport);
+  const owner = identityFollow(item.followKeys, props.follows);
+  const photo = useAthletePhoto(
+    headlineParticipant(item.title, item.sport),
+    item.sport,
+  );
+  return (
+    <EventRow
+      // A licensed portrait where the fixture names a person, the owning
+      // follow's crest otherwise — the row had the crest in hand and
+      // rendered a monogram anyway (Prompt 16 C sweep).
+      imageUrl={photo?.url ?? owner?.crestUrl}
+      onPress={props.onOpen}
+      title={item.title}
+      caption={item.competition}
+      timeText={timeLabel(item.startUtc, item.status, item.timePrecision)}
+      tbc={isDateOnly(item.status, item.timePrecision)}
+      glyph={sport?.glyph ?? '🏟️'}
+      monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
+      theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, props.mode)}
+      excluded={props.excluded}
+      onToggleExcluded={props.onToggleExcluded}
+    />
   );
 }
 

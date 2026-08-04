@@ -5,6 +5,8 @@
 // silent empty read once deleted a whole calendar (see DECISIONS.md).
 import {
   collection,
+  doc,
+  getDocFromServer,
   getDocsFromServer,
   query,
   where,
@@ -76,6 +78,56 @@ export async function fetchFixturesForFollows(
     return err({ kind: 'offline' });
   }
   return err({ kind: 'unknown', message: 'Could not load fixtures.' });
+}
+
+// One fixture by id, for surfaces the app's own snapshot cannot cover:
+// the snapshot is capped and filtered to live follows, so a bout opened
+// from a card, or a pinned event that aged past the cap, is not in it.
+//
+// `null` means the document genuinely does not exist (cancelled and
+// reaped, or a stale link); a read FAILURE is an error, never a null —
+// "this event has gone" and "we could not ask" must not look the same.
+export async function fetchFixtureById(
+  fixtureId: string,
+): Promise<Result<Fixture | null>> {
+  try {
+    const snap = await getDocFromServer(doc(db, 'fixtures', fixtureId));
+    return ok(snap.exists() ? (snap.data() as Fixture) : null);
+  } catch (e) {
+    console.warn(`[kickoffcal] fixture read failed for ${fixtureId}: ${e}`);
+    return err({ kind: 'offline' });
+  }
+}
+
+// The constituent parts of one event — a card's bouts, a draw's
+// matches. Queried by parentFixtureId rather than by follow key because
+// parent and child deliberately share none: a card's followers are not
+// automatically subscribed to every fighter on it.
+//
+// SINGLE-FIELD EQUALITY ONLY, no orderBy and no startUtc bound. Both
+// were probed against production: the equality query is served by the
+// automatic single-field index, while adding a startUtc order or range
+// fails with FAILED_PRECONDITION for want of a composite index that
+// does not exist. Ordering happens in memory (domain/card.ts), where a
+// card's bouts need re-sorting anyway.
+export async function fetchEventCard(
+  parentFixtureId: string,
+): Promise<Result<Fixture[]>> {
+  try {
+    const snap = await getDocsFromServer(
+      query(
+        collection(db, 'fixtures'),
+        where('parentFixtureId', '==', parentFixtureId),
+      ),
+    );
+    return ok(snap.docs.map((d) => d.data() as Fixture));
+  } catch (e) {
+    // A failed read is a failure, never an empty card — an event with
+    // no bouts and an event we could not ask about must not look the
+    // same on screen.
+    console.warn(`[kickoffcal] card fetch failed for ${parentFixtureId}: ${e}`);
+    return err({ kind: 'offline' });
+  }
 }
 
 export async function requestPoll(

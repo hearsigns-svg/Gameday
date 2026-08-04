@@ -29,7 +29,7 @@ function teamPollPathFor(template: string, teamId: number | string): string {
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { DirectoryTeam, fetchTeams } from '../data/directoryRepo';
-import { isFollowed } from '../data/followStore';
+import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { sportByKey } from '../domain/sportsConfig';
 
@@ -51,8 +51,19 @@ export default function TeamListScreen({ navigation, route }: Props) {
   useEffect(() => {
     void (async () => {
       const r = await fetchTeams(route.params.sportKey, route.params.leagueId);
-      if (r.ok) setTeams(r.value);
-      else setError(messageOf(r.error));
+      if (r.ok) {
+        setTeams(r.value);
+        // Repair stored follows' crests from the fresh rows.
+        hydrateFollowArt(
+          r.value.map((tm) => ({
+            key: tm.key,
+            ...(tm.crestUrl ? { crestUrl: tm.crestUrl } : {}),
+            ...(colourFromKitText(tm.colours)
+              ? { brandColour: colourFromKitText(tm.colours) as string }
+              : {}),
+          })),
+        );
+      } else setError(messageOf(r.error));
     })();
   }, [route.params.sportKey, route.params.leagueId]);
 
@@ -151,6 +162,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
                 ...(route.params.teamPollPath
                   ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
                   : {}),
+                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                 ...(item.colours ? { colours: item.colours } : {}),
               })
             }

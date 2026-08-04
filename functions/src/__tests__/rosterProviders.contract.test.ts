@@ -142,4 +142,23 @@ describe('Jolpica drivers', () => {
       /missing id/,
     );
   });
+
+  // Prompt 16 B: the grid had NO nationality stored at all, while the
+  // payload has carried it the whole time. Measured on the captured
+  // 2026 season: 22 of 31 rows have one — the tail is reserve drivers
+  // whose `nationality` is absent.
+  test('nationality becomes a country code, and the TV code never does', () => {
+    const entries = driversToEntries(drivers as never);
+    const albon = entries.find((e) => e.externalId === 'albon')!;
+    expect(albon.countryCode).toBe('THA'); // "Thai", not his TV code ALB
+    const leclerc = entries.find((e) => e.externalId === 'leclerc');
+    if (leclerc) expect(leclerc.countryCode).toBe('MON');
+    const withCode = entries.filter((e) => e.countryCode !== undefined);
+    expect(withCode.length).toBe(22);
+    // A driver the feed says nothing about carries nothing — never a
+    // guess from the name or the number.
+    expect(
+      entries.find((e) => e.externalId === 'paul_aron')?.countryCode,
+    ).toBeUndefined();
+  });
 });

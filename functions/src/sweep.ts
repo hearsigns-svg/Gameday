@@ -17,7 +17,7 @@ import {
   orderSweepPaths,
   tierPollsThisSweep,
 } from './catalogue';
-import { loadCoverage } from './coverage';
+import { loadCoverage, sliceFreshness } from './coverage';
 import {
   buildSourceRun,
   EMPTY_COUNTS,
@@ -541,6 +541,26 @@ export async function sweepAll(): Promise<SweepResult> {
       if (slice) demanded.add(`${slice.source}|${slice.competitionId}`);
     }
     const coverage = await loadCoverage(db, Date.now());
+
+    // PER-SLICE FRESHNESS for the app (Prompt 16). Same rows, same
+    // skip-aware lastSuccessAt the alerts are judged on, published
+    // world-readable so a fixture's own card can say when its source
+    // last answered — the one thing the poll-path doc cannot say,
+    // because it is keyed by a client-derived route and counts a
+    // skip's 2xx as contact. A write failure is logged and never fails
+    // the sweep: this is presentation freshness, not correctness.
+    try {
+      const slices = sliceFreshness(coverage.rows);
+      if (Object.keys(slices).length > 0) {
+        await db
+          .collection('status')
+          .doc('sources')
+          .set({ slices, updatedAt: startedAt }, { merge: true });
+      }
+    } catch (e) {
+      console.error(`[kickoffcal] slice freshness write failed: ${e}`);
+    }
+
     const active = evaluateAlerts(coverage.rows, demanded, Date.now());
     // Roster staleness comes from the dedicated marker doc, never the
     // run-window join (see alerts.ts). A marker READ FAILURE skips the

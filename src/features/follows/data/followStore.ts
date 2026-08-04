@@ -3,6 +3,7 @@
 // joins with real auth (post-slice).
 
 import { readJson, writeJson } from '../../../core/storage';
+import { applyArtHydration, ArtRow } from '../domain/followArt';
 import { followQueryKeys, FollowScope } from '../domain/followScopes';
 import { FollowableType } from '../domain/sportsConfig';
 
@@ -87,6 +88,16 @@ export function setFollowScope(key: string, scope: FollowScope | null): void {
 
 export function isFollowed(key: string): boolean {
   return loadFollowables().some((f) => f.key === key);
+}
+
+// Bring stored follows' artwork up to date from freshly fetched
+// directory rows (domain/followArt.ts explains the rules, including why
+// an absence can clear a crest). Returns true when anything changed, so
+// a screen can repaint without a needless render on every fetch.
+export function hydrateFollowArt(rows: readonly ArtRow[]): boolean {
+  const { next, changed } = applyArtHydration(loadFollowables(), rows);
+  if (changed) writeJson(KEY_V2, next);
+  return changed;
 }
 
 // Attach lazily-resolved venue art to an existing follow. No-op if the

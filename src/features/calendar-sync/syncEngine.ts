@@ -10,9 +10,18 @@ import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowables, loadFollowKeys } from '../follows/data/followStore';
 import { followQueryKeys, seriesScopesFrom } from '../follows/domain/followScopes';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
+import {
+  loadEventSettings,
+  pruneEventSettingsStore,
+} from './data/eventSettingsStore';
 import { loadExclusions, pruneExclusions } from './data/exclusionStore';
 import { pinFollowKeys, pinnedIds, prunePinStore } from './data/pinStore';
 import { loadPrefs } from './data/prefsStore';
+import {
+  assumedAppliedReminder,
+  EventSettingsMap,
+  reminderMinutesFor,
+} from './domain/eventSettings';
 import { CalendarPrefs } from './domain/prefs';
 import {
   applyTargetRequest,
@@ -45,6 +54,7 @@ import {
 import {
   loadLedger,
   removeLedgerEntry,
+  stampMissingReminders,
   upsertLedgerEntry,
 } from './data/ledger';
 import {
@@ -286,6 +296,7 @@ function writePresentationState(
   // absent from this fetch.
   pruneExclusions();
   prunePinStore();
+  pruneEventSettingsStore();
 }
 
 // Calendar not (yet) opted in: keep the app's view of fixtures fresh
@@ -340,8 +351,15 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
 
 function inputFor(
   fixtureId: string,
-  entry: { title: string; startUtc: string; endUtc: string; allDay?: boolean },
+  entry: {
+    title: string;
+    startUtc: string;
+    endUtc: string;
+    allDay?: boolean;
+    reminderMinutes?: number | null;
+  },
   prefs: CalendarPrefs,
+  settings: EventSettingsMap,
 ): EventInput {
   const allDay = entry.allDay ?? false;
   return {
@@ -350,7 +368,17 @@ function inputFor(
     startUtc: entry.startUtc,
     endUtc: entry.endUtc,
     allDay,
-    reminderMinutesBefore: allDay ? null : prefs.reminderMinutes,
+    // A MOVE IS NOT A RESET. This rebuilds the event in a different
+    // calendar, so it must carry the same reminder the old one did —
+    // the per-event override first, the preference behind it. Reading
+    // only the preference here silently discarded a per-event choice
+    // every time the calendar target changed.
+    reminderMinutesBefore: reminderMinutesFor(
+      fixtureId,
+      settings,
+      prefs,
+      allDay,
+    ),
   };
 }
 
@@ -381,6 +409,7 @@ async function migrateToTarget(
   targetCalendarId: string,
   calObj: Parameters<typeof createFixtureEvent>[0],
   prefs: CalendarPrefs,
+  settings: EventSettingsMap,
   onProgress?: (p: MoveProgress) => void,
 ): Promise<Result<number>> {
   const steps = planTargetMigration(loadLedger(), targetCalendarId);
@@ -388,17 +417,20 @@ async function migrateToTarget(
   let moved = 0;
   onProgress?.({ moved, total: steps.length });
   for (const step of steps) {
-    const created = await createFixtureEvent(
-      calObj,
-      inputFor(step.fixtureId, step.entry, prefs),
-    );
+    const input = inputFor(step.fixtureId, step.entry, prefs, settings);
+    const created = await createFixtureEvent(calObj, input);
     if (!created.ok) return created;
     // ONE write: the ledger now points at the new event and owes the old
     // one a delete. Splitting these would strand an event in a calendar
     // nothing scans again.
     upsertLedgerEntry(
       step.fixtureId,
-      movedEntry(step.entry, created.value, targetCalendarId),
+      movedEntry(
+        step.entry,
+        created.value,
+        targetCalendarId,
+        input.reminderMinutesBefore,
+      ),
     );
     const del = await deleteFixtureEvent(step.entry.eventId);
     if (del.ok) {
@@ -439,6 +471,7 @@ export async function switchCalendarTarget(
       target.value.calendarId,
       calObj.value,
       loadPrefs(),
+      loadEventSettings(),
       onProgress,
     );
     if (!moved.ok) return moved;
@@ -475,6 +508,22 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     if (!target.ok) return target;
     const calendarId = target.value.calendarId;
 
+    // Reminders became OURS to write in Prompt 16. Entries from before
+    // that carry no record of what was applied, and unknown is planned
+    // as a mismatch — so stamp the assumption ONCE rather than rewrite
+    // every event in the calendar on the first sync after upgrading.
+    //
+    // BEFORE RECOVERY, DELIBERATELY. Entries recovery is about to build
+    // are read back from the calendar, and their alarms cannot be read
+    // at all on Android (a calendar-scoped listEvents returns none), so
+    // what those events carry is genuinely unknown. Stamping them would
+    // assert an assumption about somebody else's phone; leaving them
+    // unknown makes the next pass re-assert OUR reminder on each one,
+    // which is what "we own reminders" has to mean after a reinstall.
+    stampMissingReminders((entry) =>
+      assumedAppliedReminder(entry.allDay, loadPrefs()),
+    );
+
     // Reinstall recovery: an empty ledger with tagged events already in
     // the calendar means the app's storage was lost (uninstall) — the
     // events are the durable record. Rebuild before planning so the sync
@@ -506,6 +555,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
 
     const follows = loadFollowKeys();
     const prefs = loadPrefs();
+    const settings = loadEventSettings();
 
     // Self-healing target moves. An interrupted switch leaves strays; a
     // target that changed under us (the chosen calendar was deleted in
@@ -513,7 +563,12 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // we no longer write to. Both are repaired here, before planning, so
     // the plan below only ever deals with events in the current target.
     await drainStrays();
-    const moved = await migrateToTarget(calendarId, calObj.value, prefs);
+    const moved = await migrateToTarget(
+      calendarId,
+      calObj.value,
+      prefs,
+      settings,
+    );
     if (!moved.ok) return moved;
 
     const fixtures = await fetchFixturesForFollows(
@@ -596,6 +651,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       pins,
       nowFromHorizon(horizonStart),
       seriesScopesFrom(loadFollowables()),
+      settings,
     );
 
     // Bounded pass: corrections first, creates after, stopping when the
@@ -628,9 +684,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           startUtc: d.startUtc,
           endUtc: d.endUtc,
           allDay: d.allDay,
-          // No reminder on placeholders/all-day — an alert for an
-          // unknown time is noise; timed events get the pref reminder.
-          reminderMinutesBefore: d.allDay ? null : prefs.reminderMinutes,
+          // The plan decides the reminder — per-event override first,
+          // preference behind it, nothing at all on an all-day
+          // placeholder. Deciding it HERE was what made a reminder
+          // invisible to the planner and lost it on every recreate.
+          reminderMinutesBefore: d.reminderMinutes,
           ...(d.note ? { note: d.note } : {}),
         };
         // EventKit half-applies all-day ↔ timed conversions on update
@@ -652,6 +710,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           endUtc: input.endUtc,
           title: input.title,
           allDay: input.allDay,
+          // Recorded so the NEXT plan can see a reminder change. A
+          // recreate (the all-day↔timed kind flip) lands here too, which
+          // is what makes "we own reminders, so we restore them" true
+          // rather than aspirational.
+          reminderMinutes: input.reminderMinutesBefore,
         });
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;

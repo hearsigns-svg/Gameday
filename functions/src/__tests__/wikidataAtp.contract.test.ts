@@ -17,6 +17,8 @@ import {
   passesThreshold,
   plausiblyCurrent,
   rosterEntryOf,
+  countryQueryFor,
+  parseCountryCodes,
 } from '../providers/wikidataAtp';
 
 const players = parseAtpPlayers(sample);
@@ -213,4 +215,45 @@ test('shape rot throws — missing bindings is never an empty roster', () => {
   expect(() =>
     parseAtpPlayers({ results: { bindings: [{ atp: { value: 'X' } }] } }),
   ).toThrow(/row missing/);
+});
+
+// ─── Nationality (Prompt 16 B) ────────────────────────────────────────
+//
+// The 1,374 browsable ATP men carried no country code while the 20
+// ranked men and 203 WTA women did. The Q-id is already stored, so
+// P27 → P984 needs no new source. Measured live 2026-08-04: 1,359/1,513
+// carry P27 and 1,321/1,513 resolve onward to an IOC code.
+
+test('the country query is bounded by the selected players', () => {
+  const q = countryQueryFor(['Q5812', 'Q10132']);
+  expect(q).toContain('VALUES ?p { wd:Q5812 wd:Q10132 }');
+  expect(q).toContain('wdt:P27');
+  expect(q).toContain('wdt:P984'); // the IOC code, matching the tennis feeds
+});
+
+test('an ambiguous nationality mints NOTHING — a wrong flag is worse than none', () => {
+  // Wikidata records every citizenship a person has held, including
+  // defunct states and passports they never competed under, and nothing
+  // says which one they represent. Same rule as an ambiguous NAME.
+  const rows = {
+    results: {
+      bindings: [
+        { p: { value: 'http://www.wikidata.org/entity/Q1' }, ioc: { value: 'SUI' } },
+        { p: { value: 'http://www.wikidata.org/entity/Q1' }, ioc: { value: 'ITA' } },
+        { p: { value: 'http://www.wikidata.org/entity/Q2' }, ioc: { value: 'ESP' } },
+        // The same single citizenship stated twice is not ambiguity.
+        { p: { value: 'http://www.wikidata.org/entity/Q3' }, ioc: { value: 'ARG' } },
+        { p: { value: 'http://www.wikidata.org/entity/Q3' }, ioc: { value: 'ARG' } },
+      ],
+    },
+  };
+  const codes = parseCountryCodes(rows);
+  expect(codes.has('Q1')).toBe(false);
+  expect(codes.get('Q2')).toBe('ESP');
+  expect(codes.get('Q3')).toBe('ARG');
+  expect(parseCountryCodes({ results: { bindings: [] } }).size).toBe(0);
+});
+
+test('a country response of the wrong shape throws rather than blanking flags', () => {
+  expect(() => parseCountryCodes({})).toThrow(/missing results.bindings/);
 });

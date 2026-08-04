@@ -82,6 +82,37 @@ export const emptyStoredCoverage = (): StoredCoverage => ({
 export const sliceKey = (source: string, competitionId: string): string =>
   `${source}|${competitionId}`;
 
+// Per-slice freshness for the CLIENT (Prompt 16). The app can already
+// say "fixture sources last confirmed 3h ago" across a whole follow set,
+// but not "this event's source answered 2 hours ago" — and the poll-path
+// doc it reads cannot be made to: it is keyed by a route the client
+// derives from a FOLLOW, and it records any 2xx, so a daily-cap skip
+// that fetched nothing refreshes it.
+//
+// These rows do not have that problem. `lastSuccessAt` here already
+// excludes skip records, and the key is the ingest slice, which a
+// fixture names itself (its provider prefix + its competitionId). The
+// client mirrors this key by hand in domain/sources.ts::sliceFreshnessKey
+// — the sanitisation exists because Firestore treats '.' and '/' in a
+// field name as a path.
+export function sliceFreshnessFieldKey(
+  source: string,
+  competitionId: string,
+): string {
+  return sliceKey(source, competitionId).replace(/[./]/g, '_');
+}
+
+export function sliceFreshness(
+  rows: readonly CoverageRow[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const r of rows) {
+    if (!r.lastSuccessAt) continue; // never succeeded ⇒ say nothing
+    out[sliceFreshnessFieldKey(r.source, r.competitionId)] = r.lastSuccessAt;
+  }
+  return out;
+}
+
 // Provider prefix of a fixture id ('tsdb-2541770' → 'tsdb'), matching
 // identity.ts::providerOf so the two never disagree about what a source is.
 export function sourceOfFixtureId(id: string): string {

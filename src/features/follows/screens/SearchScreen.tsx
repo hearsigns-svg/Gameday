@@ -34,9 +34,11 @@ import {
   SearchTeamHit,
 } from '../data/directoryRepo';
 import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
-import { isFollowed, Followable } from '../data/followStore';
+import { hydrateFollowArt, isFollowed, Followable } from '../data/followStore';
 import { isRetired, retiredCaption } from '../domain/careerStatus';
 import { colourFromKitText } from '../domain/entityColour';
+import { nationCaption } from '../domain/athleteIdentity';
+import { flagEmojiOf } from '../../../core/nationality';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 
 type Props = RootScreenProps<'Search'>;
@@ -51,6 +53,9 @@ interface Row {
   sportKey: string;
   // Crest / competition logo where the provider has one (Prompt 13).
   imageUrl?: string;
+  // Athlete nationality (Prompt 16 B), carried to the athlete page.
+  countryCode?: string;
+  tileBadge?: string; // the flag, on the tile
   followable?: Followable; // absent → row navigates instead
 }
 
@@ -97,6 +102,11 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
           sportKey: s.key,
           type: 'competition' as const,
           ...(c.pollPath ? { pollPath: c.pollPath } : {}),
+          // The row above shows this logo; the follow kept none of it
+          // until Prompt 16, so following from search lost it.
+          ...(cachedPriorities().competitionArt[String(c.id)]
+            ? { crestUrl: cachedPriorities().competitionArt[String(c.id)] }
+            : {}),
         },
       })),
   );
@@ -148,6 +158,7 @@ export default function SearchScreen({ navigation }: Props) {
         if (r.ok) {
           setTeams(r.value.teams);
           setAthletes(r.value.athletes);
+          hydrateFollowArt(r.value.teams);
           setError(null);
         } else {
           setTeams([]);
@@ -172,6 +183,9 @@ export default function SearchScreen({ navigation }: Props) {
               title: l.name,
               caption: `${l.country} · Soccer`,
               sportKey: 'soccer',
+              // The mirror image of the static rows: this one had the
+              // logo on the FOLLOW and nothing on the row.
+              ...(l.crestUrl ? { imageUrl: l.crestUrl } : {}),
               followable: {
                 key: l.key,
                 label: l.name,
@@ -209,8 +223,19 @@ export default function SearchScreen({ navigation }: Props) {
       // directory knows the grouping — and "Retired 2022 · Tennis"
       // beats both, because search is the ONLY route to the 1,484 ATP
       // men who carry no browse group at all (Prompt 12).
-      caption: `${retiredCaption(hit) ?? hit.grouping ?? 'Athlete'} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
+      caption: [
+        retiredCaption(hit) ?? hit.grouping ?? 'Athlete',
+        sportByKey(hit.sportKey)?.label ?? hit.sportKey,
+        // Nationality (Prompt 16 B): the athlete's identity mark.
+        nationCaption(hit.countryCode),
+      ]
+        .filter(Boolean)
+        .join(' · '),
       sportKey: hit.sportKey,
+      ...(hit.countryCode ? { countryCode: hit.countryCode } : {}),
+      ...(flagEmojiOf(hit.countryCode)
+        ? { tileBadge: flagEmojiOf(hit.countryCode) as string }
+        : {}),
       followable: {
         key: hit.key,
         label: hit.name,
@@ -340,6 +365,7 @@ export default function SearchScreen({ navigation }: Props) {
                   item.kind === 'sport' ? undefined : monogramOf(item.title)
                 }
                 {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
+                {...(item.tileBadge ? { tileBadge: item.tileBadge } : {})}
                 accessibilityLabel={`${item.title}, ${item.caption}`}
                 onPress={
                   (item.kind === 'team' || item.kind === 'athlete') &&
@@ -357,6 +383,14 @@ export default function SearchScreen({ navigation }: Props) {
                             : {}),
                           ...(item.followable!.pollPath
                             ? { pollPath: item.followable!.pollPath }
+                            : {}),
+                          ...(item.followable!.crestUrl
+                            ? { crestUrl: item.followable!.crestUrl }
+                            : item.imageUrl
+                              ? { crestUrl: item.imageUrl }
+                              : {}),
+                          ...(item.countryCode
+                            ? { countryCode: item.countryCode }
                             : {}),
                           ...(item.followable!.careerStatus
                             ? { careerStatus: item.followable!.careerStatus }

@@ -316,6 +316,93 @@ export function rosterEntryOf(p: AtpPlayer): RosterEntry {
   };
 }
 
+// ─── Nationality (Prompt 16 B) ────────────────────────────────────────
+//
+// The directory's 1,374 browsable men carried NO country code at all,
+// while the 20 ranked men and 203 WTA women did — so the flag that is
+// now an athlete's identity mark was missing from the largest
+// population we have. The Q-id is already stored, so this needs no new
+// source: P27 (country of citizenship) → P984 (that country's IOC
+// code), which is the same 3-letter standard the tennis feeds publish.
+//
+// MEASURED on the live graph, 2026-08-04: 1,359/1,513 carry P27
+// (89.8%), and 1,321/1,513 resolve onward to an IOC code (87.3%).
+//
+// A SEPARATE QUERY, deliberately. The enumeration query walks 6,559
+// humans and already answers in ~18s; bolting two more OPTIONALs onto
+// it risks the timeout that would fail the whole refresh for the sake
+// of a flag. This one is bounded by VALUES over the SELECTED players,
+// and if it fails the roster still applies — countryCode merges, so
+// absence leaves whatever each document already had.
+export function countryQueryFor(qids: readonly string[]): string {
+  // P576 (dissolved/abolished) rides along because CITIZENSHIP OUTLIVES
+  // COUNTRIES: Djokovic holds Serbia AND Serbia-and-Montenegro, and a
+  // state that no longer exists cannot be the one he competes for.
+  return `SELECT ?p ?country ?ioc ?dissolved WHERE {
+  VALUES ?p { ${qids.map((q) => `wd:${q}`).join(' ')} }
+  ?p wdt:P27 ?country .
+  ?country wdt:P984 ?ioc .
+  OPTIONAL { ?country wdt:P576 ?dissolved }
+}`;
+}
+
+export function parseCountryCodes(body: unknown): Map<string, string> {
+  const bindings = (body as { results?: { bindings?: unknown } })?.results
+    ?.bindings;
+  if (!Array.isArray(bindings)) {
+    throw new Error('wikidata: country response missing results.bindings');
+  }
+  // Grouped by COUNTRY, not by code — the two are not the same thing.
+  // Spain is the only country on Wikidata carrying two IOC codes (ESP
+  // and the historical SPA), and treating that as ambiguity dropped
+  // every Spanish player's flag.
+  const byAthlete = new Map<string, Map<string, { codes: Set<string>; dissolved: boolean }>>();
+  for (const raw of bindings as SparqlBinding[]) {
+    const qid = raw.p?.value?.split('/').pop();
+    const ioc = raw.ioc?.value;
+    const country = raw.country?.value ?? ioc; // pre-P576 shape: code IS the group
+    if (!qid || !ioc || !country) continue;
+    const countries = byAthlete.get(qid) ?? new Map();
+    const entry = countries.get(country) ?? { codes: new Set<string>(), dissolved: false };
+    entry.codes.add(ioc);
+    if (raw.dissolved?.value) entry.dissolved = true;
+    countries.set(country, entry);
+    byAthlete.set(qid, countries);
+  }
+  const out = new Map<string, string>();
+  for (const [qid, countries] of byAthlete) {
+    // A DEFUNCT STATE IS NOT A NATIONALITY. Citizenship statements
+    // outlive countries — the USSR, Yugoslavia, Serbia and Montenegro,
+    // Czechoslovakia — and nobody competes for one.
+    const live = [...countries.values()].filter((c) => !c.dissolved);
+    const usable = live.length > 0 ? live : [];
+    // GENUINE DUAL CITIZENSHIP MINTS NOTHING: nothing in the data says
+    // which nation an athlete represents, and a wrong flag on a real
+    // person is the failure the no-generated-likeness ruling exists to
+    // avoid. Same rule as an ambiguous NAME (athletes.ts) — the row
+    // keeps its monogram.
+    if (usable.length !== 1) continue;
+    out.set(qid, [...usable[0].codes].sort()[0]);
+  }
+  return out;
+}
+
+async function fetchCountryCodes(
+  qids: readonly string[],
+): Promise<Map<string, string>> {
+  const res = await fetch(WDQS, {
+    method: 'POST',
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/sparql-results+json',
+    },
+    body: `query=${encodeURIComponent(countryQueryFor(qids))}`,
+  });
+  if (!res.ok) throw new Error(`wikidata country sparql http ${res.status}`);
+  return parseCountryCodes(await res.json());
+}
+
 export async function fetchAtpRoster(): Promise<{
   rawCount: number;
   entries: RosterEntry[];
@@ -341,5 +428,29 @@ export async function fetchAtpRoster(): Promise<{
       `wikidata atp: universe ${players.length} < ${MIN_UNIVERSE} — truncated response, not applied`,
     );
   }
-  return { rawCount: players.length, entries: atpRosterEntries(players) };
+  const entries = atpRosterEntries(players);
+  // Nationality is a nice-to-have on a roster whose job is identity:
+  // a failure here is logged and the refresh proceeds. It must never
+  // be silent, though — an unlogged failure and "nobody has a
+  // nationality" would look identical.
+  try {
+    const codes = await fetchCountryCodes(
+      entries.map((e) => e.externalId!).filter(Boolean),
+    );
+    for (const entry of entries) {
+      const code = entry.externalId ? codes.get(entry.externalId) : undefined;
+      if (code) entry.countryCode = code;
+    }
+    console.log(
+      `[kickoffcal] atp roster: ${codes.size}/${entries.length} country codes resolved`,
+    );
+  } catch (e) {
+    // An Error object, not a bare string: gen-2 Error Reporting ingests
+    // stack-shaped logs, and a silent nationality failure would be
+    // indistinguishable from "nobody has one".
+    console.error(
+      new Error(`[kickoffcal] atp country codes failed (roster applied without them): ${e}`),
+    );
+  }
+  return { rawCount: players.length, entries };
 }

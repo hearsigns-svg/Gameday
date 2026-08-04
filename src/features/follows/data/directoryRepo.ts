@@ -48,6 +48,10 @@ export interface SearchAthleteHit {
   grouping?: string; // 'Heavyweight' | 'WTA Tour — Women' — the caption
   nextStartUtc?: string;
   accentHue?: number; // generated colour identity (optional: deploy skew)
+  // Nationality (Prompt 16 B) — the flag IS the athlete's identity
+  // mark. Optional in both directions: a server from before this
+  // shipped never sends it, and plenty of athletes have none.
+  countryCode?: string;
   // Recorded retirement (Prompt 12). Optional in BOTH directions: a
   // pre-Prompt-12 server never sends it, and a source that says nothing
   // about a career end never sets it. ABSENT MEANS UNKNOWN — never

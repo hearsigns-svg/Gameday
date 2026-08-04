@@ -20,6 +20,7 @@ import {
   isPast,
   timePrecisionOf,
 } from '../../fixtures/domain/horizon';
+import { EventSettingsMap, reminderMinutesFor } from './eventSettings';
 import { CalendarPrefs } from './prefs';
 
 // Re-exported so existing consumers keep their import site; the one
@@ -33,6 +34,17 @@ export interface LedgerEntry {
   endUtc: string;
   title: string;
   allDay?: boolean; // absent in pre-M2 ledgers → treated as false
+  // The reminder we last WROTE to this event, so a change to it produces
+  // a real calendar operation. Without this the planner could not see a
+  // reminder change at all: nothing else about the event differs, so a
+  // per-event setting (or a changed global preference) sat in storage
+  // and never reached the calendar.
+  //
+  // ABSENT MEANS UNKNOWN, and unknown is treated as a MISMATCH so the
+  // event converges on the next pass. Existing ledgers are stamped once
+  // with what was assumed applied (data/ledger.ts::stampMissingReminders)
+  // precisely so "unknown" is rare rather than universal.
+  reminderMinutes?: number | null;
   // Set only while a target switch is in flight: the event this fixture
   // used to occupy in the OLD calendar, still awaiting deletion. It
   // rides IN the entry so repointing the ledger and recording the
@@ -47,6 +59,11 @@ export interface DesiredEvent {
   startUtc: string;
   endUtc: string;
   allDay: boolean;
+  // Minutes before the start, or null for no alarm. Part of the DESIRED
+  // state rather than something the engine decides at write time, so
+  // that (a) a delete-and-recreate re-applies it by construction and
+  // (b) the planner can compare it with what the ledger last wrote.
+  reminderMinutes: number | null;
   // Goes in the event's description, below the tag line. Used to say a
   // time is not settled yet WITHOUT putting it in the title, where it
   // would shout on every glance at the calendar.
@@ -109,6 +126,10 @@ export function desiredEventFor(
   f: Fixture,
   prefs: CalendarPrefs,
   seriesScopes?: SeriesScopeMap,
+  // Per-event overrides (domain/eventSettings.ts). Defaulted so every
+  // existing caller — and every snapshot consumer, which has no business
+  // knowing about alarms — keeps working unchanged.
+  settings: EventSettingsMap = {},
 ): DesiredEvent | null {
   // Series sports: optionally keep only the race itself in the calendar.
   if (
@@ -127,6 +148,9 @@ export function desiredEventFor(
       startUtc: day,
       endUtc: addDaysUtc(day, days),
       allDay: true,
+      // No alarm on a day sentinel — see reminderMinutesFor. The user's
+      // override is kept and lands the moment a real time arrives.
+      reminderMinutes: reminderMinutesFor(f.id, settings, prefs, true),
     };
   };
 
@@ -174,6 +198,7 @@ export function desiredEventFor(
     startUtc: f.startUtc,
     endUtc: eventEndUtc(f.startUtc, f.durationHours),
     allDay: false,
+    reminderMinutes: reminderMinutesFor(f.id, settings, prefs, false),
     // Nominal: a real instant, but not the settled one. Said in the
     // description rather than the title — the title is read at a glance
     // fifty times, the description once when it matters.
@@ -183,6 +208,12 @@ export function desiredEventFor(
 
 function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
   return (
+    // Reminders are ours (domain/eventSettings.ts), so a difference
+    // between what we last wrote and what is now wanted is a real
+    // change. An entry that never recorded one is UNKNOWN, and unknown
+    // must not be read as "matches" — that is the read-failure-as-empty
+    // shape the standing invariant forbids, applied to the ledger.
+    entry.reminderMinutes === desired.reminderMinutes &&
     entry.startUtc === desired.startUtc &&
     // endUtc joined the compare in Prompt 5: without it a change ONLY to
     // an event's duration — a confirmed appearance slot at the same
@@ -220,6 +251,7 @@ export function planSync(
   pinned: ReadonlySet<string> = new Set(),
   nowMs: number = nowFromHorizon(horizonStartUtc),
   seriesScopes?: SeriesScopeMap,
+  settings: EventSettingsMap = {},
 ): SyncOp[] {
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
@@ -235,7 +267,7 @@ export function planSync(
     // update, and not a create if its event has somehow gone. Its ledger
     // entry is retained below so the prune sweep still sees it referenced.
     if (isPast(f, nowMs)) continue;
-    const desired = desiredEventFor(f, prefs, seriesScopes);
+    const desired = desiredEventFor(f, prefs, seriesScopes, settings);
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour
     // hundreds of past fixtures into the calendar. Events we already
@@ -353,7 +385,20 @@ export interface SnapshotFixture {
   status: string;
   sport: string;
   competition: string;
+  // The ingest slice this fixture belongs to. Carried so a fixture can
+  // name its own source freshness ("checked 2 hours ago") without a
+  // follow to route through — see fixtures/domain/sources.ts.
+  competitionId: string;
   followKeys: string[];
+  // TIMING HONESTY (Prompt 16 A3). These are what let a card explain
+  // itself: whether only the day is known, whether the time shown is a
+  // placeholder, and whether this is an appearance borrowing its
+  // parent's window until a slot is published. They were already on the
+  // stored fixture and simply never reached the app's own view of it.
+  timePrecision?: 'exact' | 'nominal' | 'date_only';
+  confidence?: 'confirmed' | 'provisional';
+  parentFixtureId?: string;
+  athletes?: string[];
   // Venue NAME where a provider publishes one (TSDB strVenue) — the
   // key the licensed venue-photography layer prefers over the
   // home-team lookup (Prompt 9b).
@@ -397,7 +442,16 @@ export function upcomingSnapshot(
       status: f.status,
       sport: f.sport,
       competition: f.competition,
+      competitionId: f.competitionId,
       followKeys: f.followKeys,
+      ...(f.timePrecision !== undefined
+        ? { timePrecision: f.timePrecision }
+        : {}),
+      ...(f.confidence !== undefined ? { confidence: f.confidence } : {}),
+      ...(f.parentFixtureId !== undefined
+        ? { parentFixtureId: f.parentFixtureId }
+        : {}),
+      ...(f.athletes !== undefined ? { athletes: f.athletes } : {}),
       ...(f.homeTeam !== undefined ? { homeTeam: f.homeTeam } : {}),
       ...(f.awayTeam !== undefined ? { awayTeam: f.awayTeam } : {}),
       ...(f.venue !== undefined ? { venue: f.venue } : {}),

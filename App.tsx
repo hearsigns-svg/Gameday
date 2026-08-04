@@ -30,6 +30,7 @@ import CalendarPrimingScreen from './src/features/calendar-sync/screens/Calendar
 import HomeScreen from './src/features/follows/screens/HomeScreen';
 import FollowingScreen from './src/features/follows/screens/FollowingScreen';
 import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen';
+import FixtureScreen from './src/features/calendar-sync/screens/FixtureScreen';
 import AthleteListScreen from './src/features/follows/screens/AthleteListScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
@@ -201,6 +202,11 @@ export default function App() {
           name="Team"
           component={TeamScreen}
           options={({ route }) => ({ title: route.params.name })}
+        />
+        <Stack.Screen
+          name="Fixture"
+          component={FixtureScreen}
+          options={({ route }) => ({ title: route.params.title })}
         />
         <Stack.Screen
           name="Preferences"

@@ -1702,3 +1702,114 @@
   their phone's language, keeps following the OS unless they explicitly
   pinned something. Default row reads "Follow my device (UK & Ireland)",
   naming what was detected so the guess is visible rather than implicit.
+
+## Prompt 16 — the expanded card, athlete identity, Following logos
+
+- 2026-08-04: **REMINDERS ARE OURS.** A reminder on a fixture's event is
+  now decided by the PLAN (`desiredEventFor`), recorded in the ledger as
+  what was last applied, and re-applied on every write — including the
+  delete-and-recreate that every all-day↔timed flip forces. Before this
+  the engine chose the alarm at write time, so the planner could not see
+  a reminder change at all: setting one produced no calendar operation,
+  and a "Time TBC" banner sharpening into a confirmed time silently
+  dropped whatever the user had set. Per-event overrides live in
+  `eventSettings.v1`, age-pruned like exclusions and pins, and beat the
+  global preference for that fixture only.
+- 2026-08-04: **A LEDGER ENTRY WITH NO RECORDED REMINDER IS UNKNOWN, AND
+  UNKNOWN REPLANS AS A MISMATCH** — the standing invariant applied to
+  our own ledger. To stop that rewriting every event in every existing
+  calendar on the first sync after the upgrade (which would also wipe any
+  alarm a user had added by hand), the engine STAMPS each pre-existing
+  entry once with what it is assumed to be carrying: nothing on an
+  all-day placeholder, the current global preference on a timed event.
+  The assumption is stated, not measured — a user who changed the
+  preference before upgrading has events carrying the old value, which is
+  exactly today's behaviour, and the next real change converges them.
+- 2026-08-04: **PER-EVENT COLOUR IS NOT BUILT, AND THE REASON IS NOT
+  iOS.** The brief expected an Android-only control, since EventKit has
+  no per-event colour while CalendarProvider has `EVENT_COLOR`. Measured
+  in expo-calendar 57.0.1: there is no per-event colour field on EITHER
+  platform — `grep -rc EVENT_COLOR node_modules/expo-calendar` is zero,
+  the Android `EventRecord` carries no colour, and neither does the iOS
+  record. Shipping a control that silently does nothing is worse than no
+  control, so the expanded card STATES the asymmetry and offers the real
+  setting instead: the calendar's own colour, which we already own.
+  Reaching `EVENT_COLOR` would mean patching the dependency's Android
+  module — a deliberate decision, not a side effect of this stage.
+- 2026-08-04: **NAMING A SOURCE TO A USER IS A CLAIM ABOUT WHO HAS NOT
+  SPOKEN.** The expanded card explains an all-day banner with the source
+  that would announce the time — but only where that source ANNOUNCES:
+  the WTA, World Athletics, the NHL, MLB and PBC are organisers, and
+  "not yet announced by Premier Boxing Champions" is accurate. TheSportsDB,
+  football-data.org, Jolpica and Tennis TV are relays; about them we can
+  only say a time "has not appeared in our source". Two would be
+  actively wrong to name after the obvious rights-holder: the tennis ICS
+  is Tennis TV's feed, not the ATP (atptour.com is a standing refusal),
+  and the F1 adapter is Jolpica, not Formula 1. A prefix the table does
+  not know is described not at all.
+- 2026-08-04: **"LAST CHECKED" NEEDED A NEW PUBLIC DOC, because the one
+  we had cannot answer it.** `status/coverage` is keyed by POLL PATH — a
+  route the client derives from a FOLLOW, so a pinned fixture or a source
+  with no client-side route gets nothing — and it records any 2xx, so a
+  daily-cap skip that fetched nothing refreshes it. It also has no PBC
+  entry at all, because `pollPbc` outruns the sweep's per-path budget:
+  the one source the brief's example names is precisely the one it could
+  not describe. The sweep now also writes `status/sources`, keyed by
+  INGEST SLICE (`source|competitionId`, which a fixture names itself) and
+  carrying the skip-aware `lastSuccessAt` the ops report already
+  computes. No timestamp ⇒ the card says nothing about freshness.
+- 2026-08-04: **NO DATE IS EVER GIVEN FOR WHEN A TIME WILL FIRM UP.**
+  Nothing in any payload carries one — grep across both trees finds no
+  such field, and the fixture key union over 9,736 future documents has
+  none. The promise made instead is the correction itself, which the app
+  already keeps.
+- 2026-08-04: **NO GENERATED LIKENESSES OF REAL ATHLETES** (owner
+  ruling). Generating an image of an identifiable person creates
+  personality-rights exposure separate from the trademark risk accepted
+  on crests, deriving one from promo photography adds copyright, and a
+  nearly-right face reads as broken to the fans who know it. An
+  athlete's mark is instead FLAG + DIVISION COLOUR + the existing
+  monogram. A licence-verified Commons photograph still outranks it
+  where one exists.
+- 2026-08-04: **A WRONG FACE IS WORSE THAN NO FACE.** The athlete photo
+  resolver took the first search candidate carrying an image, having
+  only excluded competition-shaped descriptions — measured against
+  production names, 3 of 10 boxing hits were the wrong person ("Gary
+  Russell" → a writer, "Albert Gonzalez" → a computer criminal, "Sara
+  Bailey" → an ice dancer) and 1 of 26 WTA hits was a gymnast sharing a
+  name. A candidate must now be describable as that SPORT's competitor
+  and be the only such candidate; ambiguity resolves to no photo.
+- 2026-08-04: **COUNTRY CODES ARRIVE IN TWO STANDARDS AND BOTH ARE
+  HONOURED.** Measured over 2,273 production athletes: boxing publishes
+  ISO 3166-1 alpha-3 (with `GER` and `ENG` as exceptions), the tennis
+  feeds publish IOC. The flag table accepts both spellings for one
+  nation; where they collide IOC wins (the only live case is `BRN` —
+  IOC Bahrain, ISO Brunei) because our sources are sporting bodies.
+  England, Scotland and Wales use Unicode subdivision flags; NORTHERN
+  IRELAND HAS NONE, and gets its name with no flag rather than the Union
+  flag it does not fly.
+- 2026-08-04: **NATIONALITY WAS ALREADY IN TWO PAYLOADS WE WERE
+  DROPPING.** Jolpica publishes a driver's nationality as a demonym
+  (22 of 31 rows) and the ATP directory's Q-ids reach P27 → P984, the
+  same IOC standard the tennis feeds already store (1,321 of 1,513
+  resolve). The ATP pass is a SECOND, bounded query rather than two more
+  OPTIONALs on the 6,559-row enumeration — a flag is not worth risking
+  the timeout that would fail the whole refresh — and its failure is
+  logged and survivable, because `countryCode` merges.
+- 2026-08-04: **A FOLLOW'S ARTWORK IS NO LONGER FROZEN AT FOLLOW TIME.**
+  The stored snapshot could only degrade: a follow made before crests
+  existed showed a monogram for ever, and re-following from a screen with
+  no crest to pass (or the toast's own Undo) DESTROYED one. Directory
+  reads now repair stored follows — and an absent crest in a response
+  that carries crests CLEARS the stored one, so the `imagery: false`
+  takedown switch still reaches devices.
+- 2026-08-04: **BROADCASTER: MEASURED, NOT BUILT.** The brief allowed it
+  a place on the card. TheSportsDB's payload has no `strTVStation` field
+  at all (0 of 98 boxing events — the key is absent, not empty), PBC
+  names broadcasters only in prose, and the NHL is the one structured
+  source: 94 of 94 games in the completed 2025-26 season carry
+  `tvBroadcasts`, but 1 of 88 in the season now selling, and every
+  network is US or Canadian. One sport, empty for every fixture a user
+  can currently open, in a UK-default app. It stays unbuilt and the
+  measurement is recorded so the decision can be revisited when the
+  season fills in.

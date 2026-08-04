@@ -19,15 +19,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { monogramOf,
+import {
   CalendarOffBanner,
   CarouselDots,
   EmptyState,
   FollowRail,
-  HeroCard,
   SectionHeader,
   SportCard,
 } from '../../../core/components';
+import { FixtureHero } from '../FixtureHero';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
 import { loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
@@ -45,8 +45,6 @@ import {
   isFollowed,
   loadFollowables,
 } from '../data/followStore';
-import { useTournamentVenuePhoto, useVenuePhoto, useVenuePlacePhoto } from '../useEntityPhoto';
-import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
@@ -148,9 +146,14 @@ export default function HomeScreen({ navigation }: Props) {
           key: item.key,
           label: item.label,
           caption: fixture
-            ? whenLabel(fixture.startUtc, isDateOnly(fixture.status))
+            ? whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
             : 'Nothing scheduled',
           glyph: sport?.glyph ?? '🏟️',
+          // The crest the follow already carries. Its absence here was
+          // the whole of the reported bug: the rail had no field for an
+          // image, so an NBA team showed a monogram on Home and its
+          // crest one tap later (Prompt 16 C).
+          ...(item.crestUrl ? { imageUrl: item.crestUrl } : {}),
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
         };
       });
@@ -165,69 +168,10 @@ export default function HomeScreen({ navigation }: Props) {
   const cardWidth = windowWidth - spacing.l * 2;
   const snap = cardWidth + spacing.m;
 
-  // A component so the venue-photo hook is legal inside renderItem.
-  // Identity comes from the FIXTURE first (who is playing, where) and
-  // only then from whichever follow pulled it in — a competition follow
-  // knows the league and nothing about the two clubs, which is why those
-  // cards fell all the way through to the sport emoji.
-  function Hero({ item, width }: { item: UpcomingFixture; width: number }) {
-    const sport = sportByKey(item.sport);
-    const owner = identityFollow(item.followKeys, follows);
-    // The photograph is of the ground the match is PLAYED at, so it
-    // follows the home team — not the team you happen to follow.
-    // Non-team sports have no home side; fall back to the followed team
-    // where there is one, and to the gradient floor otherwise.
-    const homeTeam =
-      item.homeTeam ?? (owner?.type === 'team' ? owner.label : null);
-    // Venue NAME beats home-team lookup where a provider publishes one
-    // (TSDB strVenue — golf courses, stadiums): the photo is of the
-    // place, and the place resolves DIRECTLY (entity → P18) — the
-    // team resolver's P115 hop can never satisfy a venue name (review
-    // round). Hooks run unconditionally; the venue result wins.
-    const placeArt = useVenuePlacePhoto(item.venue);
-    // Tennis tournament PARENTS only: no venue name, no home team —
-    // the tournament itself resolves (Prompt 9c). An appearance (a
-    // player's match) rides an -appearances slice key and must never
-    // feed its MATCH title into the tournament lookup.
-    const isTennisParent =
-      item.sport === 'tennis' &&
-      !item.venue &&
-      !item.followKeys.some((k) => k.endsWith('-appearances'));
-    const tournamentArt = useTournamentVenuePhoto(
-      isTennisParent ? item.title : null,
-      item.venueCity,
-    );
-    const teamArt = useVenuePhoto(
-      item.venue || isTennisParent ? null : homeTeam,
-    );
-    const art = placeArt ?? tournamentArt ?? teamArt;
-    return (
-      <HeroCard
-        title={item.title}
-        competition={item.competition}
-        startUtc={item.startUtc}
-        status={item.status}
-        sportKey={item.sport}
-        monogram={monogramOf(
-          owner?.label ?? item.homeTeam ?? item.competition,
-        )}
-        {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
-        photoUrl={art?.url}
-        photoCredit={
-          art
-            ? [
-                art.artist ? `Photo: ${art.artist}` : 'Photo: Wikimedia Commons',
-                art.licence,
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            : undefined
-        }
-        theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
-        style={{ width, marginHorizontal: 0 }}
-      />
-    );
-  }
+  // The poster itself now lives in follows/FixtureHero.tsx, so the
+  // carousel card and the expanded card it opens are literally the same
+  // component — tapping one shows more of the same thing, not a
+  // different-looking surface.
 
   return (
     <ScrollView
@@ -278,7 +222,17 @@ export default function HomeScreen({ navigation }: Props) {
               )
             }
             renderItem={({ item }) => (
-              <Hero item={item} width={cardWidth} />
+              <FixtureHero
+                item={item}
+                follows={follows}
+                onPress={() =>
+                  navigation.navigate('Fixture', {
+                    fixtureId: item.id,
+                    title: item.title,
+                  })
+                }
+                style={{ width: cardWidth, marginHorizontal: 0 }}
+              />
             )}
           />
           <CarouselDots
@@ -312,7 +266,8 @@ export default function HomeScreen({ navigation }: Props) {
                 sportKey: item.sportKey,
                 followType: item.type,
                 ...(item.pollPath ? { pollPath: item.pollPath } : {}),
-                      ...(item.brandColour ? { colours: item.brandColour } : {}),
+                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                ...(item.brandColour ? { colours: item.brandColour } : {}),
               });
             }}
           />

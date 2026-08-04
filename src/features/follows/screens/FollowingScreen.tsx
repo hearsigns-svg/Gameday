@@ -155,6 +155,7 @@ export default function FollowingScreen({ navigation }: Props) {
                     sportKey: item.sportKey,
                     followType: item.type,
                     ...(item.pollPath ? { pollPath: item.pollPath } : {}),
+                    ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
                     ...(item.brandColour ? { colours: item.brandColour } : {}),
                   })
                 }

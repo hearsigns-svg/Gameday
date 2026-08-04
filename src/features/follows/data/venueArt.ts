@@ -5,7 +5,12 @@
 // Every failure returns null: the tone-mapped gradient is the designed
 // floor, not an error state.
 
-import { pickTournamentCandidate, VenueArt, verifiedArt } from '../domain/venueArtRules';
+import {
+  pickAthleteCandidate,
+  pickTournamentCandidate,
+  VenueArt,
+  verifiedArt,
+} from '../domain/venueArtRules';
 
 const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
@@ -176,20 +181,21 @@ export async function resolveTournamentVenue(
 // which is the advertising-shaped use the DraftKings case turned on.
 export async function resolveAthletePhoto(
   personName: string,
+  sportKey: string,
 ): Promise<VenueArtResult> {
   try {
     const d = (await getJson(
-      `${WD}?action=wbsearchentities&search=${encodeURIComponent(personName)}&language=en&type=item&limit=3&format=json&origin=*`,
+      `${WD}?action=wbsearchentities&search=${encodeURIComponent(personName)}&language=en&type=item&limit=5&format=json&origin=*`,
     )) as { search?: Array<{ id: string; description?: string }> };
-    for (const cand of d.search ?? []) {
-      // Only accept entities that look like people — a competition
-      // named after a fighter must not supply a "portrait".
-      const desc = (cand.description ?? '').toLowerCase();
-      if (/competition|event|fight card|match|season/.test(desc)) continue;
-      const file = await claimValue(cand.id, 'P18');
-      if (file) return artFromCommonsFile(file);
-    }
-    return { status: 'none' };
+    // The candidate must be describable as THIS SPORT's competitor, and
+    // must be the only one — see pickAthleteCandidate for the measured
+    // wrong-person hits this replaces. No fallback to "first with an
+    // image": that fallback WAS the bug.
+    const entity = pickAthleteCandidate(d.search ?? [], sportKey, personName);
+    if (!entity) return { status: 'none' };
+    const file = await claimValue(entity, 'P18');
+    if (!file) return { status: 'none' };
+    return artFromCommonsFile(file);
   } catch {
     return { status: 'failed' };
   }

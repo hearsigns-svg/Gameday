@@ -20,8 +20,20 @@ import { err, ok, Result } from '../../../core/result';
 import { readJson, writeJson } from '../../../core/storage';
 import { Followable } from '../../follows/data/followStore';
 import { pollPathFor } from '../../follows/domain/pollPaths';
+import { sliceFreshnessKey } from '../domain/sources';
 
 const CACHE_KEY = 'dataFreshness.v1';
+// Per-INGEST-SLICE freshness (status/sources), written by the sweep from
+// the same coverage rows the ops report serves. Two things make it
+// different from the per-poll-path doc above, and both matter for
+// saying "checked 2 hours ago" beside ONE fixture:
+//   · it is keyed by `source|competitionId`, which a fixture can name
+//     itself — the poll-path doc can only be reached through a FOLLOW,
+//     and returns nothing for a pinned fixture or a source with no
+//     client-side route;
+//   · it is skip-aware. The poll-path doc records any 2xx, so a
+//     daily-cap skip that fetched nothing still refreshes it.
+const SLICES_CACHE_KEY = 'sourceFreshness.v1';
 
 interface FreshnessCache {
   paths: Record<string, string>; // sanitized canonical path → ISO
@@ -71,6 +83,60 @@ export async function refreshDataFreshness(): Promise<
 
 export function cachedFreshness(): FreshnessCache | null {
   return readJson<FreshnessCache | null>(CACHE_KEY, null);
+}
+
+export async function refreshSliceFreshness(): Promise<
+  Result<Record<string, string>>
+> {
+  const cached = cachedSliceFreshness();
+  if (
+    cached &&
+    Date.now() - Date.parse(cached.fetchedAt) < REFRESH_MIN_INTERVAL_MS
+  ) {
+    return ok(cached.paths);
+  }
+  try {
+    const snap = await getDocFromServer(doc(db, 'status', 'sources'));
+    // Not written yet (a server from before this shipped): UNKNOWN, not
+    // an error and not "never checked" — the UI simply says nothing
+    // about freshness rather than inventing a silence. CACHED all the
+    // same, or every screen open re-asks a server that has no answer.
+    const slices = snap.exists()
+      ? ((snap.data() as { slices?: Record<string, string> }).slices ?? {})
+      : {};
+    writeJson(SLICES_CACHE_KEY, {
+      paths: slices,
+      fetchedAt: new Date().toISOString(),
+    } satisfies FreshnessCache);
+    return ok(slices);
+  } catch {
+    return err({ kind: 'offline' });
+  }
+}
+
+export function cachedSliceFreshness(): FreshnessCache | null {
+  return readJson<FreshnessCache | null>(SLICES_CACHE_KEY, null);
+}
+
+// When this fixture's own source last answered successfully, or null
+// when we do not know. NULL IS A REAL ANSWER and prints nothing: an
+// absent record must never render as "checked just now" or as "never".
+export function sliceCheckedAt(
+  fixtureId: string,
+  competitionId: string,
+  // A run's slice key is what the POLLER covers, which is not always the
+  // fixture's own competition: NHL and MLB are polled per TEAM, so their
+  // fixtures' competitionId names a league nothing runs under. The
+  // fixture's follow keys include the team key, so they are tried next.
+  followKeys: readonly string[] = [],
+): string | null {
+  const cache = cachedSliceFreshness();
+  if (!cache) return null;
+  for (const key of [competitionId, ...followKeys]) {
+    const at = cache.paths[sliceFreshnessKey(fixtureId, key)];
+    if (at) return at;
+  }
+  return null;
 }
 
 export interface DataStaleness {

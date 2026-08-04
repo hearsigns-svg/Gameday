@@ -42,13 +42,26 @@ export type RootStackParamList = {
     // be a competition or series, and re-following from here would
     // otherwise silently rewrite its type.
     followType?: 'team' | 'competition' | 'athlete' | 'series';
+    // Crest / competition logo, carried from whichever list opened this
+    // page so the header has one BEFORE a follow exists — and so
+    // following from here captures it instead of storing a crest-less
+    // follow (Prompt 16 C).
+    crestUrl?: string;
     // Recorded retirement, carried from browse/search so the page can
     // say something truthful before any follow exists. Mirrors
     // CareerStatusFields (features/follows/domain/careerStatus) —
     // inlined because core must not import from a feature.
     careerStatus?: 'retired';
     careerEndYear?: number;
+    // Nationality (Prompt 16 B) — an athlete's identity mark, carried
+    // from the list that opened the page so the header can show it
+    // before any follow exists.
+    countryCode?: string;
   };
+  // The expanded card (Prompt 16): one event, its calendar settings and
+  // its full card. Params stay flat primitives — the screen resolves the
+  // fixture from the app's own snapshot, falling back to the document.
+  Fixture: { fixtureId: string; title: string };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
   Credits: undefined;

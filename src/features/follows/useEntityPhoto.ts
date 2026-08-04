@@ -58,8 +58,19 @@ function usePhoto(
   return art;
 }
 
-export function useAthletePhoto(name: string | null): VenueArt | null | undefined {
-  return usePhoto(name, name, resolveAthletePhoto);
+// The person named on a fixture, resolved WITHIN their sport: the same
+// name can belong to a writer, a hacker or an ice dancer, and a wrong
+// face is worse than none (domain/venueArtRules.ts::pickAthleteCandidate).
+// Cached per sport as well as per name for the same reason.
+export function useAthletePhoto(
+  name: string | null,
+  sportKey: string,
+): VenueArt | null | undefined {
+  const resolve = useCallback(
+    (person: string) => resolveAthletePhoto(person, sportKey),
+    [sportKey],
+  );
+  return usePhoto(name ? `${sportKey}:${name}` : null, name, resolve);
 }
 
 // The ground a fixture is PLAYED at — i.e. the home team's. Resolving it
