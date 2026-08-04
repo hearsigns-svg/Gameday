@@ -169,6 +169,42 @@ export async function setCalendarColour(hex: string): Promise<ColourOutcome> {
   }
 }
 
+// ─── What this calendar layer can actually do ─────────────────────────
+//
+// The UI asks THIS, never `Platform.OS`. Per-event colour is a property
+// of the calendar library, not of the operating system: EventKit has no
+// per-event colour at all, Android's CalendarProvider has `EVENT_COLOR`,
+// and expo-calendar exposes neither — its modifiable event properties
+// are title, location, timeZone, url, notes, alarms, recurrenceRule,
+// availability, startDate, endDate, allDay (build/ExpoCalendar.types.d.ts).
+//
+// So the probe reads the library's own event surface. The day a version
+// adds colour to an event, this returns true and the control appears
+// with no code change; until then the app behaves as though per-event
+// colour does not exist, and says nothing about it.
+export interface CalendarCapabilities {
+  perEventColour: boolean;
+}
+
+let capabilities: CalendarCapabilities | null = null;
+
+export function calendarCapabilities(): CalendarCapabilities {
+  if (capabilities) return capabilities;
+  let perEventColour = false;
+  try {
+    const proto = (
+      Calendar as unknown as { ExpoCalendarEvent?: { prototype?: object } }
+    ).ExpoCalendarEvent?.prototype;
+    // A colour an event can CARRY shows up as a property on the event
+    // class, the same way `alarms` and `title` do.
+    perEventColour = proto ? 'color' in proto || 'eventColor' in proto : false;
+  } catch {
+    perEventColour = false;
+  }
+  capabilities = { perEventColour };
+  return capabilities;
+}
+
 // ─── Target resolution ────────────────────────────────────────────────
 
 function defaultCalendarId(): string | null {
@@ -535,6 +571,10 @@ export interface EventInput {
   endUtc: string;
   allDay: boolean;
   reminderMinutesBefore: number | null;
+  // Per-event colour, where the layer supports one. Never set on a
+  // platform whose probe says no — the UI cannot offer it there, so the
+  // planner never has one to want, and the write below never sends it.
+  colour?: string;
   note?: string;
 }
 
@@ -585,6 +625,9 @@ function toEventDetails(input: EventInput) {
       input.reminderMinutesBefore === null
         ? []
         : [{ relativeOffset: -input.reminderMinutesBefore }],
+    ...(input.colour && calendarCapabilities().perEventColour
+      ? { color: input.colour }
+      : {}),
   };
 }
 

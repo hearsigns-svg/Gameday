@@ -164,6 +164,19 @@ These apply to every stage. They do not need restating in a brief.
    builds happened never. A Release-configuration simulator build
    (embedded bundle) counts; a Metro session does not — it dies with
    the terminal.
+10. **Never render a section whose content explains why something is
+    unavailable** (owner ruling 2026-08-04). Omit it. Explaining an
+    absence draws attention to it; silence makes the feature simply not
+    exist on that platform. Condition on a CAPABILITY the code can
+    probe, never on `Platform.OS` — when the capability arrives, the
+    control appears without a code change.
+11. **Explanatory prose in UI is a signal the design has failed.** If a
+    screen needs a paragraph to explain itself, the design is doing too
+    little and the copy is compensating. The control should show what it
+    does; the state should show what it is.
+12. **Generic caps section headings are a Settings-app pattern.** Group
+    content by rhythm, weight and spacing instead. A screen assembled
+    from labelled sections has stopped being designed.
 
 ## Concurrency against production
 

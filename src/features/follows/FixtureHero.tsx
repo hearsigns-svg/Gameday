@@ -10,7 +10,7 @@
 // Extracted from HomeScreen in Prompt 16; the resolution rules and their
 // reasons are unchanged, and are commented where they were.
 
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, View, ViewStyle } from 'react-native';
 import { HeroCard, monogramOf } from '../../core/components';
 import { teamTheme } from '../../core/teamTheme';
 import { useColorSchemeMode } from '../../core/useColorSchemeMode';
@@ -45,6 +45,11 @@ export function FixtureHero(props: {
   onPress?: () => void;
   standalone?: boolean;
   style?: StyleProp<ViewStyle>;
+  // Set while this card is the one lifted into the expansion overlay:
+  // the object on screen is this card, so the original must not sit
+  // underneath as a second copy.
+  hidden?: boolean;
+  innerRef?: React.Ref<View>;
 }) {
   const { item } = props;
   const mode = useColorSchemeMode();
@@ -94,6 +99,8 @@ export function FixtureHero(props: {
       theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
       {...(props.onPress ? { onPress: props.onPress } : {})}
       {...(props.standalone ? { standalone: true } : {})}
+      {...(props.hidden ? { hidden: true } : {})}
+      {...(props.innerRef ? { innerRef: props.innerRef } : {})}
       style={props.style}
     />
   );

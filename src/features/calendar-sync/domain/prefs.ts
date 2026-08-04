@@ -23,9 +23,16 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   autoDeletePast: false,
 };
 
-export const REMINDER_OPTIONS: Array<{ label: string; value: number | null }> = [
-  { label: 'None', value: null },
-  { label: '15 minutes before', value: 15 },
-  { label: '30 minutes before', value: 30 },
-  { label: '1 hour before', value: 60 },
+// `short` is the form a one-row control uses: the durations have to fit
+// side by side, and a segment reading "15 minutes before" is a paragraph
+// wearing a chip. Preferences keeps the long form, where there is room.
+export const REMINDER_OPTIONS: Array<{
+  label: string;
+  short: string;
+  value: number | null;
+}> = [
+  { label: 'None', short: 'Off', value: null },
+  { label: '15 minutes before', short: '15m', value: 15 },
+  { label: '30 minutes before', short: '30m', value: 30 },
+  { label: '1 hour before', short: '1h', value: 60 },
 ];

@@ -160,3 +160,45 @@ export function explainTiming(
 // the calendar event's own description says.
 export const WILL_UPDATE_NOTE =
   'Your calendar updates on its own when it changes.';
+
+// ONE LINE, ON THE CARD (Prompt 16b).
+//
+// "Time TBC" is printed on the card, so that is where the answer to
+// "why?" belongs — not in a section three scrolls down, and not as three
+// stacked paragraphs. What is known, and who has not published the time.
+// Nothing else: no promise of an update (the app's whole claim), no
+// coverage essay, no fighter directory.
+//
+// Freshness earns its place in exactly ONE case: when the source is a
+// relay we will not name, "checked N ago" is the only fact left to give.
+export function shortTimingNote(
+  f: TimingFixture,
+  opts: { sliceCheckedAt?: string | null; nowMs?: number } = {},
+): string | null {
+  const nowMs = opts.nowMs ?? Date.now();
+  const source = sourceOf(f.id);
+  const precision = timePrecisionOf(f);
+  const named = source?.kind === 'organiser' ? source.name : null;
+  const spanDays =
+    precision === 'date_only' ? dateOnlySpanDays(f.durationHours) : 1;
+
+  if (f.status === 'cancelled') return 'Cancelled';
+  if (f.status === 'postponed') return 'Postponed — no new date yet';
+  if (precision === 'date_only' && spanDays > 1) return `Runs ${spanDays} days`;
+  if (precision === 'date_only' || precision === 'nominal') {
+    const subject =
+      f.parentFixtureId !== undefined && precision === 'date_only'
+        ? 'No order of play'
+        : precision === 'nominal'
+          ? 'No confirmed time'
+          : 'No start time';
+    if (named) return `${subject} from ${named} yet`;
+    const ago =
+      opts.sliceCheckedAt != null
+        ? agoLabel(opts.sliceCheckedAt, nowMs)
+        : null;
+    return ago ? `${subject} published · checked ${ago}` : `${subject} published yet`;
+  }
+  if (f.confidence === 'provisional') return 'Confirmed for now, can still move';
+  return null;
+}

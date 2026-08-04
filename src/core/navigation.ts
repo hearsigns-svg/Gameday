@@ -58,10 +58,6 @@ export type RootStackParamList = {
     // before any follow exists.
     countryCode?: string;
   };
-  // The expanded card (Prompt 16): one event, its calendar settings and
-  // its full card. Params stay flat primitives — the screen resolves the
-  // fixture from the app's own snapshot, falling back to the document.
-  Fixture: { fixtureId: string; title: string };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
   Credits: undefined;

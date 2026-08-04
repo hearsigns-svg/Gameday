@@ -4,6 +4,8 @@
 // Liverpool but skip the matches I don't care about" happens right here.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCardExpansion } from '../../../core/cardExpansion';
+import { fixtureCardRequest } from '../../calendar-sync/openFixtureCard';
 import {
   ActivityIndicator,
   FlatList,
@@ -414,25 +416,18 @@ export default function TeamScreen({ navigation, route }: Props) {
           keyExtractor={(f) => f.id}
           ListHeaderComponent={<SectionHeader title="Upcoming" />}
           renderItem={({ item: f }) => (
-            <EventRow
-              title={f.title}
-              caption={`${whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision))} · ${f.competition}`}
-              timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
-              tbc={isDateOnly(f.status, f.timePrecision)}
+            <TeamFixtureRow
+              fixture={f}
+              name={name}
               glyph={sport?.glyph ?? '🏟️'}
-              monogram={monogramOf(f.homeTeam ?? name)}
-              {...(storedFollowCrest ? { imageUrl: storedFollowCrest } : {})}
               theme={theme}
-              onPress={() =>
-                navigation.navigate('Fixture', {
-                  fixtureId: f.id,
-                  title: f.title,
-                })
-              }
-              excluded={following ? excludedIds.has(f.id) : undefined}
-              onToggleExcluded={following ? () => toggleExclude(f) : undefined}
-              pinned={!following ? pinIds.has(f.id) : undefined}
-              onTogglePinned={!following ? () => togglePin(f) : undefined}
+              {...(storedFollowCrest ? { crestUrl: storedFollowCrest } : {})}
+              {...(following
+                ? {
+                    excluded: excludedIds.has(f.id),
+                    onToggleExcluded: () => toggleExclude(f),
+                  }
+                : { pinned: pinIds.has(f.id), onTogglePinned: () => togglePin(f) })}
             />
           )}
           ListFooterComponent={
@@ -448,6 +443,47 @@ export default function TeamScreen({ navigation, route }: Props) {
         />
       )}
     </View>
+  );
+}
+
+// A fixture row on an entity's page. Its own component so it can measure
+// itself: tapping it grows the card from exactly this row.
+function TeamFixtureRow(props: {
+  fixture: Fixture;
+  name: string;
+  glyph: string;
+  theme: ReturnType<typeof teamTheme>;
+  crestUrl?: string;
+  excluded?: boolean;
+  onToggleExcluded?: () => void;
+  pinned?: boolean;
+  onTogglePinned?: () => void;
+}) {
+  const f = props.fixture;
+  const ref = useRef<View | null>(null);
+  const expansion = useCardExpansion();
+  return (
+    <EventRow
+      innerRef={ref}
+      hidden={expansion.liftedKey === f.id}
+      title={f.title}
+      caption={`${whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision))} · ${f.competition}`}
+      timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
+      tbc={isDateOnly(f.status, f.timePrecision)}
+      glyph={props.glyph}
+      monogram={monogramOf(f.homeTeam ?? props.name)}
+      {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
+      theme={props.theme}
+      onPress={() => {
+        void fixtureCardRequest(ref, f.id).then((req) => {
+          if (req) expansion.open(req);
+        });
+      }}
+      {...(props.excluded !== undefined ? { excluded: props.excluded } : {})}
+      {...(props.onToggleExcluded ? { onToggleExcluded: props.onToggleExcluded } : {})}
+      {...(props.pinned !== undefined ? { pinned: props.pinned } : {})}
+      {...(props.onTogglePinned ? { onTogglePinned: props.onTogglePinned } : {})}
+    />
   );
 }
 

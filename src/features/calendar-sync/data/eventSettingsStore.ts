@@ -43,6 +43,23 @@ export function setEventReminder(
   writeJson(KEY, all);
 }
 
+export function setEventColour(
+  fixtureId: string,
+  colour: string | undefined,
+): void {
+  const all = loadEventSettings();
+  const existing = all[fixtureId];
+  if (colour === undefined) {
+    if (!existing) return;
+    const { colour: _drop, ...rest } = existing;
+    if (rest.reminderMinutes === undefined) delete all[fixtureId];
+    else all[fixtureId] = { ...rest, at: new Date().toISOString() };
+  } else {
+    all[fixtureId] = { ...existing, colour, at: new Date().toISOString() };
+  }
+  writeJson(KEY, all);
+}
+
 // Bounded growth without forgetting: drop only entries old enough that
 // their fixture cannot plausibly still be upcoming.
 export function pruneEventSettingsStore(now: number = Date.now()): void {

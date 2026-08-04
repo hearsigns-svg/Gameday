@@ -27,7 +27,7 @@ import {
   SectionHeader,
   SportCard,
 } from '../../../core/components';
-import { FixtureHero } from '../FixtureHero';
+import { ExpandingHero } from '../ExpandingHero';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
 import { loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
@@ -168,10 +168,9 @@ export default function HomeScreen({ navigation }: Props) {
   const cardWidth = windowWidth - spacing.l * 2;
   const snap = cardWidth + spacing.m;
 
-  // The poster itself now lives in follows/FixtureHero.tsx, so the
-  // carousel card and the expanded card it opens are literally the same
-  // component — tapping one shows more of the same thing, not a
-  // different-looking surface.
+  // The poster itself lives in follows/FixtureHero.tsx, and tapping it
+  // does not navigate anywhere: the card measures where it is and grows
+  // into the expanded state from exactly there (core/cardExpansion).
 
   return (
     <ScrollView
@@ -222,16 +221,10 @@ export default function HomeScreen({ navigation }: Props) {
               )
             }
             renderItem={({ item }) => (
-              <FixtureHero
+              <ExpandingHero
                 item={item}
                 follows={follows}
-                onPress={() =>
-                  navigation.navigate('Fixture', {
-                    fixtureId: item.id,
-                    title: item.title,
-                  })
-                }
-                style={{ width: cardWidth, marginHorizontal: 0 }}
+                width={cardWidth}
               />
             )}
           />

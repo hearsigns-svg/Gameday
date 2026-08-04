@@ -16,7 +16,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SportPattern } from './sportPattern';
-import { radius, spacing, type, useTheme } from './tokens';
+import { radius as radiusTokens, spacing, type, useTheme } from './tokens';
+const radius = radiusTokens;
 import { TeamTheme } from './teamTheme';
 import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
 
@@ -240,68 +241,33 @@ export function CountdownBadge(props: {
 // Hero: the one place the app goes loud. A dark poster surface derived
 // from the entity's tone — dark is a content surface, not a theme.
 
-export function HeroCard(props: {
-  title: string;
-  competition: string;
-  startUtc: string;
-  status: string;
-  // Sport key drives the generated pattern layer; the monogram is the
-  // typographic identity mark. Prompt 13 restored the CREST as the
-  // watermark where the followed entity has one — it sits above the
-  // generated treatment and below the venue photograph, and its absence
-  // simply falls back to the monogram, exactly as before.
+// THE PAINTED SURFACE, on its own. Extracted in Prompt 16b because the
+// collapsed card and the expanded card are ONE OBJECT: the same
+// photograph, gradient, sport geometry and watermark, painted across
+// whatever frame the object currently occupies. A card that grew into a
+// second component would be a cross-fade, and a user can see a seam.
+export function PosterSurface(props: {
+  theme: TeamTheme;
   sportKey?: string;
   monogram?: string;
   crestUrl?: string;
-  // A day sentinel is not a kick-off. Without this the poster printed a
-  // local clock time for every date_only fixture whose status is still
-  // 'scheduled' — 1,511 of them, almost all athletics.
-  timePrecision?: 'exact' | 'nominal' | 'date_only';
-  theme: TeamTheme;
-  // Venue photograph layer (docs/IMAGERY.md): the photo renders
-  // UNMODIFIED in its own layer — the gradient scrim and type are
-  // separate overlays (baking a composite would create a ShareAlike
-  // adaptation) — and the credit line is a licence condition.
   photoUrl?: string;
-  photoCredit?: string;
-  // Opens the expanded card (Prompt 16). The poster does not change —
-  // tapping it shows MORE OF THE SAME THING, so the same component
-  // renders in both places and only its container becomes pressable.
-  onPress?: () => void;
-  // Suppresses the "Next up" framing where the card is not answering
-  // "what's next" — on the expanded surface it IS the event.
-  standalone?: boolean;
-  style?: StyleProp<ViewStyle>; // carousel overrides width/margins
+  radius?: number;
+  style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
 }) {
   const th = props.theme;
   const [photoFailed, setPhotoFailed] = useState(false);
   const photo = photoFailed ? undefined : props.photoUrl;
-  const dateOnly = isDateOnly(props.status, props.timePrecision);
-  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
-  const label = props.standalone
-    ? `${props.title}, ${when}`
-    : `Next up: ${props.title}, ${when}`;
-  // ONE accessibility container, whichever it is: a pressable card that
-  // also carried an inner `accessible` view would read twice.
-  const Container = (props.onPress ? Pressable : View) as typeof Pressable;
+  const radius = props.radius ?? radiusTokens.hero;
   return (
-    <Container
-      accessible
-      {...(props.onPress
-        ? {
-            accessibilityRole: 'button' as const,
-            accessibilityLabel: `${label}. Open event`,
-            onPress: props.onPress,
-          }
-        : { accessibilityLabel: label })}
-      style={[styles.heroShadow, props.style]}
-    >
+    <View style={[{ borderRadius: radius, overflow: 'hidden' }, props.style]}>
       {photo ? (
         <Image
           source={{ uri: photo }}
           resizeMode="cover"
           onError={() => setPhotoFailed(true)}
-          style={styles.heroPhoto}
+          style={[styles.heroPhoto, { borderRadius: radius }]}
           accessible={false}
         />
       ) : null}
@@ -311,7 +277,7 @@ export function HeroCard(props: {
         end={{ x: 0.9, y: 1 }}
         // Scrim is a SIBLING layer: opacity on a parent would dim the
         // type as well. Full-strength poster when there is no photo.
-        style={[styles.heroFill, photo ? styles.heroScrim : null]}
+        style={[styles.heroFill, { borderRadius: radius }, photo ? styles.heroScrim : null]}
       />
       {/* Generated identity layer: sport geometry + type. Suppressed
           over a photo — a photo needs no texture, and the pattern over
@@ -319,58 +285,176 @@ export function HeroCard(props: {
       {!photo && props.sportKey ? (
         <SportPattern sportKey={props.sportKey} color={th.onGradient} />
       ) : null}
-      <View style={styles.hero}>
-        {!photo && usableImage(props.crestUrl) ? (
-          <Image
-            accessible={false}
-            source={{ uri: usableImage(props.crestUrl)! }}
-            style={styles.heroWatermarkCrest}
-            resizeMode="contain"
-          />
-        ) : null}
-        {!photo && !usableImage(props.crestUrl) && props.monogram ? (
-          <Text style={styles.heroWatermark} accessible={false}>
-            {props.monogram}
-          </Text>
-        ) : null}
-        <View style={styles.heroTop}>
-          <Text
-            style={[type.label, { color: th.onGradient, opacity: 0.85, flex: 1 }]}
-            numberOfLines={1}
-          >
-            {props.competition}
-          </Text>
-          <CountdownBadge startUtc={props.startUtc} theme={th} dateOnly={dateOnly} />
-        </View>
-        <View style={{ flex: 1 }} />
-        <Text
-          style={[type.hero, { color: th.onGradient }]}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-        >
-          {props.title}
+      {props.children}
+    </View>
+  );
+}
+
+// The poster's TYPE BLOCK — competition, countdown, title, when. Shared
+// for the same reason as the surface: in the expanded state this exact
+// block sits at the top of the taller object, at the same size and the
+// same width, so nothing about it reflows while the card is moving.
+export function PosterFace(props: {
+  title: string;
+  competition: string;
+  startUtc: string;
+  status: string;
+  timePrecision?: 'exact' | 'nominal' | 'date_only';
+  theme: TeamTheme;
+  photoCredit?: string;
+  // The watermark rides with the TYPE BLOCK, not with the surface: on an
+  // expanded card the surface is three times taller, and a mark pinned
+  // to its bottom-right ends up sitting behind the controls.
+  monogram?: string;
+  crestUrl?: string;
+  hasPhoto?: boolean;
+  // One line answering "why does this say Time TBC" — on the card,
+  // where the question is asked (Prompt 16b).
+  timingNote?: string | null;
+  minHeight?: number;
+}) {
+  const th = props.theme;
+  const dateOnly = isDateOnly(props.status, props.timePrecision);
+  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
+  const mark = props.hasPhoto ? null : usableImage(props.crestUrl);
+  return (
+    <View style={[styles.hero, props.minHeight ? { minHeight: props.minHeight } : null]}>
+      {mark ? (
+        <Image
+          accessible={false}
+          source={{ uri: mark }}
+          style={styles.heroWatermarkCrest}
+          resizeMode="contain"
+        />
+      ) : null}
+      {!props.hasPhoto && !mark && props.monogram ? (
+        <Text style={styles.heroWatermark} accessible={false}>
+          {props.monogram}
         </Text>
+      ) : null}
+      <View style={styles.heroTop}>
         <Text
-          style={[
-            type.secondary,
-            { color: th.onGradient, opacity: 0.85, marginTop: spacing.xs },
-          ]}
+          style={[type.label, { color: th.onGradient, opacity: 0.85, flex: 1 }]}
+          numberOfLines={1}
         >
-          {when}
+          {props.competition}
         </Text>
-        {photo && props.photoCredit ? (
-          <Text
-            style={[type.caption, styles.heroCredit, { color: th.onGradient }]}
-            numberOfLines={1}
-          >
-            {props.photoCredit}
-          </Text>
-        ) : null}
+        <CountdownBadge startUtc={props.startUtc} theme={th} dateOnly={dateOnly} />
       </View>
+      <View style={{ flex: 1 }} />
+      <Text
+        style={[type.hero, { color: th.onGradient }]}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {props.title}
+      </Text>
+      <Text
+        style={[
+          type.secondary,
+          { color: th.onGradient, opacity: 0.85, marginTop: spacing.xs },
+        ]}
+      >
+        {when}
+      </Text>
+      {props.timingNote ? (
+        <Text
+          style={[type.caption, { color: th.onGradient, opacity: 0.62, marginTop: 2 }]}
+          numberOfLines={2}
+        >
+          {props.timingNote}
+        </Text>
+      ) : null}
+      {props.photoCredit ? (
+        <Text
+          style={[type.caption, styles.heroCredit, { color: th.onGradient }]}
+          numberOfLines={1}
+        >
+          {props.photoCredit}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+export function HeroCard(props: {
+  title: string;
+  competition: string;
+  startUtc: string;
+  status: string;
+  sportKey?: string;
+  monogram?: string;
+  crestUrl?: string;
+  timePrecision?: 'exact' | 'nominal' | 'date_only';
+  theme: TeamTheme;
+  photoUrl?: string;
+  photoCredit?: string;
+  timingNote?: string | null;
+  onPress?: () => void;
+  standalone?: boolean;
+  style?: StyleProp<ViewStyle>; // carousel overrides width/margins
+  // Hidden while its own expansion is in flight: the object the user is
+  // watching IS this card, lifted into the overlay, so the original must
+  // not sit underneath it as a second copy.
+  hidden?: boolean;
+  innerRef?: React.Ref<View>;
+}) {
+  const th = props.theme;
+  const dateOnly = isDateOnly(props.status, props.timePrecision);
+  const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
+  const label = props.standalone
+    ? `${props.title}, ${when}`
+    : `Next up: ${props.title}, ${when}`;
+  const Container = (props.onPress ? Pressable : View) as typeof Pressable;
+  return (
+    <Container
+      ref={props.innerRef as never}
+      accessible
+      {...(props.onPress
+        ? {
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: `${label}. Open event`,
+            onPress: props.onPress,
+          }
+        : { accessibilityLabel: label })}
+      style={[
+        styles.heroShadow,
+        props.style,
+        props.hidden ? { opacity: 0 } : null,
+      ]}
+    >
+      <PosterSurface
+        theme={th}
+        {...(props.sportKey ? { sportKey: props.sportKey } : {})}
+        {...(props.monogram ? { monogram: props.monogram } : {})}
+        {...(props.crestUrl ? { crestUrl: props.crestUrl } : {})}
+        {...(props.photoUrl ? { photoUrl: props.photoUrl } : {})}
+      >
+        <PosterFace
+          title={props.title}
+          competition={props.competition}
+          startUtc={props.startUtc}
+          status={props.status}
+          {...(props.timePrecision ? { timePrecision: props.timePrecision } : {})}
+          theme={th}
+          {...(props.monogram ? { monogram: props.monogram } : {})}
+          {...(props.crestUrl ? { crestUrl: props.crestUrl } : {})}
+          {...(props.photoUrl ? { hasPhoto: true } : {})}
+          {...(props.photoUrl && props.photoCredit
+            ? { photoCredit: props.photoCredit }
+            : {})}
+          {...(props.timingNote ? { timingNote: props.timingNote } : {})}
+          minHeight={HERO_MIN_HEIGHT}
+        />
+      </PosterSurface>
     </Container>
   );
 }
+
+// The collapsed card's height floor — exported because the expansion
+// animates FROM it and must know it without measuring twice.
+export const HERO_MIN_HEIGHT = 180;
 
 // ---------------------------------------------------------------------------
 // Rows
@@ -404,6 +488,11 @@ export function EventRow(props: {
   badge?: string;
   // Corner mark on the tile — an athlete's flag.
   tileBadge?: string;
+  // A row is not a card, but it IS where the card comes from on the
+  // list surfaces, so it has to be measurable and it has to be able to
+  // hide itself while its card is lifted (Prompt 16b).
+  innerRef?: React.Ref<View>;
+  hidden?: boolean;
 }) {
   const t = useTheme();
   const dimmed = props.excluded === true;
@@ -491,7 +580,14 @@ export function EventRow(props: {
     </>
   );
   return (
-    <View style={[styles.eventRow, { borderColor: t.border }]}>
+    <View
+      ref={props.innerRef}
+      style={[
+        styles.eventRow,
+        { borderColor: t.border },
+        props.hidden ? { opacity: 0 } : null,
+      ]}
+    >
       {props.onPress ? (
         <Pressable
           accessible
@@ -981,11 +1077,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
   },
+  // The poster's type block. No radius or clipping of its own any more:
+  // the SURFACE owns the shape, so the same block can sit at the top of
+  // a card or at the top of the same card expanded.
   hero: {
-    borderRadius: radius.hero,
-    minHeight: 180,
     padding: spacing.l,
-    overflow: 'hidden',
   },
   heroPhoto: {
     position: 'absolute',

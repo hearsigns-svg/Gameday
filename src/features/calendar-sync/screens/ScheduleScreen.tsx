@@ -3,8 +3,10 @@
 // month grid. Rows carry the per-event opt-out: removed fixtures stay
 // visible, greyed, with a restore affordance.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, SectionList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCardExpansion } from '../../../core/cardExpansion';
+import { fixtureCardRequest } from '../openFixtureCard';
 import { monogramOf,
   CalendarOffBanner,
   EmptyState,
@@ -169,12 +171,6 @@ export default function ScheduleScreen({ navigation }: Props) {
       mode={mode}
       excluded={excludedIds.has(item.id)}
       onToggleExcluded={() => toggleExclude(item)}
-      onOpen={() =>
-        navigation.navigate('Fixture', {
-          fixtureId: item.id,
-          title: item.title,
-        })
-      }
     />
   );
 
@@ -315,7 +311,6 @@ function ScheduleRow(props: {
   mode: 'light' | 'dark';
   excluded: boolean;
   onToggleExcluded: () => void;
-  onOpen: () => void;
 }) {
   const { item } = props;
   const sport = sportByKey(item.sport);
@@ -324,13 +319,21 @@ function ScheduleRow(props: {
     headlineParticipant(item.title, item.sport),
     item.sport,
   );
+  const ref = useRef<View | null>(null);
+  const expansion = useCardExpansion();
   return (
     <EventRow
+      innerRef={ref}
+      hidden={expansion.liftedKey === item.id}
       // A licensed portrait where the fixture names a person, the owning
       // follow's crest otherwise — the row had the crest in hand and
       // rendered a monogram anyway (Prompt 16 C sweep).
       imageUrl={photo?.url ?? owner?.crestUrl}
-      onPress={props.onOpen}
+      onPress={() => {
+        void fixtureCardRequest(ref, item.id).then((req) => {
+          if (req) expansion.open(req);
+        });
+      }}
       title={item.title}
       caption={item.competition}
       timeText={timeLabel(item.startUtc, item.status, item.timePrecision)}

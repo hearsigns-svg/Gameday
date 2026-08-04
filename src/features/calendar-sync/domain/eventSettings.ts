@@ -27,6 +27,12 @@ export interface EventSettings {
   // choice (no reminder at all) and is NOT the same as the field being
   // absent, which means "follow the global preference".
   reminderMinutes?: number | null;
+  // Per-event colour, only ever set where the calendar layer supports
+  // one (data/calendarDriver.ts::calendarCapabilities). On a layer that
+  // does not, the control is never rendered, so this is never written —
+  // which is what keeps the planner from wanting a colour it cannot
+  // apply.
+  colour?: string;
   at: string; // ISO set-at, for age pruning
 }
 

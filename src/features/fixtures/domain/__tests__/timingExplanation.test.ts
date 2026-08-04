@@ -199,3 +199,73 @@ describe('explainTiming', () => {
     expect(e.headline).toBe('Postponed — no new date has been published.');
   });
 });
+
+// ─── The one line that lives ON the card (Prompt 16b) ─────────────────
+//
+// "Time TBC" is printed on the poster, so the answer belongs there too:
+// one line, what is known and who has not published it. Not a section,
+// not three paragraphs, and never a word about the fighter directory.
+
+describe('shortTimingNote', () => {
+  const { shortTimingNote } =
+    jest.requireActual<typeof import('../timingExplanation')>(
+      '../timingExplanation',
+    );
+
+  it('names the organiser, in one short line', () => {
+    const note = shortTimingNote(
+      fixture({ status: 'tbd', timePrecision: 'date_only' }),
+      { nowMs: NOW },
+    );
+    expect(note).toBe('No start time from Premier Boxing Champions yet');
+    expect(note!.length).toBeLessThan(60);
+  });
+
+  it('falls back to freshness only where there is nobody to name', () => {
+    // A relay is never named, so "when did we last look" is the only
+    // fact left that a user can act on.
+    const note = shortTimingNote(
+      fixture({ id: 'tsdb-1', status: 'tbd', timePrecision: 'date_only' }),
+      { nowMs: NOW, sliceCheckedAt: '2026-08-04T16:00:00.000Z' },
+    );
+    expect(note).toBe('No start time published · checked 3 hours ago');
+    expect(
+      shortTimingNote(
+        fixture({ id: 'tsdb-1', status: 'tbd', timePrecision: 'date_only' }),
+        { nowMs: NOW },
+      ),
+    ).toBe('No start time published yet');
+  });
+
+  it('says nothing at all when the time is settled', () => {
+    expect(
+      shortTimingNote(
+        fixture({ timePrecision: 'exact', confidence: 'confirmed' }),
+        { nowMs: NOW },
+      ),
+    ).toBeNull();
+  });
+
+  it('covers the shapes without inventing anything', () => {
+    expect(
+      shortTimingNote(fixture({ status: 'cancelled' }), { nowMs: NOW }),
+    ).toBe('Cancelled');
+    expect(
+      shortTimingNote(fixture({ status: 'postponed' }), { nowMs: NOW }),
+    ).toBe('Postponed — no new date yet');
+    expect(
+      shortTimingNote(
+        fixture({
+          id: 'tennis-1',
+          status: 'tbd',
+          timePrecision: 'date_only',
+          durationHours: 264,
+        }),
+        { nowMs: NOW },
+      ),
+    ).toBe('Runs 11 days');
+    expect(
+      shortTimingNote(fixture({ timePrecision: 'nominal' }), { nowMs: NOW }),
+    ).toBe('No confirmed time from Premier Boxing Champions yet');
+  });
+});

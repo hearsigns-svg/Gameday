@@ -30,7 +30,11 @@ import CalendarPrimingScreen from './src/features/calendar-sync/screens/Calendar
 import HomeScreen from './src/features/follows/screens/HomeScreen';
 import FollowingScreen from './src/features/follows/screens/FollowingScreen';
 import ScheduleScreen from './src/features/calendar-sync/screens/ScheduleScreen';
-import FixtureScreen from './src/features/calendar-sync/screens/FixtureScreen';
+import { CardExpansionHost } from './src/core/cardExpansion';
+import {
+  FixtureCardBody,
+  FixtureCardPayload,
+} from './src/features/calendar-sync/screens/FixtureCard';
 import AthleteListScreen from './src/features/follows/screens/AthleteListScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
@@ -142,6 +146,20 @@ export default function App() {
   };
 
   return (
+    // The expansion host sits OUTSIDE the navigator, like the toast
+    // host: the card that grows must be able to cover the tab bar and
+    // the header, because it is no longer a screen — it is the card the
+    // user tapped, at a bigger size.
+    <CardExpansionHost
+      renderExpanded={(payload, close, reveal, onContentHeight) => (
+        <FixtureCardBody
+          payload={payload as unknown as FixtureCardPayload}
+          close={close}
+          reveal={reveal}
+          onContentHeight={onContentHeight}
+        />
+      )}
+    >
     <View style={{ flex: 1 }}>
       <NavigationContainer theme={navTheme}>
         <Stack.Navigator
@@ -204,11 +222,6 @@ export default function App() {
           options={({ route }) => ({ title: route.params.name })}
         />
         <Stack.Screen
-          name="Fixture"
-          component={FixtureScreen}
-          options={({ route }) => ({ title: route.params.title })}
-        />
-        <Stack.Screen
           name="Preferences"
           component={PreferencesScreen}
           options={{ title: 'Preferences' }}
@@ -235,5 +248,6 @@ export default function App() {
       </NavigationContainer>
       <ToastHost />
     </View>
+    </CardExpansionHost>
   );
 }
