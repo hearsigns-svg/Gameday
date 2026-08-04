@@ -31,7 +31,7 @@
 // matched and every one passed; the miss (a wildcard with no Wikidata
 // item at all) is a universe bound, not a threshold drop.
 
-import { groupTitleOf, RosterEntry } from '../athletes';
+import { RosterEntry } from '../athletes';
 
 // THE MINT GATE — OPENED 2026-08-03 on the owner's approval of the
 // validated counts (Prompt 10c: universe 6,559 → selected 1,513;
@@ -277,33 +277,23 @@ export function atpRosterEntries(players: readonly AtpPlayer[]): RosterEntry[] {
 }
 
 export function rosterEntryOf(p: AtpPlayer): RosterEntry {
-  const no1 = ATP_SINGLES_NO1_QIDS.has(p.qid);
   const retired = isRetired(p);
-  // ONLY the curated singles No. 1s get a browse group: there is no
-  // honest live rank to cut the other ~1,500 by, and a 50-cap
-  // alphabetical slice of them would be an arbitrary lie. Everyone else
-  // is search-first — findable, followable, ungrouped.
-  //
-  // A RETIRED PLAYER GETS NO BROWSE GROUP AT ALL (owner ruling
-  // 2026-08-04). One list mixing Alcaraz with Björn Borg — sorted
-  // alphabetically, since none of them carries a rank — opened the
-  // men's section on five players who will never have a fixture. So
-  // the curated group is the still-playing No. 1s only, and retired
-  // players join the other 1,484 as search-first: findable, marked,
-  // ungrouped. `isRetired` is verified 100% correct on exactly this
-  // population; it is NOT extended to the other 1,484, where the same
-  // signal covers 7.9% and would mislabel hundreds.
-  const groupingKey = no1 && !retired ? 'atp-no1-active' : undefined;
+  // THIS ROSTER NO LONGER GROUPS ANYONE (owner ruling 2026-08-04). It
+  // is the DIRECTORY — who exists, and who is recorded as retired — and
+  // nothing more. The men's browse section is now the live ATP ranking
+  // (providers/atpRankings.ts), which is a better answer to "who is
+  // playing" than any curated constant: ATP points roll over 52 weeks,
+  // so being ranked IS having played this year. The curated
+  // world-No.-1s group, and the `honours` field that existed only to
+  // build it, are deleted. `ATP_SINGLES_NO1_QIDS` survives for one
+  // reason only — the import threshold's historically-notable arm, so
+  // Borg and Federer stay FINDABLE.
   const endYear = careerEndYearOf(p);
   return {
     source: 'wikidata',
     externalId: p.qid,
     name: p.label,
     sport: 'tennis',
-    ...(groupingKey
-      ? { grouping: groupTitleOf(groupingKey)!, groupingKey }
-      : {}),
-    ...(no1 ? { honours: ['former-no1'] } : {}),
     // Carried for EVERY selected player, not just the No. 1s: the
     // marker is what makes a retired man's page and follow honest, and
     // 1,484 of the 1,513 are only ever reached by search.

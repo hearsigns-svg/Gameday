@@ -1385,3 +1385,39 @@
   in the women's group. Boxing and F1 keep it, because their groups are
   weight classes and a grid, where "who is out this month" is
   information the sections genuinely do not carry.
+
+## Prompt 12c decisions (owner, 2026-08-04)
+
+- 2026-08-04: THE MEN'S SECTION IS A LIVE ATP RANKING, VIA WIKIPEDIA'S
+  ACTION API. Approved as the same documented programmatic service as
+  WDQS (2026-08-03). Wikipedia is an INDEPENDENT PUBLISHER under
+  CC BY-SA; its ranking table cites atptour.com as a reference, and per
+  the citation nuance recorded with that ruling a citation is METADATA,
+  NOT A FETCH — this connector makes zero requests to anything the ATP
+  operates, and atptour.com stays permanently excluded. THE RANKING IS
+  NOT A PROXY FOR "ACTIVE": ATP points roll over 52 weeks, so being
+  ranked IS having played in the last year, which is the owner's own
+  rule. DEPTH IS 20, NOT THE 200 ASKED FOR — measured, not assumed: the
+  Wikipedia table publishes the top 20 only. The WTA's own API serves
+  200. That asymmetry is stated in the coverage note rather than hidden.
+- 2026-08-04: A TOP-N SLICE IS NOT A MEMBERSHIP ROSTER. `reconcileRoster`
+  takes `sliceRoster`, set for the ATP ranking: absence clears the rank
+  and the browse group it granted and NEVER deactivates. Falling out of
+  the top 20 is a bad month, not a retirement — deactivating for it
+  would hide a working professional from browse and sink him in search,
+  off a list he was never guaranteed a place on.
+- 2026-08-04: THE CURATED WORLD-No.-1s GROUP AND `honours` ARE DELETED.
+  They were scaffolding for a missing men's ranking; the ranking exists
+  now, so the scaffolding goes rather than lingering. `honours` was
+  stored on 29 documents and read by nothing.
+  `ATP_SINGLES_NO1_QIDS` survives for one reason only — the import
+  threshold's historically-notable arm, which keeps Borg and Federer
+  FINDABLE.
+- 2026-08-04: SOURCE ACCESS ESTABLISHED FOR THE GRAND SLAMS, BEFORE ANY
+  PARSER. rolandgarros.com (robots: only /admin, /maintenance) and
+  ausopen.com (Drupal defaults) are reachable and permit us.
+  wimbledon.com DISALLOWS /api/ — its content pages are open, its API is
+  not. **usopen.org REFUSES US AT THE EDGE**: DNS resolves to Akamai and
+  the HTTP/2 stream is reset (INTERNAL_ERROR) on every request. Getting
+  round that means UA spoofing or browser automation, which is a settled
+  prohibition — so the US Open is recorded as refused, not retried.

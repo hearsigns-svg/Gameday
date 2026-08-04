@@ -166,23 +166,13 @@ describe('groupOrderKey', () => {
     ]);
   });
 
-  test('tennis: women, then the men still playing, then the retired', () => {
-    // The middle rank is the fix (Prompt 12). Shuffled input, because
-    // the ordering must come from the comparator and not from whatever
-    // order Firestore happened to return.
-    const order = [
-      'atp-no1-retired',
-      'wta',
-      'atp-no1',
-      'atp-no1-active',
-    ].sort((a, b) => groupOrderKey(a).localeCompare(groupOrderKey(b)));
-    // The legacy unsplit key sorts between the two it becomes.
-    expect(order).toEqual([
-      'wta',
-      'atp-no1-active',
-      'atp-no1',
-      'atp-no1-retired',
-    ]);
+  test('tennis: women, then men — two ranked tours', () => {
+    // Shuffled input, because the ordering must come from the
+    // comparator and not from whatever order Firestore returned.
+    const order = ['atp', 'wta'].sort((a, b) =>
+      groupOrderKey(a).localeCompare(groupOrderKey(b)),
+    );
+    expect(order).toEqual(['wta', 'atp']);
   });
 });
 
@@ -262,12 +252,12 @@ describe('group titles', () => {
     );
     const b = shapeAthleteBrowse(legacy, 'tennis', NOW);
     expect(b.groups).toHaveLength(1);
-    expect(b.groups[0].grouping).toBe("Men's world No. 1s");
+    // The key is retired from GROUP_TITLES, so the header falls back to
+    // the string the documents themselves carry — never to a claim this
+    // build invented about them.
+    expect(b.groups[0].grouping).toBe('Former world No. 1s');
     expect(b.groups[0].grouping).not.toMatch(/retired|still playing/);
-    // And every CARD caption too — the row is where the lie was
-    // actually readable, because these docs carry nothing else.
     for (const a of b.groups[0].athletes) {
-      expect(a.grouping).toBe("Men's world No. 1s");
       expect(a.careerStatus).toBeUndefined();
     }
   });
@@ -279,7 +269,7 @@ describe('group titles', () => {
     // still produce NO section.
     const b = shapeAthleteBrowse(
       [
-        men({ id: 'athlete_000940', groupingKey: 'atp-no1-active' }),
+        men({ id: 'athlete_000940', groupingKey: 'atp', rank: 1 }),
         men({
           id: 'athlete_000942',
           groupingKey: 'atp-no1-retired',
@@ -296,22 +286,21 @@ describe('group titles', () => {
       'tennis',
       NOW,
     );
-    expect(b.groups.map((g) => g.grouping)).toEqual([
-      "Men's world No. 1s — still playing",
-    ]);
+    expect(b.groups.map((g) => g.grouping)).toEqual(['ATP Tour — Men']);
     expect(
       b.groups.flatMap((g) => g.athletes).some((a) => a.careerStatus),
     ).toBe(false);
   });
 
-  test('tennis browse is TWO groups: women, then the men still playing', () => {
+  test('tennis browse is TWO groups: women, then men', () => {
     const b = shapeAthleteBrowse(
       [
-        men({ id: 'athlete_000944', groupingKey: 'atp-no1-active' }),
+        men({ id: 'athlete_000944', groupingKey: 'atp', rank: 2 }),
         men({ id: 'athlete_000945', groupingKey: 'wta', rank: 1 }),
         men({
           id: 'athlete_000946',
-          groupingKey: 'atp-no1-retired',
+          groupingKey: 'atp',
+          rank: 3,
           careerStatus: 'retired',
         }),
       ],
@@ -320,8 +309,10 @@ describe('group titles', () => {
     );
     expect(b.groups.map((g) => g.grouping)).toEqual([
       'WTA Tour — Women',
-      "Men's world No. 1s — still playing",
+      'ATP Tour — Men',
     ]);
+    // The retired man is filtered even though his key is a live one.
+    expect(b.groups[1].athletes).toHaveLength(1);
   });
 
   test('every tennis group a user can land on names its population', () => {
@@ -330,14 +321,14 @@ describe('group titles', () => {
     const b = shapeAthleteBrowse(
       [
         men({ id: 'athlete_000910', groupingKey: 'wta', rank: 1 }),
-        men({ id: 'athlete_000911', groupingKey: 'atp-no1-active' }),
+        men({ id: 'athlete_000911', groupingKey: 'atp', rank: 1 }),
       ],
       'tennis',
       NOW,
     );
     expect(b.groups.map((g) => g.grouping)).toEqual([
       'WTA Tour — Women',
-      "Men's world No. 1s — still playing",
+      'ATP Tour — Men',
     ]);
   });
 
@@ -347,14 +338,16 @@ describe('group titles', () => {
         men({
           id: 'athlete_000920',
           displayName: 'Retired Man',
-          groupingKey: 'atp-no1-retired',
+          groupingKey: 'atp',
+          rank: 1,
           careerStatus: 'retired',
           careerEndYear: 2022,
         }),
         men({
           id: 'athlete_000921',
           displayName: 'Unmarked Man',
-          groupingKey: 'atp-no1-active',
+          groupingKey: 'atp',
+          rank: 2,
         }),
       ],
       'tennis',

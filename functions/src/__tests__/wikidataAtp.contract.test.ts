@@ -54,23 +54,24 @@ test('the threshold: current+notable in, 19th-century journeymen out, No. 1s alw
   expect(passesThreshold(agassi)).toBe(true);
 });
 
-test('roster entries: Q-id primary, atp+itf extras, curated No. 1s get the ONLY browse group', () => {
+test('roster entries: Q-id primary, atp+itf extras, and NO browse group at all', () => {
+  // This roster is the DIRECTORY now, not a browse source: the men's
+  // section comes from the live ATP ranking (providers/atpRankings.ts).
+  // The curated world-No.-1s group and the `honours` field that existed
+  // only to build it were deleted with it.
   const dj = rosterEntryOf(byQ.get('Q5812')!);
   expect(dj).toEqual({
     source: 'wikidata',
     externalId: 'Q5812',
     name: 'Novak Djokovic',
     sport: 'tennis',
-    grouping: "Men's world No. 1s — still playing",
-    groupingKey: 'atp-no1-active',
-    honours: ['former-no1'],
     extraIdentities: [
       { source: 'atp', externalId: 'D643' },
       { source: 'itf', externalId: '100004087' },
     ],
   });
   const hm = rosterEntryOf(byQ.get('Q106962940')!);
-  expect(hm.grouping).toBeUndefined(); // search-first, no arbitrary group
+  expect(hm.grouping).toBeUndefined();
   expect(hm.groupingKey).toBeUndefined();
 });
 
@@ -82,19 +83,18 @@ test('roster entries: Q-id primary, atp+itf extras, curated No. 1s get the ONLY 
 // 1,513 carry P570 — and the death arm is pinned synthetically below
 // rather than by editing a real capture to say something it did not.
 
-test('the curated group is the still-playing No. 1s; retired ones are ungrouped — and it is right in both directions here', () => {
+test('recorded retirement is right in both directions on this capture', () => {
   // Still playing: no P2032 anywhere on the item.
   for (const q of ['Q5812']) {
     const p = byQ.get(q)!;
     expect(p.careerEnd).toBeUndefined();
     expect(isRetired(p)).toBe(false);
-    expect(rosterEntryOf(p).groupingKey).toBe('atp-no1-active');
     expect(rosterEntryOf(p).careerStatus).toBeUndefined();
   }
   // Retired: P2032 present. Federer 2022, Nadal 2024, Agassi 2006 —
-  // three different eras, one rule. They get NO grouping: retired
-  // players left browse entirely (owner ruling 2026-08-04) and are
-  // reached only by search, marked, with no follow offered.
+  // three different eras, one rule. Retired players left browse
+  // entirely (owner ruling 2026-08-04) and are reached only by search,
+  // marked, with no follow offered.
   for (const [q, year] of [
     ['Q1426', 2022],
     ['Q10132', 2024],

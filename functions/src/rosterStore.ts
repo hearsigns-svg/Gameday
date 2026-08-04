@@ -174,6 +174,7 @@ export async function applyRoster(
   opts: {
     nameMatchExcludesSources?: string[];
     ownsCareerStatus?: boolean;
+    sliceRoster?: boolean;
   } = {},
 ): Promise<RosterApplyResult> {
   const existing = await loadAthletes(db);

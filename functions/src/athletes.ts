@@ -73,10 +73,6 @@ export interface Athlete {
   missedRefreshes: number; // consecutive roster refreshes absent from
   rank?: number; // roster rank, 1 = best; absent for unranked
   championOf?: string[]; // sanctioning orgs, boxing: ['IBF', 'WBO']
-  // Career honours a browse group can be built on where no live rank
-  // exists (Prompt 10b): ['former-no1'] from Wikidata P1352=1. Facts
-  // about a career, never a claim about current form.
-  honours?: string[];
   countryCode?: string;
   // RECORDED retirement, never inferred (Prompt 12). Present only where
   // a source states it — Wikidata's end-of-work-period or a date of
@@ -106,39 +102,23 @@ export interface Athlete {
 // NAMING (Prompt 12). The repo's only prior precedent is boxing:
 // `Women's <Class>` for women, bare `<Class>` for men — marked-female,
 // unmarked-male (ibfRatings.ts:88). It does not extend to organisation
-// names ("Women's WTA Tour" is redundant), and unmarked-male is the
-// thing this stage exists to fix. The convention adopted: a group
-// states its population explicitly, either possessively where the label
-// is descriptive ("Men's world No. 1s") or after an em dash where the
-// label is a governing body's own name ("WTA Tour — Women"). Boxing is
-// NOT restyled here — its groups are already gender-marked and sorted
-// men-block-then-women-block, so no ambiguity exists to fix, and
-// rewriting 33 labels inside a tennis stage would be scope the owner
-// did not ask for. Recorded in DECISIONS as a deliberate hold.
-// A KEY WHOSE MEANING NARROWS MUST BE A NEW KEY (review round, and it
-// was a demonstrated on-screen lie, not a theory). The first cut reused
-// `atp-no1` for the retired subset — but the title resolves on DEPLOY
-// while group membership only moves on the WEEKLY ROSTER REFRESH, so
-// every one of the 29 curated No. 1s still stored under that key would
-// have sat under the header "…— retired", Alcaraz and Sinner included,
-// for up to eight days. Absence of the marker rendered as a retirement
-// claim: the standing invariant, inverted.
+// names, and unmarked-male is the thing this stage exists to fix. The
+// convention adopted: a group states its population after an em dash
+// where the label is a governing body's own name. Boxing is NOT
+// restyled — its groups are already gender-marked and sorted
+// men-block-then-women-block, so no ambiguity exists to fix. Recorded
+// in DECISIONS as a deliberate hold.
 //
-// So the split mints TWO new keys and `atp-no1` stays exactly what it
-// has always been — the whole curated 29 — with a title that is true of
-// that set whatever it currently holds. No document moves, no migration
-// is owed, and nothing on screen is wrong in ANY of the three windows:
-// before the refresh (legacy key alone), after it (the two new keys),
-// or during a partial one (all three, each honestly titled).
+// TENNIS IS TWO SECTIONS, ONE PER TOUR, BOTH FROM A LIVE RANKING
+// (owner ruling 2026-08-04). The curated world-No.-1s keys that stood
+// in for a men's ranking — `atp-no1`, `atp-no1-active`,
+// `atp-no1-retired` — are GONE, along with the `honours` field that
+// existed only to build them. They were scaffolding for a missing
+// source; the source now exists (providers/atpRankings.ts), so the
+// scaffolding is deleted rather than left standing.
 export const GROUP_TITLES: Readonly<Record<string, string>> = {
   wta: 'WTA Tour — Women',
-  'atp-no1': "Men's world No. 1s", // legacy: the unsplit 29
-  'atp-no1-active': "Men's world No. 1s — still playing",
-  // `atp-no1-retired` is deliberately ABSENT. Retired athletes left
-  // browse entirely (owner ruling 2026-08-04) and shapeAthleteBrowse
-  // filters them before grouping, so any document still carrying that
-  // key renders no section at all. A title here would only describe a
-  // group that can no longer exist.
+  atp: 'ATP Tour — Men',
 };
 
 export function groupTitleOf(
@@ -569,7 +549,6 @@ export interface RosterEntry {
   rank?: number;
   championOf?: string[];
   countryCode?: string;
-  honours?: string[];
   // Recorded retirement, where the source states one. Absent = the
   // source says nothing, which is NOT a claim that the athlete competes.
   careerStatus?: 'retired';
@@ -610,6 +589,11 @@ export function reconcileRoster(
     // than left to rot. Only the Wikidata ATP roster sets it — it
     // evaluates every selected player on every run.
     ownsCareerStatus?: boolean;
+    // This source publishes a TOP-N SLICE (the ATP top 20, a ranking
+    // cut) rather than a membership roster. Absence clears the rank and
+    // the browse group it granted, and never deactivates — see the
+    // absence loop for why.
+    sliceRoster?: boolean;
   } = {},
 ): RosterReconciliation {
   const index = buildAthleteIndex(existing);
@@ -710,7 +694,6 @@ export function reconcileRoster(
             ...(e.grouping ? { grouping: e.grouping } : {}),
             ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),
           }),
-      ...(e.honours !== undefined ? { honours: e.honours } : {}),
       // CAREER STATUS IS ALL-OR-NOTHING PER REFRESH, for the source
       // that owns it (review round). wikidata evaluates every selected
       // player each week, so an entry arriving WITHOUT a marker is a
@@ -761,14 +744,32 @@ export function reconcileRoster(
         (a.championOf?.length ?? 0) > 0;
       if (!rosterPlaced) continue;
       const misses = a.missedRefreshes + 1;
-      const patch: Partial<Athlete> = {
-        missedRefreshes: misses,
-        updatedAt: nowIso,
-        // A dropped-off athlete keeps grouping (browse hides inactive)
-        // but loses the claim to a current rank — a stale #3 is a lie.
-        ...(a.rank !== undefined ? { rank: undefined } : {}),
-        ...(misses >= MISSES_BEFORE_INACTIVE ? { active: false } : {}),
-      };
+      // A TOP-N SLICE IS NOT A MEMBERSHIP ROSTER. Falling out of the
+      // ATP top 20 is a bad month, not a retirement — deactivating for
+      // it would hide a working professional from browse AND sink him
+      // in search, off a list he was never guaranteed a place on. So a
+      // slice source clears what it granted (the rank and the browse
+      // group) and stops there; the athlete stays active and findable.
+      // A membership roster (IBF's rated fighters, the F1 grid) keeps
+      // the old behaviour, where absence really does mean gone.
+      const patch: Partial<Athlete> = opts.sliceRoster
+        ? {
+            missedRefreshes: misses,
+            updatedAt: nowIso,
+            ...(a.rank !== undefined ? { rank: undefined } : {}),
+            ...(a.groupingKey !== undefined
+              ? { grouping: undefined, groupingKey: undefined }
+              : {}),
+          }
+        : {
+            missedRefreshes: misses,
+            updatedAt: nowIso,
+            // A dropped-off athlete keeps grouping (browse hides
+            // inactive) but loses the claim to a current rank — a stale
+            // #3 is a lie.
+            ...(a.rank !== undefined ? { rank: undefined } : {}),
+            ...(misses >= MISSES_BEFORE_INACTIVE ? { active: false } : {}),
+          };
       toUpdate.set(a.id, { ...(toUpdate.get(a.id) ?? {}), ...patch });
     }
   }
@@ -823,7 +824,6 @@ export function rosterAthlete(
     ...(e.rank !== undefined ? { rank: e.rank } : {}),
     ...(e.championOf !== undefined ? { championOf: e.championOf } : {}),
     ...(e.countryCode ? { countryCode: e.countryCode } : {}),
-    ...(e.honours !== undefined ? { honours: e.honours } : {}),
     ...(e.careerStatus !== undefined ? { careerStatus: e.careerStatus } : {}),
     ...(e.careerEndYear !== undefined
       ? { careerEndYear: e.careerEndYear }

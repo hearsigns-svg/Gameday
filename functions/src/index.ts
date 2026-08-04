@@ -83,6 +83,7 @@ import { fetchWorldAthletics } from './providers/worldAthletics';
 import { fetchWtaTennis } from './providers/wtaTennis';
 import { fetchWtaRankings } from './providers/wtaRankings';
 import { ATP_ROSTER_ENABLED, fetchAtpRoster } from './providers/wikidataAtp';
+import { ATP_RANK_SOURCE, fetchAtpRankings } from './providers/atpRankings';
 import { fetchIbfRatings } from './providers/ibfRatings';
 import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
 import { applyRoster } from './rosterStore';
@@ -1417,6 +1418,7 @@ interface RosterSource {
   applyOpts?: {
     nameMatchExcludesSources?: string[];
     ownsCareerStatus?: boolean;
+    sliceRoster?: boolean;
   };
 }
 
@@ -1455,11 +1457,33 @@ const rosterSources = (): RosterSource[] => [
             nameMatchExcludesSources: ['wta'],
             // Wikidata evaluates career status for every selected
             // player every run, so what it omits is cleared, not kept.
+            // It also owns the GROUPING, and now grants none — which is
+            // what sweeps the retired world-No.-1s keys off the docs.
             ownsCareerStatus: true,
           },
         },
       ]
     : []),
+  // THE LIVE ATP RANKING — the men's browse section. ORDER MATTERS and
+  // is load-bearing: the Wikidata refresh above clears every ATP
+  // grouping, and this runs after it to grant the one men's group. Put
+  // it earlier and the directory pass would wipe the section it just
+  // built. If this source fails, the men's section is ABSENT for the
+  // week rather than stale — an honest degradation, recorded loudly in
+  // its own sourceRuns slice.
+  {
+    slice: 'roster-atp-rank',
+    source: ATP_RANK_SOURCE,
+    sport: 'tennis',
+    run: () => fetchAtpRankings(),
+    applyOpts: {
+      // Same population guard as the directory: a men's ranking name
+      // colliding with a WTA woman must never attach to her doc.
+      nameMatchExcludesSources: ['wta'],
+      // A top-20 cut, not a membership list — see reconcileRoster.
+      sliceRoster: true,
+    },
+  },
 ];
 
 async function refreshRosters(

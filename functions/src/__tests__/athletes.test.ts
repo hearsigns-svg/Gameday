@@ -498,7 +498,6 @@ describe('ATP roster reconciliation (Prompt 10b)', () => {
     sport: 'tennis',
     grouping: 'Former world No. 1s',
     groupingKey: 'atp-no1',
-    honours: ['former-no1'],
     extraIdentities: [
       { source: 'atp', externalId: 'D643' },
       { source: 'itf', externalId: '100004087' },
@@ -582,7 +581,7 @@ describe('ATP roster reconciliation (Prompt 10b)', () => {
     expect(patch.groupingKey).toBe('atp-no1-retired');
   });
 
-  test('a created athlete carries all three identities and the honours', () => {
+  test('a created athlete carries all three identities', () => {
     const rec = reconcileRoster([], [atpEntry()], nowIso);
     expect(rec.toCreate).toHaveLength(1);
     const a = rosterAthlete('athlete_000900', rec.toCreate[0], nowIso);
@@ -592,7 +591,6 @@ describe('ATP roster reconciliation (Prompt 10b)', () => {
       itf: '100004087',
     });
     expect(a.identities.map((i) => i.source).sort()).toEqual(['atp', 'itf', 'wikidata']);
-    expect(a.honours).toEqual(['former-no1']);
     expect(a.nameKeyed).toBe(false);
   });
 

@@ -313,19 +313,11 @@ export function groupOrderKey(groupingKey: string): string {
   if (womens >= 0 && groupingKey.startsWith('boxing-w-')) {
     return `1${String(womens).padStart(2, '0')}`;
   }
-  // Tennis: the WTA top 50 (full live coverage) leads; then the men's
-  // No. 1s who are STILL PLAYING; then the retired ones last. The
-  // middle rank is the point of the ordering — the men's section used
-  // to open on Agassi, Borg and Becker because the group had no rank
-  // and fell to an alphabetical sort, which in an app about upcoming
-  // events read as "there is nothing here for men" (Prompt 12).
-  // The legacy unsplit key sorts BETWEEN the two it becomes, so a
-  // partial refresh — some docs moved, some not — still reads top to
-  // bottom as playing → unsplit → retired rather than interleaving.
+  // Tennis: two sections, one per tour, both ranked. Women lead only
+  // because that is the order the screen already had; nothing else
+  // depends on it.
   if (groupingKey === 'wta') return '20';
-  if (groupingKey === 'atp-no1-active') return '21';
-  if (groupingKey === 'atp-no1') return '22';
-  if (groupingKey === 'atp-no1-retired') return '23';
+  if (groupingKey === 'atp') return '21';
   return `5${groupingKey}`;
 }
 
