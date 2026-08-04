@@ -13,7 +13,13 @@ import {
   retiredAppearanceIds,
 } from './appearances';
 import { normaliseName } from './identity';
-import { withImageryPolicy } from './imagery';
+import { imageryAllowed, withImageryPolicy } from './imagery';
+import {
+  artIsFresh,
+  narrowToServed,
+  TSDB_ART_SPORTS,
+  tsdbLeagueIdsFrom,
+} from './competitionArt';
 import {
   fetchTsdbLeagueBadges,
   leagueBadgeFor,
@@ -919,10 +925,65 @@ async function loadImageryOff(): Promise<ReadonlySet<string>> {
   }
 }
 
+// Competition logos for the client's STATIC competitions, cached in
+// Firestore for a day. It rides listPriorities because that is already
+// the browse-metadata payload the client fetches once a session and
+// caches for an hour — a second endpoint and a second cache would buy
+// nothing. ARTWORK IS DECORATIVE: every failure path here returns an
+// empty map rather than an error, because a missing logo falls back to
+// the generated treatment and a broken browse screen does not.
+const ART_DOC = 'directoryArt/competitions';
+
+async function competitionArt(): Promise<Record<string, string>> {
+  const ref = db.doc(ART_DOC);
+  const snap = await ref.get();
+  const data = snap.exists
+    ? (snap.data() as { art?: Record<string, string>; cachedAt?: string })
+    : undefined;
+  if (data?.art && artIsFresh(data.cachedAt, Date.now())) return data.art;
+
+  const key = optionalTsdbKey();
+  if (!key) return data?.art ?? {};
+  const catalogue = await db.collection('catalogue').get();
+  const served = tsdbLeagueIdsFrom(
+    catalogue.docs.map((d) => (d.data() as CatalogueEntry).competitionId),
+  );
+  const byId = new Map<string, string>();
+  for (const sport of TSDB_ART_SPORTS) {
+    try {
+      const art = await fetchTsdbLeagueBadges(key, sport, normaliseName);
+      for (const [id, url] of art.byId) if (!byId.has(id)) byId.set(id, url);
+    } catch (e) {
+      // One sport failing must not cost the other nine.
+      console.warn(`[kickoffcal] competition art: ${sport} failed: ${e}`);
+    }
+  }
+  const art = narrowToServed(byId, served);
+  // Never overwrite a populated cache with nothing: a bad TSDB day
+  // would otherwise strip every logo for the next 24 hours.
+  if (Object.keys(art).length === 0) return data?.art ?? {};
+  await ref.set({ art, cachedAt: new Date().toISOString() });
+  return art;
+}
+
 export const listPriorities = onRequest(async (_req, res) => {
   try {
     const { map, sportWeights, dormant } = await loadPriorityData();
-    res.json({ priorities: map, sportWeights, dormant });
+    // Artwork is best-effort and policy-filtered: the takedown switch
+    // and the Olympic exclusion both apply here exactly as they do to
+    // the served league rows.
+    const off = await loadImageryOff();
+    const raw = await competitionArt().catch(() => ({}) as Record<string, string>);
+    const competitionArtOut: Record<string, string> = {};
+    for (const [id, url] of Object.entries(raw)) {
+      if (imageryAllowed(`tsdb-league-${id}`, off)) competitionArtOut[id] = url;
+    }
+    res.json({
+      priorities: map,
+      sportWeights,
+      dormant,
+      competitionArt: competitionArtOut,
+    });
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }

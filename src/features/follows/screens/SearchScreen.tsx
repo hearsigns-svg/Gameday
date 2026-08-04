@@ -88,6 +88,9 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
         title: c.name,
         caption: `${c.country} · ${s.label}`,
         sportKey: s.key,
+        ...(cachedPriorities().competitionArt[String(c.id)]
+          ? { imageUrl: cachedPriorities().competitionArt[String(c.id)] }
+          : {}),
         followable: {
           key: c.key,
           label: c.name,

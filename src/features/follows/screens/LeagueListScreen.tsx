@@ -68,7 +68,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           (c) => c.key,
           pr.priorities,
           new Set(pr.dormant),
-        ),
+        ).map((c) => {
+          // Competition logo by TSDB league id (Prompt 13 follow-up).
+          // These rows are CONFIG, never served by listLeagues, which
+          // is why they alone still rendered a monogram while their
+          // soccer neighbours had logos. The id IS the TSDB id, so the
+          // join needs no name matching.
+          const art = pr.competitionArt[String(c.id)];
+          return art ? { ...c, crestUrl: art } : c;
+        }),
       );
       return;
     }

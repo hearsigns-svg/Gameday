@@ -1,0 +1,84 @@
+// Competition art for the client's STATIC competitions (Prompt 13
+// follow-up): the id set comes from the catalogue so it cannot drift,
+// and the payload carries only what browse actually offers.
+
+import {
+  artIsFresh,
+  COMPETITION_ART_TTL_MS,
+  narrowToServed,
+  TSDB_ART_SPORTS,
+  tsdbLeagueIdsFrom,
+} from '../competitionArt';
+import { CATALOGUE_SEED } from '../catalogue';
+
+test('the served id set is DERIVED from the catalogue, not hand-kept', () => {
+  const ids = tsdbLeagueIdsFrom(CATALOGUE_SEED.map((e) => e.competitionId));
+  // The competitions the owner named, plus their neighbours.
+  expect(ids).toEqual(expect.arrayContaining(['4387', '4391', '4460']));
+  // Non-TSDB keys contribute nothing: no soccer fd codes, no Olympic
+  // rows, no `sport:` weights, no tennis tours.
+  expect(ids.every((id) => /^\d+$/.test(id))).toBe(true);
+  expect(ids).not.toContain('olympics-2028');
+});
+
+test('keys that are not TSDB league keys are ignored', () => {
+  expect(
+    tsdbLeagueIdsFrom([
+      'tsdb-league-4387',
+      'fdorg-comp-PL',
+      'sport:basketball',
+      'olympics-2028-athletics',
+      'tsdb-team-133604', // a TEAM key, not a league
+      undefined,
+      'tsdb-league-notanumber',
+    ]),
+  ).toEqual(['4387']);
+});
+
+test('the payload is narrowed to served ids — not the whole badge set', () => {
+  // Ten sports carry well over a thousand leagues between them;
+  // shipping all of it would be ~80KB of URLs nobody renders.
+  const byId = new Map([
+    ['4387', 'https://x/nba.png'],
+    ['4391', 'https://x/nfl.png'],
+    ['9999', 'https://x/unserved.png'],
+  ]);
+  expect(narrowToServed(byId, ['4387', '4391'])).toEqual({
+    '4387': 'https://x/nba.png',
+    '4391': 'https://x/nfl.png',
+  });
+  // A served id the provider has no badge for is simply absent —
+  // never an empty string, which would render as a broken image.
+  expect(narrowToServed(byId, ['4387', '1234'])).toEqual({
+    '4387': 'https://x/nba.png',
+  });
+});
+
+test('every sport we browse is covered by the fetch list', () => {
+  // Verified live 2026-08-04: each of these returns leagues and every
+  // league carries a badge. A sport missing here means its
+  // competitions silently keep monograms.
+  for (const s of [
+    'Soccer',
+    'Basketball',
+    'American Football',
+    'Ice Hockey',
+    'Baseball',
+    'Cricket',
+    'Rugby',
+    'Golf',
+    'Fighting',
+    'Motorsport',
+  ]) {
+    expect(TSDB_ART_SPORTS).toContain(s);
+  }
+});
+
+test('the art cache expires daily and a bad timestamp is never fresh', () => {
+  const now = Date.parse('2026-08-04T12:00:00.000Z');
+  expect(artIsFresh('2026-08-04T11:00:00.000Z', now)).toBe(true);
+  expect(artIsFresh('2026-08-03T11:00:00.000Z', now)).toBe(false);
+  expect(artIsFresh(undefined, now)).toBe(false);
+  expect(artIsFresh('nonsense', now)).toBe(false);
+  expect(COMPETITION_ART_TTL_MS).toBe(24 * 3_600_000);
+});

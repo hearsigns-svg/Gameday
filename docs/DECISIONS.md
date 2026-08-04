@@ -1597,3 +1597,22 @@
   its "Serie A" into "Italian Serie A" without ever crossing a border.
   19 of 20 resolve; Eredivisie has no TSDB match and falls back to the
   generated treatment.
+- 2026-08-04 (follow-up): COMPETITION LOGOS FOR THE CLIENT'S STATIC
+  COMPETITIONS. NBA, WNBA, NFL, the cricket and rugby leagues, the golf
+  tours, MotoGP and the fight promotions live in the client's own
+  `sportsConfig` and never touch `listLeagues`, so they alone kept
+  monograms while their soccer neighbours had logos. They now join by
+  TSDB LEAGUE ID — the only fully safe join, and available because the
+  static rows carry the TSDB id AS their `id`, so none of the
+  country-scoped name ambiguity applies. THE ID SET IS DERIVED FROM THE
+  CATALOGUE (`tsdb-league-<id>` keys), not a second hand-kept list: a
+  new competition gets its logo by existing. Carried on
+  `listPriorities`, which is already the browse-metadata payload the
+  client fetches once a session and caches hourly — a second endpoint
+  and a second cache would buy nothing. Cached server-side for 24h in
+  `directoryArt/competitions` (ten TSDB calls on a cold build, 5.3s;
+  0.33s thereafter), narrowed to the ~40 served ids so the payload is
+  5.5KB rather than ~80KB of URLs nobody renders. Artwork is decorative,
+  so EVERY failure path returns an empty map rather than an error, and a
+  failed rebuild never overwrites a populated cache with nothing. The
+  takedown switch and the Olympic exclusion both apply.

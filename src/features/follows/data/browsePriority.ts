@@ -24,6 +24,12 @@ export interface BrowsePriorities {
   // Competition keys with zero future fixtures right now (Prompt 11b):
   // demoted below live rows within their sport, never hidden.
   dormant: string[];
+  // TSDB league id → competition logo (Prompt 13 follow-up). The
+  // client's STATIC competitions carry the TSDB id as their `id`, so
+  // this joins by id with no name matching. Absent on an old server and
+  // absent for anything the imagery policy suppresses — both fall back
+  // to the generated treatment, which is why an empty map is safe.
+  competitionArt: Record<string, string>;
 }
 
 interface PriorityCache extends BrowsePriorities {
@@ -36,6 +42,7 @@ export function cachedPriorities(): BrowsePriorities {
     priorities: c?.priorities ?? {},
     sportWeights: c?.sportWeights ?? {},
     dormant: c?.dormant ?? [],
+    competitionArt: c?.competitionArt ?? {},
   };
 }
 
@@ -63,6 +70,12 @@ export async function refreshPriorities(): Promise<void> {
           ? body.sportWeights
           : {},
       dormant: Array.isArray(body.dormant) ? body.dormant : [],
+      // Same shape discipline as the rest: a wrong type degrades to no
+      // artwork, never to a broken cache.
+      competitionArt:
+        typeof body.competitionArt === 'object' && body.competitionArt !== null
+          ? body.competitionArt
+          : {},
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);
   } catch {
