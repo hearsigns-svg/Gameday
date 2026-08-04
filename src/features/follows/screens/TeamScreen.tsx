@@ -49,6 +49,8 @@ import {
   isRetired,
   retiredEmptyState,
 } from '../domain/careerStatus';
+import { sportLabelFor } from '../domain/sportTerms';
+import { activeRegion } from '../../../core/regionStore';
 
 type Props = RootScreenProps<'Team'>;
 
@@ -308,7 +310,7 @@ export default function TeamScreen({ navigation, route }: Props) {
             {name}
           </Text>
           <Text style={[type.caption, { color: t.textSecondary }]}>
-            {sport?.label ?? sportKey}
+            {sport ? sportLabelFor(sport.key, sport.label, activeRegion()) : sportKey}
             {fixtures ? ` · ${fixtures.length} upcoming` : ''}
           </Text>
         </View>

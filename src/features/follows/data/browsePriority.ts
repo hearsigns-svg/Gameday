@@ -9,10 +9,16 @@
 // empty map here is honest — the one place a silent fallback is right.
 
 import { readJson, writeJson } from '../../../core/storage';
+import { activeRegion } from '../../../core/regionStore';
 import { functionsBaseUrl } from '../../../core/firebase';
 export { byPriority, byPriorityLive } from '../domain/browseOrder';
 
-const CACHE_KEY = 'browsePriority.v1';
+// Keyed BY REGION (Prompt 15): a device that switches region must not
+// read the previous region's ordering out of the cache, and a user
+// toggling the override should see the change immediately rather than
+// after the hourly refresh window.
+const CACHE_KEY_BASE = 'browsePriority.v2';
+const cacheKeyFor = (region: string) => `${CACHE_KEY_BASE}.${region}`;
 
 // The doc changes when ops tune the catalogue — rarely. Hourly matches
 // the freshness fetch's cadence reasoning.
@@ -37,7 +43,7 @@ interface PriorityCache extends BrowsePriorities {
 }
 
 export function cachedPriorities(): BrowsePriorities {
-  const c = readJson<PriorityCache | null>(CACHE_KEY, null);
+  const c = readJson<PriorityCache | null>(cacheKeyFor(activeRegion()), null);
   return {
     priorities: c?.priorities ?? {},
     sportWeights: c?.sportWeights ?? {},
@@ -50,7 +56,8 @@ export function cachedPriorities(): BrowsePriorities {
 // on the next mount. A failed fetch keeps the previous cache — stale
 // ordering beats config-order flapping.
 export async function refreshPriorities(): Promise<void> {
-  const cached = readJson<PriorityCache | null>(CACHE_KEY, null);
+  const region = activeRegion();
+  const cached = readJson<PriorityCache | null>(cacheKeyFor(region), null);
   if (
     cached &&
     Date.now() - Date.parse(cached.fetchedAt) < REFRESH_MIN_INTERVAL_MS
@@ -58,12 +65,14 @@ export async function refreshPriorities(): Promise<void> {
     return;
   }
   try {
-    const res = await fetch(`${functionsBaseUrl}/listPriorities`);
+    const res = await fetch(
+      `${functionsBaseUrl}/listPriorities?region=${encodeURIComponent(region)}`,
+    );
     if (!res.ok) return;
     const body = (await res.json()) as Partial<BrowsePriorities>;
     // Shape-checked: a wrong body must not blank a good cache.
     if (typeof body.priorities !== 'object' || body.priorities === null) return;
-    writeJson(CACHE_KEY, {
+    writeJson(cacheKeyFor(region), {
       priorities: body.priorities,
       sportWeights:
         typeof body.sportWeights === 'object' && body.sportWeights !== null

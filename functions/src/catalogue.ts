@@ -48,6 +48,16 @@ export interface CatalogueEntry {
   // how likely a human is to want it (the World Cup outranks nearly
   // everything). Ops-tunable in the collection without a deploy.
   priority?: number;
+  // REGIONAL ORDERING OVERLAY (Prompt 15). Region key → priority,
+  // applied over `priority` when a request names a region. SPARSE BY
+  // DESIGN: a region lists only what it reorders, and everything absent
+  // keeps the default weight — so a region is never a second complete
+  // ranking to maintain, and a new competition is correctly ordered
+  // everywhere the day it is added without touching this at all.
+  //
+  // Ops-editable in the console exactly like `priority`, which is what
+  // makes regional curation a data exercise rather than a release.
+  priorityByRegion?: Record<string, number>;
   // TAKEDOWN SWITCH (Prompt 13). `imagery: false` suppresses crests and
   // logos for this competition WITHOUT A DEPLOY — the same ops shape as
   // `enabled`, which already cools a poller from the console. Absent or

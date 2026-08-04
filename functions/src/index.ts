@@ -786,6 +786,7 @@ let priorityCache: {
   sportWeights: Record<string, number>;
   dormant: string[];
   imageryOff: string[];
+  byRegion: Record<string, Record<string, number>>;
 } | null = null;
 
 // FAIL CLOSED. A sentinel set that reports EVERY key as suppressed, so
@@ -805,6 +806,7 @@ let priorityInflight: Promise<{
   sportWeights: Record<string, number>;
   dormant: string[];
   imageryOff: string[];
+  byRegion: Record<string, Record<string, number>>;
 }> | null = null;
 
 async function loadPriorityData(): Promise<{
@@ -812,6 +814,7 @@ async function loadPriorityData(): Promise<{
   sportWeights: Record<string, number>;
   dormant: string[];
   imageryOff: string[];
+  byRegion: Record<string, Record<string, number>>;
 }> {
   if (priorityCache && Date.now() - priorityCache.at < 300_000) {
     return priorityCache;
@@ -828,6 +831,7 @@ async function loadPriorityDataUncached(): Promise<{
   sportWeights: Record<string, number>;
   dormant: string[];
   imageryOff: string[];
+  byRegion: Record<string, Record<string, number>>;
 }> {
   const snap = await db.collection('catalogue').get();
   const entries = snap.docs.map((d) => d.data() as CatalogueEntry);
@@ -840,6 +844,16 @@ async function loadPriorityDataUncached(): Promise<{
   const imageryOff = entries
     .filter((e) => e.imagery === false && typeof e.competitionId === 'string')
     .map((e) => e.competitionId);
+  // The regional overlay, inverted to region → key → weight so a
+  // request applies one lookup rather than scanning every entry.
+  const byRegion: Record<string, Record<string, number>> = {};
+  for (const e of entries) {
+    if (!e.competitionId || !e.priorityByRegion) continue;
+    for (const [region, weight] of Object.entries(e.priorityByRegion)) {
+      if (typeof weight !== 'number') continue;
+      (byRegion[region] ??= {})[e.competitionId] = weight;
+    }
+  }
   for (const e of entries) {
     if (e.competitionId && typeof e.priority === 'number') {
       map[e.competitionId] = e.priority;
@@ -902,6 +916,7 @@ async function loadPriorityDataUncached(): Promise<{
     sportWeights: sportWeightsOf(entries),
     dormant,
     imageryOff,
+    byRegion,
   };
   return priorityCache;
 }
@@ -923,6 +938,21 @@ async function loadImageryOff(): Promise<ReadonlySet<string>> {
     );
     return SUPPRESS_ALL;
   }
+}
+
+// Sport weights AFTER the regional overlay. `sportWeightsOf` derives
+// them from catalogue entries; once a region has rewritten some
+// `sport:<key>` weights we re-read them from the overlaid map, falling
+// back to the default for every sport the region did not mention.
+function sportWeightsOf2(
+  overlaid: Record<string, number>,
+  base: Record<string, number>,
+): Record<string, number> {
+  const out = { ...base };
+  for (const [key, weight] of Object.entries(overlaid)) {
+    if (key.startsWith('sport:')) out[key.slice('sport:'.length)] = weight;
+  }
+  return out;
 }
 
 // Competition logos for the client's STATIC competitions, cached in
@@ -966,9 +996,19 @@ async function competitionArt(): Promise<Record<string, string>> {
   return art;
 }
 
-export const listPriorities = onRequest(async (_req, res) => {
+export const listPriorities = onRequest(async (req, res) => {
   try {
-    const { map, sportWeights, dormant } = await loadPriorityData();
+    const { map, sportWeights, dormant, byRegion } = await loadPriorityData();
+    // REGIONAL OVERLAY (Prompt 15). A sparse per-region layer over the
+    // default weights: a region names only what it reorders, everything
+    // else keeps its default. An unknown region is not an error and not
+    // an empty ranking — it is simply the default, which is the whole
+    // reason most of the world needs no region entry at all.
+    const region = String(req.query.region ?? '').trim();
+    const overlay = region ? (byRegion[region] ?? {}) : {};
+    const regionalMap = Object.keys(overlay).length
+      ? { ...map, ...overlay }
+      : map;
     // Artwork is best-effort and policy-filtered: the takedown switch
     // and the Olympic exclusion both apply here exactly as they do to
     // the served league rows.
@@ -979,10 +1019,19 @@ export const listPriorities = onRequest(async (_req, res) => {
       if (imageryAllowed(`tsdb-league-${id}`, off)) competitionArtOut[id] = url;
     }
     res.json({
-      priorities: map,
-      sportWeights,
+      priorities: regionalMap,
+      // Sport-row weights ride the same overlay: the `sport:<key>` rows
+      // are ordinary catalogue entries, so a region reorders SPORTS by
+      // giving those rows a regional weight — which is what "cricket
+      // leads in South Asia" actually is.
+      sportWeights: sportWeightsOf2(regionalMap, sportWeights),
       dormant,
       competitionArt: competitionArtOut,
+      // Echoed so the client can prove which overlay it got rather
+      // than assume: an unrecognised region silently serving defaults
+      // is exactly the shape that hides a typo for weeks.
+      region: region || 'default',
+      regionApplied: Object.keys(overlay).length > 0,
     });
   } catch (e) {
     res.status(502).json({ error: String(e) });

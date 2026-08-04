@@ -50,6 +50,8 @@ import { identityFollow } from '../domain/followIdentity';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
+import { sportLabelFor } from '../domain/sportTerms';
+import { activeRegion } from '../../../core/regionStore';
 
 type Props = TabScreenProps<'Home'>;
 
@@ -325,7 +327,7 @@ export default function HomeScreen({ navigation }: Props) {
           return (
             <SportCard
               key={s.key}
-              label={s.label}
+              label={sportLabelFor(s.key, s.label, activeRegion())}
               glyph={s.glyph}
               theme={teamTheme(s.accent, mode)}
               caption={
@@ -335,7 +337,7 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() =>
                 navigation.navigate('LeagueList', { sportKey: s.key })
               }
-              accessibilityLabel={`${s.label}${following ? ', following' : ''}`}
+              accessibilityLabel={`${sportLabelFor(s.key, s.label, activeRegion())}${following ? ', following' : ''}`}
             />
           );
         })}

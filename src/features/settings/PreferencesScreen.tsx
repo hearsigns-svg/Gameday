@@ -21,6 +21,13 @@ import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
 import { showToast } from '../../core/toast';
+import { REGIONS, RegionKey, regionLabel } from '../../core/region';
+import {
+  detectedRegion,
+  regionOverride,
+  setRegionOverride,
+} from '../../core/regionStore';
+import { refreshPriorities } from '../follows/data/browsePriority';
 
 // Colour choices for the Gameday calendar as it appears in the OS
 // calendar app. Named for accessibility; applied live when possible.
@@ -64,6 +71,7 @@ function OptionRow(props: {
 export default function PreferencesScreen({
   navigation,
 }: RootScreenProps<'Preferences'>) {
+  const [region, setRegion] = useState<RegionKey | null>(regionOverride());
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
   const [colour, setColour] = useState<string>(calendarColour);
@@ -147,6 +155,50 @@ export default function PreferencesScreen({
       </View>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         Reminder changes apply to fixtures as they are added or updated.
+      </Text>
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Region
+      </Text>
+      <View style={styles.group}>
+        <OptionRow
+          label={`Follow my device (${regionLabel(detectedRegion())})`}
+          selected={region === null}
+          onPress={() => {
+            setRegionOverride(null);
+            setRegion(null);
+            void refreshPriorities();
+          }}
+        />
+        {REGIONS.map((r) => (
+          <OptionRow
+            key={r.key}
+            label={r.label}
+            selected={region === r.key}
+            onPress={() => {
+              setRegionOverride(r.key);
+              setRegion(r.key);
+              void refreshPriorities();
+            }}
+          />
+        ))}
+        <OptionRow
+          label="Default"
+          selected={region === 'default'}
+          onPress={() => {
+            setRegionOverride('default');
+            setRegion('default');
+            void refreshPriorities();
+          }}
+        />
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        Region changes the ORDER sports and competitions appear in, and what
+        a few of them are called. It never changes what you can follow — every
+        competition stays searchable and followable from anywhere. Detected
+        from your device's language settings; no location is used.
       </Text>
 
       <Text

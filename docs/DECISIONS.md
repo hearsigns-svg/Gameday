@@ -1654,3 +1654,51 @@
   canonical participant pair with a day window. The question for a new
   class is never "what algorithm" but "what is this event's identity to
   a user, and does a canonical id for it exist yet".
+
+## Prompt 15 decisions (owner, 2026-08-04)
+
+- 2026-08-04: THE REGIONAL OVERLAY IS BUILT; THE DATA IS NOT SEEDED.
+  Reverses 11b's "ship one UK default" on the owner's instruction, using
+  the mechanism proposed there: `priorityByRegion` on catalogue entries,
+  a `region` parameter on listPriorities, device region from the OS
+  locale. The per-region WEIGHTS are deliberately unseeded pending the
+  owner's read of the proposed table — a test asserts the overlay is
+  empty and fails the moment weights are added, which is the reminder to
+  bring the table back for approval rather than let it drift in.
+- 2026-08-04: DETECTION IS OS-LOCALE ONLY, in three layers: Intl
+  (present in Hermes on both platforms, no native module, but may answer
+  a bare language on a device with no region), then the platform locale
+  identifier (iOS AppleLocale, Android I18nManager), then 'default'. NO
+  IP GEOLOCATION AND NO LOCATION PERMISSION — the country a phone is
+  configured for is a better guess at what someone follows than the
+  country they are standing in, and it costs no prompt and leaks
+  nothing. Verified on device: an en-GB simulator resolves to UK &
+  Ireland. NO NEW DEPENDENCY was needed; expo-localization was not added.
+- 2026-08-04: SEVEN REGIONS, AND THE OMISSIONS ARE DELIBERATE. UK &
+  Ireland, Europe, North America, South Asia, Latin America, Oceania,
+  default. Most of Africa and the Middle East are correctly served by
+  the soccer-led default — that is WHY they need no entry. Two admitted
+  wrongs, both fixable as config: JAPAN falls to the soccer-led default
+  though baseball leads there and we serve NPB; CANADA shares North
+  America though ice hockey leads there and merely sits mid-table in the
+  US. Adding either is a table entry plus an overlay, no logic change.
+- 2026-08-04: REGION NEVER CHANGES AVAILABILITY, ONLY ORDER AND LABEL.
+  A user in India must find and follow the NFL as easily as anyone. The
+  overlay is sparse — a region names only what it reorders — so a new
+  competition is correctly ordered everywhere the day it is added.
+- 2026-08-04: TERMINOLOGY IS A DISPLAY LAYER; INTERNAL KEYS ARE
+  UNTOUCHED. `sport: 'soccer'` remains the identifier everywhere.
+  Overrides: soccer→Football (UK/IE, Europe, South Asia, LatAm);
+  nfl→Football (North America only); athletics→Track and field (NA);
+  ice-hockey→Hockey (NA ONLY — in South Asia and Oceania "hockey" means
+  FIELD hockey, and this app lists "Field hockey" as an Olympic
+  discipline, so the clash would be on our own screens); motorsport→Auto
+  racing (NA). AUSTRALIA AND NZ KEEP "Soccer" deliberately: "football"
+  there means the AFL or rugby league, and the sport's own audience says
+  soccer. The two football words never collide because gridiron is only
+  "Football" in the one region where soccer is "Soccer".
+- 2026-08-04: THE OVERRIDE LIVES IN PREFERENCES, and stores the CHOICE
+  rather than the resolved region — so a user who moves, or changes
+  their phone's language, keeps following the OS unless they explicitly
+  pinned something. Default row reads "Follow my device (UK & Ireland)",
+  naming what was detected so the guess is visible rather than implicit.

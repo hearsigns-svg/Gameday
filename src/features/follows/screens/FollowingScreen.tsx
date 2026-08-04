@@ -17,6 +17,8 @@ import { subscribeSync, upcomingByFollow } from '../../calendar-sync/syncEngine'
 import { refollow, unfollow } from '../followActions';
 import { Followable, loadFollowables } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
+import { sportLabelFor } from '../domain/sportTerms';
+import { activeRegion } from '../../../core/regionStore';
 
 const UNDO_WINDOW_MS = 6000;
 
@@ -25,7 +27,10 @@ type Props = TabScreenProps<'Following'>;
 // Between seasons a followed team genuinely has nothing ahead — say so
 // rather than showing a bare row that reads as broken.
 function captionFor(item: Followable, upcomingCount: number | undefined): string {
-  const sport = sportByKey(item.sportKey)?.label ?? item.sportKey;
+  const cfg = sportByKey(item.sportKey);
+  const sport = cfg
+    ? sportLabelFor(cfg.key, cfg.label, activeRegion())
+    : item.sportKey;
   if (upcomingCount === undefined) return sport;
   if (upcomingCount === 0) return `${sport} · no upcoming fixtures yet`;
   return `${sport} · ${upcomingCount} upcoming`;
