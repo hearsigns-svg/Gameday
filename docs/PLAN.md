@@ -1960,3 +1960,77 @@ window: Cincinnati, 13–23 August.
 
 897 tests both timezones, both typechecks and the functions build clean.
 **The `pollTennis` backoff needs a functions deploy.**
+
+### Prompt 17a/17b — ATP access, and the fixes that do not wait on it  [x] / Track 3 OWNER-GATED
+
+THE RECORD WAS WRONG, AND THE CORRECTION IS NARROWER THAN THE ERROR.
+`atptour.com/robots.txt` re-fetched in full: `User-agent: *` is
+`Allow: /`, with `Content-Signal: search=yes,ai-train=no,use=reference`,
+no `Sitemap:`, no `Crawl-delay`. The nine named `Disallow: /` agents —
+ClaudeBot among them — sit inside `# BEGIN/END Cloudflare Managed
+content`, which is Cloudflare's generic AI-crawler list. So the
+2026-07-31 "explicit refusal by the publisher" was an over-read. What
+blocks us is Cloudflare bot management: every path answers `403` with
+`cf-mitigated: challenge`, and only robots.txt is served. ATP's site
+terms assert restrictions whose enforceability against a non-assenting
+party is untested, and the schedule facts themselves are unlikely to be
+protectable — so production use is an OPEN LEGAL QUESTION, not a
+permission and not a prohibition. Written permission or a licensed feed
+is the clean route. Corrected in DECISIONS (append-only: the historical
+entry keeps its words and gains a superseded pointer), in
+`sportsConfig.ts` and in `athleteDelivery.ts`.
+
+TRACK 2, one bounded diagnostic: a standard Chrome User-Agent from the
+Node client we would actually deploy, five paths, existing rate limits.
+Identical `403 cf-mitigated: challenge` on all five — no difference
+from the honest-UA request. WHY the challenge fires is not established
+by those responses and is not claimed. The ladder stops there by owner
+ruling: no TLS impersonation, no curl-impersonate, no headless browser,
+no challenge solving, no proxies, no repeated attempts.
+
+TRACK 1: `docs/atp-access-request.md` — a 192-word request to
+contact@tennisdata.com (TDI, the ATP/ATP Media joint venture that owns
+the data rights; address printed in the 2023-03-13 GlobeNewswire
+release), copy to ATP Media. It leads with the product and the access
+pattern and asks for a feed, written permission, or a referral. It does
+NOT argue that robots.txt already permits us.
+
+TRACK 3: `docs/atp-vendor-trial.md` + `scripts/vendor-capture.mjs` —
+prepared, not run. Account creation and payment are the owner's, and
+the commercial gate is answered in writing by a human, so the trial
+cannot start here. The shortlist is ranked by who can actually grant
+redistribution: TDI/Sportradar hold the rights; the cheap aggregators
+can show payloads today but not sign anything. The capture script is
+vendor-neutral and logs TRANSITIONS, because the claim that matters is
+not "we have order of play" but "a match already in someone's calendar
+gets corrected".
+
+FIXED REGARDLESS:
+- **The fetch is LEASED, not merely cooled down** (`sourceLease.ts`).
+  Decision and claim are one transaction, so concurrent callers cannot
+  all read "due" and all fetch — the shape that turned one rate limit
+  into three. Leases expire, so a killed invocation costs one window,
+  not a day. New skip reason `skipped_ics_leased`.
+- **Follow no longer awaits an external fetch.** The tap syncs from the
+  warm cache and a second sync lands whatever the refresh brings; a
+  per-route 60s gate (`pollGate.ts`) means two follows in one league
+  cost one request.
+- **Grand Slam taxonomy split in two** (`tours` vs `coverage`). One
+  field was answering both "which draws does this tournament have" and
+  "which of them do we hold", so Wimbledon browsed as
+  "28 Jun – 11 Jul · ATP". Now: the slams are joint by definition, a
+  past joint edition proves the rest, and beyond a feed's horizon we
+  make NO claim rather than a men's-only one. Live: 9 joint, 37 wta,
+  13 atp, 40 claiming nothing.
+- **ATP nationality roster refresh RUN** (`runRoster`, 370s):
+  atp-directory 0 → 1,154/1,374, ATP top-20 20/20, F1 0 → 22/31,
+  retired 110/119. Tennis nationality overall 221 → 1,487 of 1,739.
+- **PRODUCT.md corrected**: tennis was listed as deferred for want of a
+  provider. Women's is complete; men's is tournament-only; athlete
+  follows are in. The "Djokovic — Wimbledon, time TBC" illustration was
+  replaced, being the one case we cannot serve.
+
+912 tests both timezones, both typechecks and the functions build
+clean. `pollTennis` + `listTournaments` DEPLOYED and verified live.
+Release simulator build verified: the four slams read "· ATP · WTA",
+2027 rows beyond the WTA horizon read dates only.
