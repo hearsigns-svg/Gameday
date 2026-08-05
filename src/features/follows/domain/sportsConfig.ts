@@ -189,8 +189,16 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['competition', 'athlete'],
     tournamentBrowse: true,
     // ATP: TOURNAMENT level from the ICS feed Tennis TV publishes for
-    // subscription — atptour.com itself refuses this agent and is
-    // permanently excluded (docs/DECISIONS.md). WTA: tournaments PLUS
+    // subscription. atptour.com is NOT excluded by robots.txt —
+    // `User-agent: *` is `Allow: /` and the content signal permits
+    // reference use; the ClaudeBot entry is Cloudflare's generic
+    // AI-crawler list. Access is blocked by Cloudflare bot management,
+    // which challenges any non-browser client. ATP's website terms
+    // assert restrictions on reproduction and storage whose
+    // enforceability against a non-assenting party is untested, so
+    // production use is an OPEN LEGAL QUESTION: written permission or a
+    // licensed feed is the clean route (docs/DECISIONS.md 2026-08-05).
+    // WTA: tournaments PLUS
     // draws and order of play from the WTA's own API (owner ruling
     // 2026-08-02) — following a player rides APPEARANCE docs, reached
     // through global search.

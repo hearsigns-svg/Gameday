@@ -137,9 +137,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         month: 'short',
         timeZone: 'UTC',
       });
-    const tours =
-      row.tours === 'joint' ? 'ATP · WTA' : row.tours.toUpperCase();
-    return `${fmt(Date.parse(row.startUtc))} – ${fmt(Date.parse(row.endUtc) - 86_400_000)} · ${tours}`;
+    const dates = `${fmt(Date.parse(row.startUtc))} – ${fmt(Date.parse(row.endUtc) - 86_400_000)}`;
+    // No tour claim when the server made none: the dates alone are the
+    // honest caption, and an omitted fact reads as nothing at all.
+    if (!row.tours || row.tours.length === 0) return dates;
+    return `${dates} · ${row.tours.map((t) => t.toUpperCase()).join(' · ')}`;
   };
 
   const toggle = useCallback(async (league: DirectoryLeague) => {

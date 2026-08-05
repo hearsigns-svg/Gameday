@@ -108,7 +108,11 @@ export type RunReason =
   // due and every retry hits it again — which is exactly what three
   // follow taps did to Google's ICS host in ten minutes. Same
   // 'skipped' prefix, same reason: it supplies no fetch evidence.
-  | 'skipped_ics_failure_backoff';
+  | 'skipped_ics_failure_backoff'
+  // Another invocation holds the fetch lease this second. Same family:
+  // no fetch happened, so no evidence about the source was gathered,
+  // and lastSuccessAt must not move.
+  | 'skipped_ics_leased';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

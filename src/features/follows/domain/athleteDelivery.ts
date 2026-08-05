@@ -7,10 +7,13 @@
 // For MEN'S TENNIS it is false, and measured false: on 2026-08-05,
 // Djokovic, Alcaraz, Sinner and Zverev each had ZERO fixtures, while
 // `tennis-atp` held 78 future TOURNAMENT rows and no matches at all.
-// Nothing is going to announce them into the calendar, because no source
-// we are allowed to use publishes men's draws or order of play — the
-// ATP's own site is a standing refusal, and the Tennis TV ICS is
-// tournament-level. The women's tour has its own API and does deliver.
+// Nothing is going to announce them into the calendar: no source we can
+// USE publishes men's draws or order of play. The Tennis TV ICS is
+// tournament-level, and atptour.com — not excluded by robots.txt, but
+// challenged by Cloudflare bot management, and with its own terms
+// making production use an open legal question — is neither reachable
+// nor settled (docs/DECISIONS.md 2026-08-05). The women's tour has its
+// own API, licensed by owner ruling, and does deliver.
 //
 // So the page says which of those two worlds the athlete is in. This is
 // the same rule retirement already follows (domain/careerStatus.ts): the

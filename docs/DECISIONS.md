@@ -574,6 +574,8 @@
   EXCLUDED. Both name ClaudeBot in robots.txt with `Disallow: /`. That is
   an explicit refusal by the publisher, and it is not to be revisited,
   routed around, or re-checked in a later stage.
+  [THE atptour.com HALF OF THIS IS SUPERSEDED — the robots.txt reading
+  was wrong; see 2026-08-05. The MVP half stands, unre-checked.]
   WHY THIS DOES NOT CONTRADICT THE ICS RULING: the two are different
   publishers making different decisions about their own property. ATP
   refused us on ATP's site. Tennis TV published a subscription feed and
@@ -1897,3 +1899,38 @@
   population, which travels on the route AND on the stored follow, so
   which door the user came through cannot change what the app claims.
   Delete it when a men's source lands.
+- 2026-08-05: **atptour.com — THE ROBOTS READING WAS WRONG, AND THE
+  POSITION IS NARROWER THAN EITHER SIDE OF IT.** Re-fetched and read in
+  full (owner-directed, Prompt 17a). The standing text is the owner's:
+  "Not excluded by robots.txt — `User-agent: *` is `Allow: /` and the
+  content signal permits reference use; the ClaudeBot entry is
+  Cloudflare's generic AI-crawler list. Access is blocked by Cloudflare
+  bot management, which challenges any non-browser client. ATP's website
+  terms assert restrictions on reproduction and storage, whose
+  enforceability against a non-assenting party is untested; the
+  underlying schedule facts are unlikely to be protectable. Production
+  use is therefore an open legal question, and written permission or a
+  licensed feed remains the clean route."
+  TWO THINGS THIS ENTRY MUST NOT BE READ AS SAYING: that robots.txt
+  grants permission for commercial use, and that the terms clearly
+  forbid it. Both overstate. This corrects the stated REASON wherever
+  the 2026-07-31 exclusion is cited (2026-08-02, the Wikidata rulings)
+  — not the practice, which is unchanged: atptour.com is not fetched in
+  production and no scraper is built.
+  THE OBSERVED FACTS, for the record: `User-agent: *` carries
+  `Allow: /`, no Disallow of any kind, and
+  `Content-Signal: search=yes,ai-train=no,use=reference`. Nine named
+  agents (Amazonbot, Applebot-Extended, Bytespider, CCBot, ClaudeBot,
+  CloudflareBrowserRenderingCrawler, Google-Extended, GPTBot,
+  meta-externalagent) are each `Disallow: /`, all inside
+  `# BEGIN/END Cloudflare Managed content`. No `Sitemap:`, no
+  `Crawl-delay`. Every path tried — homepage included, honest UA and
+  standard browser UA alike — answered `HTTP 403` with
+  `cf-mitigated: challenge`; only robots.txt was served. WHY the
+  challenge fires is NOT established by those responses and is not
+  claimed here.
+  THE LADDER STOPS HERE BY OWNER RULING: no TLS impersonation, no
+  curl-impersonate, no headless browser, no challenge solving, no
+  stealth plugins, no proxies, no cookie harvesting, no repeated
+  attempts. The routes forward are an authorised-access request and a
+  licensed vendor.

@@ -47,6 +47,7 @@ import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
 import { CatalogueEntry, sportWeightsOf } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
+import { leaseDecision } from './sourceLease';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
@@ -1899,6 +1900,10 @@ const ICS_MIN_INTERVAL_MS = 22 * 3_600_000;
 // that a user tapping again is served the cache instead of another
 // refusal.
 const ICS_FAILURE_BACKOFF_MS = 15 * 60_000;
+// How long one invocation's claim on the fetch is honoured. Longer than
+// the fetch takes, short enough that an invocation killed mid-flight
+// costs one window rather than a day (src/sourceLease.ts).
+const ICS_LEASE_MS = 90_000;
 const ICS_MARKER_DOC = 'status/tennisIcs';
 
 export const pollTennis = onRequest(async (req, res) => {
@@ -1912,18 +1917,41 @@ export const pollTennis = onRequest(async (req, res) => {
   };
   const startedAt = new Date().toISOString();
   let lastSuccessAt: string | null = null;
-  let lastFailureAt: string | null = null;
+  // THE CLAIM AND THE DECISION ARE ONE WRITE. Deciding from a read and
+  // recording it after the fetch left a gap every concurrent invocation
+  // walked through: three follow taps, three fetches, three 429s. The
+  // transaction below either hands this invocation the lease or tells it
+  // to skip, and no two callers can win it (src/sourceLease.ts).
+  type SkipReason = 'daily_cap' | 'failure_backoff' | 'leased';
+  let claim: { fetch: true } | { fetch: false; reason: SkipReason };
   try {
-    const marker = await db.doc(ICS_MARKER_DOC).get();
-    const data = marker.exists
-      ? (marker.data() as { lastSuccessAt?: string; lastFailureAt?: string })
-      : {};
-    lastSuccessAt = data.lastSuccessAt ?? null;
-    lastFailureAt = data.lastFailureAt ?? null;
+    claim = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(db.doc(ICS_MARKER_DOC));
+      const data = snap.exists
+        ? (snap.data() as {
+            lastSuccessAt?: string;
+            lastFailureAt?: string;
+            leaseUntil?: string;
+          })
+        : {};
+      lastSuccessAt = data.lastSuccessAt ?? null;
+      const d = leaseDecision(data, Date.parse(startedAt), {
+        minIntervalMs: ICS_MIN_INTERVAL_MS,
+        failureBackoffMs: ICS_FAILURE_BACKOFF_MS,
+        leaseMs: ICS_LEASE_MS,
+      });
+      if (!d.fetch) return { fetch: false as const, reason: d.reason };
+      tx.set(
+        db.doc(ICS_MARKER_DOC),
+        { leaseUntil: d.leaseUntil },
+        { merge: true },
+      );
+      return { fetch: true as const };
+    });
   } catch (e) {
-    // A marker READ failure fails CLOSED: fetching anyway could break
-    // the once-daily commitment, and the run record keeps the failure
-    // from reading as a quiet skip (standing invariant).
+    // A marker read/claim failure fails CLOSED: fetching anyway could
+    // break the once-daily commitment, and the run record keeps the
+    // failure from reading as a quiet skip (standing invariant).
     await recordSourceRun(
       { ...ctx, trigger },
       {
@@ -1931,23 +1959,15 @@ export const pollTennis = onRequest(async (req, res) => {
         seasonResolved: null,
         seasonsTried: [],
         counts: EMPTY_COUNTS,
-        error: `ics daily-cap marker read failed: ${String(e)}`,
+        error: `ics fetch lease failed: ${String(e)}`,
       },
       startedAt,
     );
-    res.status(502).json({ error: 'ics daily-cap marker read failed' });
+    res.status(502).json({ error: 'ics fetch lease failed' });
     return;
   }
-  const cappedUntilTomorrow =
-    lastSuccessAt !== null &&
-    Date.parse(startedAt) - Date.parse(lastSuccessAt) < ICS_MIN_INTERVAL_MS;
-  const coolingOff =
-    lastFailureAt !== null &&
-    Date.parse(startedAt) - Date.parse(lastFailureAt) < ICS_FAILURE_BACKOFF_MS;
-  if (cappedUntilTomorrow || coolingOff) {
-    const reason = cappedUntilTomorrow
-      ? 'skipped_ics_daily_cap'
-      : 'skipped_ics_failure_backoff';
+  if (!claim.fetch) {
+    const reason = `skipped_ics_${claim.reason}` as const;
     await recordSourceRun(
       { ...ctx, trigger },
       {
@@ -1975,9 +1995,14 @@ export const pollTennis = onRequest(async (req, res) => {
     await db
       .doc(ICS_MARKER_DOC)
       .set(
-        out.status === 200
-          ? { lastSuccessAt: new Date().toISOString() }
-          : { lastFailureAt: new Date().toISOString() },
+        {
+          ...(out.status === 200
+            ? { lastSuccessAt: new Date().toISOString() }
+            : { lastFailureAt: new Date().toISOString() }),
+          // Done — the next caller decides on the cap and the backoff,
+          // not on a lease this invocation no longer needs.
+          leaseUntil: null,
+        },
         { merge: true },
       );
   } catch (e) {

@@ -39,18 +39,39 @@ Rules:
   not per-match events. F1 creates per-session events (practice/quali/
   race) with a "race only" preference.
 - Late-scheduling sports (tennis order-of-play, UFC cards) create
-  placeholder events ("Djokovic — Wimbledon, time TBC") that sharpen as
-  data confirms.
+  placeholder events ("Gauff vs Day — National Bank Open", day known,
+  time TBC) that sharpen in place as data confirms. The example used to
+  read "Djokovic — Wimbledon", which is precisely the case we cannot
+  serve: see the men's line in v1 scope.
 
-## v1 scope (amended 2026-07-27)
+## v1 scope (amended 2026-07-27; tennis and athlete-follows amended 2026-08-05)
 
-In: the core journey; 12 sports (soccer, cricket, ice hockey, basketball, baseball, NFL, rugby, golf, F1, boxing, MMA, motorsport — motorsport and boxing added post-gate, tennis deferred on data grounds); ~60 competitions; background change detection with silent calendar correction; iOS + Android; store-launchable.
+In: the core journey; 12 sports (soccer, cricket, ice hockey, basketball, baseball, NFL, rugby, golf, F1, boxing, MMA, motorsport — motorsport and boxing added post-gate); ~60 competitions; background change detection with silent calendar correction; iOS + Android; store-launchable.
 
-Deferred: TENNIS (no provider publishes forward fixtures — verified
-twice), Test cricket (only Cricbuzz carries it; scraping decision open),
-athlete-follows (no bout-level data exists), push notifications on
-changes, server-side Google Calendar API write, Outlook/web,
-monetisation UI.
+TENNIS IS IN, ASYMMETRICALLY — and the asymmetry is the status, not a
+caveat on it (measured against production, 2026-08-05):
+
+- **Women's: complete.** api.wtatennis.com, approved by owner ruling
+  2026-08-02, carries tournaments, draws AND order of play. A player
+  follow yields one appearance document per match — the opponent named
+  from the draw, the day from the schedule, sharpened in place to an
+  exact time when the order of play publishes it. Live now: 40 future
+  tournament banners, 38 live appearances, 36 of them reaching a
+  followable athlete.
+- **Men's: tournaments only.** The Tennis TV ICS is a TOURNAMENT
+  calendar — 78 future banners and, by construction, not one match.
+  There is no men's draw or order-of-play source we can use:
+  atptour.com is challenged by Cloudflare bot management and its terms
+  make production use an open legal question (DECISIONS 2026-08-05), so
+  the routes are an authorised-access request or a licensed feed. Until
+  one lands, a followed ATP player's page SAYS SO rather than promising
+  events that cannot arrive.
+- **Athlete follows generally are IN**, not deferred: boxing, tennis
+  (women), MMA and F1 all deliver appearance-level events.
+
+Deferred: Test cricket (only Cricbuzz carries it; scraping decision
+open), push notifications on changes, server-side Google Calendar API
+write, Outlook/web, monetisation UI.
 
 ## Monetisation (architecture-relevant only)
 

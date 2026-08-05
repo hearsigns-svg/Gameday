@@ -80,9 +80,15 @@ export function canonicalDisplayName(title: string): string {
 export interface TournamentRow {
   key: string; // tennis-t-<slug> — the followable
   name: string;
-  // Which draws the NEXT edition carries, from which feeds actually
-  // hold a future doc under this key. 'joint' is the merged case.
-  tours: 'atp' | 'wta' | 'joint';
+  // WHICH DRAWS THIS TOURNAMENT HAS — a fact about the event, not about
+  // us. ABSENT when we cannot tell (the horizon rule below). Never
+  // assert a men's-only tournament from a feed's silence.
+  tours?: ('atp' | 'wta')[];
+  // WHICH OF THEM WE CURRENTLY HOLD a future parent for. Kept separate
+  // and deliberately NOT rendered: Wimbledon is a joint tournament of
+  // which we hold the men's banner, and collapsing those two facts into
+  // one field is what published "Wimbledon · ATP" in the first place.
+  coverage: ('atp' | 'wta')[];
   startUtc: string; // next edition's first day
   endUtc: string; // next edition's last day (exclusive midnight)
   level?: string; // 'Grand Slam' | 'WTA 1000' | … where a feed says
@@ -95,6 +101,45 @@ export interface TournamentSource {
   durationHours?: number;
   status: string;
 }
+
+// ─── Which draws does this tournament have? ───────────────────────────
+//
+// One field used to answer two different questions: "which draws does
+// this tournament have" and "which of them have we got". It was read
+// straight off "which feeds hold a FUTURE doc under this key", which
+// published a feed's silence as a fact about the sport. Wimbledon, Roland Garros and the Australian Open all
+// browsed as men's-only, because the only future doc for each is the
+// ATP ICS's 2027 edition and the WTA API's rolling window does not
+// reach 2027 yet. A row reading "28 Jun – 11 Jul · ATP" for WIMBLEDON
+// is the read-failure-as-empty mistake wearing a caption.
+//
+// Three rules, in order:
+//
+// 1. EVIDENCE UNIONS ACROSS EDITIONS. A tournament's draws do not
+//    change from year to year, so a PAST edition seen in both feeds
+//    proves the tournament is joint even when only one feed currently
+//    carries the next one. (Measured 2026-08-05: this alone lifts
+//    china-open, korea-open and the DC Open out of single-tour rows.)
+// 2. THE SLAMS ARE JOINT BY DEFINITION. Not a data question — each of
+//    the four majors has run a women's singles draw for a century, and
+//    no feed window changes that.
+// 3. OTHERWISE, SILENCE BEYOND A FEED'S HORIZON PROVES NOTHING. If the
+//    other feed has never published anything as late as this edition,
+//    its absence here is unobserved, not negative — so the row makes NO
+//    tour claim at all and the caption simply omits it. Inside both
+//    horizons, a single-feed tournament really is single-tour (the tour
+//    250s, which is most of the list) and says so.
+//
+// `coverage` stays alongside, answering the OTHER question honestly:
+// which tours we actually hold a future parent for. The two are never
+// merged again.
+
+const KNOWN_JOINT = new Set([
+  'tennis-t-wimbledon',
+  'tennis-t-us-open',
+  'tennis-t-roland-garros',
+  'tennis-t-australian-open',
+]);
 
 // Group future tour parents by canonical key; one row per tournament,
 // dated by its SOONEST upcoming edition. Editions beyond the next are
@@ -112,6 +157,21 @@ export function shapeTournamentRows(
     endUtc: string;
   }
   const byKey = new Map<string, Agg>();
+  // Rule 1 + rule 3 inputs, computed over EVERY edition we hold —
+  // including finished ones, which the row loop below skips.
+  const seen = new Map<string, Set<'atp' | 'wta'>>();
+  const horizon: Record<'atp' | 'wta', string> = { atp: '', wta: '' };
+  for (const p of parents) {
+    if (p.status === 'cancelled') continue;
+    const t = p.competitionId === 'tennis-wta' ? 'wta' : 'atp';
+    const k = tournamentKey(p.title);
+    if (k !== null) {
+      const set = seen.get(k) ?? new Set<'atp' | 'wta'>();
+      set.add(t);
+      seen.set(k, set);
+    }
+    if (p.startUtc > horizon[t]) horizon[t] = p.startUtc;
+  }
   for (const p of parents) {
     if (p.status === 'cancelled') continue;
     const endMs =
@@ -153,14 +213,29 @@ export function shapeTournamentRows(
     }
     // A later edition adds nothing: the key already covers it.
   }
+  const order = (t: Set<'atp' | 'wta'>): ('atp' | 'wta')[] =>
+    (['atp', 'wta'] as const).filter((x) => t.has(x));
   return [...byKey.entries()]
-    .map(([key, a]) => ({
-      key,
-      name: a.name,
-      tours:
-        a.tours.size === 2 ? ('joint' as const) : a.tours.has('wta') ? ('wta' as const) : ('atp' as const),
-      startUtc: a.startUtc,
-      endUtc: a.endUtc,
-    }))
+    .map(([key, a]) => {
+      const evidence = seen.get(key) ?? a.tours;
+      const known = KNOWN_JOINT.has(key) || evidence.size === 2;
+      const only = evidence.has('wta') ? ('wta' as const) : ('atp' as const);
+      const other = only === 'wta' ? 'atp' : 'wta';
+      // Has the OTHER feed ever published anything this late? If not,
+      // it has not looked here — and unobserved is not negative.
+      const observed = horizon[other] >= a.startUtc;
+      return {
+        key,
+        name: a.name,
+        ...(known
+          ? { tours: ['atp', 'wta'] as ('atp' | 'wta')[] }
+          : observed
+            ? { tours: [only] }
+            : {}),
+        coverage: order(a.tours),
+        startUtc: a.startUtc,
+        endUtc: a.endUtc,
+      };
+    })
     .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
 }

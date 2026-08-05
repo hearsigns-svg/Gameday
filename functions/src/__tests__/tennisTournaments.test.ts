@@ -56,7 +56,8 @@ describe('shapeTournamentRows', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       key: 'tennis-t-us-open',
-      tours: 'joint',
+      tours: ['atp', 'wta'],
+      coverage: ['atp', 'wta'],
       startUtc: '2026-08-30T00:00:00.000Z',
     });
     // The widest same-edition span wins the row's end.
@@ -77,12 +78,20 @@ describe('shapeTournamentRows', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].startUtc).toBe('2026-08-30T00:00:00.000Z');
-    expect(rows[0].tours).toBe('joint');
+    expect(rows[0].tours).toEqual(['atp', 'wta']);
   });
 
   test('a tour-specific event says which tour, and a finished edition falls off', () => {
     const rows = shapeTournamentRows(
       [
+        // Both feeds publish beyond every row below, so a single-tour
+        // observation here is a real observation (the horizon rule).
+        src({ title: 'Next Year Cup', startUtc: '2027-06-01T00:00:00.000Z' }),
+        src({
+          competitionId: 'tennis-wta',
+          title: 'Next Year Cup',
+          startUtc: '2027-06-01T00:00:00.000Z',
+        }),
         src({
           title: 'Winston-Salem Open',
           startUtc: '2026-08-23T00:00:00.000Z',
@@ -103,9 +112,96 @@ describe('shapeTournamentRows', () => {
       NOW,
     );
     expect(rows.map((r) => [r.name, r.tours])).toEqual([
-      ['Winston-Salem Open', 'atp'],
-      ['Korea Open', 'wta'],
+      ['Winston-Salem Open', ['atp']],
+      ['Korea Open', ['wta']],
+      ['Next Year Cup', ['atp', 'wta']],
     ]);
+  });
+
+  // ── Which draws does it have? A feed's silence is not an answer. ──
+
+  test('WIMBLEDON IS NOT A MEN\'S EVENT — the slams are joint by definition', () => {
+    // Live, 2026-08-05: the only future Wimbledon doc anywhere in the
+    // store is the ATP ICS's 2027 edition, because the WTA API's
+    // rolling window stops in November 2026. The row browsed as
+    // "28 Jun – 11 Jul · ATP". Same for Roland Garros and Melbourne.
+    const rows = shapeTournamentRows(
+      [
+        src({ title: 'Wimbledon', startUtc: '2027-06-28T00:00:00.000Z' }),
+        src({ title: 'Roland Garros', startUtc: '2027-05-23T00:00:00.000Z' }),
+        src({
+          title: 'Australian Open',
+          startUtc: '2027-01-17T00:00:00.000Z',
+        }),
+      ],
+      NOW,
+    );
+    // The tournament IS joint; what we HOLD is the men's banner alone.
+    // Two facts, two fields, never merged.
+    expect(rows.map((r) => r.tours)).toEqual([
+      ['atp', 'wta'],
+      ['atp', 'wta'],
+      ['atp', 'wta'],
+    ]);
+    expect(rows.map((r) => r.coverage)).toEqual([['atp'], ['atp'], ['atp']]);
+  });
+
+  test('a PAST joint edition proves the tournament is joint', () => {
+    // Draws do not change year to year. The 2025 China Open ran in both
+    // feeds; the 2026 edition has only reached the ATP ICS so far.
+    const rows = shapeTournamentRows(
+      [
+        src({
+          title: 'China Open',
+          startUtc: '2025-09-25T00:00:00.000Z',
+          durationHours: 10 * 24,
+        }),
+        src({
+          competitionId: 'tennis-wta',
+          title: 'China Open',
+          startUtc: '2025-09-25T00:00:00.000Z',
+          durationHours: 10 * 24,
+        }),
+        src({
+          title: 'China Open',
+          startUtc: '2026-09-30T00:00:00.000Z',
+          durationHours: 10 * 24,
+        }),
+      ],
+      NOW,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].startUtc).toBe('2026-09-30T00:00:00.000Z');
+    expect(rows[0].tours).toEqual(['atp', 'wta']);
+    // …but only the ATP feed has reached the 2026 edition.
+    expect(rows[0].coverage).toEqual(['atp']);
+  });
+
+  test('BEYOND A FEED\'S HORIZON, SILENCE IS NOT AN ANSWER — no claim at all', () => {
+    // A 2027 ATP-only 250 with the WTA feed stopping in 2026: we have
+    // not observed the women's tour looking that far, so the row says
+    // nothing about tours rather than asserting men's-only.
+    const rows = shapeTournamentRows(
+      [
+        src({
+          competitionId: 'tennis-wta',
+          title: 'Korea Open',
+          startUtc: '2026-09-21T00:00:00.000Z',
+          durationHours: 7 * 24,
+        }),
+        src({
+          title: 'Winston-Salem Open',
+          startUtc: '2027-08-16T00:00:00.000Z',
+          durationHours: 7 * 24,
+        }),
+      ],
+      NOW,
+    );
+    const ws = rows.find((r) => r.name === 'Winston-Salem Open');
+    expect(ws).toBeDefined();
+    expect(ws).not.toHaveProperty('tours');
+    // Inside both horizons the claim still gets made.
+    expect(rows.find((r) => r.name === 'Korea Open')?.tours).toEqual(['wta']);
   });
 
   test('an IN-PROGRESS tournament stays listed until its span ends', () => {

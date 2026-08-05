@@ -12,7 +12,13 @@ import {
 } from './data/followStore';
 import { followQueryKeys, FollowScope } from './domain/followScopes';
 import { pollPathFor } from './domain/pollPaths';
+import { shouldPoll } from './domain/pollGate';
 import { pinFollowKeys, pinPollPaths } from '../calendar-sync/data/pinStore';
+
+// Last fetch attempt per poll ROUTE, not per follow: two teams in one
+// league share a route. Attempt, not success — a failure that is
+// retried immediately is the amplification this gate exists to stop.
+const lastPollAt = new Map<string, number>();
 
 // Exported for the team-preview screen: seeing a team's fixtures
 // before following requires the same one-shot poll a follow performs.
@@ -29,6 +35,11 @@ export async function ensurePolled(item: Followable): Promise<Result<true>> {
   // Nothing to poll is not a failure. The follow still stands, and it
   // still matches whatever is already in the cache.
   if (path === null) return ok(true);
+  // Recently fetched by this device — the cache is central and shared,
+  // so asking again inside the window cannot change the answer, and
+  // asking anyway is what got us rate-limited (domain/pollGate.ts).
+  if (!shouldPoll(lastPollAt.get(path), Date.now())) return ok(true);
+  lastPollAt.set(path, Date.now());
   try {
     // Labels the server-side run record: a follow warming the cache is a
     // different event from the scheduled sweep, and coverage reporting
@@ -109,14 +120,28 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   // The honest reporting moves to the OUTCOME: if the sync that follows
   // finds nothing for this follow, the user hears that — from the
   // fixtures, not from a provider's HTTP status.
-  const polled = await ensurePolled(item);
-  if (!polled.ok) {
+  //
+  // AND IT NO LONGER BLOCKS THE TAP. Awaiting the refresh put a live
+  // third-party fetch on the critical path of a button press: the user
+  // waited out the provider's latency, and in the 429 case waited to be
+  // told no. The cache is central and warm, so the sync below has
+  // something to write for anything anyone has ever followed. The
+  // refresh runs alongside it and, if it brings anything new, a second
+  // sync lands it — no tap, no spinner, which is the same silent
+  // correction the sweep performs.
+  const refresh = ensurePolled(item);
+  updateRegistry();
+  const outcome = await runSync();
+  void refresh.then((polled) => {
+    if (polled.ok) {
+      void runSync();
+      return;
+    }
     console.warn(
       `[kickoffcal] follow ${item.key}: refresh failed (${messageOf(polled.error)}) — keeping the follow and using the cache`,
     );
-  }
-  updateRegistry();
-  return runSync();
+  });
+  return outcome;
 }
 
 // Scopes remembered across an unfollow, so the toast's Undo restores

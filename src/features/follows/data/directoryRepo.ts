@@ -127,7 +127,14 @@ export async function fetchTeams(
 export interface TournamentRow {
   key: string;
   name: string;
-  tours: 'atp' | 'wta' | 'joint';
+  // Which draws the tournament HAS. Absent when the server cannot tell —
+  // a feed that has never published anything as late as this edition has
+  // not looked, and its silence is not a men's-only draw.
+  tours?: ('atp' | 'wta')[];
+  // Which of them we currently hold. Server truth, deliberately not
+  // rendered: "we only have the men's banner for Wimbledon" is an
+  // operational fact, not something a browse row should confess.
+  coverage?: ('atp' | 'wta')[];
   startUtc: string;
   endUtc: string;
 }
