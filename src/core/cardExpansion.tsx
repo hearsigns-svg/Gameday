@@ -224,6 +224,10 @@ export function CardExpansionHost(props: {
     // not start a second animation racing the first.
     if (!req || phase === 'closing') return;
     setPhase('closing');
+    if (flightTimer.current) {
+      clearTimeout(flightTimer.current);
+      flightTimer.current = null;
+    }
     void (async () => {
       // WHERE IT ACTUALLY IS NOW, not where it was when it opened: the
       // list underneath may have scrolled, and shrinking to a stale
@@ -259,28 +263,31 @@ export function CardExpansionHost(props: {
     })();
   }, [request, progress, bodyIn, reduceMotion]);
 
-  const open = useCallback(
-    (r: ExpansionRequest) => {
-      origin.current = r.frame;
-      contentHeight.current = null;
-      setRequest(r);
-      setPhase('opening');
-      progress.setValue(0);
-      bodyIn.setValue(0);
-      left.setValue(r.frame.x);
-      top.setValue(r.frame.y);
-      width.setValue(r.frame.width);
-      height.setValue(r.frame.height);
+  // THE GEOMETRY WAITS FOR THE TARGET.
+  //
+  // The body's height is not knowable until it has laid out, and the
+  // card's width is already its final width from the first frame (every
+  // origin is clamped to the card's column), so ONE layout pass at the
+  // origin size yields the true content height. Starting the glide
+  // before that meant aiming at the MAXIMUM and then hauling the card
+  // back down — the "expands to the whole screen, then shrinks" the
+  // owner saw. So the flight begins when the height arrives.
+  const flightStarted = useRef(false);
+  const flightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const beginFlight = useCallback(
+    (targetHeight: number | null) => {
+      if (flightStarted.current) return;
+      flightStarted.current = true;
+      if (flightTimer.current) {
+        clearTimeout(flightTimer.current);
+        flightTimer.current = null;
+      }
       Animated.parallel(
         [
-          Animated.timing(progress, {
-            toValue: 1,
-            duration: reduceMotion ? 0 : motion.slow,
-            useNativeDriver: false,
-          }),
           // Decelerating: the card arrives, it does not bounce.
           glide(
-            fittedFrame(contentHeight.current),
+            fittedFrame(targetHeight),
             reduceMotion ? 0 : motion.slow,
             Easing.bezier(0.2, 0.8, 0.2, 1),
           ),
@@ -300,12 +307,41 @@ export function CardExpansionHost(props: {
         if (finished) setPhase('open');
       });
     },
-    [progress, bodyIn, reduceMotion, glide, left, top, width, height],
+    [glide, bodyIn, reduceMotion],
   );
 
-  // The body has measured itself. Settle to exactly that height — and
-  // ANIMATE it, because bouts loaded from a query arrive after the card
-  // has already opened and a jump would give the game away.
+  const open = useCallback(
+    (r: ExpansionRequest) => {
+      origin.current = r.frame;
+      contentHeight.current = null;
+      flightStarted.current = false;
+      setRequest(r);
+      setPhase('opening');
+      progress.setValue(0);
+      bodyIn.setValue(0);
+      left.setValue(r.frame.x);
+      top.setValue(r.frame.y);
+      width.setValue(r.frame.width);
+      height.setValue(r.frame.height);
+      // The scrim dims from the moment the finger lifts — it waits on
+      // nothing, and what it covers for one layout pass is the card
+      // still sitting exactly where it was.
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: reduceMotion ? 0 : motion.slow,
+        useNativeDriver: false,
+      }).start();
+      // A body that never reports a height must not leave the card
+      // stuck at the size of the row it came from.
+      if (flightTimer.current) clearTimeout(flightTimer.current);
+      flightTimer.current = setTimeout(() => beginFlight(null), 150);
+    },
+    [progress, bodyIn, reduceMotion, left, top, width, height, beginFlight],
+  );
+
+  // The body has measured itself: the FIRST report is the flight's
+  // target, and every later one — bouts arriving from a query after the
+  // card has opened — is an animated settle rather than a jump.
   const settleTo = useCallback(
     (h: number) => {
       if (contentHeight.current === h) return;
@@ -314,15 +350,18 @@ export function CardExpansionHost(props: {
       // dismissal — a body that finishes measuring mid-flight must not
       // pull it open again.
       if (phaseRef.current === 'closing') return;
-      const target = fittedFrame(h).height;
+      if (!flightStarted.current) {
+        beginFlight(h);
+        return;
+      }
       Animated.timing(height, {
-        toValue: target,
+        toValue: fittedFrame(h).height,
         duration: reduceMotion ? 0 : motion.standard,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: false,
       }).start();
     },
-    [height, reduceMotion],
+    [height, reduceMotion, beginFlight],
   );
 
   // Android's back gesture closes the card, never the screen behind it.
