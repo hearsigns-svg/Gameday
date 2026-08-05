@@ -26,9 +26,7 @@ export function ExpandingHero(props: {
       innerRef={ref}
       hidden={lifted}
       onPress={() => {
-        void fixtureCardRequest(ref, props.item.id).then((req) => {
-          if (req) expansion.open(req);
-        });
+        void fixtureCardRequest(ref, props.item.id).then(expansion.open);
       }}
       style={{ width: props.width, marginHorizontal: 0 }}
     />

@@ -330,9 +330,7 @@ function ScheduleRow(props: {
       // rendered a monogram anyway (Prompt 16 C sweep).
       imageUrl={photo?.url ?? owner?.crestUrl}
       onPress={() => {
-        void fixtureCardRequest(ref, item.id).then((req) => {
-          if (req) expansion.open(req);
-        });
+        void fixtureCardRequest(ref, item.id).then(expansion.open);
       }}
       title={item.title}
       caption={item.competition}

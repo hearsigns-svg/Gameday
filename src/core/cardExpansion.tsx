@@ -151,12 +151,53 @@ export function CardExpansionHost(props: {
   ) => ReactNode;
 }) {
   const [request, setRequest] = useState<ExpansionRequest | null>(null);
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('open');
   const [reduceMotion, setReduceMotion] = useState(false);
-  const progress = useRef(new Animated.Value(0)).current;
+  // Geometry animates as FOUR values rather than as one interpolated
+  // progress. The card's content height is not known when it opens — a
+  // fight card's bouts arrive from a query a moment later — and with a
+  // single progress value the only way to use a late height is to swap
+  // the interpolation's output range underneath it, which makes the
+  // card JUMP. Its own value can simply animate to the new height.
+  const left = useRef(new Animated.Value(0)).current;
+  const top = useRef(new Animated.Value(0)).current;
+  const width = useRef(new Animated.Value(0)).current;
+  const height = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current; // scrim only
   const bodyIn = useRef(new Animated.Value(0)).current;
   const origin = useRef<CardFrame | null>(null);
+  const contentHeight = useRef<number | null>(null);
+  // Read inside animation callbacks, where the state value would be the
+  // one captured when the callback was created.
+  const phaseRef = useRef<Phase>('open');
+
+  const glide = useCallback(
+    (frame: CardFrame, duration: number, easing: (v: number) => number) =>
+      Animated.parallel(
+        (
+          [
+            [left, frame.x],
+            [top, frame.y],
+            [width, frame.width],
+            [height, frame.height],
+          ] as const
+        ).map(([value, target]) =>
+          Animated.timing(value, {
+            toValue: target,
+            duration,
+            easing,
+            useNativeDriver: false,
+          }),
+        ),
+        // NEVER stop together. The height is re-targeted the moment the
+        // body measures itself, and a shared stop would cancel the other
+        // three axes — and, when this sat inside a sequence, the body's
+        // reveal with them. That is exactly how the first build of this
+        // opened a full-height card with nothing in it.
+        { stopTogether: false },
+      ),
+    [left, top, width, height],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -173,9 +214,15 @@ export function CardExpansionHost(props: {
     };
   }, []);
 
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
   const close = useCallback(() => {
     const req = request;
-    if (!req) return;
+    // A second tap on the scrim while the card is already shrinking must
+    // not start a second animation racing the first.
+    if (!req || phase === 'closing') return;
     setPhase('closing');
     void (async () => {
       // WHERE IT ACTUALLY IS NOW, not where it was when it opened: the
@@ -183,19 +230,27 @@ export function CardExpansionHost(props: {
       // frame is the tell that this was never one object.
       const now = (await req.remeasure?.()) ?? null;
       if (now) origin.current = now;
-      Animated.parallel([
-        Animated.timing(bodyIn, {
-          toValue: 0,
-          duration: reduceMotion ? 0 : motion.fast,
-          useNativeDriver: true,
-        }),
-        Animated.timing(progress, {
-          toValue: 0,
-          duration: reduceMotion ? 0 : motion.standard,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: false,
-        }),
-      ]).start(({ finished }) => {
+      const back = origin.current ?? req.frame;
+      Animated.parallel(
+        [
+          Animated.timing(bodyIn, {
+            toValue: 0,
+            duration: reduceMotion ? 0 : motion.fast,
+            useNativeDriver: true,
+          }),
+          Animated.timing(progress, {
+            toValue: 0,
+            duration: reduceMotion ? 0 : motion.standard,
+            useNativeDriver: false,
+          }),
+          glide(
+            back,
+            reduceMotion ? 0 : motion.standard,
+            Easing.bezier(0.4, 0, 0.2, 1),
+          ),
+        ],
+        { stopTogether: false },
+      ).start(({ finished }) => {
         if (finished) {
           setRequest(null);
           setPhase('open');
@@ -207,32 +262,67 @@ export function CardExpansionHost(props: {
   const open = useCallback(
     (r: ExpansionRequest) => {
       origin.current = r.frame;
+      contentHeight.current = null;
       setRequest(r);
-      setContentHeight(null);
       setPhase('opening');
       progress.setValue(0);
       bodyIn.setValue(0);
-      Animated.sequence([
-        Animated.timing(progress, {
-          toValue: 1,
-          duration: reduceMotion ? 0 : motion.slow,
+      left.setValue(r.frame.x);
+      top.setValue(r.frame.y);
+      width.setValue(r.frame.width);
+      height.setValue(r.frame.height);
+      Animated.parallel(
+        [
+          Animated.timing(progress, {
+            toValue: 1,
+            duration: reduceMotion ? 0 : motion.slow,
+            useNativeDriver: false,
+          }),
           // Decelerating: the card arrives, it does not bounce.
-          easing: Easing.bezier(0.2, 0.8, 0.2, 1),
-          useNativeDriver: false,
-        }),
-        // A SHORT STAGGER, not simultaneous: the body appears once the
-        // geometry has settled, so the eye follows one object and then
-        // reads what is inside it.
-        Animated.timing(bodyIn, {
-          toValue: 1,
-          duration: reduceMotion ? 0 : motion.standard,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
+          glide(
+            fittedFrame(contentHeight.current),
+            reduceMotion ? 0 : motion.slow,
+            Easing.bezier(0.2, 0.8, 0.2, 1),
+          ),
+          // A SHORT STAGGER, not simultaneous: the body appears once the
+          // geometry has settled. A DELAY rather than a sequence, so the
+          // reveal cannot be cancelled by the height being re-targeted
+          // underneath it.
+          Animated.timing(bodyIn, {
+            toValue: 1,
+            duration: reduceMotion ? 0 : motion.standard,
+            delay: reduceMotion ? 0 : motion.slow,
+            useNativeDriver: true,
+          }),
+        ],
+        { stopTogether: false },
+      ).start(({ finished }) => {
         if (finished) setPhase('open');
       });
     },
-    [progress, bodyIn, reduceMotion],
+    [progress, bodyIn, reduceMotion, glide, left, top, width, height],
+  );
+
+  // The body has measured itself. Settle to exactly that height — and
+  // ANIMATE it, because bouts loaded from a query arrive after the card
+  // has already opened and a jump would give the game away.
+  const settleTo = useCallback(
+    (h: number) => {
+      if (contentHeight.current === h) return;
+      contentHeight.current = h;
+      // While the card is shrinking back, its height belongs to the
+      // dismissal — a body that finishes measuring mid-flight must not
+      // pull it open again.
+      if (phaseRef.current === 'closing') return;
+      const target = fittedFrame(h).height;
+      Animated.timing(height, {
+        toValue: target,
+        duration: reduceMotion ? 0 : motion.standard,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: false,
+      }).start();
+    },
+    [height, reduceMotion],
   );
 
   // Android's back gesture closes the card, never the screen behind it.
@@ -256,10 +346,6 @@ export function CardExpansionHost(props: {
     [request, phase, open, close],
   );
 
-  const from = origin.current ?? request?.frame ?? null;
-  const to = fittedFrame(contentHeight);
-  const interp = (a: number, b: number) =>
-    progress.interpolate({ inputRange: [0, 1], outputRange: [a, b] });
 
   return (
     <Ctx.Provider value={value}>
@@ -278,13 +364,13 @@ export function CardExpansionHost(props: {
         statusBarTranslucent
         onRequestClose={close}
       >
-      {request && from ? (
+      {request ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
               styles.scrim,
-              { opacity: interp(0, 1) },
+              { opacity: progress },
             ]}
             pointerEvents={phase === 'closing' ? 'none' : 'auto'}
           >
@@ -298,19 +384,14 @@ export function CardExpansionHost(props: {
           <Animated.View
             style={{
               position: 'absolute',
-              left: interp(from.x, to.x),
-              top: interp(from.y, to.y),
-              width: interp(from.width, to.width),
-              height: interp(from.height, to.height),
+              left,
+              top,
+              width,
+              height,
               borderRadius: radius.hero,
             }}
           >
-            {props.renderExpanded(
-              request.payload as never,
-              close,
-              bodyIn,
-              (h) => setContentHeight((prev) => (prev === h ? prev : h)),
-            )}
+            {props.renderExpanded(request.payload as never, close, bodyIn, settleTo)}
           </Animated.View>
         </View>
       ) : null}

@@ -475,9 +475,7 @@ function TeamFixtureRow(props: {
       {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
       theme={props.theme}
       onPress={() => {
-        void fixtureCardRequest(ref, f.id).then((req) => {
-          if (req) expansion.open(req);
-        });
+        void fixtureCardRequest(ref, f.id).then(expansion.open);
       }}
       {...(props.excluded !== undefined ? { excluded: props.excluded } : {})}
       {...(props.onToggleExcluded ? { onToggleExcluded: props.onToggleExcluded } : {})}

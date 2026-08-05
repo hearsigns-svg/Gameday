@@ -9,6 +9,10 @@ import { cardEntries, cardSectionTitle, boutTimingCaption } from '../card';
 import { Fixture } from '../fixture';
 
 const CARD_START = '2026-08-22T22:00:00.000Z';
+// Every call passes this. `cardEntries` filters out what has already been
+// played, so a suite that let it default to Date.now() would quietly stop
+// testing anything the day these fixtures went past.
+const NOW = Date.parse('2026-08-04T09:00:00.000Z');
 
 function parent(overrides: Partial<Fixture> = {}): Fixture {
   return {
@@ -57,11 +61,15 @@ describe('cardEntries', () => {
     const main = bout(['Rolando Romero', 'Teofimo Lopez'], {
       followKeys: ['pbc-cards-appearances', 'pbc-cards-main'],
     });
-    const entries = cardEntries(p, [
-      bout(['Victor Santillan', 'Gary Antonio Russell']),
-      main,
-      bout(['Carlos Utria', 'Israel Mercado']),
-    ]);
+    const entries = cardEntries(
+      p,
+      [
+        bout(['Victor Santillan', 'Gary Antonio Russell']),
+        main,
+        bout(['Carlos Utria', 'Israel Mercado']),
+      ],
+      NOW,
+    );
     expect(entries.map((e) => e.title)).toEqual([
       'Rolando Romero vs Teofimo Lopez',
       'Carlos Utria vs Israel Mercado',
@@ -74,10 +82,14 @@ describe('cardEntries', () => {
     // Measured: only ONE stored child carries a `-main` key on a parent
     // with siblings, while every future combat parent carries the
     // title-parsed pair. Accents must not defeat the match.
-    const entries = cardEntries(parent({ awayTeam: 'Teófimo López' }), [
-      bout(['Carlos Utria', 'Israel Mercado']),
-      bout(['Rolando Romero', 'Teofimo Lopez']),
-    ]);
+    const entries = cardEntries(
+      parent({ awayTeam: 'Teófimo López' }),
+      [
+        bout(['Carlos Utria', 'Israel Mercado']),
+        bout(['Rolando Romero', 'Teofimo Lopez']),
+      ],
+      NOW,
+    );
     expect(entries[0].title).toBe('Rolando Romero vs Teofimo Lopez');
     expect(entries[0].isMain).toBe(true);
     expect(entries[1].isMain).toBe(false);
@@ -86,23 +98,32 @@ describe('cardEntries', () => {
   it('says nothing when the only bout IS the event itself', () => {
     // The ten TSDB combat parents: their single child is the same fight
     // as the card. A "full card" repeating the headline is noise.
-    expect(cardEntries(parent(), [bout(['Rolando Romero', 'Teofimo Lopez'])]))
-      .toEqual([]);
+    expect(
+      cardEntries(parent(), [bout(['Rolando Romero', 'Teofimo Lopez'])], NOW),
+    ).toEqual([]);
   });
 
   it('keeps a single bout that is NOT the headline', () => {
-    const entries = cardEntries(parent(), [bout(['Carlos Utria', 'Israel Mercado'])]);
+    const entries = cardEntries(
+      parent(),
+      [bout(['Carlos Utria', 'Israel Mercado'])],
+      NOW,
+    );
     expect(entries).toHaveLength(1);
     expect(entries[0].isMain).toBe(false);
   });
 
   it('drops a scratched bout', () => {
     // A cancelled child under a live parent is a real stored shape.
-    const entries = cardEntries(parent(), [
-      bout(['Rolando Romero', 'Teofimo Lopez']),
-      bout(['Carlos Utria', 'Israel Mercado']),
-      bout(['Aaron McKenna', 'Etinosa Oliha'], { status: 'cancelled' }),
-    ]);
+    const entries = cardEntries(
+      parent(),
+      [
+        bout(['Rolando Romero', 'Teofimo Lopez']),
+        bout(['Carlos Utria', 'Israel Mercado']),
+        bout(['Aaron McKenna', 'Etinosa Oliha'], { status: 'cancelled' }),
+      ],
+      NOW,
+    );
     expect(entries.map((e) => e.title)).toEqual([
       'Rolando Romero vs Teofimo Lopez',
       'Carlos Utria vs Israel Mercado',
@@ -114,7 +135,7 @@ describe('cardEntries', () => {
     const stray = bout(['Someone Else', 'Another Person'], {
       parentFixtureId: 'tsdb-999',
     });
-    expect(cardEntries(p, [stray, p])).toEqual([]);
+    expect(cardEntries(p, [stray, p], NOW)).toEqual([]);
   });
 
   it('collapses tennis appearances stored once per player', () => {
@@ -146,11 +167,18 @@ describe('cardEntries', () => {
       confidence: 'confirmed',
       updatedAt: '2026-08-04T00:00:00.000Z',
     });
-    const entries = cardEntries(tournament, [
-      match('Moyuka Uchijima', 'Aryna Sabalenka', '2026-08-04T23:00:00.000Z'),
-      match('Aryna Sabalenka', 'Moyuka Uchijima', '2026-08-04T23:00:00.000Z'),
-      match('Anna Kalinskaya', 'Emma Raducanu', '2026-08-04T21:00:00.000Z'),
-    ]);
+    // `now` is a PARAMETER, never the wall clock: these matches are in
+    // the past by the time anyone reads this, and a test that passes
+    // only on the day it was written is not a test.
+    const entries = cardEntries(
+      tournament,
+      [
+        match('Moyuka Uchijima', 'Aryna Sabalenka', '2026-08-04T23:00:00.000Z'),
+        match('Aryna Sabalenka', 'Moyuka Uchijima', '2026-08-04T23:00:00.000Z'),
+        match('Anna Kalinskaya', 'Emma Raducanu', '2026-08-04T21:00:00.000Z'),
+      ],
+      NOW,
+    );
     // One row per MATCH, earliest first, nothing marked as a main event.
     expect(entries).toHaveLength(2);
     expect(entries[0].title.startsWith('Anna Kalinskaya')).toBe(true);
@@ -169,9 +197,11 @@ describe('vocabulary', () => {
 
   it('says a bout has no time of its own rather than repeating the card time', () => {
     const p = parent();
-    const [entry] = cardEntries(p, [
-      bout(['Carlos Utria', 'Israel Mercado']),
-    ]);
+    const [entry] = cardEntries(
+      p,
+      [bout(['Carlos Utria', 'Israel Mercado'])],
+      NOW,
+    );
     expect(boutTimingCaption(p, entry)).toBe(
       'Time within the event not published',
     );

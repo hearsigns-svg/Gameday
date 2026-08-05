@@ -18,14 +18,16 @@ import { FixtureCardPayload } from './screens/FixtureCard';
 export async function fixtureCardRequest(
   ref: RefObject<View | null>,
   fixtureId: string,
-): Promise<ExpansionRequest<FixtureCardPayload> | null> {
+): Promise<ExpansionRequest<FixtureCardPayload>> {
   const measured: CardFrame | null = await measureFrame(ref as never);
-  // NO FRAME, NO FLIGHT. A surface that cannot say where its card is
-  // does not get to fake the motion from an invented position.
-  if (!measured) return null;
+  // NO FRAME, NO FLIGHT — but still a card. A measurement can lose its
+  // race on a busy frame, and a tap that silently does nothing is a
+  // worse failure than one that opens without motion: the card starts
+  // AT its destination and simply appears. Never an invented origin,
+  // which would fly in from a position the card was never in.
   return {
     key: fixtureId,
-    frame: inColumn(measured),
+    frame: measured ? inColumn(measured) : expandedFrame(),
     payload: { fixtureId },
     remeasure: async () => {
       const now = await measureFrame(ref as never);
