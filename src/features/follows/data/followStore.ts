@@ -29,6 +29,12 @@ export interface Followable {
   // where the sport offers a choice (domain/followScopes.ts). Absent =
   // the default: today's behaviour, unchanged.
   scope?: FollowScope;
+  // Nationality, captured at follow time. An athlete has no crest, so
+  // on the Following rail a boxer was a monogram in a colour and
+  // nothing else — five of them read as five anonymous tokens. The flag
+  // IS the identity mark (Prompt 16 B); it just never reached the
+  // follow.
+  countryCode?: string;
   // Recorded retirement, captured at follow time (Prompt 12) so the
   // athlete's page is still honest when it is reached from the
   // Following rail, which carries no directory data of its own. Absent

@@ -21,7 +21,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FollowButton, ListRow, monogramOf, SectionHeader } from '../../../core/components';
+import {
+  CoverageNote,
+  FollowButton,
+  ListRow,
+  monogramOf,
+  SectionHeader,
+} from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { hueToHex, teamTheme } from '../../../core/teamTheme';
@@ -44,7 +50,7 @@ import {
   fetchAthleteBrowse,
   searchEntities,
 } from '../data/directoryRepo';
-import { Followable, isFollowed } from '../data/followStore';
+import { Followable, hydrateFollowArt, isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AthleteList'>;
@@ -128,6 +134,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         setError(messageOf(r.error));
         return;
       }
+      // Athletes followed before their nationality was captured get it
+      // here — the same repair the crest work needed, for the same
+      // reason: a follow is a snapshot and nothing else revisits it.
+      hydrateFollowArt(
+        [...r.value.groups.flatMap((g) => g.athletes), ...r.value.competingSoon]
+          .filter((a) => a.countryCode)
+          .map((a) => ({ key: a.key, countryCode: a.countryCode as string })),
+      );
       const sections: AthleteSection[] = [];
       // TENNIS IS TWO SECTIONS: women, men (owner ruling 2026-08-04).
       // "Competing soon" is redundant there — both groups are already
@@ -210,7 +224,9 @@ export default function AthleteListScreen({ navigation, route }: Props) {
       ? { brandColour: hueToHex(a.accentHue) }
       : {}),
     // Captured at follow time so the Following rail — which has no
-    // directory read of its own — still reaches an honest page.
+    // directory read of its own — still reaches an honest page, and so
+    // a followed boxer carries the one identity mark they have.
+    ...(a.countryCode ? { countryCode: a.countryCode } : {}),
     ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
     ...(a.careerEndYear !== undefined
       ? { careerEndYear: a.careerEndYear }
@@ -297,18 +313,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           ranking source is approved. Browse only — a search has moved
           past the question. */}
       {results === null && sport?.coverageNote ? (
-        <Text
-          style={[
-            type.caption,
-            {
-              color: t.textSecondary,
-              paddingHorizontal: spacing.l,
-              paddingBottom: spacing.s,
-            },
-          ]}
-        >
-          {sport.coverageNote}
-        </Text>
+        <CoverageNote note={sport.coverageNote} />
       ) : null}
       {browse === null && results === null && !error ? (
         <View style={styles.center}>

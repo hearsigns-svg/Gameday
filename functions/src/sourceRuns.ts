@@ -102,7 +102,13 @@ export type RunReason =
   // The 'skipped' prefix matters: coverage counts a reasonless
   // error-free run as a success, and a cap-skip must never refresh
   // lastSuccessAt (that is how sweep-skips once masked a dead slice).
-  | 'skipped_ics_daily_cap';
+  | 'skipped_ics_daily_cap'
+  // A fetch that FAILED buys a short cool-down. The daily cap is keyed
+  // on the last SUCCESS, so a rate-limited source stays permanently
+  // due and every retry hits it again — which is exactly what three
+  // follow taps did to Google's ICS host in ten minutes. Same
+  // 'skipped' prefix, same reason: it supplies no fetch evidence.
+  | 'skipped_ics_failure_backoff';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

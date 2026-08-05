@@ -72,7 +72,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     careerStatus,
     careerEndYear,
     crestUrl: routeCrest,
-    countryCode,
+    countryCode: routeCountry,
   } = route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -124,6 +124,16 @@ export default function TeamScreen({ navigation, route }: Props) {
     [teamKey, routeCrest],
   );
 
+  // Same fallback for nationality: the Following rail and the Home rail
+  // navigate with no directory data of their own, so an athlete opened
+  // from there would lose the one identity mark they have.
+  const nationality = useMemo(
+    () =>
+      routeCountry ??
+      loadFollowables().find((f) => f.key === teamKey)?.countryCode,
+    [teamKey, routeCountry],
+  );
+
   const career: CareerStatusFields = useMemo(() => {
     const stored = loadFollowables().find((f) => f.key === teamKey);
     const src =
@@ -151,6 +161,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     type: followType ?? 'team',
     ...(pollPath ? { pollPath } : {}),
     ...(brandColour ? { brandColour } : {}),
+    ...(nationality ? { countryCode: nationality } : {}),
     // PRESERVE THE CREST. `setFollowed` writes this object WHOLE, so an
     // unfollow→re-follow here (or the toast's Undo) used to replace a
     // crested follow with a crest-less one — the artwork was destroyed
@@ -327,7 +338,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               // Nationality first for an athlete (Prompt 16 B): with no
               // likeness allowed and a photo available for a minority,
               // the flag is what tells two fighters apart.
-              nationLabelOf(countryCode),
+              nationLabelOf(nationality),
               sport
                 ? sportLabelFor(sport.key, sport.label, activeRegion())
                 : sportKey,

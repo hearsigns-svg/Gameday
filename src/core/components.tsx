@@ -147,6 +147,9 @@ export interface FollowRailItem {
   // had no field for it at all, which is why the same NBA team showed
   // its crest on its own page and a bare monogram here (Prompt 16 C).
   imageUrl?: string;
+  // An athlete's flag. A team has a crest; a boxer has a country, and
+  // without it five followed fighters are five identical tokens.
+  badge?: string;
 }
 
 export function FollowRail(props: {
@@ -176,6 +179,7 @@ export function FollowRail(props: {
             theme={item.theme}
             monogram={monogramOf(item.label)}
             {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
+            {...(item.badge ? { badge: item.badge } : {})}
             size={64}
             round
           />
@@ -1014,6 +1018,41 @@ export function CalendarOffBanner(props: {
   );
 }
 
+// WHAT THIS SPORT'S DATA HONESTLY IS — on demand, not as a wall.
+//
+// The note itself is load-bearing (a user should read that men's tennis
+// has no draw source, not discover it), but nine lines of prose above
+// the rows pushed the actual content off the screen, and prose in a UI
+// is a sign the design is compensating (AGENTS.md rule 11). It keeps
+// its place; it stops being the first thing you meet.
+export function CoverageNote(props: { note: string }) {
+  const t = useTheme();
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.coverage}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={
+          open ? 'Hide what this covers' : 'What this covers'
+        }
+        onPress={() => setOpen((v) => !v)}
+        hitSlop={8}
+        style={styles.coverageToggle}
+      >
+        <Text style={[type.caption, { color: t.textSecondary }]}>
+          {open ? 'ⓘ  What this covers ▲' : 'ⓘ  What this covers'}
+        </Text>
+      </Pressable>
+      {open ? (
+        <Text style={[type.caption, { color: t.textSecondary }]}>
+          {props.note}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 export function EmptyState(props: {
   headline: string;
   body: string;
@@ -1240,6 +1279,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  coverage: {
+    paddingHorizontal: spacing.l,
+    paddingBottom: spacing.s,
+    gap: spacing.xs,
+  },
+  coverageToggle: { minHeight: 32, justifyContent: 'center' },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',

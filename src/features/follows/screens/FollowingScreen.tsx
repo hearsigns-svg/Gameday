@@ -12,6 +12,7 @@ import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
+import { flagEmojiOf } from '../../../core/nationality';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync, upcomingByFollow } from '../../calendar-sync/syncEngine';
 import { refollow, unfollow } from '../followActions';
@@ -144,6 +145,9 @@ export default function FollowingScreen({ navigation }: Props) {
                 )}
                 monogram={monogramOf(item.label)}
                 {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+                {...(flagEmojiOf(item.countryCode)
+                  ? { tileBadge: flagEmojiOf(item.countryCode) as string }
+                  : {})}
                 accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
                 // A followed thing's own schedule was previously
                 // reachable only from browse or search — you could not

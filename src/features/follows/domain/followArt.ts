@@ -25,12 +25,14 @@ export interface ArtRow {
   key: string;
   crestUrl?: string;
   brandColour?: string;
+  countryCode?: string;
 }
 
 export interface ArtCarrier {
   key: string;
   crestUrl?: string;
   brandColour?: string;
+  countryCode?: string;
 }
 
 export function applyArtHydration<T extends ArtCarrier>(
@@ -60,6 +62,15 @@ export function applyArtHydration<T extends ArtCarrier>(
     // richer source must not be flattened by a poorer one.
     if (row.brandColour && !f.brandColour) {
       updated.brandColour = row.brandColour;
+      changed = true;
+    }
+    // NATIONALITY IS ADDITIVE, NEVER CLEARED. It is a fact about a
+    // person, not artwork we license — there is no takedown to
+    // propagate, and a search result that happens not to carry one says
+    // nothing about the athlete. This is what gives athletes followed
+    // before Prompt 17 their flag on the next browse.
+    if (row.countryCode && f.countryCode !== row.countryCode) {
+      updated.countryCode = row.countryCode;
       changed = true;
     }
     return updated;

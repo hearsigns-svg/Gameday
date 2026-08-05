@@ -4,7 +4,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { FollowButton, ListRow, monogramOf } from '../../../core/components';
+import { FollowButton, ListRow, monogramOf , CoverageNote } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -24,6 +24,24 @@ import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
+
+// What the people in this sport are CALLED. "Athletes" is right for
+// athletics and wrong everywhere else — a boxing fan is looking for
+// fighters, a tennis fan for players.
+function athleteRowTitle(sportKey: string): string {
+  switch (sportKey) {
+    case 'boxing':
+    case 'ufc':
+      return 'Fighters';
+    case 'tennis':
+      return 'Players';
+    case 'f1':
+    case 'motorsport':
+      return 'Drivers';
+    default:
+      return 'Athletes';
+  }
+}
 
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
@@ -174,23 +192,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           {error}
         </Text>
       ) : null}
-      {/* The coverage note: what this sport's data honestly is, said up
-          front. A user should read that athlete-level athletics is
-          absent, not discover it. */}
-      {sport?.coverageNote ? (
-        <Text
-          style={[
-            type.caption,
-            {
-              color: t.textSecondary,
-              paddingHorizontal: spacing.l,
-              paddingBottom: spacing.s,
-            },
-          ]}
-        >
-          {sport.coverageNote}
-        </Text>
-      ) : null}
+      {/* What this sport's data honestly is — one line, opened on
+          demand. It used to be nine lines of prose above the rows. */}
+      {sport?.coverageNote ? <CoverageNote note={sport.coverageNote} /> : null}
       <FlatList
         data={leagues}
         keyExtractor={(l) => l.key}
@@ -201,16 +205,25 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         ListHeaderComponent={
           sport?.browse.includes('athlete') ? (
             <ListRow
-              title="Athletes"
-              caption="Champions, rankings and who's competing soon"
-              accessibilityLabel="Browse athletes"
+              title={athleteRowTitle(route.params.sportKey)}
+              caption="Rankings, champions, who's competing"
+              // A TILE AND A REAL CHEVRON. Beside competition rows
+              // carrying a filled Follow button, a bare grey › read as
+              // decoration — the one way into an individual sport
+              // looked like the least important thing on the screen.
+              glyph={sport?.glyph ?? '🏟️'}
+              tileTheme={teamTheme(sport?.accent ?? null, mode)}
+              accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
               onPress={() =>
                 navigation.navigate('AthleteList', {
                   sportKey: route.params.sportKey,
                 })
               }
               right={
-                <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
+                <Text
+                  style={[type.heading, { color: t.primary }]}
+                  accessible={false}
+                >
                   ›
                 </Text>
               }

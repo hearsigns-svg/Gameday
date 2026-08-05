@@ -23,10 +23,17 @@ const PLAIN_MS = 2_500;
 const ACTION_MS = 6_000; // long enough to actually hit Undo
 
 type Listener = (t: ToastSpec) => void;
-let listener: Listener | null = null;
+
+// A STACK, not a single listener. The expanded card is a native modal
+// window, and anything rendered in the root window — including the
+// toast — is BELOW it: an Undo fired from inside the card was invisible,
+// which is the same as not existing. So the card mounts its own host,
+// and the top-most host wins. Popping restores the one underneath, so
+// the root host is never left orphaned.
+const listeners: Listener[] = [];
 
 export function showToast(t: ToastSpec): void {
-  listener?.(t);
+  listeners[listeners.length - 1]?.(t);
 }
 
 export function ToastHost() {
@@ -39,9 +46,10 @@ export function ToastHost() {
     void AccessibilityInfo.isReduceMotionEnabled().then((v) => {
       reduceMotion.current = v;
     });
-    listener = setToast;
+    listeners.push(setToast);
     return () => {
-      listener = null;
+      const i = listeners.indexOf(setToast);
+      if (i >= 0) listeners.splice(i, 1);
     };
   }, []);
 

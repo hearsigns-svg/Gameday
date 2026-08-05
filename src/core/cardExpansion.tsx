@@ -42,6 +42,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { ToastHost } from './toast';
 import { motion, radius, spacing } from './tokens';
 
 export interface CardFrame {
@@ -432,6 +433,10 @@ export function CardExpansionHost(props: {
           >
             {props.renderExpanded(request.payload as never, close, bodyIn, settleTo)}
           </Animated.View>
+          {/* The card's own toast host. A modal is a separate window,
+              so the root one is underneath it — an Undo the user cannot
+              see is an Undo they do not have. */}
+          <ToastHost />
         </View>
       ) : null}
       </Modal>

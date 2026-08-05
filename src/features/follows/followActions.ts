@@ -1,7 +1,7 @@
 // Follow/unfollow orchestration: update the store, ensure the server
 // cache has the followable's fixtures, then sync the calendar.
 
-import { err, ok, Result } from '../../core/result';
+import { err, messageOf, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
 import {
@@ -93,14 +93,27 @@ function nextGeneration(key: string): number {
 }
 
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
-  const gen = nextGeneration(item.key);
+  nextGeneration(item.key);
   setFollowed(item, true);
+  // THE FOLLOW STANDS EVEN IF THE REFRESH FAILS.
+  //
+  // This used to roll back on any poll failure, so that nobody was left
+  // with a follow whose fixtures never came. Against a WARM CENTRAL
+  // CACHE that reasoning is inverted: the ATP tour has 340 fixtures
+  // stored, and the owner's three attempts to follow it were each
+  // refused because Google rate-limited the Tennis TV ICS behind it
+  // (429 → "service error", follow undone). The refresh is a
+  // nice-to-have; the sweep runs it again within hours, and the sync
+  // below shows whatever is already there.
+  //
+  // The honest reporting moves to the OUTCOME: if the sync that follows
+  // finds nothing for this follow, the user hears that — from the
+  // fixtures, not from a provider's HTTP status.
   const polled = await ensurePolled(item);
   if (!polled.ok) {
-    // Roll back so the UI never shows a follow whose fixtures never
-    // came — unless a newer intent for this key has superseded us.
-    if (intentGeneration.get(item.key) === gen) setFollowed(item, false);
-    return polled;
+    console.warn(
+      `[kickoffcal] follow ${item.key}: refresh failed (${messageOf(polled.error)}) — keeping the follow and using the cache`,
+    );
   }
   updateRegistry();
   return runSync();

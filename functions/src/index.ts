@@ -1891,6 +1891,14 @@ export const pollPbc = onRequest(
 // drifts inside 00–06 UTC, and yesterday's 05:20 success must not
 // block tomorrow's early attempts.
 const ICS_MIN_INTERVAL_MS = 22 * 3_600_000;
+// AND A COOL-DOWN AFTER A FAILURE. The daily cap is keyed on the last
+// SUCCESS, so a rate-limited source stays permanently "due": three
+// follow taps in ten minutes each fetched, each got 429 from Google
+// (the ICS is hosted on calendar.google.com), and each reported a
+// service error to the app. A failure now buys quiet for long enough
+// that a user tapping again is served the cache instead of another
+// refusal.
+const ICS_FAILURE_BACKOFF_MS = 15 * 60_000;
 const ICS_MARKER_DOC = 'status/tennisIcs';
 
 export const pollTennis = onRequest(async (req, res) => {
@@ -1904,11 +1912,14 @@ export const pollTennis = onRequest(async (req, res) => {
   };
   const startedAt = new Date().toISOString();
   let lastSuccessAt: string | null = null;
+  let lastFailureAt: string | null = null;
   try {
     const marker = await db.doc(ICS_MARKER_DOC).get();
-    lastSuccessAt = marker.exists
-      ? ((marker.data() as { lastSuccessAt?: string }).lastSuccessAt ?? null)
-      : null;
+    const data = marker.exists
+      ? (marker.data() as { lastSuccessAt?: string; lastFailureAt?: string })
+      : {};
+    lastSuccessAt = data.lastSuccessAt ?? null;
+    lastFailureAt = data.lastFailureAt ?? null;
   } catch (e) {
     // A marker READ failure fails CLOSED: fetching anyway could break
     // the once-daily commitment, and the run record keeps the failure
@@ -1927,10 +1938,16 @@ export const pollTennis = onRequest(async (req, res) => {
     res.status(502).json({ error: 'ics daily-cap marker read failed' });
     return;
   }
-  if (
+  const cappedUntilTomorrow =
     lastSuccessAt !== null &&
-    Date.parse(startedAt) - Date.parse(lastSuccessAt) < ICS_MIN_INTERVAL_MS
-  ) {
+    Date.parse(startedAt) - Date.parse(lastSuccessAt) < ICS_MIN_INTERVAL_MS;
+  const coolingOff =
+    lastFailureAt !== null &&
+    Date.parse(startedAt) - Date.parse(lastFailureAt) < ICS_FAILURE_BACKOFF_MS;
+  if (cappedUntilTomorrow || coolingOff) {
+    const reason = cappedUntilTomorrow
+      ? 'skipped_ics_daily_cap'
+      : 'skipped_ics_failure_backoff';
     await recordSourceRun(
       { ...ctx, trigger },
       {
@@ -1939,11 +1956,14 @@ export const pollTennis = onRequest(async (req, res) => {
         seasonsTried: [],
         counts: EMPTY_COUNTS,
         error: null,
-        reason: 'skipped_ics_daily_cap',
+        reason,
       },
       startedAt,
     );
-    res.status(200).json({ skipped: 'ics_daily_cap', lastSuccessAt });
+    // 200, deliberately: nothing is wrong. The caller wanted this
+    // slice refreshed and it is as fresh as our commitment to the
+    // source allows.
+    res.status(200).json({ skipped: reason, lastSuccessAt });
     return;
   }
   const out = await servePoll(trigger, ctx, async (trace) => {
@@ -1951,14 +1971,20 @@ export const pollTennis = onRequest(async (req, res) => {
     const r = await fetchTennisTournaments();
     return { ...r, followKey: 'tennis-atp', seasonResolved: 'current', sliceComplete: true };
   });
-  if (out.status === 200) {
-    try {
-      await db.doc(ICS_MARKER_DOC).set({ lastSuccessAt: new Date().toISOString() });
-    } catch (e) {
-      // Never fail a successful poll over the marker; the cost of a
-      // lost write is one extra fetch tomorrow, not data loss.
-      console.error(`[kickoffcal] tennis ics marker write failed: ${String(e)}`);
-    }
+  try {
+    await db
+      .doc(ICS_MARKER_DOC)
+      .set(
+        out.status === 200
+          ? { lastSuccessAt: new Date().toISOString() }
+          : { lastFailureAt: new Date().toISOString() },
+        { merge: true },
+      );
+  } catch (e) {
+    // Never fail a poll over the marker; the cost of a lost write is one
+    // extra fetch, not data loss. (merge: true — a failure must not
+    // erase the last success, which is what the daily cap reads.)
+    console.error(`[kickoffcal] tennis ics marker write failed: ${String(e)}`);
   }
   res.status(out.status).json(out.body);
 });

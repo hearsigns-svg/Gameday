@@ -29,7 +29,7 @@ import {
 } from '../../../core/components';
 import { ExpandingHero } from '../ExpandingHero';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
-import { loadExclusions } from '../../calendar-sync/data/exclusionStore';
+import { isExcluded, loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
@@ -50,6 +50,7 @@ import { byPriority, cachedPriorities, refreshPriorities } from '../data/browseP
 import { followQueryKeys } from '../domain/followScopes';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
+import { flagEmojiOf } from '../../../core/nationality';
 
 type Props = TabScreenProps<'Home'>;
 
@@ -70,9 +71,15 @@ export default function HomeScreen({ navigation }: Props) {
     const refresh = () => {
       setFixtures(upcomingFixtures());
       setFollows(loadFollowables());
+      // A removal made while this screen is open repaints the card as
+      // removed; it only LEAVES on the next entry.
+      forceRepaint((n) => n + 1);
     };
     const unsub = subscribeSync(refresh);
-    const focus = navigation.addListener('focus', refresh);
+    const focus = navigation.addListener('focus', () => {
+      setExcludedAtEntry(loadExclusions());
+      refresh();
+    });
     // Ordering weights are data (Prompt 11): refresh the cache in the
     // background; this render uses whatever is already cached.
     void refreshPriorities();
@@ -94,20 +101,27 @@ export default function HomeScreen({ navigation }: Props) {
     [follows],
   );
 
-  const upcoming = useMemo(() => {
-    // Removed (excluded) events never lead Home — they live greyed on
-    // Schedule. Re-reads on every sync-triggered refresh.
-    const excluded = loadExclusions();
-    return fixtures.filter(
-      (f) =>
-        new Date(f.startUtc).getTime() > Date.now() - 3_600_000 &&
-        !excluded.has(f.id),
-    );
-  }, [fixtures]);
+  // REMOVED EVENTS DO NOT VANISH UNDER YOUR FINGER. The exclusion set is
+  // sampled when the screen is entered, not read live: removing an event
+  // from its own card used to delete the card you were looking at, which
+  // reads as the app losing your place — and leaves nothing to undo
+  // against. It goes on the next visit, greyed until then.
+  const [excludedAtEntry, setExcludedAtEntry] = useState<Set<string>>(
+    loadExclusions,
+  );
+  const [, forceRepaint] = useState(0);
+
+  const upcoming = useMemo(
+    () =>
+      fixtures.filter(
+        (f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000,
+      ),
+    [fixtures],
+  );
 
   const carousel = useMemo(
-    () => upcoming.slice(0, CAROUSEL_MAX),
-    [upcoming],
+    () => upcoming.filter((f) => !excludedAtEntry.has(f.id)).slice(0, CAROUSEL_MAX),
+    [upcoming, excludedAtEntry],
   );
 
   // Everything followed, soonest first, each showing when it next plays.
@@ -154,6 +168,10 @@ export default function HomeScreen({ navigation }: Props) {
           // image, so an NBA team showed a monogram on Home and its
           // crest one tap later (Prompt 16 C).
           ...(item.crestUrl ? { imageUrl: item.crestUrl } : {}),
+          // An athlete's flag, where the follow captured one.
+          ...(flagEmojiOf(item.countryCode)
+            ? { badge: flagEmojiOf(item.countryCode) as string }
+            : {}),
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
         };
       });
@@ -225,6 +243,7 @@ export default function HomeScreen({ navigation }: Props) {
                 item={item}
                 follows={follows}
                 width={cardWidth}
+                removed={isExcluded(item.id)}
               />
             )}
           />

@@ -15,6 +15,9 @@ export function ExpandingHero(props: {
   item: HeroFixture;
   follows: readonly Followable[];
   width: number;
+  // Removed from the calendar, but still on screen until you leave: the
+  // card greys rather than disappearing under your finger.
+  removed?: boolean;
 }) {
   const ref = useRef<View | null>(null);
   const expansion = useCardExpansion();
@@ -28,7 +31,10 @@ export function ExpandingHero(props: {
       onPress={() => {
         void fixtureCardRequest(ref, props.item.id).then(expansion.open);
       }}
-      style={{ width: props.width, marginHorizontal: 0 }}
+      style={[
+        { width: props.width, marginHorizontal: 0 },
+        props.removed ? { opacity: 0.4 } : null,
+      ]}
     />
   );
 }

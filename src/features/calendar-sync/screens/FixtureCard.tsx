@@ -326,7 +326,14 @@ export function FixtureCardBody(props: {
         onContentSizeChange={(_w, h) => props.onContentHeight(h)}
       >
         {/* The poster block: identical component, identical size, at the
-            top of the same object it was before the tap. */}
+            top of the same object it was before the tap — and tapping it
+            again closes the card, because the thing you tapped to open
+            it is the thing you expect to tap to shut it. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${fixture.title}. Close`}
+          onPress={props.close}
+        >
         <PosterFace
           title={fixture.title}
           competition={fixture.competition}
@@ -352,6 +359,7 @@ export function FixtureCardBody(props: {
           timingNote={note}
           minHeight={HERO_MIN_HEIGHT}
         />
+        </Pressable>
 
         <Animated.View style={body}>
           {past ? null : (

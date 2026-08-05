@@ -158,7 +158,12 @@ export default function SearchScreen({ navigation }: Props) {
         if (r.ok) {
           setTeams(r.value.teams);
           setAthletes(r.value.athletes);
-          hydrateFollowArt(r.value.teams);
+          hydrateFollowArt([
+            ...r.value.teams,
+            ...r.value.athletes
+              .filter((a) => a.countryCode)
+              .map((a) => ({ key: a.key, countryCode: a.countryCode as string })),
+          ]);
           setError(null);
         } else {
           setTeams([]);
@@ -241,6 +246,7 @@ export default function SearchScreen({ navigation }: Props) {
         label: hit.name,
         sportKey: hit.sportKey,
         type: 'athlete' as const,
+        ...(hit.countryCode ? { countryCode: hit.countryCode } : {}),
         ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
         // The generated colour identity persists onto the follow, so
         // the rail, Home and the athlete page inherit it (Prompt 9b).

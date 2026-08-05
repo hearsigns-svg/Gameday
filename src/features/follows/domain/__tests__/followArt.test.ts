@@ -10,6 +10,7 @@ interface Follow {
   label: string;
   crestUrl?: string;
   brandColour?: string;
+  countryCode?: string;
 }
 
 const follows: Follow[] = [
@@ -74,4 +75,27 @@ it('reports no change when there is nothing to do', () => {
     { key: 'someone-else', crestUrl: 'x.png' },
   ]);
   expect(changed).toBe(false);
+});
+
+it('gives an athlete followed before nationality existed their flag', () => {
+  // The same frozen-snapshot problem crests had: five followed boxers
+  // were five identical monograms because the follow captured no
+  // country, and nothing revisits a follow.
+  const athletes: Follow[] = [{ key: 'athlete_000003', label: 'Rolando Romero' }];
+  const { next, changed } = applyArtHydration(athletes, [
+    { key: 'athlete_000003', countryCode: 'USA' },
+  ]);
+  expect(changed).toBe(true);
+  expect(next[0].countryCode).toBe('USA');
+});
+
+it('never CLEARS a nationality — it is a fact, not licensed artwork', () => {
+  const athletes: Follow[] = [
+    { key: 'athlete_000003', label: 'Rolando Romero', countryCode: 'USA' },
+  ];
+  const { next, changed } = applyArtHydration(athletes, [
+    { key: 'athlete_000003', crestUrl: 'x.png' },
+  ]);
+  expect(next[0].countryCode).toBe('USA');
+  expect(changed).toBe(true); // the crest changed, the country did not
 });
