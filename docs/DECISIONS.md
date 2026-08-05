@@ -1872,3 +1872,28 @@
   first cut rendered a "Colour" section whose content was a sentence
   about why there was no colour control. A user should not learn about a
   capability they cannot have.
+- 2026-08-05: **A FOLLOW SURVIVES A FAILED POLL.** Following fired a
+  preview poll and rolled the follow back when it failed, which turned a
+  provider's 429 into "your follow didn't take". The poll warms a cache;
+  the follow is the user's intent. It now logs and proceeds.
+- 2026-08-05: **A RATE LIMIT MUST NOT BE AMPLIFIED BY THE UI.** Three
+  follow-triggered fetches in a minute each drew 429 from the host
+  serving the tennis ICS — a self-inflicted outage that read to the owner
+  as a 502 from us. `pollTennis` records `lastFailureAt` and skips for 15
+  minutes, returning 200 with `skipped_ics_failure_backoff`: a poll we
+  chose not to make is not a failure.
+- 2026-08-05: **NATIONALITY IS NEVER CLEARED BY HYDRATION.** Crests can
+  be withdrawn and an absence must propagate; a country cannot. A search
+  response that happens not to carry one says nothing about the athlete,
+  and reading that silence as "no nationality" is the read-failure-as-
+  empty mistake in another costume.
+- 2026-08-05: **WE DO NOT PROMISE WHAT WE HAVE NO MECHANISM TO DELIVER**
+  (`features/follows/domain/athleteDelivery.ts`). A followed ATP man was
+  told his events would reach the calendar when announced. Measured the
+  same day: four of the top men held zero fixtures and `tennis-atp` held
+  78 tournament rows and no matches — no approved source publishes men's
+  draws, so nothing was ever going to announce them. The page now states
+  the gap, the same rule retirement follows. Keyed on the browse
+  population, which travels on the route AND on the stored follow, so
+  which door the user came through cannot change what the app claims.
+  Delete it when a men's source lands.

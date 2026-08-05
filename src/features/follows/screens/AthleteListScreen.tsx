@@ -227,6 +227,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
     // directory read of its own — still reaches an honest page, and so
     // a followed boxer carries the one identity mark they have.
     ...(a.countryCode ? { countryCode: a.countryCode } : {}),
+    ...(a.grouping ? { grouping: a.grouping } : {}),
     ...(a.careerStatus ? { careerStatus: a.careerStatus } : {}),
     ...(a.careerEndYear !== undefined
       ? { careerEndYear: a.careerEndYear }
@@ -411,6 +412,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                     ? { colours: hueToHex(a.accentHue) }
                     : {}),
                   ...(a.countryCode ? { countryCode: a.countryCode } : {}),
+                  ...(a.grouping ? { grouping: a.grouping } : {}),
                   ...(a.careerStatus
                     ? { careerStatus: a.careerStatus }
                     : {}),

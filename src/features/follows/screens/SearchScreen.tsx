@@ -247,6 +247,7 @@ export default function SearchScreen({ navigation }: Props) {
         sportKey: hit.sportKey,
         type: 'athlete' as const,
         ...(hit.countryCode ? { countryCode: hit.countryCode } : {}),
+        ...(hit.grouping ? { grouping: hit.grouping } : {}),
         ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
         // The generated colour identity persists onto the follow, so
         // the rail, Home and the athlete page inherit it (Prompt 9b).
@@ -397,6 +398,9 @@ export default function SearchScreen({ navigation }: Props) {
                               : {}),
                           ...(item.countryCode
                             ? { countryCode: item.countryCode }
+                            : {}),
+                          ...(item.followable!.grouping
+                            ? { grouping: item.followable!.grouping }
                             : {}),
                           ...(item.followable!.careerStatus
                             ? { careerStatus: item.followable!.careerStatus }

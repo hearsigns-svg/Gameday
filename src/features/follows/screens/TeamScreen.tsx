@@ -51,6 +51,7 @@ import {
   isRetired,
   retiredEmptyState,
 } from '../domain/careerStatus';
+import { deliveryGap } from '../domain/athleteDelivery';
 import { sportLabelFor } from '../domain/sportTerms';
 import { nationLabelOf } from '../../../core/nationality';
 import { activeRegion } from '../../../core/regionStore';
@@ -73,6 +74,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     careerEndYear,
     crestUrl: routeCrest,
     countryCode: routeCountry,
+    grouping: routeGrouping,
   } = route.params;
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -132,6 +134,17 @@ export default function TeamScreen({ navigation, route }: Props) {
       routeCountry ??
       loadFollowables().find((f) => f.key === teamKey)?.countryCode,
     [teamKey, routeCountry],
+  );
+
+  // Which population this athlete browses under — resolved the same way,
+  // and for the same reason: reached from the Following rail there are no
+  // route params, and what the page can honestly PROMISE must not depend
+  // on which door the user came through.
+  const grouping = useMemo(
+    () =>
+      routeGrouping ??
+      loadFollowables().find((f) => f.key === teamKey)?.grouping,
+    [teamKey, routeGrouping],
   );
 
   const career: CareerStatusFields = useMemo(() => {
@@ -416,7 +429,11 @@ export default function TeamScreen({ navigation, route }: Props) {
                 // Unless they have RETIRED — then "we'll add them when
                 // announced" is a promise nobody can keep, and saying so
                 // is the whole point (Prompt 12).
+                // And unless we have no source for their matches AT ALL
+                // — men's tennis — where the same promise is just as
+                // empty (domain/athleteDelivery.ts).
                 (retiredEmptyState(career) ??
+                deliveryGap(sportKey, grouping) ??
                 "No scheduled events. We'll add them when announced — follow now and they'll reach your calendar.")
               : 'No upcoming fixtures yet — schedules land here as soon as they are announced.'}
           </Text>

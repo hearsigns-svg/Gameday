@@ -1897,3 +1897,66 @@ pattern.
 Release simulator build verified. **The functions deploy for Prompt 16's
 server half is STILL OWED — blocked by the environment's classifier, not
 skipped.**
+
+### Prompt 16c — nine items from the owner's pass over the build  [x]
+
+Not a brief with a shape: nine things the owner hit while using it.
+Seven were fixes (d84b730), one was a diagnosis that changed a rule, one
+was research.
+
+THE CARD, ON SECOND USE. Removing an event from the calendar now leaves
+the card where it is and offers **Undo** — a removal you cannot see is
+indistinguishable from a bug, and the card only disappears once you have
+navigated away, which is the moment the decision is final. Tapping the
+open card closes it: an expansion that only closes by tapping AROUND it
+teaches that the object is a sheet, which is the reading the whole
+design exists to avoid.
+
+BROWSE. The Athletes row took the Teams row's chevron treatment — two
+entry points at the same level had two different weights, and the
+individual sports are exactly where users do not already know what the
+app holds. Competition coverage prose moved behind a **ⓘ What this
+covers** disclosure (`CoverageNote`), so the note is available and never
+in the way. AGENTS.md rule 11 in practice.
+
+WHY FOLLOWED BOXERS LOOKED IDENTICAL (item 4). They rendered correctly.
+The follow itself was the bug: `Followable` never captured `countryCode`,
+so five followed fighters were five monograms in five near-identical
+generated hues, with no identity mark between them. Nationality is now
+captured at follow time and, for follows made before it existed,
+back-filled by `applyArtHydration` on any browse or search — **additively
+and never cleared**, because a nationality is a fact about a person and
+not licensed artwork with a takedown to propagate. Tennis players got the
+same treatment: 1,282 of 1,513 (84.7%) resolved from Wikidata P27, IOC
+code preferred, dissolved states dropped, genuine dual citizenship left
+blank rather than guessed.
+
+THE "502" WAS OURS (item 7). Not a service error: our own `sourceRuns`
+showed three follow-triggered ICS fetches inside a minute, each answered
+**429** by the host serving the Tennis TV calendar. Two changes.
+`pollTennis` now records `lastFailureAt` and skips for 15 minutes after a
+failure, so a rate-limit answer cannot be amplified by the next tap. And
+**a follow no longer rolls back when its preview poll fails** — the poll
+is a courtesy; the follow is the user's intent, and destroying it because
+a third party was busy is the wrong trade.
+
+MEN'S TENNIS IS NOT LAUNCH READY, AND NOW SAYS SO (item 8). Measured:
+Djokovic, Alcaraz, Sinner and Zverev each hold ZERO fixtures, while
+`tennis-atp` holds 78 future TOURNAMENT rows and no matches at all. The
+page was telling those followers "we'll add them when announced" —
+nothing will, because no source we may use publishes men's draws or order
+of play. `domain/athleteDelivery.ts` states the gap in one place and the
+empty state says it, exactly as retirement already does (Prompt 12). It
+is keyed on the athlete's browse population, which now travels with the
+athlete (route param, and stored on the follow) so the Following rail
+reaches the same sentence as browse. **Delete the module when a men's
+source lands** — it is a fact about today's sourcing, not about the sport.
+
+TENNIS TV, RESEARCHED NOT BUILT (item 9). `tennistv.com/tournaments` is
+the tournament ICS we already consume. `/live-schedule` is the order of
+play, is robots-permitted, and is client-rendered — it returns an empty
+shell outside a live window, so it cannot be evaluated today. Next real
+window: Cincinnati, 13–23 August.
+
+897 tests both timezones, both typechecks and the functions build clean.
+**The `pollTennis` backoff needs a functions deploy.**

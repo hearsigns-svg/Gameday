@@ -35,6 +35,10 @@ export interface Followable {
   // IS the identity mark (Prompt 16 B); it just never reached the
   // follow.
   countryCode?: string;
+  // The browse population this athlete belongs to, captured at follow
+  // time so the page reached from the Following rail — which carries no
+  // directory data — can still say what a follow will deliver.
+  grouping?: string;
   // Recorded retirement, captured at follow time (Prompt 12) so the
   // athlete's page is still honest when it is reached from the
   // Following rail, which carries no directory data of its own. Absent

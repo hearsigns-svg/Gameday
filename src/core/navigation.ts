@@ -57,6 +57,10 @@ export type RootStackParamList = {
     // from the list that opened the page so the header can show it
     // before any follow exists.
     countryCode?: string;
+    // Which population this athlete browses under ("ATP Tour — Men").
+    // The page needs it to know whether a follow can actually deliver
+    // anything (features/follows/domain/athleteDelivery.ts).
+    grouping?: string;
   };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
