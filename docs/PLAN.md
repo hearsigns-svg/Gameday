@@ -1693,13 +1693,16 @@ model: `olympics-2028-athletics` is an ordinary competition follow key.
 
 ### Prompt 16 — the expanded card, athlete identity, Following logos  [x]
 
-PART A — THE HERO CARD EXPANDS. Tapping the poster pushes a screen whose
-header is THE SAME `HeroCard` component (extracted to
-`follows/FixtureHero.tsx`, so the carousel card and the expanded card
-cannot drift apart): same photo→scrim→pattern→watermark layers, same
-identity resolution, same credit line. Actions first, facts second.
-Reachable from Home's carousel, Schedule rows and a team/athlete page's
-fixture rows.
+PART A — THE HERO CARD EXPANDS. Tapping the poster opens the same card,
+larger: the same photo→scrim→pattern→watermark layers, the same identity
+resolution, the same credit line. Reachable from Home's carousel,
+Schedule rows and a team/athlete page's fixture rows.
+
+> SUPERSEDED IN PART BY PROMPT 16b (below): this first cut pushed a
+> `Fixture` SCREEN, and the owner's read was exact — "a settings page
+> with the hero card pasted on top". The route is gone; the card now
+> grows out of the row it was tapped on. What A1/A2/A3 do is unchanged;
+> where they live is not.
 
 - **A1 — per-event calendar settings.** Reminders are now OURS: chosen by
   the planner, recorded in the ledger, re-applied on every write. THIS
@@ -1811,3 +1814,86 @@ PART C — THE FOLLOWING LOGOS. Root cause found and fixed, plus a sweep.
   mark-less-by-data and are recorded, not silently left.
 
 879 tests both timezones; both typechecks and the functions build clean.
+
+### Prompt 16b — the card IS the modal  [x]
+
+The owner's verdict on the first cut: the card was the only designed
+element and everything under it was stock iOS Settings chrome — caps
+headers, system blue, destructive red, flush-left prose on white,
+inheriting none of the card's colour, radius, type or density. Partly a
+brief artefact ("actions first, facts second" plus three lettered items
+read as an instruction to build three labelled sections), and that
+structure was explicitly withdrawn.
+
+THE INTERACTION. Tapping a card measures its frame (`measureInWindow`),
+lifts it into an overlay at exactly that frame, and animates the
+geometry out — one element throughout. The origin hides itself while it
+is lifted, so there is never a second copy to cross-fade, and dismiss
+RE-MEASURES so the card shrinks back to where that row is now.
+
+- **Measure-and-animate, not a shared-element transition.**
+  `react-native-reanimated` is not a dependency, and its shared
+  transitions were experimental in v3 and absent from the v4 line SDK 57
+  pairs with. A native dependency plus a prebuild, for one interpolation
+  we would not control, buys less than 120 lines of measured geometry.
+- **The card keeps its WIDTH.** Every origin is clamped to the card's
+  own column, so only y and height interpolate: the title's line
+  breaking cannot change mid-flight, and the motion reads as growth
+  rather than a sheet arriving. A row is not a card — Schedule and team
+  rows grow from a 60pt row into a poster, which is the honest limit and
+  is stated rather than hidden.
+- **One painted object.** `PosterSurface` (photo, gradient, sport
+  geometry) and `PosterFace` (competition, countdown, title, when, the
+  one timing line) are shared by both states, so they cannot drift.
+- **A native Modal window**, because the navigation header is a platform
+  view (react-native-screens) and drew the settings gear on top of a JS
+  overlay. Window coordinates are unchanged, so measured frames still
+  line up.
+- **The card is as tall as its content**, and the geometry WAITS for
+  that height: one layout pass at the origin size yields it, because the
+  width is already final. Starting the flight first aimed at the maximum
+  and then hauled the card back — an overshoot the owner caught on
+  device (65ed597).
+
+THE CONTENT. The fixture's own gradient carries through everything,
+hairlines at 14%, type from the same scale, no caps headings and no
+system blue or red. Reminder is one row of durations where "use my
+default" is not a fifth chip but the ABSENCE of an override: inherited
+reads as a ring, explicit as a fill, and a reset appears only when there
+is something to reset. On an all-day entry the control is visibly inert
+and the card's own "Time TBC" line above it is the reason — no
+paragraph. The TBC answer is one line naming whoever has not published
+the time. The undercard is the substance of the open state. Copy on the
+surface went from ~150 words to ~25.
+
+COLOUR IS GATED ON A CAPABILITY PROBE, not `Platform.OS`
+(`calendarDriver.ts::calendarCapabilities`). expo-calendar 57's
+modifiable event properties are title, location, timeZone, url, notes,
+alarms, recurrenceRule, availability, startDate, endDate, allDay — no
+colour on EITHER platform, so the section does not render anywhere. The
+write path exists, so the day the library gains one the control appears
+with no code change.
+
+THE PUSHED `Fixture` ROUTE IS GONE. Entity drill-downs (Team, the browse
+lists) stay pushed; an object that expands does not need a route. Judged
+not to conflict with the app's navigation rather than escalated, and
+said so.
+
+THREE DEFECTS FOUND BY RUNNING IT (c6c0631), all in the first cut of the
+animation: `Animated.parallel` defaults to `stopTogether`, so
+re-targeting the height cancelled the parallel and the sequence never
+revealed the body; interpolating height from one progress value made a
+late height snap; and a lost measurement resolved null and swallowed the
+tap entirely. Also caught: three `cardEntries` cases passed only because
+the wall clock was before 22 August — every call now passes an explicit
+`now`, which is the repo's own convention.
+
+AGENTS.md gained standing rules 10–12: never render a section explaining
+why something is unavailable; explanatory prose in UI is a signal the
+design has failed; generic caps section headings are a Settings-app
+pattern.
+
+890 tests both timezones; both typechecks and the functions build clean;
+Release simulator build verified. **The functions deploy for Prompt 16's
+server half is STILL OWED — blocked by the environment's classifier, not
+skipped.**

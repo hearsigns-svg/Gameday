@@ -1813,3 +1813,62 @@
   can currently open, in a UK-default app. It stays unbuilt and the
   measurement is recorded so the decision can be revisited when the
   season fills in.
+
+## Prompt 16b — the card is the modal
+
+- 2026-08-05: **AN OBJECT THAT EXPANDS DOES NOT NEED A ROUTE.** The
+  expanded fixture surface was a pushed `Fixture` screen; it is now the
+  tapped card itself, measured and grown. The route is deleted. Entity
+  drill-downs (Team, browse lists) stay pushed — the distinction is that
+  one navigates to a different subject and the other enlarges the
+  subject already on screen. Judged not to conflict with the app's
+  navigation rather than escalated as the brief's stop-condition
+  allowed, and said so in the report.
+- 2026-08-05: **MEASURE-AND-ANIMATE, NOT A SHARED-ELEMENT TRANSITION.**
+  `react-native-reanimated` is not a dependency of this project, and its
+  shared-element transitions were experimental in v3 and are absent from
+  the v4 line Expo SDK 57 pairs with. Adding a native dependency and a
+  prebuild, for one interpolation whose timing we would not control,
+  buys less than 120 lines of measured geometry. Recorded so the next
+  reader does not "fix" this by adding the dependency.
+- 2026-08-05: **THE CARD KEEPS ITS WIDTH.** Every origin frame is
+  clamped to the card's own column before the flight, so only y and
+  height interpolate. This is not a style choice: a width that changes
+  mid-flight re-breaks the title's lines, which is the one thing that
+  makes an expansion read as two different objects. It also means a ROW
+  is an honest origin — a row is not a card, and the card grows out of
+  its vertical position rather than pretending the row was one.
+- 2026-08-05: **THE GEOMETRY WAITS FOR ITS TARGET.** A card is as tall
+  as its content, and content height is only knowable after a layout
+  pass. Starting the flight before that aimed at the maximum frame and
+  then corrected — and the correction was visible as an overshoot to
+  full screen. Because the width is final from the first frame, one
+  layout pass at the ORIGIN size yields the true height, so the flight
+  simply starts a frame later. The scrim still dims immediately.
+- 2026-08-05: **`Animated.parallel` DEFAULTS TO stopTogether.** Every
+  parallel in the expansion passes `stopTogether: false`, and the body's
+  reveal is a DELAY rather than the second step of a sequence. With the
+  defaults, re-targeting the card's height when the body measured itself
+  cancelled the whole parallel, the sequence never reached the reveal,
+  and the card opened full-height and empty.
+- 2026-08-05: **A LOST MEASUREMENT STILL OPENS THE CARD.** `measureFrame`
+  races a 120ms timeout; on a busy frame it resolves null. A tap that
+  silently does nothing is a worse failure than one that opens without
+  motion, so a missing frame starts the card AT its destination. Never
+  an invented origin — that would fly in from a position the card was
+  never in.
+- 2026-08-05: **CAPABILITY PROBE, NOT `Platform.OS`** (owner ruling,
+  now AGENTS.md rule 10). Per-event colour is a property of the calendar
+  LIBRARY, not of the OS: EventKit has none, Android's CalendarProvider
+  has `EVENT_COLOR`, and expo-calendar 57 exposes neither — its
+  modifiable event properties are title, location, timeZone, url, notes,
+  alarms, recurrenceRule, availability, startDate, endDate, allDay. The
+  UI asks `calendarCapabilities()`, so the control appears the day a
+  version adds one, with no code change. The write path is already
+  there; the invariant that keeps it safe is that a platform which
+  cannot show the control can never store a colour, so the planner can
+  never want one it cannot apply.
+- 2026-08-05: **AN ABSENCE IS NEVER EXPLAINED** (AGENTS.md rule 10). The
+  first cut rendered a "Colour" section whose content was a sentence
+  about why there was no colour control. A user should not learn about a
+  capability they cannot have.
