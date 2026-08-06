@@ -189,15 +189,20 @@ export const SPORTS: SportConfig[] = [
     followTypes: ['competition', 'athlete'],
     tournamentBrowse: true,
     // ATP: TOURNAMENT level from the ICS feed Tennis TV publishes for
-    // subscription. atptour.com is NOT excluded by robots.txt —
-    // `User-agent: *` is `Allow: /` and the content signal permits
-    // reference use; the ClaudeBot entry is Cloudflare's generic
-    // AI-crawler list. Access is blocked by Cloudflare bot management,
-    // which challenges any non-browser client. ATP's website terms
-    // assert restrictions on reproduction and storage whose
-    // enforceability against a non-assenting party is untested, so
-    // production use is an OPEN LEGAL QUESTION: written permission or a
-    // licensed feed is the clean route (docs/DECISIONS.md 2026-08-05).
+    // subscription. On atptour.com itself, the standing position, in
+    // the owner's words (docs/DECISIONS.md 2026-08-05):
+    //
+    //   Not excluded by robots.txt — `User-agent: *` is `Allow: /` and
+    //   the content signal permits reference use; the ClaudeBot entry
+    //   is Cloudflare's generic AI-crawler list. Access is blocked by
+    //   Cloudflare bot management, which challenges any non-browser
+    //   client. ATP's website terms assert restrictions on reproduction
+    //   and storage, whose enforceability against a non-assenting party
+    //   is untested; the underlying schedule facts are unlikely to be
+    //   protectable. Production use is therefore an open legal
+    //   question, and written permission or a licensed feed remains the
+    //   clean route.
+    //
     // WTA: tournaments PLUS
     // draws and order of play from the WTA's own API (owner ruling
     // 2026-08-02) — following a player rides APPEARANCE docs, reached
