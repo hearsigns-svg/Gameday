@@ -223,3 +223,29 @@ it('titles a match with its round', () => {
     'Luciano Darderi vs Juncheng Shang — National Bank Open',
   );
 });
+
+describe('one doc per player, not one per match', () => {
+  // Measured on the first live run (2026-08-06): a single appearance
+  // doc carrying BOTH players as id-bearing refs trips resolution's F34
+  // guard — one provider id per doc id — so the second ref is refused
+  // and the match reaches only one of its two players' followers. Nine
+  // Montreal matches landed that way. The publish contract has to make
+  // the per-side split obvious, which is what this pins.
+  it('gives each side its own title, naming that player first', () => {
+    const r = parseSheet([HEADER, row()]).rows[0];
+    const home = matchTitle(r, 'National Bank Open');
+    const away = matchTitle(
+      { ...r, homeDisplay: r.awayDisplay, awayDisplay: r.homeDisplay },
+      'National Bank Open',
+    );
+    expect(home).toBe(
+      'Luciano Darderi vs Juncheng Shang — National Bank Open, Round of 32',
+    );
+    expect(away).toBe(
+      'Juncheng Shang vs Luciano Darderi — National Bank Open, Round of 32',
+    );
+    // Two different titles means two different appearance doc ids,
+    // which is the whole point: neither player can claim the other's.
+    expect(home).not.toBe(away);
+  });
+});

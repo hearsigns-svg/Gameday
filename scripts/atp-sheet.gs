@@ -352,9 +352,28 @@ function appendRaw_(obs) {
 
 // ─── Player mapping (Tab 3) ───────────────────────────────────────────
 
+/**
+ * Fold to a comparable form. THE COMBINING-MARK RANGE IS WRITTEN AS
+ * ESCAPES ON PURPOSE: `\u0300-\u036f` survives a clipboard, an editor
+ * that re-normalises its input, and a copy-paste through a browser. The
+ * same range written as literal characters is invisible in the source
+ * and silently stopped stripping when this file was pasted into Apps
+ * Script — after which "Jiří Lehečka" and "Jiri Lehečka" folded to
+ * DIFFERENT strings, the exact-match test failed, and six of nine
+ * Montreal matches went unmapped over players we hold.
+ *
+ * The second replace matters just as much: anything left non-ASCII
+ * becomes a SPACE, so a mark that survives does not merely disappear —
+ * it splits the word ("jir i lehec ka") and can never match again.
+ */
 function norm_(s) {
-  return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**

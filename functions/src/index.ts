@@ -2562,40 +2562,71 @@ export const pollSheetAtp = onRequest(
         // run resolves by id in the same run.
         const mapping = await applyMappings(mappingIntents(parsed.rows));
         const nowIso = new Date().toISOString();
+        // ONE DOC PER PLAYER, exactly as the WTA provider does — not one
+        // per match. A single doc carrying BOTH players as id-bearing
+        // refs trips resolution's F34 guard, which allows one provider
+        // id per doc id: the second ref is refused, and the match ends
+        // up carrying only the first player's follow key. Measured, on
+        // the first live run: nine Montreal matches landed, each
+        // reaching one of its two players' followers and nobody else.
+        // Per-player docs give each ref its own doc id, so both players
+        // get the match and neither can masquerade as the other.
         const drafts = publish.flatMap((p) => {
           const parent = parents.get(p.row.tournamentKey)!;
-          const draft = appearanceFor(parent, {
-            refs: [
-              {
-                name: p.row.homeDisplay,
-                ...(p.row.homeVendorPlayerId
-                  ? { source: SHEET_VENDOR, externalId: p.row.homeVendorPlayerId }
-                  : {}),
-              },
-              {
-                name: p.row.awayDisplay,
-                ...(p.row.awayVendorPlayerId
-                  ? { source: SHEET_VENDOR, externalId: p.row.awayVendorPlayerId }
-                  : {}),
-              },
-            ],
-            title: matchTitle(p.row, parent.title),
-            updatedAt: nowIso,
-            ...(p.cancelled || p.startUtc === ''
-              ? {}
-              : {
-                  slot: p.dayOnly
-                    ? { startUtc: p.startUtc, durationHours: 24, dayOnly: true }
-                    : { startUtc: p.startUtc, durationHours: 3 },
-                }),
+          const sides = [
+            {
+              name: p.row.homeDisplay,
+              id: p.row.homeVendorPlayerId,
+              opponent: p.row.awayDisplay,
+            },
+            {
+              name: p.row.awayDisplay,
+              id: p.row.awayVendorPlayerId,
+              opponent: p.row.homeDisplay,
+            },
+          ];
+          return sides.flatMap((side) => {
+            const draft = appearanceFor(parent, {
+              refs: [
+                {
+                  name: side.name,
+                  ...(side.id
+                    ? { source: SHEET_VENDOR, externalId: side.id }
+                    : {}),
+                },
+              ],
+              // Titled from THIS player's side, so the event in their
+              // calendar names them first — the same convention the
+              // WTA appearances already use.
+              title: matchTitle(
+                { ...p.row, homeDisplay: side.name, awayDisplay: side.opponent },
+                parent.title,
+              ),
+              updatedAt: nowIso,
+              ...(p.cancelled || p.startUtc === ''
+                ? {}
+                : {
+                    slot: p.dayOnly
+                      ? { startUtc: p.startUtc, durationHours: 24, dayOnly: true }
+                      : { startUtc: p.startUtc, durationHours: 3 },
+                  }),
+            });
+            if (!draft) return [];
+            // A withdrawal has to REMOVE an event already sitting in
+            // somebody's calendar; that is the whole reason a human can
+            // edit this sheet at all.
+            return p.cancelled
+              ? [
+                  {
+                    ...draft,
+                    fixture: {
+                      ...draft.fixture,
+                      status: 'cancelled' as FixtureStatus,
+                    },
+                  },
+                ]
+              : [draft];
           });
-          if (!draft) return [];
-          // A withdrawal has to REMOVE an event already sitting in
-          // somebody's calendar; that is the whole reason a human can
-          // edit this sheet at all.
-          return p.cancelled
-            ? [{ ...draft, fixture: { ...draft.fixture, status: 'cancelled' as FixtureStatus } }]
-            : [draft];
         });
 
         return {
