@@ -2453,6 +2453,11 @@ export const activeTennisWindows = onRequest(async (_req, res) => {
         tournamentKey:
           w.f.followKeys.find((k) => k.startsWith('tennis-t-')) ?? null,
         name: w.f.title,
+        // THE CITY IS THE SEARCH TERM, not the title. Vendors index
+        // tennis tournaments by where they are played; our titles are
+        // the sponsor's ("National Bank Open Presented by Rogers"), and
+        // searching that finds nothing. 339 of 340 ATP rows carry one.
+        venueCity: w.f.venueCity ?? null,
         startUtc: w.f.startUtc,
         endUtc: new Date(w.end).toISOString(),
       }))

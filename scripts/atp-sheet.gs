@@ -207,20 +207,55 @@ function vendorIdsFor_(win) {
       return { tournamentId: values[i][2], seasonId: values[i][3] };
     }
   }
-  // Search by the tournament's own words, then take the ATP singles
-  // entity. Doubles and the WTA event share the city name, so the
-  // category has to be checked — picking the first hit would publish
-  // the women's draw into the men's slice.
-  var city = win.name.split(/[,—-]/)[0].trim();
-  var found = vendorGet_('/api/tennis/search/' + encodeURIComponent(city));
+  // A row that EXISTS but has no ids is a human's to-do, not a reason
+  // to append another blank one every two hours.
+  for (var j = 1; j < values.length; j++) {
+    if (values[j][0] === win.tournamentKey) {
+      throw new Error(
+        win.tournamentKey + ': tournaments tab row has no vendor ids yet — ' +
+        'fill vendor_tournament_id and vendor_season_id by hand'
+      );
+    }
+  }
+  // SEARCH BY CITY, NOT BY TITLE. Vendors index tennis tournaments by
+  // where they are played; our titles are the sponsor's ("National Bank
+  // Open Presented by Rogers") and find nothing. The venue city comes
+  // from our own fixture. The bare city is tried first because it is
+  // the form that hits; the title is a fallback for the handful of
+  // events named for something other than a place.
+  var candidates = [];
+  if (win.venueCity) {
+    candidates.push(String(win.venueCity).split(/[\s,]+/)[0]);
+    candidates.push(String(win.venueCity));
+  }
+  candidates.push(win.name.split(/[,—-]/)[0].trim());
+  var tried = [];
   var entity = null;
-  ((found && found.results) || []).forEach(function (r) {
-    var e = r.entity || {};
-    var cat = (e.category || {}).name;
-    if (entity) return;
-    if (cat === 'ATP' && String(e.name || '').toLowerCase().indexOf('doubles') === -1) entity = e;
-  });
-  if (!entity) throw new Error('no ATP singles entity for "' + city + '"');
+  for (var c = 0; c < candidates.length && !entity; c++) {
+    var term = candidates[c];
+    if (!term || tried.indexOf(term) !== -1) continue;
+    tried.push(term);
+    var found = vendorGet_('/api/tennis/search/' + encodeURIComponent(term));
+    // Doubles and the WTA event share the city name, so the category
+    // has to be checked — taking the first hit would publish the
+    // women's draw into the men's slice.
+    ((found && found.results) || []).forEach(function (r) {
+      var e = r.entity || {};
+      if (entity) return;
+      if ((e.category || {}).name === 'ATP' &&
+          String(e.name || '').toLowerCase().indexOf('doubles') === -1) entity = e;
+    });
+  }
+  if (!entity) {
+    // Leave the human a row to fill rather than only an error: next run
+    // picks up whatever they type.
+    sh.appendRow([
+      win.tournamentKey, win.name, '', '', new Date().toISOString(),
+      'AUTO-DISCOVERY FAILED — searched: ' + tried.join(', ') +
+        '. Fill vendor_tournament_id and vendor_season_id by hand.',
+    ]);
+    throw new Error('no ATP singles entity; searched ' + tried.join(', '));
+  }
   var seasons = vendorGet_('/api/tennis/tournament/' + entity.id + '/seasons');
   var year = String(new Date(win.startUtc).getUTCFullYear());
   var season = ((seasons && seasons.seasons) || []).filter(function (s) {
