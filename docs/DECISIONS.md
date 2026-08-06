@@ -2105,3 +2105,43 @@
   athletes, every sport): ZERO pairs exist that are each other's
   reversal, so nothing today can be wrongly merged; the conditions are
   there because the directory grows.
+- 2026-08-06: **EVERY ENTITY IN BROWSE OPENS ITS OWN PAGE** (owner
+  ruling, Prompt 19). Sports → Tennis → ATP Tour was a dead end: the
+  only way to see a competition's fixtures was to follow it and find it
+  in Following. Commit, then look. CHECKED RATHER THAN ASSUMED, because
+  the brief asked: the detail screen has NO dependency on follow state —
+  `TeamScreen::loadFixtures` reads
+  `stored ? followQueryKeys(stored) : [teamKey]`, querying by key and
+  falling back to the bare key. That is why an athlete page already
+  worked unfollowed. So this was navigation, not a rewrite: browse rows
+  now open the SAME screen the Following tab uses, with Follow on it.
+  A competition row's press opens the competition; its Teams button
+  still browses the clubs.
+  WHY IT MATTERS BEYOND CONVENIENCE: coverage now varies by
+  competition — ATP tournaments carry banners and live match times, the
+  WTA carries draws and order of play, athletics is meeting-level, some
+  competitions are dormant until 2028. A user who can look before
+  following sees that for themselves; a user who must follow first
+  discovers it as a disappointment already in their calendar.
+- 2026-08-06: **TENNIS BROWSES AS THREE SECTIONS**, ATP, WTA and Grand
+  Slams, each with its own Players entry point and its own coverage
+  note. One shared note could only be vague about two tours whose
+  coverage genuinely differs now. The majors get their own section
+  because they belong to neither tour — which the `tours` taxonomy
+  already says, and the UI should not contradict its own data.
+  PLACEMENT falls back from `tours` to `coverage`, because 40 of 99
+  rows make no tours claim at all (beyond the WTA feed's horizon) and
+  would otherwise vanish from browse entirely.
+  AND THE SECTIONS COLLAPSE. Uncollapsed, the two tours put 95
+  tournament rows above the Grand Slams heading — "beneath them" as the
+  brief asked, and invisible in practice. Each tour previews six with a
+  "Show all N", reusing the athlete list's existing affordance, so the
+  majors sit at row 20 however many tournaments exist. A section nobody
+  can reach is not a section.
+- 2026-08-06: **EVERY HOOK ABOVE THE LOADING EARLY-RETURN.**
+  LeagueListScreen has `if (!leagues) return <spinner/>` between its
+  hooks and its body; a `useCallback` added below it ran on the second
+  render and not the first, and Release crashed the screen outright with
+  "Rendered more hooks than during the previous render". Typecheck and
+  972 tests were all green — only running it found this, which is the
+  argument for rule 9 in one sentence.

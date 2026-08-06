@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { FollowButton, ListRow, monogramOf , CoverageNote } from '../../../core/components';
+import { BrowseRow, tennisBrowseRows, TOUR_PREVIEW } from '../domain/tennisBrowse';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -51,6 +52,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [expandedTours, setExpandedTours] = useState<Set<'atp' | 'wta'>>(new Set());
   const [, forceRender] = useState(0);
 
   // Toast Undo (and any other sync) must refresh Follow buttons here too.
@@ -144,6 +146,50 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     return `${dates} · ${row.tours.map((t) => t.toUpperCase()).join(' · ')}`;
   };
 
+  // EVERY HOOK IN THIS COMPONENT LIVES ABOVE THE LOADING EARLY-RETURN.
+  // `if (!leagues) return <spinner/>` sits between here and the render
+  // body, so a hook declared after it runs on the SECOND render and not
+  // the first — "Rendered more hooks than during the previous render",
+  // which crashes the screen outright in Release.
+  const followAll = useCallback(
+    async (keys: string[], title: string) => {
+      setBusyKey(title);
+      for (const key of keys) {
+        const row = tournaments.find((x) => x.key === key);
+        if (!row || isFollowed(key)) continue;
+        await follow({
+          key,
+          label: row.name,
+          sportKey: route.params.sportKey,
+          type: 'competition',
+        });
+      }
+      setBusyKey(null);
+      forceRender((n) => n + 1);
+    },
+    [tournaments, route.params.sportKey],
+  );
+
+  // EVERY ENTITY IN BROWSE OPENS ITS OWN PAGE (Prompt 19). It used to
+  // be that the only way to see a competition's fixtures was to follow
+  // it and find it in Following — commit, then look. The detail screen
+  // never needed the follow: it queries by KEY and falls back to the
+  // bare key when no follow record exists (TeamScreen::loadFixtures),
+  // which is why an athlete page already worked unfollowed.
+  const openEntity = useCallback(
+    (key: string, name: string, crestUrl?: string, pollPath?: string) =>
+      navigation.navigate('Team', {
+        teamKey: key,
+        name,
+        sportKey: route.params.sportKey,
+        followType: 'competition' as const,
+        ...(pollPath ? { pollPath } : {}),
+        ...(crestUrl ? { crestUrl } : {}),
+        ...(sport?.accent ? { colours: sport.accent } : {}),
+      }),
+    [navigation, route.params.sportKey, sport?.accent],
+  );
+
   const toggle = useCallback(async (league: DirectoryLeague) => {
     const isSeries = league.key === sport?.seriesFollowable?.key;
     const item = {
@@ -183,6 +229,161 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     return (
       <View style={[styles.center, { backgroundColor: t.bg }]}>
         <ActivityIndicator color={t.primary} />
+      </View>
+    );
+  }
+
+  // TENNIS IS THREE THINGS (Prompt 19): ATP, WTA, and the majors, which
+  // belong to neither tour. It used to be one Players row and one
+  // undifferentiated block of every tournament, with a single coverage
+  // note trying to describe two tours that no longer match.
+  const tennisRows: BrowseRow[] | null =
+    route.params.sportKey === 'tennis' && leagues
+      ? tennisBrowseRows(leagues, tournaments, expandedTours)
+      : null;
+
+  const renderBrowseRow = (r: BrowseRow) => {
+    switch (r.kind) {
+      case 'header':
+        return (
+          <View style={{ paddingTop: spacing.l }}>
+            <Text
+              style={[
+                type.caption,
+                {
+                  color: t.textSecondary,
+                  paddingHorizontal: spacing.l,
+                  paddingBottom: spacing.s,
+                  fontWeight: '600',
+                },
+              ]}
+            >
+              {r.title.toUpperCase()}
+            </Text>
+            <CoverageNote note={r.note} />
+          </View>
+        );
+      case 'players':
+        return (
+          <ListRow
+            title={r.title}
+            caption="Rankings, champions, who's competing"
+            glyph={sport?.glyph ?? '🎾'}
+            tileTheme={teamTheme(sport?.accent ?? null, mode)}
+            accessibilityLabel={`Browse ${r.tour.toUpperCase()} players`}
+            onPress={() =>
+              navigation.navigate('AthleteList', {
+                sportKey: route.params.sportKey,
+                tour: r.tour,
+              })
+            }
+            right={
+              <Text style={[type.heading, { color: t.primary }]} accessible={false}>
+                ›
+              </Text>
+            }
+          />
+        );
+      case 'competition':
+        return (
+          <ListRow
+            title={r.name}
+            caption="Every event on the tour"
+            glyph={sport?.glyph ?? '🎾'}
+            tileTheme={teamTheme(sport?.accent ?? null, mode)}
+            monogram={monogramOf(r.name)}
+            accessibilityLabel={`${r.name}, see upcoming`}
+            onPress={() => openEntity(r.key, r.name)}
+            right={
+              <FollowButton
+                following={isFollowed(r.key)}
+                subject={r.name}
+                busy={busyKey === r.key}
+                label="Follow all"
+                onPress={() =>
+                  void toggle({ id: r.key, name: r.name, country: '', key: r.key, followOnly: true })
+                }
+              />
+            }
+          />
+        );
+      case 'followAll':
+        return (
+          <ListRow
+            title={r.title}
+            caption={`${r.keys.length} tournaments`}
+            glyph="🏆"
+            tileTheme={teamTheme(sport?.accent ?? null, mode)}
+            accessibilityLabel={`Follow all four majors`}
+            right={
+              <FollowButton
+                following={r.keys.every((k) => isFollowed(k))}
+                subject={r.title}
+                busy={busyKey === r.title}
+                label="Follow all"
+                onPress={() => void followAll(r.keys, r.title)}
+              />
+            }
+          />
+        );
+      case 'showAll':
+        return (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Show all ${r.tour.toUpperCase()} tournaments`}
+            onPress={() => setExpandedTours((prev) => new Set([...prev, r.tour]))}
+            style={{
+              minHeight: 44,
+              justifyContent: 'center',
+              paddingHorizontal: spacing.l,
+            }}
+          >
+            <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
+              {`Show all ${r.hidden + TOUR_PREVIEW}`}
+            </Text>
+          </Pressable>
+        );
+      case 'tournament':
+        return (
+          <ListRow
+            title={r.tournament.name}
+            caption={tournamentCaption(r.tournament as TournamentRow)}
+            accessibilityLabel={`${r.tournament.name}, see upcoming`}
+            onPress={() => openEntity(r.tournament.key, r.tournament.name)}
+            right={
+              <FollowButton
+                following={isFollowed(r.tournament.key)}
+                subject={r.tournament.name}
+                busy={busyKey === r.tournament.key}
+                onPress={() =>
+                  void toggle({
+                    id: r.tournament.key,
+                    name: r.tournament.name,
+                    country: '',
+                    key: r.tournament.key,
+                    followOnly: true,
+                  })
+                }
+              />
+            }
+          />
+        );
+    }
+  };
+
+  if (tennisRows) {
+    return (
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        {error ? (
+          <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
+            {error}
+          </Text>
+        ) : null}
+        <FlatList
+          data={tennisRows}
+          keyExtractor={(r) => r.id}
+          renderItem={({ item }) => renderBrowseRow(item)}
+        />
       </View>
     );
   }
@@ -259,7 +460,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                   key={row.key}
                   title={row.name}
                   caption={tournamentCaption(row)}
-                  accessibilityLabel={row.name}
+                  accessibilityLabel={`${row.name}, see upcoming`}
+                  onPress={() => openEntity(row.key, row.name)}
                   right={
                     <FollowButton
                       following={isFollowed(row.key)}
@@ -294,20 +496,13 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             tileTheme={teamTheme(sport?.accent ?? null, mode)}
             monogram={monogramOf(item.name)}
             {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-            accessibilityLabel={
-              item.followOnly ? item.name : `${item.name}, browse teams`
-            }
-            onPress={
-              item.followOnly
-                ? undefined
-                : () =>
-                    navigation.navigate('TeamList', {
-                      sportKey: route.params.sportKey,
-                      leagueId: item.id,
-                      leagueName: item.name,
-                      teamPollPath: item.teamPollPath,
-                    })
-            }
+            accessibilityLabel={`${item.name}, see upcoming`}
+            // The row is the COMPETITION now, not a shortcut to its
+            // teams — "Premier League" should show Premier League
+            // fixtures, and its Teams button (right) still browses the
+            // clubs. A followOnly row (ATP Tour, a series) was a dead
+            // end before this.
+            onPress={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
             right={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
                 {/* A competition with no league-level poller offers no

@@ -23,7 +23,10 @@ export type RootStackParamList = {
   LeagueList: { sportKey: string };
   // Individual-sport athlete browse (Prompt 8): search-first over the
   // canonical directory, curated entry points, competing-soon.
-  AthleteList: { sportKey: string };
+  // `tour` narrows an individual sport's directory to one population —
+  // tennis browses ATP and WTA as separate sections, each with its own
+  // way in, rather than one shared list with a split inside it.
+  AthleteList: { sportKey: string; tour?: 'atp' | 'wta' };
   TeamList: {
     sportKey: string;
     leagueId: number | string;

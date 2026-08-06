@@ -155,12 +155,24 @@ export default function AthleteListScreen({ navigation, route }: Props) {
       ) {
         sections.push({ title: 'Competing soon', data: r.value.competingSoon });
       }
+      // A `tour` param narrows to one population (Prompt 19). Tennis
+      // browses ATP and WTA as separate SECTIONS now, each with its own
+      // Players entry, so arriving from the men's section and being
+      // shown the women's list first would undo the split. Matched on
+      // the server's own group titles ("ATP Tour — Men", "More ATP
+      // players — A–Z", "WTA Tour — Women"), which is where the tour's
+      // name lives.
+      const tour = route.params.tour;
+      const wanted = (title: string): boolean => {
+        if (!tour) return true;
+        return new RegExp(`\\b${tour}\\b`, 'i').test(title);
+      };
       for (const g of r.value.groups) {
-        sections.push({ title: g.grouping, data: g.athletes });
+        if (wanted(g.grouping)) sections.push({ title: g.grouping, data: g.athletes });
       }
       setBrowse(sections);
     })();
-  }, [route.params.sportKey]);
+  }, [route.params.sportKey, route.params.tour]);
 
   // Search-first: the box feeds the same canonical directory search as
   // global search, filtered to this sport. Stale responses are dropped.
