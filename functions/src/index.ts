@@ -7,6 +7,7 @@ import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadTeamAliases } from './aliases';
 import {
+  appearanceFor,
   appearanceEndMs,
   appearanceSliceKey,
   deriveBoutAppearances,
@@ -47,6 +48,17 @@ import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
 import { CatalogueEntry, sportWeightsOf } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
+import { readSheetTab } from './sheets';
+import {
+  mappingIntents,
+  matchTitle,
+  parseSheet,
+  publishable,
+} from './providers/sheetAtp';
+// The vendor namespace the sheet's player ids live in. One constant, so
+// the mapping the sheet teaches and the refs it publishes can never
+// drift into two different provider namespaces.
+const SHEET_VENDOR = 'tennisapi1';
 import { leaseDecision } from './sourceLease';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
@@ -2404,5 +2416,221 @@ export const runReconcile = onRequest(
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }
+  },
+);
+
+// ─── Prompt 18: men's ATP matches via the review sheet ────────────────
+
+// What the sheet's Apps Script needs before it spends a single vendor
+// request: which ATP tournaments are actually on. Public, tiny, and no
+// personal data — it is our own tournament windows, which the app
+// already serves through listTournaments.
+//
+// This exists so the poller's cadence is driven by FIRESTORE rather than
+// a calendar hardcoded in a script nobody will remember to edit. A week
+// with no ATP tennis costs the vendor nothing at all.
+export const activeTennisWindows = onRequest(async (_req, res) => {
+  try {
+    const snap = await db
+      .collection('fixtures')
+      .where('competitionId', '==', 'tennis-atp')
+      .get();
+    const now = Date.now();
+    // Live now, or starting inside 48h — draws and the first order of
+    // play publish before play begins, and a calendar app that learns
+    // the time on the morning of the match has already lost.
+    const LOOKAHEAD_MS = 48 * 3_600_000;
+    const windows = snap.docs
+      .map((d) => d.data() as Fixture)
+      .filter((f) => f.status !== 'cancelled')
+      .map((f) => {
+        const start = Date.parse(f.startUtc);
+        const end = start + (f.durationHours ?? 24) * 3_600_000;
+        return { f, start, end };
+      })
+      .filter((w) => w.end > now && w.start < now + LOOKAHEAD_MS)
+      .map((w) => ({
+        tournamentKey:
+          w.f.followKeys.find((k) => k.startsWith('tennis-t-')) ?? null,
+        name: w.f.title,
+        startUtc: w.f.startUtc,
+        endUtc: new Date(w.end).toISOString(),
+      }))
+      .filter((w) => w.tournamentKey !== null)
+      .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
+    res.json({ windows, checkedAt: new Date().toISOString() });
+  } catch (e) {
+    // An empty list means "no ATP tennis this week" and the script
+    // sleeps. A failed read must NOT be able to say that.
+    res.status(502).json({ error: String(e) });
+  }
+});
+
+const SHEET_TAB = 'canonical_matches';
+
+// Stamp the human's mapping onto the athlete, so the NEXT run resolves
+// that player certainly by id instead of by name. Additive only: an
+// athlete already carrying a different id from this vendor is the F34
+// shape and is reported, never overwritten — one of the two is wrong and
+// a silent update would pick the wrong one half the time.
+async function applyMappings(
+  intents: readonly {
+    athleteId: string;
+    vendorPlayerId: string;
+    displayName: string;
+  }[],
+): Promise<{ stamped: number; conflicts: string[]; missing: string[] }> {
+  const conflicts: string[] = [];
+  const missing: string[] = [];
+  let stamped = 0;
+  for (const m of intents) {
+    const ref = db.collection('athletes').doc(m.athleteId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      missing.push(`${m.athleteId} (${m.displayName})`);
+      continue;
+    }
+    const held = (snap.data()?.providerIds ?? {})[SHEET_VENDOR];
+    if (held === m.vendorPlayerId) continue; // already taught
+    if (held !== undefined) {
+      conflicts.push(
+        `${m.athleteId} holds ${SHEET_VENDOR}:${held}, sheet says ${m.vendorPlayerId}`,
+      );
+      continue;
+    }
+    await ref.update({ [`providerIds.${SHEET_VENDOR}`]: m.vendorPlayerId });
+    stamped++;
+  }
+  return { stamped, conflicts, missing };
+}
+
+export const pollSheetAtp = onRequest(
+  { timeoutSeconds: 120 },
+  async (req, res) => {
+    const spreadsheetId = process.env.ATP_SHEET_ID ?? '';
+    if (spreadsheetId === '') {
+      res.status(500).json({ error: 'ATP_SHEET_ID is not configured' });
+      return;
+    }
+    const out = await servePoll(
+      triggerOf(req.get(TRIGGER_HEADER)),
+      {
+        source: 'sheet',
+        sport: 'tennis',
+        competitionId: 'tennis-atp-sheet',
+        pollPath: 'pollSheetAtp',
+        seasonRequested: null,
+      },
+      async (trace) => {
+        trace.seasonsTried.push(SHEET_TAB);
+        const values = await readSheetTab(spreadsheetId, SHEET_TAB);
+        const parsed = parseSheet(values);
+        // A header we cannot read is a failure, full stop: renamed tab,
+        // revoked share, disabled API and broken quota all land here,
+        // and none of them means "no matches today".
+        if (parsed.error !== null) throw new Error(parsed.error);
+
+        // Parents, by the year-agnostic tournament key the sheet speaks.
+        const parentSnap = await db
+          .collection('fixtures')
+          .where('competitionId', '==', 'tennis-atp')
+          .get();
+        const now = Date.now();
+        const parents = new Map<string, Fixture>();
+        for (const d of parentSnap.docs) {
+          const f = d.data() as Fixture;
+          const key = f.followKeys.find((k) => k.startsWith('tennis-t-'));
+          if (!key) continue;
+          const end =
+            Date.parse(f.startUtc) + (f.durationHours ?? 24) * 3_600_000;
+          if (end <= now) continue; // horizon rule: finished editions never publish
+          // The SOONEST live-or-upcoming edition owns the key.
+          const held = parents.get(key);
+          if (!held || f.startUtc < held.startUtc) parents.set(key, f);
+        }
+
+        const { publish, skipped } = publishable(
+          parsed.rows,
+          new Set(parents.keys()),
+        );
+        // Teach the directory before publishing, so a player mapped this
+        // run resolves by id in the same run.
+        const mapping = await applyMappings(mappingIntents(parsed.rows));
+        const nowIso = new Date().toISOString();
+        const drafts = publish.flatMap((p) => {
+          const parent = parents.get(p.row.tournamentKey)!;
+          const draft = appearanceFor(parent, {
+            refs: [
+              {
+                name: p.row.homeDisplay,
+                ...(p.row.homeVendorPlayerId
+                  ? { source: SHEET_VENDOR, externalId: p.row.homeVendorPlayerId }
+                  : {}),
+              },
+              {
+                name: p.row.awayDisplay,
+                ...(p.row.awayVendorPlayerId
+                  ? { source: SHEET_VENDOR, externalId: p.row.awayVendorPlayerId }
+                  : {}),
+              },
+            ],
+            title: matchTitle(p.row, parent.title),
+            updatedAt: nowIso,
+            ...(p.cancelled || p.startUtc === ''
+              ? {}
+              : {
+                  slot: p.dayOnly
+                    ? { startUtc: p.startUtc, durationHours: 24, dayOnly: true }
+                    : { startUtc: p.startUtc, durationHours: 3 },
+                }),
+          });
+          if (!draft) return [];
+          // A withdrawal has to REMOVE an event already sitting in
+          // somebody's calendar; that is the whole reason a human can
+          // edit this sheet at all.
+          return p.cancelled
+            ? [{ ...draft, fixture: { ...draft.fixture, status: 'cancelled' as FixtureStatus } }]
+            : [draft];
+        });
+
+        return {
+          rawCount: parsed.rows.length,
+          // The sheet carries MATCHES, never the tournament parents —
+          // those stay the ICS's job, and two sources writing one slice
+          // is how a reaper eats a live fixture.
+          fixtures: [],
+          followKey: 'tennis-atp-sheet',
+          seasonResolved: 'current',
+          appearances: {
+            followKey: appearanceSliceKey('tennis-atp'),
+            rawCount: parsed.rows.length,
+            drafts,
+            create: 'never' as const,
+            // NOTHING IS MINTED FROM A SHEET. Every player here was
+            // mapped by a human to an athlete we already hold; an
+            // unmapped one is skipped upstream and counted below. A
+            // sheet that could create athletes would let one typo add a
+            // person to the directory for ever.
+          },
+          body: {
+            rows: parsed.rows.length,
+            published: drafts.length,
+            skipped: skipped.length,
+            skippedByReason: skipped.reduce<Record<string, number>>((m, s) => {
+              m[s.reason] = (m[s.reason] ?? 0) + 1;
+              return m;
+            }, {}),
+            // Named, not just counted: an unmapped player is a job for a
+            // human, and a count alone tells them nothing about who.
+            skippedDetail: skipped.slice(0, 25).map((s) => `${s.reason}: ${s.detail}`),
+            overrides: publish.filter((p) => p.overridden).length,
+            mappingStamped: mapping.stamped,
+            mappingConflicts: mapping.conflicts,
+            mappingMissingAthletes: mapping.missing,
+          },
+        };
+      },
+    );
+    res.status(out.status).json(out.body);
   },
 );

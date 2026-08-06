@@ -1934,3 +1934,41 @@
   stealth plugins, no proxies, no cookie harvesting, no repeated
   attempts. The routes forward are an authorised-access request and a
   licensed vendor.
+- 2026-08-06: **THE MEN'S SHEET IS AN INGESTION SOURCE, NEVER THE
+  SERVING LAYER** (owner ruling, Prompt 18). ATP matches are assembled
+  by an Apps Script into a Google Sheet a human can correct, and a Cloud
+  Function reads that sheet into Firestore:
+  `vendor → Apps Script → Sheet → pollSheetAtp → Firestore → app`. The
+  app never reads the sheet. Everything already built lives downstream of
+  Firestore — provisional→confirmed in place, the ledger, the horizon
+  rule, the reaper, coverage — and reading the sheet directly would
+  bypass all of it for a source with per-project rate limits and no
+  offline story. So the sheet is one more connector: its own
+  `sourceRuns`, catalogue entry and slice (`tennis-atp-sheet`).
+- 2026-08-06: **THE SHEET NEVER MINTS AN ATHLETE, AND NEVER GUESSES
+  ONE.** `create: 'never'` on the appearance slice, and a row whose
+  players are not mapped to canonical ids is skipped and named in the
+  run record. What the sheet CAN do is teach: a mapping a human curates
+  is stamped onto the athlete as `providerIds.tennisapi1`, after which
+  resolution is CERTAIN by id and the name path — the one F31/F34 exist
+  to distrust — is never consulted for that player again. Additive only;
+  an athlete already holding a different id from this vendor is reported
+  as a conflict, never overwritten.
+- 2026-08-06: **COLUMNS ARE READ BY HEADER NAME, AND OVERRIDES ARE READ
+  BEFORE THE REWRITE.** Two failure modes specific to a human-edited
+  source. Positional parsing would silently reassign every field the
+  first time somebody inserts a column — plausible data, wrong
+  everywhere. And a rebuild that did not re-read the override columns
+  would discard a correction made during a final, which is the exact
+  scenario the editable sheet exists for.
+- 2026-08-06: **VENDOR MEASURED, FREE TIER IS 50 REQUESTS/KEY/DAY.**
+  `tennisapi1` on RapidAPI carries what nobody else assessed did: live
+  National Bank Open R32 with exact pre-announced times, `roundInfo`,
+  stable match ids, a `changes.changeTimestamp`, and FULL player names
+  with numeric ids, slugs and countries. Against our roster, 356 of
+  their top 500 join exactly and uniquely by name with ZERO ambiguity.
+  The owner's three keys are three accounts on ONE host — quota
+  stacking, not redundancy, and a shared failure mode; raised, and the
+  owner elected to rotate all three at a 2-hourly cadence. The connector
+  is vendor-pluggable so a genuinely independent second source is a
+  config entry rather than a rewrite.

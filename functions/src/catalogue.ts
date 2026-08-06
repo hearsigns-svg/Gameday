@@ -132,6 +132,11 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // age (review round).
   T1('tennis-atp', 'ATP Tour', 'tennis', 'pollTennis', 66),
   T1('tennis-wta', 'WTA Tour', 'tennis', 'pollWtaTennis', 66),
+  // The men's matches, assembled in the review sheet. Tier 1 because
+  // the cost is a Sheets read, not a vendor request — the vendor quota
+  // is spent by the Apps Script on its own 2-hourly trigger, and this
+  // route only moves what is already in the sheet into Firestore.
+  T1('tennis-atp-sheet', 'ATP matches (sheet)', 'tennis', 'pollSheetAtp', 65),
   // wa-calendar carries NO priority: it is the "Everything on the
   // calendar" catch-all (1,372 future meetings) and must sort LAST
   // within athletics, after every curated group below.

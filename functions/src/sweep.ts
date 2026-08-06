@@ -49,6 +49,10 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
   pollPbc: {},
   pollTennis: {},
   pollWtaTennis: {},
+  // The men's review sheet. Parameterless like the rest: which
+  // tournaments it covers is decided by the sheet, not by a stored
+  // follow.
+  pollSheetAtp: {},
   pollAthletics: {},
   pollTsdbLeague: {
     leagueId: /^\d{3,6}$/,
@@ -189,6 +193,8 @@ export function sliceOfPollPath(
       return { source: 'tennis', sport: 'tennis', competitionId: 'tennis-atp' };
     case 'pollWtaTennis':
       return { source: 'wta', sport: 'tennis', competitionId: 'tennis-wta' };
+    case 'pollSheetAtp':
+      return { source: 'sheet', sport: 'tennis', competitionId: 'tennis-atp-sheet' };
     case 'pollAthletics':
       return { source: 'wa', sport: 'athletics', competitionId: 'wa-calendar' };
     default:

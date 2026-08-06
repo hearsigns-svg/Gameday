@@ -2034,3 +2034,41 @@ FIXED REGARDLESS:
 clean. `pollTennis` + `listTournaments` DEPLOYED and verified live.
 Release simulator build verified: the four slams read "· ATP · WTA",
 2027 rows beyond the WTA horizon read dates only.
+
+### Prompt 18 — the review sheet as the ATP ingestion layer  [x] / owner setup pending
+
+`vendor → Apps Script → Sheet → pollSheetAtp → Firestore → app`. The
+sheet is a connector, not a serving layer, so every downstream guarantee
+still applies.
+
+MEASURED FIRST, WITH THE OWNER'S KEY. `tennisapi1` serves the live
+National Bank Open men's R32: 16 matches, exact pre-announced times
+(16:30, 17:40, 22:00, 23:10 UTC), `roundInfo`, stable match ids, a
+`changes.changeTimestamp` for reschedule detection, and FULL player
+names with numeric ids, slugs, seeds and countries — the first vendor
+assessed that does not abbreviate. 356 of their top 500 join our roster
+exactly and uniquely, zero ambiguous. **Free tier is 50 requests per key
+per day** (from the live headers), which is why the script asks our own
+`activeTennisWindows` before spending anything and caches vendor
+tournament ids in a tab.
+
+RAISED AND RULED ON: the three keys are one host, so they are quota
+stacking rather than redundancy and share a failure mode. Owner elected
+to rotate all three at 2-hourly, with the connector kept
+vendor-pluggable.
+
+BUILT: `providers/sheetAtp.ts` (pure — header-keyed parsing, publish
+rules, mapping intents; 20 tests), `sheets.ts` (metadata-server token,
+read-only), `activeTennisWindows` and `pollSheetAtp` in index.ts,
+`scripts/atp-sheet.gs` (six tabs, key rotation with quota tracking,
+auto-mapping against our own directory, override preservation),
+registered with the sweep and catalogue as `tennis-atp-sheet`.
+
+932 tests both timezones. Both functions DEPLOYED and verified:
+`activeTennisWindows` returns the National Bank Open to 14 Aug;
+`pollSheetAtp` returns **502 with the exact reason** (Sheets API not yet
+enabled) rather than reading as an empty sheet.
+
+OWNER SETUP — `docs/atp-sheet-setup.md`: enable the Sheets API, share
+the sheet with `188261010398-compute@developer.gserviceaccount.com`,
+paste the Apps Script, set two script properties, run `install()`.
