@@ -387,25 +387,44 @@ function updateMapping_(obs) {
   var values = sh.getDataRange().getValues();
   var known = {};
   for (var i = 1; i < values.length; i++) {
-    if (values[i][1]) known[String(values[i][1])] = { id: values[i][3], row: i + 1 };
+    if (values[i][1]) {
+      known[String(values[i][1])] = { id: String(values[i][3] || ''), row: i + 1 };
+    }
   }
   var seen = {};
   obs.forEach(function (o) {
     [[o.homeVendorPlayerId, o.homeDisplay], [o.awayVendorPlayerId, o.awayDisplay]]
       .forEach(function (p) {
-        if (!p[0] || seen[p[0]] || known[p[0]]) return;
+        if (!p[0] || seen[p[0]]) return;
         seen[p[0]] = true;
+        var row = known[p[0]];
+        // A FILLED id is final — it may be a human's decision and is
+        // never second-guessed. A BLANK one is an open question, so it
+        // is asked again every run: the matcher may have been fixed
+        // (it was), or the player may have entered our directory since.
+        // Without this retry a player recorded once as unmatchable
+        // stays unmatchable for ever, which is how six Montreal
+        // matches stayed unpublished after the fold bug was fixed.
+        if (row && row.id) return;
         var hit = null;
         try { hit = lookupAthlete_(p[1]); } catch (e) { hit = null; }
-        sh.appendRow([
+        var cells = [
           VENDOR, p[0], p[1],
           hit ? hit.key : '',
           hit ? hit.name : '',
           hit ? (hit.countryCode || '') : '',
           hit ? 'auto: exact unique full name' : 'NEEDS A HUMAN',
           new Date().toISOString(),
-        ]);
-        known[p[0]] = { id: hit ? hit.key : '' };
+        ];
+        if (row) {
+          // Update in place — appending would grow a duplicate row
+          // every two hours for every player we cannot resolve.
+          sh.getRange(row.row, 1, 1, MAP_HEADER.length).setValues([cells]);
+          row.id = hit ? hit.key : '';
+        } else {
+          sh.appendRow(cells);
+          known[p[0]] = { id: hit ? hit.key : '', row: sh.getLastRow() };
+        }
       });
   });
   var out = {};
