@@ -37,7 +37,14 @@ import { groupTitleOf, RosterEntry } from '../athletes';
 // validated counts (Prompt 10c: universe 6,559 → selected 1,513;
 // 110/110 on the live-draw check). The weekly scheduler owns the
 // refresh from here, under the WDQS ruling's conditions.
-export const ATP_ROSTER_ENABLED = true;
+// RETIRED 2026-08-06 (owner ruling). The men's directory is now the
+// vendor's ranked 500 — one maintained source instead of 1,394 mostly
+// inactive Wikidata men. Left as a flag rather than deleted because the
+// query, the dual-IOC-code handling and the dissolved-state filtering
+// are hard-won and would be expensive to rediscover; but it MUST stay
+// false, because a weekly run of this would re-mint every athlete the
+// reset removed and silently undo it.
+export const ATP_ROSTER_ENABLED = false;
 
 export const USER_AGENT =
   'KickOffCal/1.0 (+https://kickoffcal.app; calendar sync; contact hearsigns@gmail.com)';

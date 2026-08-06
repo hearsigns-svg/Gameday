@@ -85,7 +85,11 @@ export const EXPECTED_ROSTER_SLICES = [
   // reformatted or moved for long enough to fail its gates repeatedly
   // surfaces here as roster_stale — the failure the gates create is
   // itself watched, rather than being a quiet hold.
-  'atp-rank|roster-atp-rank',
+  // The men's directory, whole (2026-08-06). Replaces both
+  // 'atp-rank|roster-atp-rank' (Wikipedia top 20) and the Wikidata
+  // directory pass: one weekly refresh now owns the population, so its
+  // silence is the only thing worth paging about.
+  'tennisapi1|roster-atp-vendor',
 ];
 
 export function evaluateRosterAlerts(

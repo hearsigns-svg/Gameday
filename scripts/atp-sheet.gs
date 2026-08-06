@@ -157,23 +157,31 @@ function activeWindows_() {
  * only when the straight one found NOTHING, the reversed one is
  * UNIQUE, and the two sides' countries do not contradict each other.
  */
-function lookupAthlete_(name, iso3) {
+function searchTennis_(q) {
   var r = UrlFetchApp.fetch(
-    base_() + '/searchEntities?q=' + encodeURIComponent(name),
+    base_() + '/searchEntities?q=' + encodeURIComponent(q),
     { muteHttpExceptions: true }
   );
-  if (r.getResponseCode() !== 200) return null;
-  var body = JSON.parse(r.getContentText());
-  var tennis = (body.athletes || []).filter(function (a) {
+  if (r.getResponseCode() !== 200) return [];
+  return (JSON.parse(r.getContentText()).athletes || []).filter(function (a) {
     return a.sportKey === 'tennis';
   });
+}
+
+function lookupAthlete_(name, iso3) {
+  var tennis = searchTennis_(name);
   var straight = tennis.filter(function (a) {
     return norm_(a.name) === norm_(name);
   });
   if (straight.length === 1) return straight[0];
   if (straight.length > 1) return null; // ambiguous — a human decides
+  // ASK AGAIN, REVERSED. Reversing the candidate list is not enough:
+  // measured, our search returns ZERO hits for "Juncheng Shang" while
+  // the directory holds him as "Shang Juncheng", so there was never a
+  // candidate to reverse. The second query is against our own free
+  // endpoint and only happens for names the first one missed.
   var reversedName = norm_(name).split(' ').reverse().join(' ');
-  var flipped = tennis.filter(function (a) {
+  var flipped = searchTennis_(reversedName).filter(function (a) {
     return norm_(a.name) === reversedName;
   });
   if (flipped.length !== 1) return null;

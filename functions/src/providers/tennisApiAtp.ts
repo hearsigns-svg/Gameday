@@ -200,3 +200,62 @@ export const BROWSE_RANK_LIMIT = 100;
 export function groupingFor(rank: number): 'atp' | 'atp-directory' {
   return rank <= BROWSE_RANK_LIMIT ? 'atp' : 'atp-directory';
 }
+
+// ─── The fetch, and the guard that makes a DELETING source safe ───────
+
+const HOST = 'tennisapi1.p.rapidapi.com';
+
+export async function fetchAtpTop500(
+  key: string,
+  limit = 500,
+): Promise<{ rawCount: number; entries: RankedPlayer[] }> {
+  const r = await fetch(`https://${HOST}/api/tennis/rankings/atp`, {
+    headers: { 'x-rapidapi-host': HOST, 'x-rapidapi-key': key },
+  });
+  if (!r.ok) {
+    throw new Error(`atp rankings HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  }
+  const body = (await r.json()) as {
+    rankings?: {
+      ranking?: number;
+      team?: { id?: number; name?: string; country?: { alpha3?: string } };
+    }[];
+  };
+  // No `?? []`. An absent rankings array is a shape change, and this
+  // source DELETES — reading it as "nobody is ranked" would empty the
+  // men's directory (standing invariant).
+  if (!Array.isArray(body.rankings)) {
+    throw new Error('atp rankings response carried no rankings array');
+  }
+  const entries: RankedPlayer[] = [];
+  for (const row of body.rankings) {
+    const id = row.team?.id;
+    const name = row.team?.name;
+    const rank = row.ranking;
+    if (id === undefined || !name || typeof rank !== 'number') continue;
+    if (rank > limit) continue;
+    entries.push({
+      vendorId: String(id),
+      name,
+      rank,
+      countryCode: row.team?.country?.alpha3 ?? null,
+    });
+  }
+  return { rawCount: body.rankings.length, entries };
+}
+
+// A TRUNCATED LIST MUST NOT EMPTY THE DIRECTORY. The zero-entry check
+// upstream catches a total failure; this catches the subtler one — a
+// vendor that answers 200 with the top 50 because a query parameter
+// changed meaning. On the FIRST run this is expected to trip (the
+// original reset removed 1,136), so it is applied to steady-state runs
+// only, which is what `expectedRemovals` encodes.
+export const MAX_STEADY_REMOVALS = 60;
+
+export function removalGuard(
+  plan: ReconcilePlan,
+  cap = MAX_STEADY_REMOVALS,
+): string | null {
+  if (plan.remove.length <= cap) return null;
+  return `refusing to remove ${plan.remove.length} athletes in one run (cap ${cap}) — the ranking list looks truncated`;
+}

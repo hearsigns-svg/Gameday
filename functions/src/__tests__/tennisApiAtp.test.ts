@@ -8,7 +8,17 @@ import {
   planReconcile,
   RankedPlayer,
   DirectoryAthlete,
+  ReconcilePlan,
+  removalGuard,
 } from '../providers/tennisApiAtp';
+
+const EMPTY_PLAN: ReconcilePlan = {
+  keep: [],
+  create: [],
+  remove: [],
+  keepFollowed: [],
+  review: [],
+};
 
 const p = (over: Partial<RankedPlayer>): RankedPlayer => ({
   vendorId: '206570',
@@ -169,5 +179,25 @@ describe('the merge is permanent, not a one-off', () => {
     const plan = planReconcile([vendorRow], [renamed], NOBODY);
     expect(plan.keep[0]).toMatchObject({ athleteId: 'athlete_000900', via: 'vendorId' });
     expect(plan.remove).toEqual([]);
+  });
+});
+
+describe('a deleting source needs a floor as well as a ceiling', () => {
+  const many = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      athleteId: `athlete_${i}`,
+      displayName: `Player ${i}`,
+    }));
+
+  it('lets an ordinary week through', () => {
+    expect(removalGuard({ ...EMPTY_PLAN, remove: many(12) })).toBeNull();
+  });
+
+  it('REFUSES a run that would gut the directory', () => {
+    // The zero-entry check upstream catches a total failure. This
+    // catches the subtler one: a 200 response carrying the top 50
+    // because a parameter changed meaning.
+    const e = removalGuard({ ...EMPTY_PLAN, remove: many(400) });
+    expect(e).toMatch(/refusing to remove 400/);
   });
 });

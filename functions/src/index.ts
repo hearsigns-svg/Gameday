@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
@@ -111,10 +111,13 @@ import { fetchWtaTennis } from './providers/wtaTennis';
 import { fetchWtaRankings } from './providers/wtaRankings';
 import { ATP_ROSTER_ENABLED, fetchAtpRoster } from './providers/wikidataAtp';
 import {
-  ATP_RANK_SOURCE,
-  fetchAtpRankings,
-  gateRanking,
-} from './providers/atpRankings';
+  fetchAtpTop500,
+  groupingFor,
+  planReconcile,
+  RankedPlayer,
+  removalGuard,
+  VENDOR as ATP_VENDOR,
+} from './providers/tennisApiAtp';
 import { fetchIbfRatings } from './providers/ibfRatings';
 import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
 import { applyRoster } from './rosterStore';
@@ -1632,7 +1635,20 @@ export const scheduledReconcile = onSchedule(
 // (roster_stale in alerts.ts) — the watcher must not share the fate of
 // the thing it watches.
 
-interface RosterSource {
+// A source that OWNS ITS APPLY. The vendor ATP directory replaces a
+// population rather than topping one up, so it removes documents —
+// something applyRoster deliberately cannot do. It still runs inside the
+// same loop and therefore keeps the zero-entry refusal, the staleness
+// marker and the run record.
+interface CustomRosterSource<T> {
+  slice: string;
+  source: string;
+  sport: string;
+  run: () => Promise<{ rawCount: number; entries: T[] }>;
+  apply: (entries: T[], startedAt: string) => Promise<Record<string, number>>;
+}
+
+interface StandardRosterSource {
   slice: string;
   source: string;
   sport: string;
@@ -1652,6 +1668,8 @@ interface RosterSource {
     sliceRoster?: boolean;
   };
 }
+
+type RosterSource = StandardRosterSource | CustomRosterSource<RankedPlayer>;
 
 const rosterSources = (): RosterSource[] => [
   {
@@ -1695,48 +1713,162 @@ const rosterSources = (): RosterSource[] => [
         },
       ]
     : []),
-  // THE LIVE ATP RANKING — the men's browse section. ORDER MATTERS and
-  // is load-bearing: the Wikidata refresh above clears every ATP
-  // grouping, and this runs after it to grant the one men's group. Put
-  // it earlier and the directory pass would wipe the section it just
-  // built. If this source fails, the men's section is ABSENT for the
-  // week rather than stale — an honest degradation, recorded loudly in
-  // its own sourceRuns slice.
+  // THE MEN'S DIRECTORY, whole (owner ruling 2026-08-06). One ranked
+  // source of 500 replaces BOTH the Wikidata directory of 1,394 mostly
+  // inactive men and the Wikipedia top-20 ranking that used to grant
+  // the browse group. Top 100 browsable, 500 searchable.
+  //
+  // The old ordering hazard is gone with them: nothing clears the ATP
+  // grouping any more, because one source now owns the whole
+  // population. This spec REMOVES documents, which is why it carries
+  // its own apply and its own truncation guard.
   {
-    slice: 'roster-atp-rank',
-    source: ATP_RANK_SOURCE,
+    slice: 'roster-atp-vendor',
+    source: 'tennisapi1',
     sport: 'tennis',
-    run: () => fetchAtpRankings(),
-    // THE MOST FRAGILE SOURCE IN THE SYSTEM gets the strictest gates:
-    // every name must resolve to a directory athlete, and the top 20
-    // must overlap the previous top 20 by at least MIN_CARRY_OVER.
-    gate: (entries, existing) => {
-      const tennis = existing.filter((a) => a.sport === 'tennis');
-      // Resolvable = a tennis athlete that is NOT WTA-id-backed. That
-      // mirrors the population guard reconcileRoster applies, so the
-      // gate cannot pass a name the reconciler would then refuse.
-      const resolvableNames = new Set(
-        tennis
-          .filter((a) => a.providerIds.wta === undefined)
-          .flatMap((a) => [a.searchName, ...a.aliases])
-          .filter((n) => n.length > 0),
-      );
-      const previous = new Map(
-        tennis
-          .filter((a) => a.groupingKey === 'atp' && a.rank !== undefined)
-          .map((a) => [a.searchName, a.rank!] as const),
-      );
-      gateRanking(entries, { resolvableNames, previous }, normaliseName);
-    },
-    applyOpts: {
-      // Same population guard as the directory: a men's ranking name
-      // colliding with a WTA woman must never attach to her doc.
-      nameMatchExcludesSources: ['wta'],
-      // A top-20 cut, not a membership list — see reconcileRoster.
-      sliceRoster: true,
-    },
+    run: () => fetchAtpTop500(requireAtpVendorKey()),
+    apply: (entries: RankedPlayer[], startedAt: string) =>
+      applyAtpDirectory(entries, startedAt),
   },
 ];
+
+function requireAtpVendorKey(): string {
+  const k = process.env.ATP_VENDOR_KEY;
+  if (!k) throw new Error('ATP_VENDOR_KEY is not configured');
+  return k;
+}
+
+// Replace the men's directory with the ranked list. Keeps document ids,
+// never removes a followed athlete, refuses a suspiciously large cull,
+// and leaves the WTA population entirely alone
+// (providers/tennisApiAtp.ts explains each rule and why it exists).
+async function applyAtpDirectory(
+  ranked: RankedPlayer[],
+  startedAt: string,
+): Promise<Record<string, number>> {
+  const all = await db.collection('athletes').where('sport', '==', 'tennis').get();
+  const tennis: Record<string, unknown>[] = all.docs.map((d) => ({
+    ...(d.data() as Record<string, unknown>),
+    id: d.id,
+  }));
+  // MEN ONLY. This list is men's singles; an unmatched woman is not an
+  // unranked man, and treating her as one would delete the half of
+  // tennis that actually serves appearances.
+  const men = tennis.filter(
+    (a) => (a.providerIds as Record<string, string> | undefined)?.wta === undefined,
+  );
+  const devices = await db.collection('devices').get();
+  const followed = new Set(
+    devices.docs
+      .flatMap((d) => (d.data().followKeys as string[] | undefined) ?? [])
+      .filter((k) => k.startsWith('athlete_')),
+  );
+  const plan = planReconcile(
+    ranked,
+    men.map((a) => ({
+      id: String(a.id),
+      displayName: String(a.displayName ?? ''),
+      countryCode: a.countryCode as string | undefined,
+      groupingKey: a.groupingKey as string | undefined,
+      providerIds: a.providerIds as Record<string, string> | undefined,
+    })),
+    followed,
+  );
+  const guard = removalGuard(plan);
+  if (guard !== null) throw new Error(guard);
+
+  const byId = new Map(men.map((a) => [String(a.id), a]));
+  let batch = db.batch();
+  let n = 0;
+  const flush = async () => {
+    if (n > 0) {
+      await batch.commit();
+      batch = db.batch();
+      n = 0;
+    }
+  };
+  const queue = async (fn: () => void) => {
+    fn();
+    if (++n >= 400) await flush();
+  };
+  for (const k of plan.keep) {
+    const ref = db.collection('athletes').doc(k.athleteId);
+    const held = (byId.get(k.athleteId)?.providerIds ?? {}) as Record<string, string>;
+    await queue(() =>
+      batch.set(
+        ref,
+        {
+          rank: k.player.rank,
+          groupingKey: groupingFor(k.player.rank),
+          ...(k.player.countryCode ? { countryCode: k.player.countryCode } : {}),
+          providerIds: { ...held, [ATP_VENDOR]: k.player.vendorId },
+          active: true,
+          updatedAt: startedAt,
+        },
+        { merge: true },
+      ),
+    );
+  }
+  for (const f of plan.keepFollowed) {
+    // Followed but unranked: they stay, and stop claiming a ranking
+    // they no longer hold.
+    await queue(() =>
+      batch.set(
+        db.collection('athletes').doc(f.athleteId),
+        { rank: FieldValue.delete(), groupingKey: 'atp-directory', updatedAt: startedAt },
+        { merge: true },
+      ),
+    );
+  }
+  for (const r of plan.remove) {
+    await queue(() => batch.delete(db.collection('athletes').doc(r.athleteId)));
+  }
+  await flush();
+
+  // Ids come from the counter AFTER the deletes, so a newly minted id
+  // can never collide with a doc still being removed.
+  const start = await db.runTransaction(async (tx) => {
+    const ref = db.doc('counters/athletes');
+    const snap = await tx.get(ref);
+    const cur = (snap.exists ? (snap.data()?.next as number) : 1) || 1;
+    tx.set(ref, { next: cur + plan.create.length }, { merge: true });
+    return cur;
+  });
+  batch = db.batch();
+  n = 0;
+  plan.create.forEach((p, i) => {
+    const id = `athlete_${String(start + i).padStart(6, '0')}`;
+    batch.set(db.collection('athletes').doc(id), {
+      id,
+      displayName: p.name,
+      searchName: p.name.toLowerCase(),
+      aliases: [],
+      sport: 'tennis',
+      providerIds: { [ATP_VENDOR]: p.vendorId },
+      provenance: 'roster',
+      nameKeyed: false,
+      active: true,
+      missedRefreshes: 0,
+      rank: p.rank,
+      groupingKey: groupingFor(p.rank),
+      ...(p.countryCode ? { countryCode: p.countryCode } : {}),
+      identities: [
+        { source: ATP_VENDOR, externalId: p.vendorId, name: p.name, lastSeenAt: startedAt },
+      ],
+      createdAt: startedAt,
+      updatedAt: startedAt,
+    });
+    n++;
+  });
+  if (n > 0) await batch.commit();
+  return {
+    created: plan.create.length,
+    updated: plan.keep.length,
+    deactivated: plan.remove.length,
+    skippedAmbiguous: plan.review.length,
+    keptFollowed: plan.keepFollowed.length,
+  };
+}
 
 async function refreshRosters(
   trigger: RunTrigger,
@@ -1753,11 +1885,16 @@ async function refreshRosters(
       seasonRequested: null,
     };
     try {
-      const { rawCount, entries } = await s.run();
+      const { rawCount, entries } = await (s.run as () => Promise<{
+        rawCount: number;
+        entries: unknown[];
+      }>)();
       // Gate BEFORE the zero check and before any write: a source that
       // fails its own sanity rules must leave production exactly as it
       // was.
-      if (s.gate) s.gate(entries, await loadAthletes(db));
+      if ('gate' in s && s.gate) {
+        s.gate(entries as import('./athletes').RosterEntry[], await loadAthletes(db));
+      }
       // ZERO entries is never applied: a roster source answering with
       // nothing (a January F1 season page before the grid exists, a
       // filter regression) would mark every athlete absent, deactivate
@@ -1767,7 +1904,20 @@ async function refreshRosters(
       if (entries.length === 0) {
         throw new Error(`${s.source} roster returned zero entries`);
       }
-      const applied = await applyRoster(db, entries, startedAt, s.applyOpts ?? {});
+      // A source may own its own apply. The vendor ATP directory does,
+      // because it REMOVES documents — replacing a directory rather
+      // than topping one up — and applyRoster deliberately has no such
+      // power. It still gets the gate, the zero-entry refusal, the
+      // staleness marker and the run record from this loop.
+      const applied =
+        'apply' in s
+          ? await s.apply(entries as RankedPlayer[], startedAt)
+          : await applyRoster(
+              db,
+              entries as import('./athletes').RosterEntry[],
+              startedAt,
+              s.applyOpts ?? {},
+            );
       // The staleness marker the sweep's roster_stale rule reads —
       // written ONLY on a successful, non-empty, fully-applied refresh.
       await db

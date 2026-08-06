@@ -2042,3 +2042,31 @@
   map and watching all four still land `via=vendorId`. A rename on
   either side cannot split them again. The second run computes 0
   creates and 0 removes, which is the real proof the reset converged.
+- 2026-08-06: **THE VENDOR IS NOW THE SCHEDULED MEN'S ROSTER SOURCE.**
+  `tennisapi1|roster-atp-vendor` runs in the weekly roster refresh and
+  RETIRES two sources: the Wikidata directory
+  (`ATP_ROSTER_ENABLED = false`) and the Wikipedia top-20 ranking. The
+  flag is left in place rather than deleted — the query's dual-IOC-code
+  handling and dissolved-state filtering were expensive to get right —
+  but it must stay false, because one weekly run of it would re-mint
+  every athlete the reset removed and silently undo it.
+  A GOOD SIDE EFFECT: the roster specs' load-bearing ORDER hazard is
+  gone with them. Wikidata cleared every ATP grouping and the ranking
+  pass had to run after it to grant the one men's group; put them the
+  wrong way round and the directory wiped the section it had just
+  built. One source now owns the whole population, so nothing clears
+  anything.
+  THE APPLY IS THE SOURCE'S OWN (`CustomRosterSource`), because this
+  one REMOVES documents and `applyRoster` deliberately cannot. It still
+  runs inside the same loop, so it keeps the zero-entry refusal, the
+  staleness marker `roster_stale` reads, and its own sourceRuns record.
+  TWO GUARDS, because a deleting source needs a floor as well as a
+  ceiling: the loop already refuses a zero-entry response, and
+  `removalGuard` refuses any run that would remove more than 60
+  athletes at once — a vendor answering 200 with a truncated list must
+  not be able to empty the directory. The initial reset (1,136
+  removals) was applied by hand, deliberately, so the steady-state cap
+  could be tight.
+  VERIFIED LIVE through the scheduled path: 500 entries, 0 created, 490
+  updated, 0 removed, 10 left ambiguous. A second run being a no-op is
+  the real proof the reset converged.
