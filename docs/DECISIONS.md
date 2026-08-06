@@ -2070,3 +2070,38 @@
   VERIFIED LIVE through the scheduled path: 500 entries, 0 created, 490
   updated, 0 removed, 10 left ambiguous. A second run being a no-op is
   the real proof the reset converged.
+- 2026-08-06: **THE HARDEST FAILURES DO NOT FAIL** (owner ruling, now
+  AGENTS.md rule 13). The directory reset would have been undone by the
+  next weekly roster run, because `ATP_ROSTER_ENABLED` was still true
+  and nothing about that errors: the job succeeds, re-mints 1,374
+  athletes, and tennis is simply wrong again on Wednesday with a clean
+  log. Whenever a migration REPLACES a source rather than adding one,
+  every other writer of that population must be found and disabled in
+  the same change.
+- 2026-08-06: **EROSION NEEDS A FLOOR, NOT A BIGGER CAP.** The per-run
+  removal cap of 60 catches a cliff — a vendor answering 200 with a
+  truncated list — and cannot see 59 removals a week for eight weeks
+  draining 470 athletes. A rolling window would catch it, but it needs
+  stored state, can be walked under by going slower, and becomes
+  another thing that can be wrong. The guard is instead a PROPORTIONAL
+  FLOOR that restates the invariant directly — the directory IS the
+  ranked list, so it may not end a run materially smaller than the list
+  that defines it. Stateless, self-calibrating (move to a top-100
+  roster and the floor moves with it), and it trips the 59/week drain
+  in the SECOND week where a 150-per-8-weeks window takes three.
+  Creations count toward the projection, so a genuine 50-in-50-out
+  turnover passes.
+- 2026-08-06: **FAMILY-NAME-FIRST IS A CONVENTION, NOT A DIFFERENT
+  PERSON — and it is now handled in the shared matcher**
+  (`athletes.ts::matchAthlete`), not patched per player. Chinese,
+  Korean and Hungarian conventions put the family name first and two
+  feeds will not agree; our own search returned ZERO hits for "Juncheng
+  Shang" while holding "Shang Juncheng". Four conditions stop it
+  marrying up two real people: the straight lookup must have found
+  nothing, the name must have EXACTLY TWO tokens (155 of our athletes
+  carry three or more, where reversal is noise rather than convention),
+  the reversed hit must be unique, and countries — where both sides
+  carry one — must agree. Measured across the whole directory (1,291
+  athletes, every sport): ZERO pairs exist that are each other's
+  reversal, so nothing today can be wrongly merged; the conditions are
+  there because the directory grows.

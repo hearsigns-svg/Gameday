@@ -252,10 +252,40 @@ export async function fetchAtpTop500(
 // only, which is what `expectedRemovals` encodes.
 export const MAX_STEADY_REMOVALS = 60;
 
+// AND A FLOOR, because the cap above only catches a CLIFF.
+//
+// 59 removals a week for eight weeks drains 470 athletes and never
+// trips a per-run cap of 60. A rolling window would catch that, but it
+// needs stored state, it can still be walked under by going slower, and
+// the window itself becomes a thing that can be wrong.
+//
+// A PROPORTIONAL FLOOR needs no state and cannot drift, because it
+// restates the invariant directly: THE DIRECTORY IS THE RANKED LIST. If
+// applying a run would leave the directory materially smaller than the
+// list that defines it, something is wrong with the list, whatever the
+// per-run delta was. It also self-calibrates — move to a top-100 or a
+// top-1000 roster and the floor moves with it, with no constant to
+// remember.
+//
+// Erosion at 59/week trips this in the SECOND week, where a rolling
+// 150-per-8-weeks window would take three.
+export const MIN_DIRECTORY_FRACTION = 0.8;
+
 export function removalGuard(
   plan: ReconcilePlan,
+  rankedCount: number,
+  existingCount: number,
   cap = MAX_STEADY_REMOVALS,
+  floorFraction = MIN_DIRECTORY_FRACTION,
 ): string | null {
-  if (plan.remove.length <= cap) return null;
-  return `refusing to remove ${plan.remove.length} athletes in one run (cap ${cap}) — the ranking list looks truncated`;
+  if (plan.remove.length > cap) {
+    return `refusing to remove ${plan.remove.length} athletes in one run (cap ${cap}) — the ranking list looks truncated`;
+  }
+  // What the directory would hold once this run is applied.
+  const projected = existingCount - plan.remove.length + plan.create.length;
+  const floor = Math.floor(rankedCount * floorFraction);
+  if (projected < floor) {
+    return `refusing to leave the directory at ${projected} against a ranked list of ${rankedCount} (floor ${floor}) — erosion, not a refresh`;
+  }
+  return null;
 }

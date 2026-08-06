@@ -214,6 +214,10 @@ export interface AthleteRef {
   name: string;
   source?: string; // provider namespace of externalId
   externalId?: string;
+  // Optional, and only used to REFUSE a family-name-first match (see
+  // reversedMatch below). Never used to make a match, so a feed that
+  // omits it loses nothing.
+  countryCode?: string;
 }
 
 export interface MatchResult {
@@ -227,6 +231,44 @@ export interface MatchResult {
 // because a surname is not an identity.
 export function isFullName(name: string): boolean {
   return name.trim().split(/\s+/).length >= 2;
+}
+
+// FAMILY NAME FIRST IS A CONVENTION, NOT A DIFFERENT PERSON.
+//
+// Chinese, Korean, Hungarian and several other naming conventions put
+// the family name first, and two feeds will not agree on the order:
+// measured, our search returns ZERO hits for "Juncheng Shang" while the
+// directory holds him as "Shang Juncheng". Treating that as two people
+// is the F34 mistake pointing the other way — not a collision, a split
+// — and it silently costs that player every event they appear in.
+//
+// FOUR CONDITIONS, so this cannot marry up two different people:
+//   1. The straight lookup found NOTHING. An existing match always wins.
+//   2. EXACTLY TWO name tokens. "Adolfo Daniel Vallejo" reversed is
+//      "Vallejo Daniel Adolfo", which is not a convention, it is noise —
+//      and 155 of our athletes carry three or more tokens.
+//   3. The reversed lookup is UNIQUE.
+//   4. Countries, where BOTH sides carry one, agree. A contradiction
+//      refuses; an absence on either side is not a contradiction.
+//
+// Measured 2026-08-06 against the whole directory (1,291 athletes,
+// every sport): ZERO pairs exist that are each other's reversal, so
+// nothing today can be wrongly merged by this. The conditions are there
+// because the directory grows.
+function reversedMatch(
+  index: AthleteIndex,
+  sport: string,
+  ref: AthleteRef,
+): Athlete | null {
+  const tokens = normaliseName(ref.name).split(/\s+/).filter(Boolean);
+  if (tokens.length !== 2) return null;
+  const flipped = [tokens[1], tokens[0]].join(' ');
+  if (flipped === tokens.join(' ')) return null; // "Ali Ali" — says nothing
+  const hits = index.byName.get(`${sport}|${flipped}`) ?? [];
+  if (hits.length !== 1) return null;
+  const theirs = hits[0].countryCode;
+  if (ref.countryCode && theirs && ref.countryCode !== theirs) return null;
+  return hits[0];
 }
 
 export function matchAthlete(
@@ -254,6 +296,12 @@ export function matchAthlete(
       ) {
         return { kind: 'confident', athlete: hits[0] };
       }
+      if (hits.length === 0) {
+        const flipped = reversedMatch(index, sport, ref);
+        if (flipped && flipped.providerIds[ref.source] === undefined) {
+          return { kind: 'confident', athlete: flipped };
+        }
+      }
     }
     return { kind: 'unknown' };
   }
@@ -261,6 +309,8 @@ export function matchAthlete(
   const hits = index.byName.get(`${sport}|${normaliseName(ref.name)}`) ?? [];
   if (hits.length === 1) return { kind: 'confident', athlete: hits[0] };
   if (hits.length > 1) return { kind: 'ambiguous' };
+  const flipped = reversedMatch(index, sport, ref);
+  if (flipped) return { kind: 'confident', athlete: flipped };
   return { kind: 'unknown' };
 }
 

@@ -1774,7 +1774,7 @@ async function applyAtpDirectory(
     })),
     followed,
   );
-  const guard = removalGuard(plan);
+  const guard = removalGuard(plan, ranked.length, men.length);
   if (guard !== null) throw new Error(guard);
 
   const byId = new Map(men.map((a) => [String(a.id), a]));

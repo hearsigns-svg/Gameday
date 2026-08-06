@@ -177,6 +177,17 @@ These apply to every stage. They do not need restating in a brief.
 12. **Generic caps section headings are a Settings-app pattern.** Group
     content by rhythm, weight and spacing instead. A screen assembled
     from labelled sections has stopped being designed.
+13. **When a migration REPLACES a source rather than adding one, find
+    what still writes the old shape** (owner ruling 2026-08-06). Today's
+    reset swapped the men's directory to a single vendor;
+    `ATP_ROSTER_ENABLED` was still true, so the next weekly run would
+    have re-minted all 1,374 Wikidata athletes and undone it — on a
+    Tuesday, with no error anywhere, nothing failing, and tennis simply
+    wrong again on Wednesday. A scheduled job that quietly undoes an
+    applied migration is the hardest class of failure to debug, because
+    there is no failure. Before applying: list every writer of the
+    population you are replacing — schedulers, roster specs, seed
+    scripts, feature flags — and disable them in the SAME change.
 
 ## Concurrency against production
 

@@ -190,14 +190,53 @@ describe('a deleting source needs a floor as well as a ceiling', () => {
     }));
 
   it('lets an ordinary week through', () => {
-    expect(removalGuard({ ...EMPTY_PLAN, remove: many(12) })).toBeNull();
+    expect(removalGuard({ ...EMPTY_PLAN, remove: many(12) }, 500, 501)).toBeNull();
   });
 
-  it('REFUSES a run that would gut the directory', () => {
+  it('REFUSES a run that would gut the directory in one go', () => {
     // The zero-entry check upstream catches a total failure. This
     // catches the subtler one: a 200 response carrying the top 50
     // because a parameter changed meaning.
-    const e = removalGuard({ ...EMPTY_PLAN, remove: many(400) });
+    const e = removalGuard({ ...EMPTY_PLAN, remove: many(400) }, 500, 501);
     expect(e).toMatch(/refusing to remove 400/);
+  });
+
+  it('CATCHES EROSION THE PER-RUN CAP CANNOT SEE', () => {
+    // 59 a week for eight weeks drains 470 and never trips a cap of 60.
+    // The floor restates the invariant instead: the directory IS the
+    // ranked list, so it cannot drift far below it however slowly.
+    let size = 501;
+    let trippedAtWeek: number | null = null;
+    for (let week = 1; week <= 8 && trippedAtWeek === null; week++) {
+      const g = removalGuard({ ...EMPTY_PLAN, remove: many(59) }, 500, size);
+      if (g !== null) {
+        expect(g).toMatch(/erosion, not a refresh/);
+        trippedAtWeek = week;
+        break;
+      }
+      size -= 59;
+    }
+    // Second week — a rolling 150-per-8-weeks window would take three.
+    expect(trippedAtWeek).toBe(2);
+  });
+
+  it('self-calibrates to whatever list size is configured', () => {
+    // Move to a top-100 roster and the floor moves with it; no constant
+    // tied to today's 500 needs remembering.
+    expect(removalGuard({ ...EMPTY_PLAN, remove: many(5) }, 100, 101)).toBeNull();
+    expect(removalGuard({ ...EMPTY_PLAN, remove: many(30) }, 100, 101))
+      .toMatch(/floor 80/);
+  });
+
+  it('counts creations, so a genuine turnover of the list passes', () => {
+    // A week where 50 players drop out and 50 new ones enter is a
+    // normal ranking, not erosion.
+    expect(
+      removalGuard(
+        { ...EMPTY_PLAN, remove: many(50), create: Array(50).fill(p({})) },
+        500,
+        501,
+      ),
+    ).toBeNull();
   });
 });
