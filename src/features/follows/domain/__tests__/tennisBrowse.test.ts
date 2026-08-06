@@ -1,9 +1,14 @@
-// Tennis is three things, not one list. These pin where a tournament
-// lands, because the placement rules are the whole design: the slams
-// belong to neither tour, and 40 of 99 rows carry no `tours` claim at
-// all and would otherwise vanish from browse.
+// Tennis is two sections of four rows, not one list. These pin where a
+// tournament lands, because the placement rules are the whole design:
+// the majors belong to BOTH tours, and 40 of 99 rows carry no `tours`
+// claim at all and would otherwise vanish from browse.
 
-import { tennisBrowseRows, isSlam, TournamentLike } from '../tennisBrowse';
+import {
+  tennisBrowseRows,
+  tournamentsFor,
+  isSlam,
+  TournamentLike,
+} from '../tennisBrowse';
 
 const t = (over: Partial<TournamentLike>): TournamentLike => ({
   key: 'tennis-t-x',
@@ -18,122 +23,93 @@ const COMPS = [
   { key: 'tennis-wta', name: 'WTA Tour' },
 ];
 
-const kindsIn = (rows: ReturnType<typeof tennisBrowseRows>, from: string, to: string) => {
-  const a = rows.findIndex((r) => r.id === from);
-  const b = to === '' ? rows.length : rows.findIndex((r) => r.id === to);
-  return rows.slice(a, b);
-};
+const WIMBLEDON = t({ key: 'tennis-t-wimbledon', name: 'Wimbledon', tours: ['atp', 'wta'] });
+const CINCY = t({ key: 'tennis-t-cincinnati-open', name: 'Cincinnati Open', tours: ['atp', 'wta'] });
+const WARSAW = t({ key: 'tennis-t-warsaw', name: 'Warsaw Open', tours: ['wta'] });
+const QUIET = t({ key: 'tennis-t-quiet', name: 'Quiet Open', coverage: ['atp'] });
 
-it('builds three sections, each with its own Players entry', () => {
-  const rows = tennisBrowseRows(COMPS, [t({ key: 'tennis-t-wimbledon', name: 'Wimbledon' })]);
-  expect(rows.filter((r) => r.kind === 'header').map((r) => (r as { title: string }).title))
-    .toEqual(['ATP — Men’s', 'WTA — Women’s', 'Grand Slams']);
-  // TWO players rows, one per tour — not one shared list with a filter.
-  const players = rows.filter((r) => r.kind === 'players');
-  expect(players).toHaveLength(2);
-  expect(players.map((r) => (r as { tour: string }).tour)).toEqual(['atp', 'wta']);
-});
+describe('two sections, four rows each', () => {
+  const rows = tennisBrowseRows(COMPS, [WIMBLEDON, CINCY, WARSAW, QUIET]);
 
-it('each section carries its OWN note — the tours differ now', () => {
-  const rows = tennisBrowseRows(COMPS, []);
-  const notes = rows.filter((r) => r.kind === 'header').map((r) => (r as { note: string }).note);
-  expect(new Set(notes).size).toBe(notes.length); // all distinct
-  expect(notes[1]).toMatch(/order of play/); // WTA says what only it has
-});
-
-it('a slam goes to Grand Slams and NOT to either tour', () => {
-  const wimbledon = t({
-    key: 'tennis-t-wimbledon',
-    name: 'Wimbledon',
-    tours: ['atp', 'wta'],
-  });
-  const rows = tennisBrowseRows(COMPS, [wimbledon]);
-  const atp = kindsIn(rows, 'h-atp', 'h-wta');
-  const wta = kindsIn(rows, 'h-wta', 'h-slams');
-  expect(atp.some((r) => r.id.includes('wimbledon'))).toBe(false);
-  expect(wta.some((r) => r.id.includes('wimbledon'))).toBe(false);
-  expect(rows.some((r) => r.id === 'slam-tennis-t-wimbledon')).toBe(true);
-});
-
-it('a joint non-slam appears under BOTH tours, because it is both', () => {
-  const cincy = t({ key: 'tennis-t-cincinnati-open', name: 'Cincinnati Open', tours: ['atp', 'wta'] });
-  const rows = tennisBrowseRows(COMPS, [cincy]);
-  expect(rows.filter((r) => r.id.endsWith('tennis-t-cincinnati-open'))).toHaveLength(2);
-});
-
-it('FALLS BACK TO COVERAGE when the tournament makes no tours claim', () => {
-  // 40 of 99 live rows are exactly this: an ATP-feed event beyond the
-  // WTA horizon, so the server refuses to claim a tour. Dropping them
-  // would empty most of the 2027 calendar out of browse.
-  const unknown = t({ key: 'tennis-t-quiet', name: 'Quiet Open', coverage: ['atp'] });
-  const rows = tennisBrowseRows(COMPS, [unknown]);
-  expect(kindsIn(rows, 'h-atp', 'h-wta').some((r) => r.id.endsWith('tennis-t-quiet'))).toBe(true);
-  expect(kindsIn(rows, 'h-wta', '').some((r) => r.id.endsWith('tennis-t-quiet'))).toBe(false);
-});
-
-it('offers a follow-all for the majors, and a way into each', () => {
-  const rows = tennisBrowseRows(COMPS, [
-    t({ key: 'tennis-t-wimbledon', name: 'Wimbledon' }),
-    t({ key: 'tennis-t-us-open', name: 'US Open' }),
-  ]);
-  const all = rows.find((r) => r.kind === 'followAll') as { keys: string[] };
-  expect(all.keys).toEqual(['tennis-t-wimbledon', 'tennis-t-us-open']);
-  // …and each is still individually reachable.
-  expect(rows.filter((r) => r.kind === 'tournament')).toHaveLength(2);
-});
-
-it('shows no Grand Slams section when we hold none', () => {
-  // A header over nothing is worse than no header.
-  const rows = tennisBrowseRows(COMPS, [t({ coverage: ['atp'] })]);
-  expect(rows.some((r) => r.id === 'h-slams')).toBe(false);
-});
-
-it('knows the four majors and nothing else', () => {
-  expect(isSlam('tennis-t-us-open')).toBe(true);
-  expect(isSlam('tennis-t-cincinnati-open')).toBe(false);
-});
-
-describe('a section nobody can reach is not a section', () => {
-  const many = (n: number, tour: 'atp' | 'wta') =>
-    Array.from({ length: n }, (_, i) =>
-      t({ key: `tennis-t-${tour}-${i}`, name: `${tour} ${i}`, tours: [tour] }),
-    );
-
-  it('previews each tour and offers the rest', () => {
-    const rows = tennisBrowseRows(COMPS, many(20, 'atp'));
-    expect(rows.filter((r) => r.kind === 'tournament')).toHaveLength(6);
-    const more = rows.find((r) => r.kind === 'showAll') as { hidden: number };
-    expect(more.hidden).toBe(14);
-  });
-
-  it('KEEPS GRAND SLAMS REACHABLE — the whole point of collapsing', () => {
-    // The live shape: 57 ATP tournaments, 38 WTA, four majors.
-    const rows = tennisBrowseRows(COMPS, [
-      ...many(57, 'atp'),
-      ...many(38, 'wta'),
-      t({ key: 'tennis-t-wimbledon', name: 'Wimbledon' }),
+  it('is exactly the shape the owner asked for', () => {
+    expect(rows.map((r) => `${r.kind}:${r.id}`)).toEqual([
+      'header:h-atp',
+      'players:p-atp',
+      'competition:c-tennis-atp',
+      'slams:slams-atp',
+      'others:others-atp',
+      'header:h-wta',
+      'players:p-wta',
+      'competition:c-tennis-wta',
+      'slams:slams-wta',
+      'others:others-wta',
     ]);
-    // Two sections of ten rows each (header, players, tour, six
-    // tournaments, "show all"), so the majors sit at 20 — a couple of
-    // screens. Uncollapsed they sat below 95 tournament rows, which is
-    // reachable in the same sense that page nine of search results is.
-    expect(rows.findIndex((r) => r.id === 'h-slams')).toBe(20);
-    // And the guard that actually matters: the position does not grow
-    // with the number of tournaments. Quadruple both tours and the
-    // majors sit exactly where they did.
-    const bigger = tennisBrowseRows(COMPS, [
-      ...many(200, 'atp'),
-      ...many(200, 'wta'),
-      t({ key: 'tennis-t-wimbledon', name: 'Wimbledon' }),
-    ]);
-    expect(bigger.findIndex((r) => r.id === 'h-slams')).toBe(20);
   });
 
-  it('expands only the tour asked for', () => {
-    const rows = tennisBrowseRows(COMPS, [...many(20, 'atp'), ...many(20, 'wta')], new Set(['atp']));
-    const atpRows = kindsIn(rows, 'h-atp', 'h-wta').filter((r) => r.kind === 'tournament');
-    const wtaRows = kindsIn(rows, 'h-wta', '').filter((r) => r.kind === 'tournament');
-    expect(atpRows).toHaveLength(20);
-    expect(wtaRows).toHaveLength(6);
+  it('NO INLINE TOURNAMENTS — the list lives behind its own entry', () => {
+    // The ninety-five-rows problem, answered by structure rather than by
+    // hiding rows six at a time.
+    expect(rows).toHaveLength(10);
+  });
+
+  it('each section carries its OWN note — the tours differ now', () => {
+    const notes = rows
+      .filter((r) => r.kind === 'header')
+      .map((r) => (r as { note: string }).note);
+    expect(new Set(notes).size).toBe(notes.length);
+    expect(notes[1]).toMatch(/order of play/); // WTA says what only it has
+  });
+
+  it('two Players rows, one per tour, not one shared list', () => {
+    const players = rows.filter((r) => r.kind === 'players');
+    expect(players.map((r) => (r as { tour: string }).tour)).toEqual(['atp', 'wta']);
+  });
+
+  it('counts what is behind each entry', () => {
+    const atpOthers = rows.find((r) => r.id === 'others-atp') as { count: number };
+    const wtaOthers = rows.find((r) => r.id === 'others-wta') as { count: number };
+    // Men: Cincinnati + Quiet. Women: Cincinnati + Warsaw.
+    expect(atpOthers.count).toBe(2);
+    expect(wtaOthers.count).toBe(2);
+  });
+});
+
+describe('placement', () => {
+  it('THE MAJORS ARE IN BOTH SECTIONS — both tours play them', () => {
+    // Not a duplicate: a follow from a section is scoped to that tour,
+    // so these are two different subscriptions to one fortnight.
+    expect(tournamentsFor([WIMBLEDON], 'atp', 'slams')).toHaveLength(1);
+    expect(tournamentsFor([WIMBLEDON], 'wta', 'slams')).toHaveLength(1);
+  });
+
+  it('a slam never appears under Other tournaments', () => {
+    expect(tournamentsFor([WIMBLEDON, CINCY], 'atp', 'others')).toEqual([CINCY]);
+  });
+
+  it('a single-tour event appears under its tour only', () => {
+    expect(tournamentsFor([WARSAW], 'atp', 'others')).toEqual([]);
+    expect(tournamentsFor([WARSAW], 'wta', 'others')).toEqual([WARSAW]);
+  });
+
+  it('FALLS BACK TO COVERAGE when no tours claim is made', () => {
+    // 40 of 99 live rows: ATP-feed events beyond the WTA horizon. Every
+    // one has coverage ['atp'], so they land under the MEN'S Other
+    // tournaments and nowhere else — until the women's window reaches
+    // them and the server can claim both.
+    expect(tournamentsFor([QUIET], 'atp', 'others')).toEqual([QUIET]);
+    expect(tournamentsFor([QUIET], 'wta', 'others')).toEqual([]);
+  });
+
+  it('omits an entry we hold nothing for', () => {
+    // A row promising a list, opening on nothing, is worse than no row.
+    const rows = tennisBrowseRows(COMPS, [WARSAW]);
+    expect(rows.some((r) => r.kind === 'slams')).toBe(false);
+    expect(rows.some((r) => r.id === 'others-atp')).toBe(false);
+    expect(rows.some((r) => r.id === 'others-wta')).toBe(true);
+  });
+
+  it('knows the four majors and nothing else', () => {
+    expect(isSlam('tennis-t-us-open')).toBe(true);
+    expect(isSlam('tennis-t-cincinnati-open')).toBe(false);
   });
 });

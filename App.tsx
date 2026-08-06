@@ -36,6 +36,7 @@ import {
   FixtureCardPayload,
 } from './src/features/calendar-sync/screens/FixtureCard';
 import AthleteListScreen from './src/features/follows/screens/AthleteListScreen';
+import TournamentListScreen from './src/features/follows/screens/TournamentListScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
@@ -210,6 +211,11 @@ export default function App() {
           name="AthleteList"
           component={AthleteListScreen}
           options={{ title: 'Athletes' }}
+        />
+        <Stack.Screen
+          name="TournamentList"
+          component={TournamentListScreen}
+          options={({ route }) => ({ title: route.params.title })}
         />
         <Stack.Screen
           name="TeamList"

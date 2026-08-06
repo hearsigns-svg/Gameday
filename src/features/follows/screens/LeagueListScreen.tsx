@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { FollowButton, ListRow, monogramOf , CoverageNote } from '../../../core/components';
-import { BrowseRow, tennisBrowseRows, TOUR_PREVIEW } from '../domain/tennisBrowse';
+import { BrowseRow, tennisBrowseRows } from '../domain/tennisBrowse';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -52,7 +52,6 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [expandedTours, setExpandedTours] = useState<Set<'atp' | 'wta'>>(new Set());
   const [, forceRender] = useState(0);
 
   // Toast Undo (and any other sync) must refresh Follow buttons here too.
@@ -239,7 +238,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   // note trying to describe two tours that no longer match.
   const tennisRows: BrowseRow[] | null =
     route.params.sportKey === 'tennis' && leagues
-      ? tennisBrowseRows(leagues, tournaments, expandedTours)
+      ? tennisBrowseRows(leagues, tournaments)
       : null;
 
   const renderBrowseRow = (r: BrowseRow) => {
@@ -307,67 +306,32 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             }
           />
         );
-      case 'followAll':
+      case 'slams':
+      case 'others': {
+        const isSlams = r.kind === 'slams';
+        const title = isSlams ? 'All four majors' : 'Other tournaments';
         return (
           <ListRow
-            title={r.title}
-            caption={`${r.keys.length} tournaments`}
-            glyph="🏆"
+            title={title}
+            caption={`${r.count} ${r.count === 1 ? 'tournament' : 'tournaments'}`}
+            glyph={isSlams ? '🏆' : (sport?.glyph ?? '🎾')}
             tileTheme={teamTheme(sport?.accent ?? null, mode)}
-            accessibilityLabel={`Follow all four majors`}
+            accessibilityLabel={`${title}, ${r.tour.toUpperCase()}`}
+            onPress={() =>
+              navigation.navigate('TournamentList', {
+                tour: r.tour,
+                kind: isSlams ? 'slams' : 'others',
+                title,
+              })
+            }
             right={
-              <FollowButton
-                following={r.keys.every((k) => isFollowed(k))}
-                subject={r.title}
-                busy={busyKey === r.title}
-                label="Follow all"
-                onPress={() => void followAll(r.keys, r.title)}
-              />
+              <Text style={[type.heading, { color: t.primary }]} accessible={false}>
+                ›
+              </Text>
             }
           />
         );
-      case 'showAll':
-        return (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Show all ${r.tour.toUpperCase()} tournaments`}
-            onPress={() => setExpandedTours((prev) => new Set([...prev, r.tour]))}
-            style={{
-              minHeight: 44,
-              justifyContent: 'center',
-              paddingHorizontal: spacing.l,
-            }}
-          >
-            <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
-              {`Show all ${r.hidden + TOUR_PREVIEW}`}
-            </Text>
-          </Pressable>
-        );
-      case 'tournament':
-        return (
-          <ListRow
-            title={r.tournament.name}
-            caption={tournamentCaption(r.tournament as TournamentRow)}
-            accessibilityLabel={`${r.tournament.name}, see upcoming`}
-            onPress={() => openEntity(r.tournament.key, r.tournament.name)}
-            right={
-              <FollowButton
-                following={isFollowed(r.tournament.key)}
-                subject={r.tournament.name}
-                busy={busyKey === r.tournament.key}
-                onPress={() =>
-                  void toggle({
-                    id: r.tournament.key,
-                    name: r.tournament.name,
-                    country: '',
-                    key: r.tournament.key,
-                    followOnly: true,
-                  })
-                }
-              />
-            }
-          />
-        );
+      }
     }
   };
 

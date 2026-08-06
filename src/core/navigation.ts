@@ -65,6 +65,13 @@ export type RootStackParamList = {
     // anything (features/follows/domain/athleteDelivery.ts).
     grouping?: string;
   };
+  // One tour's tournaments, behind their own entry rather than inline
+  // under the tour heading (Prompt 19 A).
+  TournamentList: {
+    tour: 'atp' | 'wta';
+    kind: 'slams' | 'others';
+    title: string;
+  };
   Preferences: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
   Credits: undefined;

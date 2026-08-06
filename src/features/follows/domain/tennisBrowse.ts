@@ -36,9 +36,12 @@ export type BrowseRow =
   | { kind: 'header'; id: string; title: string; note: string }
   | { kind: 'players'; id: string; title: string; tour: 'atp' | 'wta' }
   | { kind: 'competition'; id: string; key: string; name: string }
-  | { kind: 'tournament'; id: string; tournament: TournamentLike }
-  | { kind: 'followAll'; id: string; title: string; keys: string[] }
-  | { kind: 'showAll'; id: string; tour: 'atp' | 'wta'; hidden: number };
+  // Two rows that OPEN A LIST rather than expanding inline. This is why
+  // there is no "show all" collapse any more: the tournaments live
+  // behind their own entry, which answers the ninety-five-rows problem
+  // properly instead of hiding it six at a time.
+  | { kind: 'slams'; id: string; tour: 'atp' | 'wta'; count: number }
+  | { kind: 'others'; id: string; tour: 'atp' | 'wta'; count: number };
 
 // The four majors, by canonical key. A curated fact about the sport,
 // like KNOWN_JOINT in the server's taxonomy — not something to infer
@@ -69,6 +72,13 @@ export const SECTION_NOTES = {
     'fortnight; follow a player and you get their matches within it.',
 } as const;
 
+// WHERE THE UNCLAIMED ROWS LAND, stated rather than left implicit: a
+// tournament that makes no `tours` claim — 40 of 99, all of them ATP-feed
+// events beyond the WTA API's horizon — falls back to `coverage`, which
+// for every one of them is ['atp']. They appear under Other tournaments
+// in the MEN'S section and nowhere else, until the women's window
+// reaches them and the server can claim both.
+
 const toursOf = (t: TournamentLike): ('atp' | 'wta')[] =>
   t.tours ?? t.coverage ?? [];
 
@@ -76,23 +86,27 @@ export function isSlam(key: string): boolean {
   return SLAM_KEYS.includes(key);
 }
 
-// A SECTION NOBODY CAN REACH IS NOT A SECTION. Uncollapsed, the two
-// tours put 95 tournament rows between the top of the screen and the
-// Grand Slams heading — "beneath them", technically, and invisible in
-// practice. Each tour shows its next few and offers the rest, the same
-// way the athlete lists already do ("Show all 50").
-export const TOUR_PREVIEW = 6;
+// What a tour's tournament list actually contains, split the way a
+// browser asks for it: the majors, and everything else.
+//
+// THE MAJORS ARE IN BOTH LISTS ON PURPOSE. Both tours play them, and a
+// follow made from a section is scoped to THAT tour, so the two entries
+// are not one thing listed twice — they are two different
+// subscriptions.
+export function tournamentsFor(
+  tournaments: readonly TournamentLike[],
+  tour: 'atp' | 'wta',
+  kind: 'slams' | 'others',
+): TournamentLike[] {
+  if (kind === 'slams') return tournaments.filter((t) => isSlam(t.key));
+  return tournaments.filter((t) => !isSlam(t.key) && toursOf(t).includes(tour));
+}
 
 export function tennisBrowseRows(
   competitions: readonly CompetitionLike[],
   tournaments: readonly TournamentLike[],
-  expanded: ReadonlySet<'atp' | 'wta'> = new Set(),
 ): BrowseRow[] {
-  const slams = SLAM_KEYS.map((k) => tournaments.find((t) => t.key === k)).filter(
-    (t): t is TournamentLike => t !== undefined,
-  );
-  const forTour = (tour: 'atp' | 'wta'): TournamentLike[] =>
-    tournaments.filter((t) => !isSlam(t.key) && toursOf(t).includes(tour));
+  const slams = tournamentsFor(tournaments, 'atp', 'slams');
   // The tour's own "follow everything" row, matched by key rather than
   // by name so a relabelled competition still lands in its section.
   const comp = (needle: string): CompetitionLike | undefined =>
@@ -121,42 +135,16 @@ export function tennisBrowseRows(
     if (c) {
       rows.push({ kind: 'competition', id: `c-${c.key}`, key: c.key, name: c.name });
     }
-    const all = forTour(tour);
-    const shown = expanded.has(tour) ? all : all.slice(0, TOUR_PREVIEW);
-    for (const t of shown) {
-      rows.push({ kind: 'tournament', id: `${tour}-${t.key}`, tournament: t });
+    if (slams.length > 0) {
+      rows.push({ kind: 'slams', id: `slams-${tour}`, tour, count: slams.length });
     }
-    if (shown.length < all.length) {
-      rows.push({
-        kind: 'showAll',
-        id: `more-${tour}`,
-        tour,
-        hidden: all.length - shown.length,
-      });
+    const others = tournamentsFor(tournaments, tour, 'others');
+    if (others.length > 0) {
+      rows.push({ kind: 'others', id: `others-${tour}`, tour, count: others.length });
     }
   };
 
   section('atp', 'ATP — Men’s', 'Players', 'tennis-atp');
   section('wta', 'WTA — Women’s', 'Players', 'tennis-wta');
-
-  // The slams last, and only if we actually hold them: a section header
-  // over nothing is worse than no section.
-  if (slams.length > 0) {
-    rows.push({
-      kind: 'header',
-      id: 'h-slams',
-      title: 'Grand Slams',
-      note: SECTION_NOTES.slams,
-    });
-    rows.push({
-      kind: 'followAll',
-      id: 'slam-all',
-      title: 'All four majors',
-      keys: slams.map((t) => t.key),
-    });
-    for (const t of slams) {
-      rows.push({ kind: 'tournament', id: `slam-${t.key}`, tournament: t });
-    }
-  }
   return rows;
 }
