@@ -54,6 +54,7 @@ import {
   matchTitle,
   parseSheet,
   publishable,
+  stalenessError,
 } from './providers/sheetAtp';
 // The vendor namespace the sheet's player ids live in. One constant, so
 // the mapping the sheet teaches and the refs it publishes can never
@@ -2472,6 +2473,9 @@ export const activeTennisWindows = onRequest(async (_req, res) => {
 });
 
 const SHEET_TAB = 'canonical_matches';
+// Three times the Apps Script's 2-hour cadence: one missed run is
+// weather, three is a dead script.
+const SHEET_MAX_AGE_MS = 6 * 3_600_000;
 
 // Stamp the human's mapping onto the athlete, so the NEXT run resolves
 // that player certainly by id instead of by name. Additive only: an
@@ -2554,6 +2558,12 @@ export const pollSheetAtp = onRequest(
           if (!held || f.startUtc < held.startUtc) parents.set(key, f);
         }
 
+        // A LIVE TOURNAMENT AND A FROZEN SHEET IS AN OUTAGE, and it is
+        // the one `yield_died` cannot see (providers/sheetAtp.ts).
+        if (parents.size > 0) {
+          const stale = stalenessError(parsed.rows, Date.now(), SHEET_MAX_AGE_MS);
+          if (stale !== null) throw new Error(stale);
+        }
         const { publish, skipped } = publishable(
           parsed.rows,
           new Set(parents.keys()),

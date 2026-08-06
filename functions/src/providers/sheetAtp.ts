@@ -50,6 +50,9 @@ export interface SheetRow {
   // Provenance, so a vendor that dies can be re-sourced row by row.
   vendors: string;
   vendorMatchId: string;
+  // When the Apps Script last rewrote this row. The ONLY signal we have
+  // that the half of the chain we do not run is still alive.
+  updatedAt: string;
 }
 
 export interface PublishablePair {
@@ -116,6 +119,7 @@ export function parseSheet(
       overrideStatus: orNull(at(r, 'override_status')),
       vendors: at(r, 'vendors'),
       vendorMatchId: at(r, 'vendor_match_id'),
+      updatedAt: at(r, 'updated_at'),
     });
   }
   return { rows, error: null };
@@ -270,4 +274,51 @@ export function mappingIntents(rows: readonly SheetRow[]): MappingIntent[] {
     }
   }
   return [...out.values()];
+}
+
+// ─── Is the half of the chain we do not run still alive? ──────────────
+//
+// `yield_died` CANNOT cover this source. It keys on futureDated, and
+// this slice publishes zero fixtures by design — its matches are
+// appearances, and the alert file states that an appearance funnel
+// dying alone never pages. So a dead Apps Script (trigger removed,
+// vendor quota gone, payload shape changed) would leave pollSheetAtp
+// succeeding against a frozen sheet, publishing the same stale rows,
+// for ever — the exact silent outage the standing invariant exists to
+// forbid, arriving through the one door nothing was watching.
+//
+// The sheet stamps every row with the time it was rewritten. If the
+// newest stamp is far older than the script's own cadence WHILE a
+// tournament is live, the script has stopped and this run must FAIL —
+// which turns an invisible outage into `no_success_24h`.
+//
+// Only while a tournament is live: with nothing on, the script no-ops
+// by design and the stamps go legitimately stale.
+
+export function newestStamp(rows: readonly SheetRow[]): number | null {
+  let newest: number | null = null;
+  for (const r of rows) {
+    const ms = Date.parse(r.updatedAt);
+    if (!Number.isFinite(ms)) continue;
+    if (newest === null || ms > newest) newest = ms;
+  }
+  return newest;
+}
+
+export function stalenessError(
+  rows: readonly SheetRow[],
+  nowMs: number,
+  maxAgeMs: number,
+): string | null {
+  const newest = newestStamp(rows);
+  if (newest === null) {
+    // Rows exist but not one carries a readable stamp: either the
+    // script never wrote them or the column was renamed. Both mean we
+    // cannot tell whether this data is current, and "cannot tell" is
+    // not "fine".
+    return rows.length === 0 ? null : 'sheet rows carry no readable updated_at';
+  }
+  const ageMs = nowMs - newest;
+  if (ageMs <= maxAgeMs) return null;
+  return `sheet is stale: newest row written ${Math.round(ageMs / 60_000)} min ago while a tournament is live`;
 }

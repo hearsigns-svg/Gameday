@@ -1972,3 +1972,41 @@
   owner elected to rotate all three at a 2-hourly cadence. The connector
   is vendor-pluggable so a genuinely independent second source is a
   config entry rather than a rewrite.
+- 2026-08-06: **MEN'S TENNIS DEPENDS ON ONE VENDOR, AND HERE IS WHAT
+  GOES DARK.** All three RapidAPI keys point at
+  `tennisapi1.p.rapidapi.com` — three accounts on one host, which is
+  quota (150/day rather than 50) and NOT redundancy: one outage, one
+  terms change, one shape change takes all three at once. Raised before
+  building; the owner elected to rotate all three at a 2-hourly cadence
+  with the connector kept vendor-pluggable.
+  IF IT DIES: men's MATCHES stop — the appearance docs stop refreshing
+  and drain by the ordinary horizon rule. What SURVIVES is everything
+  not sourced from it: the 78 ATP tournament banners (Tennis TV ICS),
+  all women's tennis (the WTA API), and every other sport. A followed
+  ATP player falls back to the honest empty state
+  (`domain/athleteDelivery.ts`), which is the same sentence the app
+  showed yesterday. No wrong data, no invented times — the failure mode
+  is absence, which is the one this project accepts.
+  COST OF A SECOND VENDOR: the Apps Script is the only place that
+  changes. `fetchTournament_` maps one payload shape to the neutral
+  observation record; a second vendor is a second mapper (~40 lines)
+  plus its ids in the tournaments tab. Everything downstream —
+  canonical keys, the disagreement tab, player mapping, the Cloud
+  Function, Firestore — already takes a `vendors` column and needs no
+  change. What it is NOT free of: a second player-id namespace to map
+  (`providerIds.<vendor>`), a second rights question, and a second
+  account. Call it a day, not a rewrite.
+- 2026-08-06: **`yield_died` CANNOT COVER THE SHEET SLICE — CHECKED,
+  NOT ASSUMED.** The alert keys on `futureDated`, and
+  `sheet|tennis-atp-sheet` publishes ZERO fixtures by design (its
+  matches are appearances, and alerts.ts states an appearance funnel
+  dying alone never pages). So a HARD failure is covered —
+  `no_success_24h` fires, because the sweep demands the slice and an
+  unreadable sheet throws — but a SILENT one was not: a dead Apps
+  Script leaves pollSheetAtp succeeding against a frozen sheet,
+  republishing stale rows for ever. Closed by making staleness an
+  error: every row carries the time the script rewrote it, and if the
+  newest stamp is older than 6 hours (3× the script's cadence) WHILE a
+  tournament is live, the run fails and `no_success_24h` picks it up.
+  Only while a tournament is live — with nothing on, the script no-ops
+  by design and the stamps go legitimately stale.

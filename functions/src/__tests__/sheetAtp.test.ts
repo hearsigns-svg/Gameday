@@ -7,9 +7,11 @@
 import {
   mappingIntents,
   matchTitle,
+  newestStamp,
   parseSheet,
   publishable,
   SheetRow,
+  stalenessError,
 } from '../providers/sheetAtp';
 
 const HEADER = [
@@ -28,6 +30,7 @@ const HEADER = [
   'override_status',
   'vendors',
   'vendor_match_id',
+  'updated_at',
 ];
 
 const row = (over: Partial<Record<string, string>> = {}): string[] =>
@@ -48,6 +51,7 @@ const row = (over: Partial<Record<string, string>> = {}): string[] =>
       override_status: '',
       vendors: 'tennisapi1',
       vendor_match_id: '16661674',
+      updated_at: '2026-08-06T12:00:00.000Z',
       ...over,
     })[h] ?? '',
   );
@@ -247,5 +251,47 @@ describe('one doc per player, not one per match', () => {
     // Two different titles means two different appearance doc ids,
     // which is the whole point: neither player can claim the other's.
     expect(home).not.toBe(away);
+  });
+});
+
+describe('a frozen sheet is an outage, not a quiet week', () => {
+  // `yield_died` cannot cover this slice: it keys on futureDated and
+  // this source publishes zero fixtures by design. So a dead Apps
+  // Script would leave pollSheetAtp succeeding against stale rows for
+  // ever. The stamp is the only liveness signal we have.
+  const SIX_H = 6 * 3_600_000;
+  const NOW = Date.parse('2026-08-06T18:00:00.000Z');
+  const withStamp = (iso: string) =>
+    parseSheet([HEADER, row({ updated_at: iso })]).rows;
+
+  it('passes a sheet written within the window', () => {
+    expect(
+      stalenessError(withStamp('2026-08-06T16:30:00.000Z'), NOW, SIX_H),
+    ).toBeNull();
+  });
+
+  it('FAILS a sheet nobody has written for longer than that', () => {
+    const e = stalenessError(withStamp('2026-08-06T09:00:00.000Z'), NOW, SIX_H);
+    expect(e).toMatch(/stale/);
+    expect(e).toMatch(/540 min/);
+  });
+
+  it('takes the NEWEST stamp, not the first row', () => {
+    const rows = [
+      ...withStamp('2026-08-06T09:00:00.000Z'),
+      ...withStamp('2026-08-06T17:30:00.000Z'),
+    ];
+    expect(newestStamp(rows)).toBe(Date.parse('2026-08-06T17:30:00.000Z'));
+    expect(stalenessError(rows, NOW, SIX_H)).toBeNull();
+  });
+
+  it('unreadable stamps are "cannot tell", which is not "fine"', () => {
+    expect(stalenessError(withStamp(''), NOW, SIX_H)).toMatch(/no readable/);
+  });
+
+  it('an empty sheet is judged by the header check, not by staleness', () => {
+    // parseSheet already turns a missing header into an error; a
+    // legitimately empty tab must not ALSO be called stale.
+    expect(stalenessError([], NOW, SIX_H)).toBeNull();
   });
 });
