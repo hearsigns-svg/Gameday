@@ -2010,3 +2010,35 @@
   tournament is live, the run fails and `no_success_24h` picks it up.
   Only while a tournament is live — with nothing on, the script no-ops
   by design and the stamps go legitimately stale.
+- 2026-08-06: **THE MEN'S DIRECTORY IS THE VENDOR'S RANKED 500, AND
+  NOTHING ELSE** (owner ruling). 1,394 Wikidata-derived men — mostly
+  inactive, unranked or retired — replaced by one ranked list: top 100
+  browsable, 500 searchable. A single fit-for-purpose source beats a
+  large one nobody maintains.
+  APPLIED 2026-08-06 after a dry run: 1,739 → 727 tennis athletes.
+  Men 1,513 → 501. Kept 366 (24 already matched BY VENDOR ID — stamps
+  the sheet had taught the directory hours earlier; 4 human-confirmed
+  spelling merges; 6 reversed name order), created 124, removed 1,136,
+  left 10 near-misses untouched. **Zero follows broken, re-verified
+  against the store after the write, not just in the plan.**
+  WHAT MADE IT SAFE, and what any future directory replacement must
+  repeat: a matched player KEEPS THEIR DOCUMENT ID (a follow is a
+  stored reference to `athlete_001801`; delete-and-recreate would have
+  silently orphaned four real follows); a followed athlete is never
+  removed however they rank; a surname near-miss is neither merged nor
+  created, because both answers are destructive if wrong; and a
+  reversed name is the same person when the country agrees — while a
+  contradiction is not licence to treat them as strangers either, so
+  nothing moves.
+  SCOPED TO THE MEN. "Get rid of the 1000+" would literally have taken
+  the 226 WTA women — the half of tennis actually serving appearances —
+  since this vendor's list is men's singles. The women stay on the WTA
+  API.
+- 2026-08-06: **IDENTITY IS BY VENDOR ID FIRST, NAME LAST.** The
+  reconciler matches `providerIds.tennisapi1` before it looks at any
+  name, so a merge is permanent rather than a one-off: "Aleksandr" and
+  "Alexander" Shevchenko resolved to one document once, by hand, and
+  now resolve by id for ever — verified by re-planning with NO merge
+  map and watching all four still land `via=vendorId`. A rename on
+  either side cannot split them again. The second run computes 0
+  creates and 0 removes, which is the real proof the reset converged.

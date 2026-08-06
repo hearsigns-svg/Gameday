@@ -126,3 +126,48 @@ it('top 100 browses, the rest are searchable', () => {
   expect(groupingFor(101)).toBe('atp-directory');
   expect(groupingFor(500)).toBe('atp-directory');
 });
+
+describe('the merge is permanent, not a one-off', () => {
+  const shevchenko = a({
+    id: 'athlete_000900',
+    displayName: 'Alexander Shevchenko',
+    countryCode: 'KAZ',
+  });
+  const vendorRow = p({ name: 'Aleksandr Shevchenko', vendorId: '89', rank: 89, countryCode: 'KAZ' });
+
+  it('a human merge keeps the existing id', () => {
+    const plan = planReconcile(
+      [vendorRow],
+      [shevchenko],
+      NOBODY,
+      new Map([['89', 'athlete_000900']]),
+    );
+    expect(plan.keep).toEqual([
+      { athleteId: 'athlete_000900', player: vendorRow, via: 'merge' },
+    ]);
+    expect(plan.create).toEqual([]);
+    expect(plan.review).toEqual([]);
+  });
+
+  it('AFTERWARDS they resolve BY ID, with no merge map and no name match', () => {
+    // The doc now carries the vendor id. The spelling still disagrees —
+    // and it no longer matters, which is the entire point.
+    const stamped = { ...shevchenko, providerIds: { tennisapi1: '89' } };
+    const plan = planReconcile([vendorRow], [stamped], NOBODY);
+    expect(plan.keep).toEqual([
+      { athleteId: 'athlete_000900', player: vendorRow, via: 'vendorId' },
+    ]);
+    expect(plan.review).toEqual([]);
+  });
+
+  it('an id match beats a name match, so a rename cannot split them', () => {
+    const renamed = {
+      ...shevchenko,
+      displayName: 'Something Else Entirely',
+      providerIds: { tennisapi1: '89' },
+    };
+    const plan = planReconcile([vendorRow], [renamed], NOBODY);
+    expect(plan.keep[0]).toMatchObject({ athleteId: 'athlete_000900', via: 'vendorId' });
+    expect(plan.remove).toEqual([]);
+  });
+});

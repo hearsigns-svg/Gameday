@@ -50,7 +50,13 @@ export interface DirectoryAthlete {
 
 export interface ReconcilePlan {
   // Existing doc, still ranked: update rank/grouping/vendor id in place.
-  keep: { athleteId: string; player: RankedPlayer; via: 'name' | 'reversed' }[];
+  keep: {
+    athleteId: string;
+    player: RankedPlayer;
+    // How identity was established, weakest last. `vendorId` is the
+    // only one that cannot be disturbed by a spelling change.
+    via: 'vendorId' | 'merge' | 'name' | 'reversed';
+  }[];
   // Ranked, and we hold nobody plausible: mint a new athlete.
   create: RankedPlayer[];
   // Ours, no longer in the list: remove.
@@ -79,12 +85,21 @@ const surname = (s: string): string => {
   return parts[parts.length - 1] ?? '';
 };
 
+// The namespace the vendor's player ids live under, on the athlete doc.
+export const VENDOR = 'tennisapi1';
+
 export function planReconcile(
   ranked: readonly RankedPlayer[],
   // The MEN only. Callers must not pass the WTA population: this list
   // is men's singles, and an unmatched woman is not an unranked man.
   existing: readonly DirectoryAthlete[],
   followedIds: ReadonlySet<string>,
+  // One-time human decisions: vendorId → our athlete id. Used ONCE, for
+  // the spelling variants a person has confirmed. After the first apply
+  // the vendor id is stamped on the doc and the id match below finds
+  // them without this map — which is the point of merging rather than
+  // creating.
+  manualMerges: ReadonlyMap<string, string> = new Map(),
 ): ReconcilePlan {
   const byName = new Map<string, DirectoryAthlete[]>();
   const bySurname = new Map<string, DirectoryAthlete[]>();
@@ -101,8 +116,32 @@ export function planReconcile(
     keepFollowed: [],
     review: [],
   };
+  // MATCH BY VENDOR ID FIRST, ALWAYS. Once a player carries the id —
+  // whether stamped by a previous run or by a human's merge — their
+  // identity stops depending on how anyone spells their name. That is
+  // the whole value of the merge: "Aleksandr" and "Alexander" resolve
+  // to one document for ever after, and a rename by either side changes
+  // nothing.
+  const byVendorId = new Map<string, DirectoryAthlete>();
+  for (const a of existing) {
+    const v = a.providerIds?.[VENDOR];
+    if (v) byVendorId.set(v, a);
+  }
+  const byOurId = new Map(existing.map((a) => [a.id, a]));
   const claimed = new Set<string>();
   for (const p of ranked) {
+    const known = byVendorId.get(p.vendorId);
+    if (known) {
+      plan.keep.push({ athleteId: known.id, player: p, via: 'vendorId' });
+      claimed.add(known.id);
+      continue;
+    }
+    const merged = manualMerges.get(p.vendorId);
+    if (merged !== undefined && byOurId.has(merged)) {
+      plan.keep.push({ athleteId: merged, player: p, via: 'merge' });
+      claimed.add(merged);
+      continue;
+    }
     const straight = byName.get(normaliseForMatch(p.name)) ?? [];
     if (straight.length === 1) {
       plan.keep.push({ athleteId: straight[0].id, player: p, via: 'name' });
