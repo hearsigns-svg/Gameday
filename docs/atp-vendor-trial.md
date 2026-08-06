@@ -93,13 +93,63 @@ same conversation.** Both end at TDI. The trial's real question is not
 | **Sportradar / TDI** | Official — the rights holder's own distributor | Not published; enterprise | Is there a non-betting media/schedule tier at indie scale? |
 | **api-tennis.com** | Aggregator | Low tiers (~£29 class) | Best shape on paper: round + stable keys + scheduled time. Is the time pre-announced? Rights in writing? |
 | **Goalserve** | Aggregator | $150/mo, $1,200/yr | Public samples show NO round and no draw structure — confirm both exist before anything else |
-| **SportDevs** | Aggregator | Free trial, 300 req/day | Free tier is the cheapest way to see live payloads, but still needs an account |
+| ~~**SportDevs**~~ | Aggregator | Free trial, 300 req/day | **DNS-dead as of 2026-08-05** — see below. Do not spend time signing up |
 
 Ranked deliberately: Sportradar/TDI is the only route that can grant
 redistribution with certainty, and api-tennis is the cheapest one whose
 published shape already carries what we need. Run both ends at once —
 the cheap tier tells you whether the data is good enough to be worth
 licensing, and the licensed route tells you whether it can be used.
+
+## SportDevs is not a candidate today
+
+Checked before recommending a sign-up, and the result says don't:
+`sportdevs.com`, `www.`, `api.`, `app.` and `docs.` all return **no A
+record** from both 8.8.8.8 and 1.1.1.1. The zone is alive on Cloudflare
+nameservers but has no web host and no MX. Their RapidAPI listing still
+answers (HTTP 200, a BASIC free plan), so the product may live on there
+— but a vendor whose own site and email have gone dark is not one to
+put a calendar product's men's tennis on, free tier or not.
+
+## THE IDENTITY COST IS MUCH SMALLER THAN I SAID
+
+Last round I reported the abbreviated names as a finding that "changes
+the integration cost estimate for both vendors". Measured against our
+own roster, that was an overstatement, and the correction runs the
+other way.
+
+Every one of our **1,394 ATP athletes carries an ATP player code and a
+Wikidata id** (1,394/1,394); 995 carry an ITF id; 1,174 a country. And
+under the vendors' own `F. Surname` rendering:
+
+| | ATP populations | Whole tennis roster |
+|---|---|---|
+| Distinct abbreviations | 1,390 | 1,733 |
+| **Ambiguous** abbreviations | **4** | 6 |
+| Athletes behind them | **8 (0.6%)** | 12 (0.7%) |
+| Resolved by adding country | 4 | 6 |
+| Still ambiguous with country | 2 | 4 |
+
+The entire residual is nameable: Yosuke / Yusuke **Watanuki**, Martin /
+Michael **Redlicki** (both USA), Andraž / Aljaž **Bedene**, Andres /
+Andrej **Martin**. Four pairs. That is a morning's reconciliation with
+a human eye, not a mapping subsystem.
+
+Two things make it smaller still. **api-tennis carries `player_bday`**
+("22.05.1987") alongside `player_country`, and we hold Wikidata ids for
+all 1,394 — so birth date can be pulled from P569 in the same query
+that already fetches P27 for nationality, and the residual collapses to
+zero. **Goalserve's profile carries `<country>` but no birth date** in
+its public sample, so it stops at the country tier.
+
+WHAT THIS DOES NOT MEASURE, and what a key is still needed for: this is
+collision within OUR roster, not the join against THEIRS. A vendor may
+abbreviate differently — Goalserve's own sample shows `Al. Popyrin`,
+extending the initial to break a tie, which means their scheme is not
+derivable from ours — may transliterate differently, and may carry
+qualifiers and juniors we have never heard of. The real number is
+measured by pulling their player list once and diffing it against ours.
+That is one request with a key, and it should be the FIRST request.
 
 ## The one question that gates everything
 
@@ -112,8 +162,19 @@ Send this verbatim, before any integration work:
 > time, and subsequent changes — transform them into calendar events,
 > and deliver those events to end users' personal calendars? Please
 > confirm in writing, including any attribution or volume conditions.
-> We do not need scores, odds or streaming, and we do not use the data
-> to train models.
+> We would also retain schedule history and cache your responses beyond
+> their immediate lifetime, so please confirm both. We do not need
+> scores, odds or streaming, and we do not use the data to train
+> models.
+>
+> Separately: do you hold a licence from Tennis Data Innovations for
+> ATP data, and does it permit onward supply to a customer for the use
+> above?
+
+The second question is the one that predicts the rest. TDI owns the
+rights and Sportradar is its exclusive distributor, so a vendor
+collecting the data itself cannot grant what it does not hold — and a
+vendor that answers it evasively has told you what its licence says.
 
 A vendor that will not answer this in writing has failed the gate,
 whatever their JSON looks like.
