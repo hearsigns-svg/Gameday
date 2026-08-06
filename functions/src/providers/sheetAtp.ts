@@ -163,7 +163,18 @@ export function publishable(
   for (const row of rows) {
     const label = `${row.homeDisplay} vs ${row.awayDisplay}`;
     if (row.homeAthleteId === null || row.awayAthleteId === null) {
-      skipped.push({ reason: 'unmapped_player', detail: label });
+      // NAME THE SIDE. "unmapped_player: A vs B" tells a human a match
+      // is stuck; it does not tell them which of the two cells to fill,
+      // and making them diff the sheet by eye to find out is work the
+      // machine already did.
+      const who = [
+        row.homeAthleteId === null ? row.homeDisplay : null,
+        row.awayAthleteId === null ? row.awayDisplay : null,
+      ].filter(Boolean);
+      skipped.push({
+        reason: 'unmapped_player',
+        detail: `${who.join(' + ')} (in ${label})`,
+      });
       continue;
     }
     if (row.homeAthleteId === row.awayAthleteId) {

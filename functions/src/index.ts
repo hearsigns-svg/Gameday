@@ -52,6 +52,7 @@ import { readSheetTab } from './sheets';
 import {
   mappingIntents,
   matchTitle,
+  newestStamp,
   parseSheet,
   publishable,
   stalenessError,
@@ -2670,6 +2671,13 @@ export const pollSheetAtp = onRequest(
             // human, and a count alone tells them nothing about who.
             skippedDetail: skipped.slice(0, 25).map((s) => `${s.reason}: ${s.detail}`),
             overrides: publish.filter((p) => p.overridden).length,
+            // When the Apps Script last rewrote the tab — the one
+            // signal that says whether a stale answer is OUR staleness
+            // or the sheet's.
+            sheetWrittenAt: (() => {
+              const ms = newestStamp(parsed.rows);
+              return ms === null ? null : new Date(ms).toISOString();
+            })(),
             mappingStamped: mapping.stamped,
             mappingConflicts: mapping.conflicts,
             mappingMissingAthletes: mapping.missing,

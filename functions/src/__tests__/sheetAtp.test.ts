@@ -106,10 +106,19 @@ describe('publishable', () => {
     });
   });
 
-  it('NEVER PUBLISHES AN UNMAPPED PLAYER', () => {
+  it('NEVER PUBLISHES AN UNMAPPED PLAYER, and names which side', () => {
     const { publish, skipped } = of({ away_athlete_id: '' });
     expect(publish).toEqual([]);
     expect(skipped[0].reason).toBe('unmapped_player');
+    // The point of the detail is that a human knows which cell to fill.
+    expect(skipped[0].detail).toBe(
+      'Juncheng Shang (in Luciano Darderi vs Juncheng Shang)',
+    );
+  });
+
+  it('names BOTH sides when neither is mapped', () => {
+    const { skipped } = of({ home_athlete_id: '', away_athlete_id: '' });
+    expect(skipped[0].detail).toMatch(/Luciano Darderi \+ Juncheng Shang/);
   });
 
   it('catches a mapping that points both players at one athlete', () => {

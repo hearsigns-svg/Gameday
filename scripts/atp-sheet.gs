@@ -139,18 +139,49 @@ function activeWindows_() {
   return body.windows;
 }
 
-// Our directory, for auto-mapping. Exact unique full-name hits only.
-function lookupAthlete_(name) {
+/**
+ * Our directory, for auto-mapping. Exact unique full-name hits — plus
+ * ONE widening, for name ORDER.
+ *
+ * Measured against the vendor's 500 ranked men: 356 match our roster
+ * exactly, and SIX are the same person written the other way round —
+ * "Juncheng Shang" here is "Shang Juncheng" in our directory, and the
+ * same for Wu Yibing, Zhang Zhizhen, Zhou Yi, Sun Fajing. Chinese and
+ * Korean names are rendered family-name-first by some sources and
+ * given-name-first by others, and treating that as two people is the
+ * F34 mistake pointing the other way: not a collision, a split.
+ *
+ * The widening is GATED so it cannot invent a match between two
+ * genuinely different Western players whose names happen to invert
+ * ("Thomas Martin" / "Martin Thomas"). A reversed match is accepted
+ * only when the straight one found NOTHING, the reversed one is
+ * UNIQUE, and the two sides' countries do not contradict each other.
+ */
+function lookupAthlete_(name, iso3) {
   var r = UrlFetchApp.fetch(
     base_() + '/searchEntities?q=' + encodeURIComponent(name),
     { muteHttpExceptions: true }
   );
   if (r.getResponseCode() !== 200) return null;
   var body = JSON.parse(r.getContentText());
-  var hits = (body.athletes || []).filter(function (a) {
-    return a.sportKey === 'tennis' && norm_(a.name) === norm_(name);
+  var tennis = (body.athletes || []).filter(function (a) {
+    return a.sportKey === 'tennis';
   });
-  return hits.length === 1 ? hits[0] : null;
+  var straight = tennis.filter(function (a) {
+    return norm_(a.name) === norm_(name);
+  });
+  if (straight.length === 1) return straight[0];
+  if (straight.length > 1) return null; // ambiguous — a human decides
+  var reversedName = norm_(name).split(' ').reverse().join(' ');
+  var flipped = tennis.filter(function (a) {
+    return norm_(a.name) === reversedName;
+  });
+  if (flipped.length !== 1) return null;
+  var theirs = flipped[0].countryCode || '';
+  // Unknown on either side is not a contradiction; a DIFFERENT country
+  // is, and refuses the match.
+  if (iso3 && theirs && iso3 !== theirs) return null;
+  return flipped[0];
 }
 
 // ─── Vendor, with key rotation and quota tracking ─────────────────────
@@ -288,8 +319,10 @@ function fetchTournament_(win) {
       round: (e.roundInfo || {}).name || '',
       homeDisplay: home.name || '',
       homeVendorPlayerId: home.id ? String(home.id) : '',
+      homeCountry: ((home.country || {}).alpha3) || '',
       awayDisplay: away.name || '',
       awayVendorPlayerId: away.id ? String(away.id) : '',
+      awayCountry: ((away.country || {}).alpha3) || '',
       scheduledUtc: e.startTimestamp
         ? new Date(e.startTimestamp * 1000).toISOString()
         : '',
@@ -393,7 +426,8 @@ function updateMapping_(obs) {
   }
   var seen = {};
   obs.forEach(function (o) {
-    [[o.homeVendorPlayerId, o.homeDisplay], [o.awayVendorPlayerId, o.awayDisplay]]
+    [[o.homeVendorPlayerId, o.homeDisplay, o.homeCountry],
+     [o.awayVendorPlayerId, o.awayDisplay, o.awayCountry]]
       .forEach(function (p) {
         if (!p[0] || seen[p[0]]) return;
         seen[p[0]] = true;
@@ -407,13 +441,17 @@ function updateMapping_(obs) {
         // matches stayed unpublished after the fold bug was fixed.
         if (row && row.id) return;
         var hit = null;
-        try { hit = lookupAthlete_(p[1]); } catch (e) { hit = null; }
+        try { hit = lookupAthlete_(p[1], p[2]); } catch (e) { hit = null; }
         var cells = [
           VENDOR, p[0], p[1],
           hit ? hit.key : '',
           hit ? hit.name : '',
           hit ? (hit.countryCode || '') : '',
-          hit ? 'auto: exact unique full name' : 'NEEDS A HUMAN',
+          hit
+            ? (norm_(hit.name) === norm_(p[1])
+                ? 'auto: exact unique full name'
+                : 'auto: name order reversed, country agrees')
+            : 'NEEDS A HUMAN',
           new Date().toISOString(),
         ];
         if (row) {
