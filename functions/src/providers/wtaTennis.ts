@@ -32,6 +32,7 @@
 // that atptour.com remains excluded.
 
 import { appearanceFor } from '../appearances';
+import { RoundCode } from '../fixture';
 import { AppearanceDraft } from '../athletes';
 import { Fixture } from '../fixture';
 import { tournamentKey } from '../tennisTournaments';
@@ -65,7 +66,11 @@ export interface WtaTournament {
 }
 
 export interface WtaMatch {
-  MatchID?: string; // LS001 = ladies singles; LD = doubles; RS observed
+  // LS001 = ladies singles; LD = doubles; RS/QS = qualifying.
+  // THE NUMBER IS A BRACKET POSITION, not a sequence — see
+  // roundFromMatchId below. We read only its second character until
+  // Prompt 20b and threw the position away.
+  MatchID?: string;
   DrawMatchType?: string; // 'S' | 'D'
   Winner?: string; // '0' = not decided; '2'/'3' winner side; '5' walkover
   PlayerNameFirstA?: string;
@@ -75,6 +80,9 @@ export interface WtaMatch {
   PlayerIDA?: string;
   PlayerIDB?: string;
   RoundID?: string;
+  // 'M' main draw, 'Q' qualifying. The gate that stops a qualifying
+  // ladder being read as a main-draw one.
+  DrawLevelType?: string;
 }
 
 // The OOP feed nests XML-converted JSON: single-element containers
@@ -366,6 +374,23 @@ export function buildTournamentAppearances(
     if (!players.has(keyOf(p))) players.set(keyOf(p), p);
   }
   const inDrawKeys = new Set(inDraw.map(keyOf));
+  // WHERE EACH PLAYER STANDS IN THE DRAW, from the bracket position we
+  // already receive. Keyed by player so the rung follows them as they
+  // advance — the same rolling-slot behaviour the ATP side proved on
+  // 2026-08-07, now available to the women without a vendor.
+  const rungOf = new Map<string, RoundCode>();
+  for (const m of matches) {
+    if (m.DrawMatchType !== 'S') continue;
+    const rung = roundFromMatchId(m.MatchID, m.DrawLevelType);
+    if (!rung) continue;
+    for (const nm of [
+      [m.PlayerNameFirstA, m.PlayerNameLastA],
+      [m.PlayerNameFirstB, m.PlayerNameLastB],
+    ]) {
+      const full = [nm[0], nm[1]].filter(Boolean).join(' ').trim();
+      if (full) rungOf.set(full, rung);
+    }
+  }
   // The slot join is NAME-keyed (the only join key both feeds carry).
   // When two distinct ids share a rendered name, a name-joined slot
   // cannot be attributed: publishing it would hand one player's match
@@ -415,9 +440,81 @@ export function buildTournamentAppearances(
           }
         : {}),
     });
-    if (a) out.push(a);
+    if (!a) continue;
+    const rung = rungOf.get(p.name);
+    out.push(
+      rung
+        ? {
+            ...a,
+            fixture: {
+              ...a.fixture,
+              stage: { round: rung, label: ROUND_LABELS[rung] },
+            },
+          }
+        : a,
+    );
   }
   return out;
+}
+
+// ─── The round, derived from the draw we already fetch ───────────────
+//
+// THIS IS WHY THE VENDOR IS NOT USED FOR WOMEN'S ROUNDS. The WTA feed's
+// MatchID is a BRACKET POSITION in a full 2^k tree laid out top-down: 1
+// is the final, 2–3 the semi-finals, 4–7 the quarters, 8–15 the round of
+// 16, 16–31 the round of 32. The rung is simply the depth of the slot,
+// and we have been fetching and discarding it since this connector
+// shipped.
+//
+// WHAT PROVES IT IS A BRACKET AND NOT A COUNTER: on the DC Open's last
+// day the WTA singles final, the ATP singles final and the ATP doubles
+// final are LS001, MS001 and MD001 — three draws, two tours, one
+// number. And LS028 exists in a 28-player draw, which plays only 27
+// matches; a contiguous per-round counter could never mint a 28, so the
+// numbering must be full-bracket-with-byes. That is also why COUNTING
+// the first round would have shipped a bug: 28 players with 4 byes give
+// 12 first-round matches, and 2 × 12 = 24 is not a round.
+//
+// Four refusals, each a wrong rung avoided rather than a nicety:
+//   - QUALIFYING is excluded. RS007 is a qualifying match and would
+//     otherwise read as a quarter-final; a qualifying draw's last round
+//     is not one.
+//   - A DEPTH BEYOND THE LADDER yields nothing, not the nearest rung.
+//   - A MALFORMED id yields nothing. Never a default (invariant 4), and
+//     never a fixed slice(2) — a longer prefix must not silently shift.
+//   - r64 and r128 ARE PREDICTED, NOT OBSERVED: the only draw we hold is
+//     28/32. The arithmetic says Rome and the slams will emit them; the
+//     first one that appears is a checkpoint to confirm, not a fact yet.
+const RUNGS: RoundCode[] = ['f', 'sf', 'qf', 'r16', 'r32', 'r64', 'r128'];
+
+// The label a person reads. Derived rather than provider text, because
+// this feed publishes no round NAME at all — only the position.
+export const ROUND_LABELS: Record<RoundCode, string> = {
+  f: 'Final',
+  sf: 'Semi-final',
+  qf: 'Quarter-final',
+  'third-place': 'Third-place play-off',
+  r16: 'Round of 16',
+  r32: 'Round of 32',
+  r64: 'Round of 64',
+  r128: 'Round of 128',
+};
+
+export function roundFromMatchId(
+  matchId: string | undefined,
+  drawLevelType?: string,
+): RoundCode | undefined {
+  if (!matchId) return undefined;
+  if (drawLevelType !== undefined && drawLevelType !== 'M') return undefined;
+  const m = /^([A-Za-z])([SDsd])(\d+)$/.exec(matchId.trim());
+  if (!m) return undefined;
+  const bracket = m[1].toUpperCase();
+  if (bracket === 'R' || bracket === 'Q') return undefined; // qualifying draws
+  const n = Number(m[3]);
+  if (!Number.isInteger(n) || n < 1) return undefined;
+  // Exact floor(log2) with no floating point: the slot's depth in a full
+  // binary bracket.
+  return RUNGS[31 - Math.clz32(n)];
 }
 
 // COMPETITION-SCOPED ROUND SLOTS (Prompt 11): "follow Wimbledon,
