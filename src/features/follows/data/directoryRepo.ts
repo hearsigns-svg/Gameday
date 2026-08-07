@@ -29,6 +29,13 @@ export interface DirectoryTeam {
   key: string;
   crestUrl?: string; // club crest (Prompt 13)
   colours?: string; // free-text kit colours ("Red / White")
+  // THE SERVER HAS ALWAYS SENT THESE (functions/src/directory.ts:201) and
+  // this type did not declare them, so they were parsed away and the
+  // in-league filter matched the display name alone. Providers publish
+  // their own alias lists — "Liverpool FC" AND "Liverpool" — and the
+  // server's identity rules deliberately match against those rather than
+  // guess which words are noise. The client was guessing by omission.
+  aliases?: string[];
 }
 
 export interface SearchTeamHit {

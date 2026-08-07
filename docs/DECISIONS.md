@@ -2357,3 +2357,103 @@
   mark and would change too); let Teams drop below the caption under a
   width threshold; or accept one wrapped-and-clipped name on the narrowest
   class. Not decided here.
+
+## 2026-08-07 — Prompt 22c: the rename that is not a data change, and a search box that lied
+
+- **THE SHORTENED NAMES DO NOT LAND, and the reason is worth more than the
+  change would have been.** The owner proposed "Champions League" for
+  "UEFA Champions League": what everyone calls it, fits at every width, a
+  data change rather than a layout change. Six names were proposed and all
+  six were refuted, because in THIS codebase a competition's display name
+  is not display-only:
+  - **The badge join runs on the NAME.** `leagueBadgeFor` takes its
+    by-id branch only when the id matches `/^\d+$/`, and a football-data
+    competition's id is its code — `'CL'`, not numeric. So it falls
+    through to country-scoped name matching, including a SUBSTRING pass
+    over every league's `strLeagueAlternate`. "uefa champions league" is
+    specific; "champions league" is exactly the kind of alternate other
+    European rows publish, and first writer wins. The failure mode is not
+    a missing badge, it is somebody else's badge.
+  - **And that badge reaches STORED follows.** `hydrateFollowArt` runs on
+    every browse and overwrites a stored follow's `crestUrl` from the
+    served row — deleting it when the response carries crests and this
+    row has none. A name-only edit could therefore silently rewrite or
+    wipe artwork already saved on every existing Champions League follow.
+  - **The monogram collides.** `monogramOf` takes the first letter of the
+    first two words: "Champions League" → CL, and "Champions League
+    qualifying" → CL. Two rows of one list, identical marks, where today
+    they are UC and CL. Reachable without a deploy — `withImageryPolicy`
+    can strip a logo and hydration then clears the stored one.
+  - **`label: league.name` is copied onto the follow** and art hydration
+    never refreshes it, so existing followers would keep the long name
+    for good while new followers got the short one. A permanent
+    two-population split from a cosmetic edit.
+  - **Search loses a word.** Typing "uefa" returns four rows today and
+    would return three, silently omitting the biggest competition in the
+    app, because `DirectoryLeague` has no alias field.
+  - Four of the five European rows carry the UEFA prefix, so dropping it
+    from one applies the rule to a quarter of its own family.
+  - WHAT IT WOULD ACTUALLY TAKE, if the short names are wanted for their
+    own sake rather than for the 375pt row: rename all four UEFA rows
+    together, add `aliases` to `DirectoryLeague` so "uefa" still finds
+    them, give the CL row an explicit numeric TSDB id so the badge stops
+    depending on name matching, and migrate stored follow labels. That is
+    a package, not a table edit.
+- **TENNIS NAMES ARE A HARD BLOCKER, not a judgement call.** Sponsor
+  prefixes are rife there ("National Bank Open presented by Rogers"), but
+  `canonicalDisplayName` and `tournamentKey` read the SAME alias table —
+  so adding a display alias necessarily changes `tennis-t-<slug>`, which
+  is stamped into fixture followKeys by both feeds and stored on follows.
+  A rename orphans existing follows and their calendar events. Display
+  would have to be split from key first.
+- **A search box that lied.** Search filtered on the bundled config label
+  while Home, Following, the team page and the sport picker all displayed
+  the REGIONAL word — so a UK user typed "football", the exact word the
+  app had just shown them, and got nothing. Worse than a wrong result:
+  there is nothing to correct, and it reads as "we don't have that sport".
+  `sportSearchTerms` / `sportMatches` now match EVERY name a sport goes
+  by, region-blind on purpose — people arrive with the word they already
+  have — while display stays regional, which is what keeps the two rows
+  apart when "football" legitimately names two sports in North America.
+- **The same class, swept.** Display and matching drawing from different
+  strings turned out to be four more things:
+  - `applyAtpDirectory` wrote `searchName: p.name.toLowerCase()` where
+    every other writer uses `normaliseName` and the query side always
+    has. MEASURED IN PRODUCTION: 12 of 1,291 athletes were unreachable by
+    any ASCII spelling — including "Hamad Medjedović", the exact case
+    `identity.ts` records as caught and fixed once already. Fixed at the
+    writer AND made SELF-HEALING on the keep path, which never wrote the
+    field: a scheduled job that repairs nothing is how a one-line bug
+    becomes permanent. No migration needed, and the vendor's spelling
+    becomes an alias where it differs from our canonical one.
+  - The in-league team filter compared raw lower-cased names and dropped
+    the `aliases` the server has always sent, because the client type
+    never declared them. "Monchengladbach" did not find "Mönchengladbach".
+  - Competition search did not fold diacritics while the athlete and team
+    search in the SAME result list did, so one screen answered to
+    "Brasileirao" for a player and not for the league.
+  - The soccer directory captioned a hardcoded "Soccer" on a screen that
+    now says Football everywhere else.
+  - `src/core/nameFold.ts` is one fold for every client search comparison,
+    mirroring the server's `normaliseName` rule for rule. The two dedupe
+    leaves keep their own near-copies deliberately: their fold decides
+    whether two documents are the same real event, and consolidating them
+    is a real piece of work with its own test surface, not a tidy-up to
+    smuggle into a search fix.
+  - REFUTED and left alone: the athlete-list placeholder. It reads
+    `sport.label` rather than the regional word, but tennis is the only
+    sport with athlete browse and tennis has no regional variant, so it
+    is currently a no-op. Changed anyway, as construction rather than a
+    fix — athletics is regionally named and has a directory.
+- **The repository had no remote.** 131 commits and weeks of work on one
+  machine. Audited before wiring one, never after: `git log --all -S` for
+  every value in `.env` and `functions/.env` across all 131 commits, and a
+  scan of all 289 tracked files — no secret has ever been committed. The
+  Firebase web `apiKey` in `src/core/firebase.ts` is a public client
+  identifier that already ships inside the app binary. `.gitignore`
+  hardened first: `.env` matched only the bare name, so `.env.production`
+  would have sailed past it; service-account and admin-credential patterns
+  were absent entirely; and `.claude/settings.local.json` was protected
+  only by the owner's GLOBAL ignore file, which does not travel with a
+  repository. AGENTS rule 14 makes the push part of the end-of-stage
+  routine, paired with the simulator rebuild.

@@ -188,6 +188,26 @@ These apply to every stage. They do not need restating in a brief.
     there is no failure. Before applying: list every writer of the
     population you are replacing — schedulers, roster specs, seed
     scripts, feature flags — and disable them in the SAME change.
+14. **Push at the end of every stage, alongside the simulator rebuild**
+    (owner ruling 2026-08-07). Until that date this repository had no
+    remote at all: 131 commits, ~1,000 tests and weeks of work existed on
+    one machine. That was the largest single risk in the project and none
+    of it was in the code. A stage is not finished when it is committed;
+    it is finished when it is pushed.
+    - Rule 9's simulator rebuild and this push are ONE step, not two.
+      Report both outcomes together.
+    - **Audit what a push would publish BEFORE the first one to any new
+      remote**, never after: `git log --all -S<value>` for every key in
+      `.env` and `functions/.env`, plus a scan of tracked files for the
+      same values. A secret can only be kept out of a remote before it
+      reaches one; afterwards the only honest remedy is rotation.
+    - The Firebase web `apiKey` in `src/core/firebase.ts` is a public
+      client identifier that already ships inside every app binary. It is
+      not a secret and needs no redaction. Everything in `.env` and
+      `functions/.env` is — and as of 2026-08-07 none of it had ever been
+      committed, across all 131 commits.
+    - A failed push is reported, not retried blind — same rule as a failed
+      deploy.
 
 ## Concurrency against production
 

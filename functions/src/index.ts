@@ -1803,6 +1803,24 @@ async function applyAtpDirectory(
           groupingKey: groupingFor(k.player.rank),
           ...(k.player.countryCode ? { countryCode: k.player.countryCode } : {}),
           providerIds: { ...held, [ATP_VENDOR]: k.player.vendorId },
+          // SELF-HEALING, so this needs no migration. The keep path never
+          // wrote `searchName`, which meant fixing the create path alone
+          // would have left the twelve already-stored names broken for
+          // good — a scheduled job that repairs nothing is how a one-line
+          // bug becomes permanent. Derived from the doc's OWN
+          // `displayName` rather than the vendor's spelling, because
+          // display is the string this has to agree with; four of these
+          // docs were manually merged and keep our canonical name.
+          searchName: normaliseName(
+            String(byId.get(k.athleteId)?.displayName ?? k.player.name),
+          ),
+          // The vendor's spelling becomes an alias when it differs, so a
+          // merged player is findable by both. `search.ts` already
+          // searches aliases alongside searchName.
+          ...(normaliseName(k.player.name) !==
+          normaliseName(String(byId.get(k.athleteId)?.displayName ?? k.player.name))
+            ? { aliases: FieldValue.arrayUnion(normaliseName(k.player.name)) }
+            : {}),
           active: true,
           updatedAt: startedAt,
         },
@@ -1842,7 +1860,15 @@ async function applyAtpDirectory(
     batch.set(db.collection('athletes').doc(id), {
       id,
       displayName: p.name,
-      searchName: p.name.toLowerCase(),
+      // `normaliseName`, NOT `.toLowerCase()` (22c). Every other writer of
+      // this field already used it (athletes.ts:527, :857) and the query
+      // side always has (search.ts:233), so lower-casing here put the ONE
+      // population in the store that could not be searched: 12 men whose
+      // names carry a diacritic or a hyphen were unreachable by any ASCII
+      // spelling a user would type. "Hamad Medjedović" is the same case
+      // identity.ts:32 records as caught and fixed once already — this
+      // reintroduced it for the ATP directory alone.
+      searchName: normaliseName(p.name),
       aliases: [],
       sport: 'tennis',
       providerIds: { [ATP_VENDOR]: p.vendorId },

@@ -9,6 +9,8 @@ import {
 import {
   REGIONALLY_NAMED_SPORTS,
   sportLabelFor,
+  sportMatches,
+  sportSearchTerms,
 } from '../../features/follows/domain/sportTerms';
 import { SPORTS } from '../../features/follows/domain/sportsConfig';
 
@@ -108,5 +110,86 @@ describe('terminology is a display layer only', () => {
     // fine and the override would be dead.
     const keys = new Set(SPORTS.map((s) => s.key));
     for (const k of REGIONALLY_NAMED_SPORTS) expect(keys.has(k)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MATCHING vs DISPLAY (22c). The bug these pin: search filtered on the
+// bundled config label while every screen displayed the regional one, so a
+// UK user typed the exact word the app had shown them and got nothing.
+
+describe('sportSearchTerms', () => {
+  it('returns the bundled label plus every regional variant', () => {
+    const terms = sportSearchTerms('soccer', 'Soccer');
+    expect(terms).toContain('Soccer');
+    expect(terms).toContain('Football');
+  });
+
+  it('de-duplicates: four regions say Football, the word appears once', () => {
+    const terms = sportSearchTerms('soccer', 'Soccer');
+    expect(terms.filter((t) => t === 'Football')).toHaveLength(1);
+  });
+
+  it('a sport with no regional variants is just its own label', () => {
+    expect(sportSearchTerms('tennis', 'Tennis')).toEqual(['Tennis']);
+  });
+
+  it('never returns the sport KEY — these are names, not identifiers', () => {
+    expect(sportSearchTerms('ice-hockey', 'Ice hockey')).not.toContain(
+      'ice-hockey',
+    );
+  });
+});
+
+describe('sportMatches', () => {
+  it('finds soccer by the word the UK app displays', () => {
+    expect(sportMatches('soccer', 'Soccer', 'football')).toBe(true);
+  });
+
+  it('finds soccer by the word the config carries', () => {
+    expect(sportMatches('soccer', 'Soccer', 'soccer')).toBe(true);
+  });
+
+  // The owner's specific concern: in North America "football" genuinely
+  // names two sports, and neither may shadow the other.
+  it('"football" surfaces BOTH soccer and NFL — neither shadows the other', () => {
+    expect(sportMatches('soccer', 'Soccer', 'football')).toBe(true);
+    expect(sportMatches('nfl', 'American football', 'football')).toBe(true);
+  });
+
+  it('matches on a prefix, the way a search box is actually used', () => {
+    expect(sportMatches('athletics', 'Athletics', 'track')).toBe(true);
+    expect(sportMatches('motorsport', 'Motorsport', 'auto')).toBe(true);
+  });
+
+  it('is case- and whitespace-insensitive', () => {
+    expect(sportMatches('soccer', 'Soccer', '  FOOTball ')).toBe(true);
+  });
+
+  it('an empty needle matches nothing — it must not return every sport', () => {
+    expect(sportMatches('soccer', 'Soccer', '')).toBe(false);
+    expect(sportMatches('soccer', 'Soccer', '   ')).toBe(false);
+  });
+
+  it('does not match an unrelated word', () => {
+    expect(sportMatches('soccer', 'Soccer', 'cricket')).toBe(false);
+  });
+
+  // Matching is region-blind BY DESIGN: people arrive with the word they
+  // already have. Display stays regional, which is what distinguishes the
+  // two rows once they are both on screen.
+  it('matching does not depend on the active region, but display does', () => {
+    expect(sportMatches('soccer', 'Soccer', 'football')).toBe(true);
+    expect(sportLabelFor('soccer', 'Soccer', 'north-america')).toBe('Soccer');
+    expect(sportLabelFor('soccer', 'Soccer', 'uk-ie')).toBe('Football');
+  });
+
+  it('every regionally-named sport is findable by all of its names', () => {
+    for (const key of REGIONALLY_NAMED_SPORTS) {
+      for (const name of sportSearchTerms(key, 'ZZUNUSED')) {
+        if (name === 'ZZUNUSED') continue;
+        expect(sportMatches(key, 'ZZUNUSED', name)).toBe(true);
+      }
+    }
   });
 });

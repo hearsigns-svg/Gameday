@@ -44,8 +44,49 @@ yarn-error.*
 /ios
 /android
 
-# Secrets — never commit
-.env
+# ---------------------------------------------------------------------------
+# SECRETS — never commit. Hardened before this repo got its first remote
+# (22c): until then everything lived on one machine, so a gap here cost
+# nothing. It costs something now.
+#
+# Verified at the time of hardening: no secret value has ever appeared in
+# any of the 131 commits (checked with `git log --all -S<value>` for every
+# key in .env and functions/.env), and no tracked file contains one.
+# ---------------------------------------------------------------------------
+
+# EVERY .env variant, not just the bare name. `\.env` matches only `.env`
+# exactly — `.env.production` and `.env.staging` sailed straight past it.
+.env*
+# ...except the emulator override, which holds a localhost URL and nothing
+# else, and which the local suite needs. Negated explicitly so the exception
+# is a decision rather than a gap.
+!**/.env.demo-gameday
+
+# Service-account / admin credentials. These are the ones that actually
+# grant access — unlike the Firebase web apiKey in src/core/firebase.ts,
+# which is a public client identifier and ships inside the app binary.
+*serviceAccount*.json
+*-adminsdk-*.json
+application_default_credentials.json
+*.credentials.json
+
+# Loose key material of the kind that gets pasted next to a script
+.rapidkey
+*.rapidkey
+*-key.txt
+*_key.txt
+
+# Android signing
+*.keystore
+
+# Agent scratch: local settings carry machine paths and permissions, and
+# were previously covered ONLY by the owner's global ~/.config/git/ignore —
+# protection that does not travel with the repo.
+.claude/settings.local.json
+
+# Throwaway probes run from inside the tree so node resolves deps there
+.probe*.mjs
+functions/.probe*.mjs
 
 # Build output + emulator artifacts
 functions/lib/

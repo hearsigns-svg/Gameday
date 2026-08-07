@@ -30,6 +30,8 @@ import {
   TileRow,
 } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
+import { sportLabelFor } from '../domain/sportTerms';
+import { activeRegion } from '../../../core/regionStore';
 import { messageOf } from '../../../core/result';
 import { hueToHex, teamTheme } from '../../../core/teamTheme';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
@@ -116,6 +118,11 @@ export default function AthleteListScreen({ navigation, route }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
   const sport = sportByKey(route.params.sportKey);
+  // What this user's region calls the sport — the same string the tile
+  // they arrived from was showing.
+  const sportName = sport
+    ? sportLabelFor(sport.key, sport.label, activeRegion())
+    : '';
   const [browse, setBrowse] = useState<AthleteSection[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -303,10 +310,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={`Search ${sport?.label ?? ''} athletes`}
+          // The region's word, like every other sport-naming site — the
+        // placeholder in a UK user's search box read "Search Soccer
+        // athletes" on a screen they had reached from a tile saying
+        // Football.
+        placeholder={`Search ${sportName} athletes`}
           placeholderTextColor={t.textSecondary}
           autoCorrect={false}
-          accessibilityLabel={`Search ${sport?.label ?? ''} athletes`}
+          accessibilityLabel={`Search ${sportName} athletes`}
           style={[
             styles.input,
             { borderColor: t.border, color: t.textPrimary, backgroundColor: t.surface },

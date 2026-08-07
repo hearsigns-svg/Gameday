@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { monogramOf, FollowButton, SportCard, TileRow } from '../../../core/components';
+import { anyFoldedIncludes } from '../../../core/nameFold';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
@@ -69,8 +70,16 @@ export default function TeamListScreen({ navigation, route }: Props) {
 
   const visible = useMemo(() => {
     if (!teams) return null;
-    const q = queryText.trim().toLowerCase();
-    return q ? teams.filter((tm) => tm.name.toLowerCase().includes(q)) : teams;
+    // FOLD BOTH SIDES, AND SEARCH THE ALIASES (22c). This compared raw
+    // lower-cased names, so "Monchengladbach" did not find
+    // "Mönchengladbach" — the row was on screen, the user typed what
+    // they saw, and the list went empty. The provider's own aliases go
+    // in too, now that the client type stops discarding them.
+    return queryText.trim()
+      ? teams.filter((tm) =>
+          anyFoldedIncludes([tm.name, ...(tm.aliases ?? [])], queryText),
+        )
+      : teams;
   }, [teams, queryText]);
 
   const toggle = useCallback(async (team: DirectoryTeam) => {

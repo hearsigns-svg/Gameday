@@ -41,6 +41,9 @@ import { colourFromKitText } from '../domain/entityColour';
 import { nationCaption } from '../domain/athleteIdentity';
 import { flagEmojiOf } from '../../../core/nationality';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
+import { sportLabelFor, sportMatches } from '../domain/sportTerms';
+import { activeRegion } from '../../../core/regionStore';
+import { foldedIncludes } from '../../../core/nameFold';
 
 type Props = RootScreenProps<'Search'>;
 
@@ -60,15 +63,30 @@ interface Row {
   followable?: Followable; // absent → row navigates instead
 }
 
+// The sport's name AS THIS USER SEES IT EVERYWHERE ELSE, for the two
+// sites that hold only a sport KEY. (The two inside `localMatches` hold
+// the config object already and call `sportLabelFor` directly.) All four
+// used to name the sport with its bundled label rather than the word on
+// screen, so a search result read "Arsenal · Premier League · Soccer" to
+// someone the rest of the app had spent all day calling it Football to.
+function sportNameOf(sportKey: string): string {
+  const cfg = sportByKey(sportKey);
+  return cfg ? sportLabelFor(cfg.key, cfg.label, activeRegion()) : sportKey;
+}
+
 function localMatches(q: string): { sports: Row[]; comps: Row[] } {
   const needle = q.trim().toLowerCase();
   if (needle.length < 2) return { sports: [], comps: [] };
+  // MATCH EVERY NAME, DISPLAY THE LOCAL ONE (22c). This filtered on the
+  // bundled config label while Home, Following, the team page and the
+  // sport picker all showed the REGIONAL word — so in the UK the app
+  // said "Football", and then found nothing when you typed it back.
   const sports: Row[] = SPORTS.filter(
-    (s) => s.enabled && s.label.toLowerCase().includes(needle),
+    (s) => s.enabled && sportMatches(s.key, s.label, needle),
   ).map((s) => ({
     kind: 'sport',
     key: `sport-${s.key}`,
-    title: s.label,
+    title: sportLabelFor(s.key, s.label, activeRegion()),
     caption: 'Sport',
     sportKey: s.key,
     ...(s.seriesFollowable
@@ -87,12 +105,15 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
   }));
   const comps: Row[] = SPORTS.flatMap((s: SportConfig) =>
     (s.staticCompetitions ?? [])
-      .filter((c) => s.enabled && c.name.toLowerCase().includes(needle))
+      // Folded, like the server's athlete and team search in the same
+      // result list — an unfolded competition filter meant one screen
+      // answered to "Brasileirao" for a player and not for the league.
+      .filter((c) => s.enabled && foldedIncludes(c.name, needle))
       .map((c) => ({
         kind: 'competition' as const,
         key: c.key,
         title: c.name,
-        caption: `${c.country} · ${s.label}`,
+        caption: `${c.country} · ${sportLabelFor(s.key, s.label, activeRegion())}`,
         sportKey: s.key,
         ...(cachedPriorities().competitionArt[String(c.id)]
           ? { imageUrl: cachedPriorities().competitionArt[String(c.id)] }
@@ -182,12 +203,16 @@ export default function SearchScreen({ navigation }: Props) {
     const soccerRows: Row[] =
       needle.length >= 2
         ? soccerLeagues
-            .filter((l) => l.name.toLowerCase().includes(needle))
+            .filter((l) => foldedIncludes(l.name, needle))
             .map((l) => ({
               kind: 'competition' as const,
               key: l.key,
               title: l.name,
-              caption: `${l.country} · Soccer`,
+              // The LAST hardcoded sport name on this screen. Every other
+              // caption here now says what the user's region calls it;
+              // this literal would have gone on saying "Soccer" under a
+              // row on a screen that says Football everywhere else.
+              caption: `${l.country} · ${sportNameOf('soccer')}`,
               sportKey: 'soccer',
               // The mirror image of the static rows: this one had the
               // logo on the FOLLOW and nothing on the row.
@@ -206,7 +231,7 @@ export default function SearchScreen({ navigation }: Props) {
       kind: 'team',
       key: hit.key,
       title: hit.name,
-      caption: `${hit.league} · ${sportByKey(hit.sportKey)?.label ?? hit.sportKey}`,
+      caption: `${hit.league} · ${sportNameOf(hit.sportKey)}`,
       sportKey: hit.sportKey,
       ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
       followable: {
@@ -231,7 +256,7 @@ export default function SearchScreen({ navigation }: Props) {
       // men who carry no browse group at all (Prompt 12).
       caption: [
         retiredCaption(hit) ?? hit.grouping ?? 'Athlete',
-        sportByKey(hit.sportKey)?.label ?? hit.sportKey,
+        sportNameOf(hit.sportKey),
         // Nationality (Prompt 16 B): the athlete's identity mark.
         nationCaption(hit.countryCode),
       ]

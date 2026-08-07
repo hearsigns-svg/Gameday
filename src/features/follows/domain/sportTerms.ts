@@ -63,6 +63,48 @@ export function sportLabelFor(
   return TERMS[sportKey]?.[region] ?? fallbackLabel;
 }
 
+// EVERY NAME THIS SPORT GOES BY, ANYWHERE — for MATCHING, never display.
+//
+// The display half of this module and the matching half were drawing from
+// different strings, which is the one thing a rename table must not allow.
+// Search filtered on the bundled label while every screen showed the
+// regional one, so a UK user typed the exact word the app had just shown
+// them — "football" — and got nothing back. Worse than a wrong result,
+// because it reads as "we don't have that sport".
+//
+// MATCHING IGNORES THE ACTIVE REGION ON PURPOSE. Someone who calls it
+// soccer should find it in London and someone who calls it football
+// should find it in Sydney; a search box is where people arrive with the
+// word they already have, not the word we chose for them. The display
+// name still comes from `sportLabelFor`, so the row answers in the local
+// word whichever spelling found it.
+//
+// In North America "football" therefore matches BOTH this and NFL — which
+// is correct, because there it genuinely names two sports, and the two
+// rows are distinguishable precisely because they display their regional
+// names ("Soccer" and "Football") rather than the word that was typed.
+export function sportSearchTerms(
+  sportKey: string,
+  fallbackLabel: string,
+): string[] {
+  const variants = Object.values(TERMS[sportKey] ?? {});
+  return [...new Set([fallbackLabel, ...variants])];
+}
+
+// Does any name this sport goes by contain the needle? Case-folded here
+// rather than at each call site, so no caller can forget.
+export function sportMatches(
+  sportKey: string,
+  fallbackLabel: string,
+  needle: string,
+): boolean {
+  const n = needle.trim().toLowerCase();
+  if (n === '') return false;
+  return sportSearchTerms(sportKey, fallbackLabel).some((t) =>
+    t.toLowerCase().includes(n),
+  );
+}
+
 // Every sport whose name varies at all — for the report, and for a test
 // that keeps this list and the table honest with each other.
 export const REGIONALLY_NAMED_SPORTS = Object.keys(TERMS).sort();
