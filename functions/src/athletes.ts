@@ -263,6 +263,37 @@ export type AthleteKey = ProviderKey | AthleteNameKey;
 declare const athleteNameKeyBrand: unique symbol;
 export type AthleteNameKey = string & { readonly [athleteNameKeyBrand]: true };
 
+// A STABLE SLOT FOR EACH REF ON ONE APPEARANCE DOC. PURE.
+//
+// The F34 guard below keeps one provider id per doc, which is exactly
+// right for TENNIS, where an appearance is stored one per player. A
+// BOUT is one document with TWO id-bearing fighters, so keying the
+// guard on the doc alone made the second fighter look like a second
+// claimant and refused him — 4 of 12 boxing bouts landed followable by
+// only one of the two men in the ring.
+//
+// So the guard keys on (doc, slot). The slot must NOT be the provider's
+// array index: this vendor returns fighter_1/fighter_2 in no fixed
+// order (6 of 12 captured bouts differ from sorted order), so an index
+// would make the slots swap between polls and invent a collision that
+// appears and disappears with the payload. Ranking the FOLDED names
+// gives the same slot whichever way round they arrive.
+//
+// Ties — the same folded name twice on one doc — fall back to input
+// order. That is a person fighting themselves, which `appearanceTwinKey`
+// already refuses upstream; here it just has to be deterministic.
+export function stableSlots(refs: readonly { name: string }[]): number[] {
+  const folded = refs.map((r) => toSearchName(r.name));
+  const ranked = folded
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => (a.f < b.f ? -1 : a.f > b.f ? 1 : a.i - b.i));
+  const slots = new Array<number>(refs.length);
+  ranked.forEach((x, rank) => {
+    slots[x.i] = rank;
+  });
+  return slots;
+}
+
 export function nameKey(sport: string, name: string): AthleteNameKey {
   return `${sport}|${toSearchName(name)}` as AthleteNameKey;
 }
@@ -497,7 +528,8 @@ export function resolveDrafts(
   // collision is counted and reported instead of silently absorbed.
   // Changing the id scheme to represent both is gated on an owner ruling
   // (see the Prompt 8 report); until then the loss is LOUD.
-  const docIdOwner = new Map<string, string>(); // doc id → provider key
+  // (doc id, stable slot) → provider key. See `stableSlots`.
+  const slotOwner = new Map<string, string>();
   const appearances: Fixture[] = [];
 
   // Deterministic processing order INDEPENDENT of caller input order:
@@ -519,12 +551,14 @@ export function resolveDrafts(
   );
   for (const draft of sorted) {
     const keys: string[] = [];
-    for (const ref of draft.refs) {
+    const slots = stableSlots(draft.refs);
+    for (const [refIndex, ref] of draft.refs.entries()) {
       const m = matchAthlete(index, draft.fixture.sport, ref);
       if (m.kind === 'certain' || m.kind === 'confident') {
         if (ref.source && ref.externalId) {
           const pk = providerKey(ref.source, ref.externalId);
-          const owner = docIdOwner.get(draft.fixture.id);
+          const slotKey = `${draft.fixture.id}#${slots[refIndex]}`;
+          const owner = slotOwner.get(slotKey);
           if (owner !== undefined && owner !== pk) {
             // A second, DIFFERENT provider id arriving at the same
             // name-built doc id: the F34 shape. The first owner keeps
@@ -539,7 +573,7 @@ export function resolveDrafts(
             }
             continue;
           }
-          docIdOwner.set(draft.fixture.id, pk);
+          slotOwner.set(slotKey, pk);
         }
         counts[m.kind]++;
         if (!keys.includes(m.athlete!.id)) keys.push(m.athlete!.id);

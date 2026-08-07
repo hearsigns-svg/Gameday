@@ -2678,3 +2678,56 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
     vendor" — correct as a rule — means **more than half of every card
     cannot publish**, and only 2 of 5 main events have BOTH fighters
     mapped.
+
+## 2026-08-07 — The F34 guard on a two-sided bout, and a test that was not testing it
+
+- **THE GUARD NOW KEYS ON (doc, SLOT), not on the doc alone.** Keeping one
+  provider id per document is exactly right for tennis, where an
+  appearance is stored ONE PER PLAYER. A bout is one document with TWO
+  id-bearing fighters, so the second always looked like a second claimant
+  and was refused: 4 of 12 real boxing bouts landed followable by only one
+  of the two men in the ring. A follower of Floyd Masson got nothing for
+  his own fight.
+- **THE SLOT IS NOT THE PROVIDER'S ARRAY INDEX** (owner correction, and it
+  was the right one). Measured: 6 of 12 captured bouts return
+  fighter_1/fighter_2 in an order that differs from sorted, so an index
+  would let the slots swap between polls. `stableSlots` ranks the FOLDED
+  names, giving each fighter the same slot whichever way round they
+  arrive.
+- **THE DOC ID IS BUILT FROM REF ORDER, AND THAT IS A SEPARATE BUG.** The
+  owner asked me to confirm the ordering before relying on it rather than
+  assume it was sorted. It is not: `appearanceId` joins the refs AS GIVEN,
+  and `…-app-shurretta-metcalf-amanda-galle` is stored in vendor order
+  where sorted would be `amanda-galle-shurretta-metcalf`. So if a provider
+  ever swaps a pair between polls, the doc id CHANGES — the old doc is
+  retired and a new one created, which loses the user's reminder and
+  per-event settings on that bout. That is the identity-across-updates
+  rule, broken. NOT FIXED HERE: changing the id scheme rewrites existing
+  doc ids and is a migration. Both boxing sources are exposed; tennis is
+  not, because its appearances carry one ref.
+- **RULE 15 FOUND THAT TWO OF MY OWN TESTS PROVED NOTHING.**
+  - The cross-poll swap test compares two SEPARATE `resolveDrafts` runs,
+    and `slotOwner` is fresh per run — so it passes with the provider's
+    array index as the slot. It does not discriminate, and saying so is
+    more useful than leaving it looking like coverage.
+  - An attempt to write one that DID discriminate failed too: two drafts
+    sharing a doc id never reach the slot guard, because a
+    duplicate-draft check drops the second first. Under today's ref-order
+    doc ids, swapped bouts cannot share an id at all — so an index-based
+    slot is functionally equivalent RIGHT NOW. The stable slot is
+    defensive, and becomes load-bearing the moment the doc-id ordering is
+    fixed. Recorded as the honest position rather than a caught bug.
+  - **AND THE F34 REGRESSION TEST NEVER TESTED THE F34 GUARD.** Deleting
+    the provider-id collision check entirely left ALL 1,092 tests green.
+    The test asserted `nameCollisions >= 1` and one surviving appearance —
+    both of which the unrelated duplicate-draft check also produces. Safety
+    code written after a real incident had no test of its own for two
+    prompts. It now asserts on the collision DETAIL (`wta:111 vs wta:222`,
+    which only the id guard emits) and on `droppedNoKeys`, and deleting
+    the guard fails it.
+- **PBC WAS NEVER AFFECTED, for a reason worth recording**: its refs carry
+  no `source`/`externalId` (PBC publishes no fighter ids), so the guarded
+  branch is never entered. 6 of 6 PBC bouts carry two athlete ids. The
+  three TSDB boxing bouts with one id are unmapped second fighters, not
+  refusals. Tennis and WTA bouts carry one id BY DESIGN — their
+  appearances are one per player.

@@ -19,6 +19,7 @@ import {
   resolveDrafts,
   rosterAthlete,
   RosterEntry,
+  stableSlots,
   stampDriverKeys,
 } from '../athletes';
 import { appearanceFor } from '../appearances';
@@ -223,6 +224,18 @@ describe('F34 — two players, one rendered name', () => {
     ]);
     expect(r.counts.nameCollisions).toBeGreaterThanOrEqual(1);
     expect(r.collisionDetails.length).toBeGreaterThanOrEqual(1);
+    // ASSERT WHICH GUARD FIRED. Two can produce this outcome — the
+    // provider-id check inside the ref loop, and the belt-over-braces
+    // duplicate-draft check after it — and the assertions above are
+    // satisfied by either. Deleting the id guard entirely left all 1,092
+    // tests green (rule 15, attack D), which means the safety code
+    // written after F34 had no test of its own. The detail string is what
+    // tells them apart: the id guard names both provider keys, the
+    // duplicate check says "duplicate draft dropped".
+    expect(r.collisionDetails[0]).toContain('wta:111 vs wta:222');
+    // And a ref refused by the id guard leaves its draft with NO keys —
+    // the duplicate check, by contrast, drops a draft that has them.
+    expect(r.counts.droppedNoKeys).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -753,5 +766,151 @@ describe('CreationPolicy id_backed', () => {
       { create: 'never' },
     );
     expect(r.counts.created).toBe(0);
+  });
+});
+
+// ─── Two-sided bouts and the F34 guard ────────────────────────────────
+//
+// The guard kept one provider id per DOC, which is right for tennis
+// (appearances are one per player) and wrong for a bout (one doc, two
+// id-bearing fighters). It refused the second fighter on 4 of 12 real
+// boxing bouts, so a follower of Floyd Masson got nothing for his own
+// fight. It now keys on (doc, stable slot).
+
+describe('stableSlots', () => {
+  it('gives the same slots however the provider orders the pair', () => {
+    const a = stableSlots([{ name: 'Troy Williamson' }, { name: 'Callum Simpson' }]);
+    const b = stableSlots([{ name: 'Callum Simpson' }, { name: 'Troy Williamson' }]);
+    // Same person, same slot, whichever position they arrived in.
+    expect(a[0]).toBe(b[1]); // Williamson
+    expect(a[1]).toBe(b[0]); // Simpson
+    expect([...a].sort()).toEqual([0, 1]);
+  });
+
+  it('folds before ranking, so spelling variance cannot move a slot', () => {
+    expect(stableSlots([{ name: 'Filip Hrgović' }, { name: 'Moses Itauma' }])).toEqual(
+      stableSlots([{ name: 'Filip Hrgovic' }, { name: 'Moses Itauma' }]),
+    );
+  });
+
+  it('is deterministic when both names fold the same', () => {
+    const s = stableSlots([{ name: 'A B' }, { name: 'A  B' }]);
+    expect([...s].sort()).toEqual([0, 1]);
+  });
+});
+
+describe('bout docs: both fighters keep their key', () => {
+  const bout = (id: string): Fixture => ({
+    id,
+    sport: 'boxing',
+    competition: 'Boxing',
+    competitionId: 'boxingdata-cards',
+    title: 'Card',
+    followKeys: ['boxingdata-cards'],
+    startUtc: '2026-09-01T20:00:00.000Z',
+    status: 'scheduled',
+    durationHours: 4,
+    timePrecision: 'nominal',
+    confidence: 'provisional',
+    updatedAt: NOW,
+  });
+  const nyika = athlete({
+    id: 'athlete_000275',
+    displayName: 'David Nyika',
+    providerIds: { boxingdata: 'aaa' },
+    sport: 'boxing',
+  });
+  const masson = athlete({
+    id: 'athlete_000276',
+    displayName: 'Floyd Masson',
+    providerIds: { boxingdata: 'bbb' },
+    sport: 'boxing',
+  });
+  const idx = () => buildAthleteIndex([nyika, masson]);
+  const refs = [
+    { name: 'David Nyika', source: 'boxingdata', externalId: 'aaa' },
+    { name: 'Floyd Masson', source: 'boxingdata', externalId: 'bbb' },
+  ];
+
+  // THE REGRESSION THIS FIXES.
+  it('carries BOTH athlete keys, and collides nothing', () => {
+    const d = appearanceFor(bout('c1'), {
+      refs,
+      title: 'David Nyika vs Floyd Masson',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([d], idx(), { create: 'id_backed', provenance: 'vendor' });
+    expect(r.counts.nameCollisions).toBe(0);
+    expect(r.appearances[0].followKeys).toContain('athlete_000275');
+    expect(r.appearances[0].followKeys).toContain('athlete_000276');
+  });
+
+  // A provider that swaps fighter_1/fighter_2 between polls must not
+  // invent a collision — 6 of 12 captured bouts differ from sorted order,
+  // so this is the normal case, not an edge one.
+  it('is unchanged when the provider swaps the pair between polls', () => {
+    const forward = appearanceFor(bout('c2'), {
+      refs,
+      title: 'David Nyika vs Floyd Masson',
+      updatedAt: NOW,
+    })!;
+    const reversed = appearanceFor(bout('c2'), {
+      refs: [refs[1], refs[0]],
+      title: 'Floyd Masson vs David Nyika',
+      updatedAt: NOW,
+    })!;
+    const a = resolveDrafts([forward], idx(), { create: 'id_backed' });
+    const b = resolveDrafts([reversed], idx(), { create: 'id_backed' });
+    expect(a.counts.nameCollisions).toBe(0);
+    expect(b.counts.nameCollisions).toBe(0);
+    // Same two keys either way round — no churn in what a follower gets.
+    expect([...a.appearances[0].followKeys].sort()).toEqual(
+      [...b.appearances[0].followKeys].sort(),
+    );
+  });
+
+  // WHY THERE IS NO CROSS-DRAFT SWAP TEST HERE, established by trying to
+  // write one (rule 15). Two drafts sharing a doc id never reach the slot
+  // guard at all — an earlier duplicate-draft check drops the second, and
+  // the "collision" it counts is that, not a slot clash. And two drafts
+  // CANNOT share a doc id after a swap anyway, because `appearanceId` is
+  // built from ref ORDER (see DECISIONS: that is its own bug).
+  //
+  // So a provider-index slot would behave identically TODAY. The stable
+  // slot is defensive, and it becomes load-bearing the moment the doc-id
+  // ordering is fixed — at which point swapped bouts WOULD share an id and
+  // an index-based slot would invent a collision. Said plainly rather than
+  // claimed as a caught bug.
+
+  // F34's ACTUAL CASE, on a bout: two DIFFERENT people arriving at the
+  // SAME slot must still be refused. This is the half that must not
+  // regress — the guard is loosened per-slot, not switched off.
+  it('still refuses two different ids claiming ONE slot', () => {
+    const twin = athlete({
+      id: 'athlete_000999',
+      displayName: 'David Nyika',
+      providerIds: { boxingdata: 'zzz' },
+      sport: 'boxing',
+    });
+    const first = appearanceFor(bout('c3'), {
+      refs,
+      title: 'David Nyika vs Floyd Masson',
+      updatedAt: NOW,
+    })!;
+    const second = appearanceFor(bout('c3'), {
+      refs: [
+        { name: 'David Nyika', source: 'boxingdata', externalId: 'zzz' },
+        refs[1],
+      ],
+      title: 'David Nyika vs Floyd Masson',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([first, second], buildAthleteIndex([nyika, masson, twin]), {
+      create: 'id_backed',
+    });
+    // Two people, one slot on one doc: the second is refused and counted,
+    // never silently absorbed.
+    expect(r.counts.nameCollisions).toBeGreaterThanOrEqual(1);
+    expect(r.collisionDetails.length).toBeGreaterThanOrEqual(1);
   });
 });
