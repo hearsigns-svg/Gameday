@@ -2584,3 +2584,41 @@ and every attempt but one changed the design.
     collections are keyed by it. Both attacks now fail to compile.
 - Gate: 81 suites / 1048 tests both timezones, both typechecks, functions
   build. Not deployed — compile-time only; rides the next deploy.
+
+## 2026-08-07 — boxing-data.com: the rights position, and a promoter field that is never inferred
+
+- **NOTHING IS GRANTED AND NOTHING IS WITHHELD** (owner ruling). boxing-data.com
+  publishes no terms of use, no licensing statement and no provenance
+  statement — not on the site, not on the pricing page, not in the docs,
+  not on RapidAPI. The only assertion anywhere is
+  `Copyright © 2026 Boxing Data. All rights reserved.` A drafted enquiry
+  asking what the source is, whether we may write their data into end
+  users' calendars, and whether they hold an upstream licence was DELETED
+  UNSENT: silence is not refusal, and asking a question nobody has to
+  answer converts a clear position into an ambiguous one.
+  - The operative contract is therefore RapidAPI's marketplace terms,
+    which govern the subscription itself.
+  - Revisit if and only if the vendor states a restriction. This is
+    deliberately a different posture from atptour.com, where a specific
+    party HAS published terms and the question is what they mean.
+  - What the vendor does claim, verbatim: coverage of "Top Rank",
+    "Matchroom Boxing", "Golden Boy", "Queensberry", "MVP", "Zuffa
+    Boxing" and "Boxxer", and "Live event and fight data updated daily".
+- **`Fixture.promoter` EXISTS AND IS NEVER INFERRED.** Absent means
+  "nobody told us", not "no promoter". The only writer is the review
+  queue, where a person types it and a person approves it.
+  - Deriving it from venue or headline fighter would be right most of the
+    time, and that is the objection: a wrong promoter is a confident,
+    checkable, false claim about a real business, and fighters change
+    promoters mid-career — precisely when someone looks it up.
+  - Neither available feed attributes cards. TheSportsDB's competition
+    string is the literal word "Boxing" on 17 of 19 future cards.
+    boxing-data.com names the promotions it COVERS without saying which
+    card belongs to whom, so subscribing does not close this.
+- **`venueTz` WOULD BECOME LOAD-BEARING FOR THE FIRST TIME**, measured
+  before assuming: it is ABSENT on all 273 combat fixtures, and absent on
+  12,204 of 14,121 fixtures overall; where present it is the literal
+  'UTC' on 1,829. So if boxing-data.com's offset-free timestamps turn out
+  to be venue-LOCAL rather than UTC, there is no existing zone data to
+  convert them with — it would have to be sourced from scratch. That is a
+  gate on ingesting any time at all, not a detail to settle later.

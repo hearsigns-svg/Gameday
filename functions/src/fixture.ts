@@ -55,6 +55,24 @@ export interface Fixture {
   // Absent means unknown — it used to be the literal 'UTC' on 10,395 of
   // 10,483 documents, which is a claim, not a default.
   venueTz?: string;
+  // WHO PUTS THE CARD ON. Combat sports only, and ONLY where a human has
+  // said so — today that means the review queue, which is the one path
+  // where a person types it in.
+  //
+  // NEVER INFERRED (owner ruling 2026-08-07). It is tempting to derive
+  // this from the venue or the headline fighter, and it would be right
+  // most of the time: the O2 plus a Queensberry fighter is almost
+  // certainly a Queensberry card. "Almost certainly" is the problem. A
+  // wrong promoter is a confident, checkable, visibly false claim about
+  // a real business, and boxers change promoters mid-career, which is
+  // exactly when a fan is most likely to look. Neither TheSportsDB (its
+  // competition string is the literal word "Boxing" on 17 of 19 cards)
+  // nor boxing-data.com attributes cards to a promoter — the latter
+  // names the promotions it COVERS without saying which card is whose.
+  //
+  // Absent therefore means "nobody told us", not "no promoter", and
+  // nothing backfills it by guessing.
+  promoter?: string;
   status: FixtureStatus;
   // WHERE THIS FIXTURE SITS IN ITS COMPETITION'S STRUCTURE.
   //

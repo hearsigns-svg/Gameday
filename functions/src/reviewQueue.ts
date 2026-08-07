@@ -176,6 +176,9 @@ export function reviewItemToFixture(
     sport: 'boxing',
     competition: item.promoter,
     competitionId: compKey,
+    // The ONE path where a promoter is known rather than guessed: a
+    // person typed it into the submission and a person approved it.
+    promoter: item.promoter,
     title: item.title,
     homeTeam: main.first,
     awayTeam: main.second,
