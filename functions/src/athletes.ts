@@ -41,7 +41,22 @@ export interface AthleteIdentity {
   lastSeenAt: string;
 }
 
-export type AthleteProvenance = 'roster' | 'fixture_derived' | 'review';
+// WHERE AN ATHLETE CAME FROM, because the four are not the same
+// confidence and the matching logic has to be able to tell them apart.
+//
+//   roster          a ranked list said this person exists — strongest
+//   review          a human typed the name and a human approved it
+//   vendor          a paid feed put them on a SCHEDULED CARD, carrying a
+//                   stable provider id (22d). Weaker than roster because
+//                   nobody ranked them; stronger than fixture_derived
+//                   because the id makes the identity permanent rather
+//                   than name-shaped.
+//   fixture_derived a name was parsed out of a fixture — weakest
+export type AthleteProvenance =
+  | 'roster'
+  | 'fixture_derived'
+  | 'review'
+  | 'vendor';
 
 // THE ATHLETES COLLECTION, TYPED — the other half of the brand.
 //
@@ -408,7 +423,21 @@ export function matchAthlete(
 //     consumer. Ambiguous participants stay display-only on the doc that
 //     does survive (their name is still in `athletes`).
 
-export type CreationPolicy = 'structured' | 'never';
+// MAY THIS SOURCE MINT AN ATHLETE, and on what evidence.
+//
+//   structured  a full name from a structured field (a promoter's own
+//               performer node). Mints name-keyed athletes.
+//   id_backed   ONLY where the ref carries a provider id (22d ruling).
+//               A vendor row with no id does not publish and does not
+//               mint, whatever its name looks like. This exists because
+//               "never mint from this vendor" was written when every
+//               candidate shipped abbreviated names — its purpose was
+//               stopping F34 duplicates from name-only matching, and a
+//               stable id is precisely what removes that risk. The rule
+//               is relaxed exactly as far as the reasoning behind it
+//               extends, and no further.
+//   never       resolve against the directory or drop.
+export type CreationPolicy = 'structured' | 'id_backed' | 'never';
 
 export interface AppearanceDraft {
   fixture: Fixture; // followKeys: [sliceKey] only
@@ -521,11 +550,17 @@ export function resolveDrafts(
         continue;
       }
       // unknown
-      if (opts.create === 'structured' && isFullName(ref.name)) {
-        const createKey =
-          ref.source && ref.externalId
-            ? providerKey(ref.source, ref.externalId)
-            : nameKey(draft.fixture.sport, ref.name);
+      // `id_backed` mints ONLY from a provider id; a nameless-id ref is
+      // refused here rather than falling through to a name key, which is
+      // the whole point of the policy.
+      const idBacked = Boolean(ref.source && ref.externalId);
+      const mayCreate =
+        (opts.create === 'structured' || (opts.create === 'id_backed' && idBacked)) &&
+        isFullName(ref.name);
+      if (mayCreate) {
+        const createKey = idBacked
+          ? providerKey(ref.source!, ref.externalId!)
+          : nameKey(draft.fixture.sport, ref.name);
         if (!toCreate.has(createKey)) {
           toCreate.set(createKey, {
             ref,

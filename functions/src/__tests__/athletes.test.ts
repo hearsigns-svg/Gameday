@@ -657,3 +657,101 @@ describe('ATP roster reconciliation (Prompt 10b)', () => {
     expect(unguarded.toUpdate).toHaveLength(1);
   });
 });
+
+// ─── id_backed (22d) ──────────────────────────────────────────────────
+//
+// "Never mint from this vendor" was relaxed to "mint only from a vendor
+// id observed on a scheduled card". The relaxation is exactly as wide as
+// the reasoning behind the original rule, and these pin the edge — a
+// policy VALUE is not something a type can guard, so it is guarded here.
+
+describe('CreationPolicy id_backed', () => {
+  const card = (id: string): Fixture => ({
+    id,
+    sport: 'boxing',
+    competition: 'Boxing',
+    competitionId: 'boxingdata-cards',
+    title: 'A vs B',
+    followKeys: ['boxingdata-cards'],
+    startUtc: '2026-09-01T20:00:00.000Z',
+    status: 'scheduled',
+    durationHours: 4,
+    timePrecision: 'nominal',
+    confidence: 'provisional',
+    updatedAt: NOW,
+  });
+
+  it('mints from a ref carrying a provider id', () => {
+    const r = resolveDrafts(
+      [
+        {
+          fixture: card('c1'),
+          refs: [
+            { name: 'Callum Simpson', source: 'boxingdata', externalId: 'abc123' },
+          ],
+        },
+      ],
+      buildAthleteIndex([]),
+      { create: 'id_backed', provenance: 'vendor' },
+    );
+    expect(r.counts.created).toBe(1);
+    expect(r.toCreate[0].provenance).toBe('vendor');
+    expect(r.toCreate[0].ref.externalId).toBe('abc123');
+  });
+
+  // THE SCOPING RULE. A full, plausible, structured name with no id must
+  // NOT mint — that is precisely the name-only path F34 exists to stop.
+  it('refuses to mint from a name alone, however good the name looks', () => {
+    const r = resolveDrafts(
+      [{ fixture: card('c2'), refs: [{ name: 'Callum Simpson' }] }],
+      buildAthleteIndex([]),
+      { create: 'id_backed', provenance: 'vendor' },
+    );
+    expect(r.counts.created).toBe(0);
+    expect(r.toCreate).toHaveLength(0);
+  });
+
+  it('refuses a source with no externalId, and an externalId with no source', () => {
+    const r = resolveDrafts(
+      [
+        {
+          fixture: card('c3'),
+          refs: [
+            { name: 'Callum Simpson', source: 'boxingdata' },
+            { name: 'Sean Hemphill', externalId: 'abc123' },
+          ],
+        },
+      ],
+      buildAthleteIndex([]),
+      { create: 'id_backed', provenance: 'vendor' },
+    );
+    expect(r.counts.created).toBe(0);
+  });
+
+  // `structured` is unchanged — the relaxation must not have widened the
+  // policy every other connector uses.
+  it('leaves structured able to mint from a name, as before', () => {
+    const r = resolveDrafts(
+      [{ fixture: card('c4'), refs: [{ name: 'Callum Simpson' }] }],
+      buildAthleteIndex([]),
+      { create: 'structured' },
+    );
+    expect(r.counts.created).toBe(1);
+  });
+
+  it('never mints under the never policy, id or not', () => {
+    const r = resolveDrafts(
+      [
+        {
+          fixture: card('c5'),
+          refs: [
+            { name: 'Callum Simpson', source: 'boxingdata', externalId: 'abc123' },
+          ],
+        },
+      ],
+      buildAthleteIndex([]),
+      { create: 'never' },
+    );
+    expect(r.counts.created).toBe(0);
+  });
+});

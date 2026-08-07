@@ -123,6 +123,13 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T1('tsdb-league-4443', 'UFC', 'ufc', 'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4', 76),
   T1('tsdb-league-4445', 'Boxing cards', 'boxing', 'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3', 64),
   T1('pbc-cards', 'Premier Boxing Champions', 'boxing', 'pollPbc', 60),
+  // TIER 2, and the tier is the quota. 100 requests a MONTH means one
+  // schedule call a day plus a bounded number of bouts calls; tier 1
+  // polls every sweep, which would spend the month in under a fortnight.
+  // The route enforces the cadence itself (BOXINGDATA_MIN_INTERVAL_MS)
+  // rather than trusting whoever invokes it — the same commitment shape
+  // the Tennis TV ICS carries.
+  T2('boxingdata-cards', 'Boxing (times and undercards)', 'boxing', 'pollBoxingData', 62),
   // tennis-atp STAYS tier 1 even though the ICS is fetched once daily
   // by owner ruling (F41): the CONNECTOR enforces the cadence (a
   // pollTennis invocation within 22h of the last success skips without

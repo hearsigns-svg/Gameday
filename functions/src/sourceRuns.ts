@@ -112,7 +112,13 @@ export type RunReason =
   // Another invocation holds the fetch lease this second. Same family:
   // no fetch happened, so no evidence about the source was gathered,
   // and lastSuccessAt must not move.
-  | 'skipped_ics_leased';
+  | 'skipped_ics_leased'
+  // boxing-data.com is 100 requests a MONTH, so its route enforces a
+  // ~daily cadence itself rather than trusting whoever invokes it. Same
+  // 'skipped' family and the same reason: no fetch happened, so no
+  // evidence about the provider was gathered and lastSuccessAt must not
+  // move — coverage keys on the prefix, not the specific value.
+  | 'skipped_boxingdata_daily_cap';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

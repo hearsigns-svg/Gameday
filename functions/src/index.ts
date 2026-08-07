@@ -109,6 +109,12 @@ import { fetchTsdbLeagueSeasonFixtures, fetchTsdbLeagueTeams } from './providers
 import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
 import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
 import { fetchF1SeasonFixtures } from './providers/f1';
+import {
+  fetchBoxingData,
+  shouldFetchBouts,
+  SLICE as BOXING_SLICE,
+  type BoutFetchState,
+} from './providers/boxingData';
 import { fetchPbcCards } from './providers/pbc';
 import { fetchTennisTournaments } from './providers/tennisIcs';
 import { fetchWorldAthletics } from './providers/worldAthletics';
@@ -2071,6 +2077,126 @@ export const pollPbc = onRequest(
     res.status(out.status).json(out.body);
   },
 );
+
+// boxing-data.com — DEPTH over the coming seven days, where TheSportsDB
+// gives BREADTH over seventy-seven. They are not competing: a card enters
+// this vendor's window, gets its real start time, its per-bout ring-walk
+// times and its main-event billing, and nothing regresses when it leaves.
+//
+// 100 requests a MONTH, so the cadence is daily and the fights calls are
+// capped. One schedule call plus one call per card; `BOXINGDATA_MAX_CARDS`
+// bounds a busy week so it cannot silently eat the month, and anything it
+// drops is reported rather than quietly skipped.
+const BOXINGDATA_MAX_CARDS = 8;
+// The cadence commitment, enforced HERE where every trigger converges —
+// a sweep, a follow tap and a manual curl all land on this route, and a
+// monthly quota cannot survive being polled per-invocation. 22h rather
+// than 24 for the same reason the ICS uses it: yesterday's late success
+// must not block today's early attempt.
+const BOXINGDATA_MIN_INTERVAL_MS = 22 * 3_600_000;
+const BOXINGDATA_MARKER = 'status/boxingData';
+
+function requireBoxingKey(): string {
+  const k = process.env.BOXING_VENDOR_KEY;
+  if (!k) throw new Error('BOXING_VENDOR_KEY is not configured');
+  return k;
+}
+
+export const pollBoxingData = onRequest(async (req, res) => {
+  const trigger = triggerOf(req.get(TRIGGER_HEADER));
+  const ctx = {
+    source: 'boxingdata',
+    sport: 'boxing',
+    competitionId: BOXING_SLICE,
+    pollPath: 'pollBoxingData',
+    seasonRequested: null,
+  };
+  const startedAt = new Date().toISOString();
+  const nowMs = Date.parse(startedAt);
+  const marker = db.doc(BOXINGDATA_MARKER);
+  const prior = (await marker.get().catch(() => null))?.data() as
+    | { lastSuccessAt?: string; boutsFetchedAt?: BoutFetchState }
+    | undefined;
+  const lastSuccessAt = prior?.lastSuccessAt ?? null;
+  const lastMs = Date.parse(lastSuccessAt ?? '');
+
+  // THE CADENCE IS ENFORCED HERE, where every trigger converges. A
+  // sweep, a follow tap and a manual curl all land on this route, and a
+  // hundred-a-MONTH quota does not survive being polled per-invocation.
+  if (Number.isFinite(lastMs) && nowMs - lastMs < BOXINGDATA_MIN_INTERVAL_MS) {
+    const reason = 'skipped_boxingdata_daily_cap' as const;
+    await recordSourceRun(
+      { ...ctx, trigger },
+      {
+        httpStatus: null,
+        seasonResolved: null,
+        seasonsTried: [],
+        counts: EMPTY_COUNTS,
+        error: null,
+        reason,
+      },
+      startedAt,
+    );
+    // 200: nothing is wrong. The slice is as fresh as the quota allows.
+    res.status(200).json({ skipped: reason, lastSuccessAt });
+    return;
+  }
+
+  const boutsFetchedAt: BoutFetchState = { ...(prior?.boutsFetchedAt ?? {}) };
+  let spend: { calls: number; remaining: number | null; bouts: number; capped: number } | null =
+    null;
+  const out = await servePoll(trigger, ctx, async (trace) => {
+    trace.seasonsTried.push('current');
+    const r = await fetchBoxingData(requireBoxingKey(), startedAt, {
+      maxCards: BOXINGDATA_MAX_CARDS,
+      due: (eventId, startUtc) =>
+        shouldFetchBouts(eventId, startUtc, boutsFetchedAt, nowMs),
+    });
+    for (const id of r.boutsFetchedFor) boutsFetchedAt[id] = startedAt;
+    // Forget cards that have left the window, so the marker cannot grow
+    // without bound.
+    const live = new Set(r.fixtures.map((f) => f.id.replace(/^boxingdata-/, '')));
+    for (const k of Object.keys(boutsFetchedAt)) if (!live.has(k)) delete boutsFetchedAt[k];
+    spend = {
+      calls: r.callsSpent,
+      remaining: r.quotaRemaining,
+      bouts: r.boutsFetchedFor.length,
+      capped: r.skippedForCap,
+    };
+    return {
+      rawCount: r.rawCount,
+      fixtures: r.fixtures,
+      followKey: BOXING_SLICE,
+      seasonResolved: 'current',
+      sliceComplete: true,
+      appearances: {
+        followKey: appearanceSliceKey(BOXING_SLICE),
+        rawCount: r.rawBouts,
+        drafts: r.appearances,
+        // ID-BACKED ONLY (22d ruling). "Never mint from this vendor" was
+        // written when every candidate shipped abbreviated names, to stop
+        // F34 duplicates from name-only matching; a stable provider id is
+        // exactly what removes that risk. A vendor row without one still
+        // does not publish and does not mint.
+        create: 'id_backed' as const,
+        provenance: 'vendor' as const,
+      },
+    };
+  });
+  try {
+    await marker.set(
+      {
+        ...(out.status === 200 ? { lastSuccessAt: startedAt } : {}),
+        boutsFetchedAt,
+      },
+      { merge: true },
+    );
+  } catch {
+    // Never fail a poll over the marker. A lost write costs one extra
+    // run tomorrow, not correctness.
+  }
+  res.status(out.status).json({ ...out.body, ...(spend ? { quota: spend } : {}) });
+});
 
 // The Tennis TV ICS is fetched ONCE DAILY by owner ruling (2026-07-31)
 // — subscribing, not crawling. The catalogue briefly polled it every

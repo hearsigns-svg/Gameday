@@ -46,6 +46,7 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
   pollF1: { season: /^\d{4}$/ },
   // Parameterless: each has exactly one feed, and the window is computed
   // server-side from the clock rather than baked into a stored follow.
+  pollBoxingData: {},
   pollPbc: {},
   pollTennis: {},
   pollWtaTennis: {},
@@ -76,7 +77,12 @@ const FETCH_TIMEOUT_MS = 20_000;
 // own declared timeouts imply.
 const SLOW_ROUTE_TIMEOUT_MS = 120_000;
 const isSlowRoute = (p: string): boolean =>
-  p.startsWith('pollAthletics') || p.startsWith('pollPbc');
+  p.startsWith('pollAthletics') ||
+  p.startsWith('pollPbc') ||
+  // Up to nine sequential vendor calls (a schedule plus one per card),
+  // and the sweep must not kill it mid-run: a half-fetched card spends
+  // quota and lands nothing.
+  p.startsWith('pollBoxingData');
 const FCM_BATCH = 450; // sendEachForMulticast hard-caps at 500
 const DEADLINE_MS = 480_000; // leave headroom inside the 540s timeout
 
@@ -187,6 +193,12 @@ export function sliceOfPollPath(
       };
     case 'pollF1':
       return { source: 'f1', sport: 'f1', competitionId: 'f1-series-1' };
+    case 'pollBoxingData':
+      return {
+        source: 'boxingdata',
+        sport: 'boxing',
+        competitionId: 'boxingdata-cards',
+      };
     case 'pollPbc':
       return { source: 'pbc', sport: 'boxing', competitionId: 'pbc-cards' };
     case 'pollTennis':
