@@ -3,9 +3,11 @@
 // Team/sport colour arrives here ONLY as a TeamTheme (never raw hex).
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
+  Animated,
   Image,
   Pressable,
   ScrollView,
@@ -16,7 +18,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SportPattern } from './sportPattern';
-import { radius as radiusTokens, spacing, type, useTheme } from './tokens';
+import { motion, radius as radiusTokens, spacing, type, useTheme } from './tokens';
 const radius = radiusTokens;
 import { TeamTheme } from './teamTheme';
 import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
@@ -699,7 +701,50 @@ export function ListRow(props: {
   // it was decoration that actively misled. The affordance is now the
   // press itself, which is the same on every surface that uses this
   // component.
-  const [pressed, setPressed] = useState(false);
+  // A PRESS STATE YOU CANNOT PERCEIVE IS FUNCTIONALLY ABSENT. The first
+  // cut washed the row in `surface`, which on the light shell is
+  // #F3F2EF against a #FBFAF8 background — a 2% step, invisible in
+  // daylight. Rule 1 protects the shell AT REST; a press is not rest,
+  // and interaction feedback answers to different rules from resting
+  // decoration.
+  //
+  // So: the next tone already on the ramp (`border`), not a new colour
+  // and not a tint of the brand — tonal, so nothing about the row's
+  // meaning changes, only its state. It arrives INSTANTLY on touch-down
+  // and decays over motion.fast, because a brief stronger tint reads as
+  // responsive where a sustained one would make the resting list busier.
+  //
+  // Now that button-versus-row is structural, this only has to say
+  // "something is happening", not "which thing" — which is why it can
+  // be quick and quiet rather than loud.
+  //
+  // Opacity on an overlay rather than an animated backgroundColor: it
+  // runs on the native driver, so a long list does not drop frames
+  // repainting a colour on the JS thread.
+  const press = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
+      if (live) setReduceMotion(on);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  // Reduced motion removes the FADE, never the feedback: the tint still
+  // appears and disappears, it just does not animate out.
+  const setPress = (down: boolean) =>
+    Animated.timing(press, {
+      toValue: down ? 1 : 0,
+      duration: down || reduceMotion ? 0 : motion.fast,
+      useNativeDriver: true,
+    }).start();
   const openable = props.onPress !== undefined && props.disabled !== true;
   const body = (
     <>
@@ -732,20 +777,25 @@ export function ListRow(props: {
     <View
       style={[
         styles.row,
-        {
-          borderColor: t.border,
-          opacity: props.disabled ? 0.45 : 1,
-          backgroundColor: pressed ? t.surface : 'transparent',
-        },
+        { borderColor: t.border, opacity: props.disabled ? 0.45 : 1 },
       ]}
     >
+      {/* Under the content, across the FULL row: the thing responding
+          is the row, even though the thing pressed is the body. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: t.border, opacity: press },
+        ]}
+      />
       {openable ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={props.accessibilityLabel}
           onPress={props.onPress}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
+          onPressIn={() => setPress(true)}
+          onPressOut={() => setPress(false)}
           style={styles.rowBody}
         >
           {body}
