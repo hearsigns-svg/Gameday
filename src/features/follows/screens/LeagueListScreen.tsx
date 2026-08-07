@@ -282,11 +282,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 tour: r.tour,
               })
             }
-            right={
-              <Text style={[type.heading, { color: t.primary }]} accessible={false}>
-                ›
-              </Text>
-            }
+
           />
         );
       case 'competition':
@@ -339,28 +335,14 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             }
             right={
               isSlams ? (
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}
-                >
-                  <FollowButton
-                    following={slamKeys.every((k) => isFollowed(k))}
-                    subject="all four majors"
-                    busy={busyKey === 'slams'}
-                    label="Follow all"
-                    onPress={() => void followAll(slamKeys, 'slams')}
-                  />
-                  <Text
-                    style={[type.heading, { color: t.primary }]}
-                    accessible={false}
-                  >
-                    ›
-                  </Text>
-                </View>
-              ) : (
-                <Text style={[type.heading, { color: t.primary }]} accessible={false}>
-                  ›
-                </Text>
-              )
+                <FollowButton
+                  following={slamKeys.every((k) => isFollowed(k))}
+                  subject="all four majors"
+                  busy={busyKey === 'slams'}
+                  label="Follow all"
+                  onPress={() => void followAll(slamKeys, 'slams')}
+                />
+              ) : undefined
             }
           />
         );
@@ -407,10 +389,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             <ListRow
               title={athleteRowTitle(route.params.sportKey)}
               caption="Rankings, champions, who's competing"
-              // A TILE AND A REAL CHEVRON. Beside competition rows
-              // carrying a filled Follow button, a bare grey › read as
-              // decoration — the one way into an individual sport
-              // looked like the least important thing on the screen.
+              // A TILE, and no chevron (Prompt 21). The chevron was
+              // added here because a bare row beside a filled Follow
+              // button looked unimportant — but it appeared on some
+              // rows and not others while EVERY row opens, so it said
+              // nothing and misled where it was absent. The row's own
+              // press state carries the affordance now.
               glyph={sport?.glyph ?? '🏟️'}
               tileTheme={teamTheme(sport?.accent ?? null, mode)}
               accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
@@ -419,14 +403,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                   sportKey: route.params.sportKey,
                 })
               }
-              right={
-                <Text
-                  style={[type.heading, { color: t.primary }]}
-                  accessible={false}
-                >
-                  ›
-                </Text>
-              }
+
             />
           ) : null
         }
@@ -534,7 +511,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                     ]}
                   >
                     <Text style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}>
-                      Teams ›
+                      Teams
                     </Text>
                   </Pressable>
                 ) : null}

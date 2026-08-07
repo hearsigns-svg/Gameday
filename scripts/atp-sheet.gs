@@ -254,7 +254,19 @@ function vendorGet_(path) {
   var ks = keys_();
   var props = PropertiesService.getScriptProperties();
   var lastErr = 'no keys configured';
-  for (var i = 0; i < ks.length; i++) {
+  // START AT A RANDOM INDEX. Always beginning at key1 meant key1 did
+  // every first call of every run and drained first while key4 sat
+  // near full -- the pool's usable size was really the first key's.
+  // Starting anywhere evens the wear.
+  //
+  // WHAT THIS IS NOT: it is not evasion, and must not be described as
+  // any. All four keys leave the same Cloud Function IP with identical
+  // headers and identical request shapes; ordering is the one variable
+  // that cannot tell them apart. This changes which bucket a request
+  // is billed to, nothing else.
+  var start = Math.floor(Math.random() * ks.length);
+  for (var n = 0; n < ks.length; n++) {
+    var i = (start + n) % ks.length;
     var r = UrlFetchApp.fetch('https://' + VENDOR_HOST + path, {
       muteHttpExceptions: true,
       headers: { 'x-rapidapi-host': VENDOR_HOST, 'x-rapidapi-key': ks[i] },

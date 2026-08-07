@@ -135,7 +135,6 @@ export default function PreferencesScreen({
               : 'Picked automatically when your calendar connects'}
           </Text>
         </View>
-        <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
       </Pressable>
 
       <Text
@@ -367,7 +366,6 @@ export default function PreferencesScreen({
         <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
           Photo credits
         </Text>
-        <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
       </Pressable>
 
       {__DEV__ ? (

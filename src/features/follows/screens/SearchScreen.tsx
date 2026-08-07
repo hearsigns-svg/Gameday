@@ -433,9 +433,7 @@ export default function SearchScreen({ navigation }: Props) {
                       busy={busyKey === item.key}
                       onPress={() => void toggle(item)}
                     />
-                  ) : (
-                    <Text style={[type.body, { color: t.textSecondary }]}>›</Text>
-                  )
+                  ) : undefined
                 }
               />
             );

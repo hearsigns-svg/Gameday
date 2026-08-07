@@ -103,7 +103,6 @@ export default function CalendarTargetScreen({ navigation }: Props) {
           title="Put your games in your calendar"
           accessibilityLabel="Connect your calendar"
           onPress={() => navigation.navigate('CalendarPriming')}
-          right={<Text style={[type.body, { color: t.textSecondary }]}>›</Text>}
         />
       </View>
     );

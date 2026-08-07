@@ -679,21 +679,30 @@ export function ListRow(props: {
   disabled?: boolean;
 }) {
   const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole={props.onPress ? 'button' : undefined}
-      // A row without onPress is a passive container, NOT a disabled
-      // control — marking it disabled makes VoiceOver skip the Follow
-      // button inside it.
-      accessibilityLabel={props.onPress ? props.accessibilityLabel : undefined}
-      onPress={props.onPress}
-      disabled={props.disabled === true}
-      style={({ pressed }) => [
-        styles.row,
-        { borderColor: t.border, opacity: props.disabled ? 0.45 : 1 },
-        pressed && props.onPress && { backgroundColor: t.surface },
-      ]}
-    >
+  // THE BUTTON AND THE ROW ARE SIBLINGS, NOT NESTED (Prompt 21).
+  //
+  // The row used to be ONE Pressable with the trailing button inside
+  // it, so a press anywhere — including on the Follow button — lit the
+  // row's own press state. Tapping the button looked exactly like
+  // tapping the row, which is precisely the confusion the chevron was
+  // being asked to resolve and could not.
+  //
+  // Now the tappable BODY (tile + title + caption) is its own
+  // Pressable and the trailing control sits beside it. A press on the
+  // button cannot reach the row's state by construction rather than by
+  // luck, and the row's highlight still spans the FULL width, because
+  // the thing responding is the row even though the thing pressed is
+  // the body.
+  //
+  // THIS REPLACES THE CHEVRON. A `›` on some rows and not others said
+  // nothing about which rows opened — every row in browse opens — so
+  // it was decoration that actively misled. The affordance is now the
+  // press itself, which is the same on every surface that uses this
+  // component.
+  const [pressed, setPressed] = useState(false);
+  const openable = props.onPress !== undefined && props.disabled !== true;
+  const body = (
+    <>
       {props.glyph ? (
         props.tileTheme ? (
           <GlyphTile
@@ -717,8 +726,38 @@ export function ListRow(props: {
           </Text>
         ) : null}
       </View>
+    </>
+  );
+  return (
+    <View
+      style={[
+        styles.row,
+        {
+          borderColor: t.border,
+          opacity: props.disabled ? 0.45 : 1,
+          backgroundColor: pressed ? t.surface : 'transparent',
+        },
+      ]}
+    >
+      {openable ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={props.accessibilityLabel}
+          onPress={props.onPress}
+          onPressIn={() => setPressed(true)}
+          onPressOut={() => setPressed(false)}
+          style={styles.rowBody}
+        >
+          {body}
+        </Pressable>
+      ) : (
+        // A row without onPress is a passive container, NOT a disabled
+        // control — marking it disabled makes VoiceOver skip the Follow
+        // button inside it.
+        <View style={styles.rowBody}>{body}</View>
+      )}
       {props.right}
-    </Pressable>
+    </View>
   );
 }
 
@@ -791,9 +830,6 @@ export function SportCard(props: {
           {props.caption}
         </Text>
       </View>
-      <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
-        ›
-      </Text>
     </Pressable>
   );
 }
@@ -1185,11 +1221,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.m,
     paddingHorizontal: spacing.l,
     borderBottomWidth: StyleSheet.hairlineWidth,
     minHeight: 56,
     gap: spacing.m,
+  },
+  // The row's TAP TARGET: everything except the trailing control. It
+  // carries the row's vertical padding so the touch area is the full
+  // height of the row, not just the text — a 56pt row whose target was
+  // only the label would fail the 44pt rule at the top and bottom edge.
+  rowBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.m,
+    paddingVertical: spacing.m,
+    minHeight: 44,
   },
   glyph: { width: 32, textAlign: 'center' },
   // "Main event" beside a bout's name — a quiet chip in the entity's own

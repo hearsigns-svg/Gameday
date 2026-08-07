@@ -71,14 +71,7 @@ export default function SportPickerScreen({ navigation }: Props) {
                   : undefined
               }
               right={
-                item.enabled ? (
-                  <Text
-                    style={[type.body, { color: t.textSecondary }]}
-                    accessible={false}
-                  >
-                    ›
-                  </Text>
-                ) : undefined
+                undefined
               }
             />
           );

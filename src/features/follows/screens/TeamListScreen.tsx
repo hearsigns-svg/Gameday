@@ -174,12 +174,6 @@ export default function TeamListScreen({ navigation, route }: Props) {
                   busy={busyKey === item.key}
                   onPress={() => void toggle(item)}
                 />
-                <Text
-                  style={[type.body, { color: t.textSecondary }]}
-                  accessible={false}
-                >
-                  ›
-                </Text>
               </View>
             }
           />
