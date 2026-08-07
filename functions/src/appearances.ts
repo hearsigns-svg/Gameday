@@ -31,7 +31,7 @@
 
 import { AppearanceDraft, AthleteRef } from './athletes';
 import { Fixture } from './fixture';
-import { normaliseName } from './identity';
+import { nameSlug, normaliseName } from './identity';
 import { namesPeople, parseBout } from './participants';
 
 // The ingest/coverage slice for a parent's appearances. Not offered as a
@@ -41,8 +41,9 @@ export function appearanceSliceKey(parentCompetitionId: string): string {
   return `${parentCompetitionId}-appearances`;
 }
 
-const slug = (name: string): string =>
-  normaliseName(name).replace(/\s+/g, '-');
+// The fourth independent copy of normalise-then-hyphenate, now the one
+// constructor. It returns null for a name that normalises to nothing,
+// which is what `appearanceId` has to handle rather than paper over.
 
 // Stable across provisional → confirmed, and across re-polls: built only
 // from the parent id and the participants' names. The ledger is keyed by
@@ -52,11 +53,24 @@ const slug = (name: string): string =>
 // distinct athletes sharing a rendered name inside one parent would
 // collide. resolveDrafts detects that case, keeps the first,
 // and REFUSES the second loudly rather than silently absorbing it.
+// NULL WHEN ANY PARTICIPANT HAS NO SLUGGABLE NAME. The guard above it
+// checks `refs.length === 0`, which is a different test: a
+// punctuation-only participant passes it and used to produce
+// `<parent>-app-` or `<parent>-app--smith`, so two different bouts under
+// one parent collided on ONE document id — and this id keys the sync
+// ledger and is embedded in the calendar note, so a collision does not
+// merely duplicate, it overwrites somebody's event with somebody else's.
+//
+// Same shape as the F34 limit already recorded below: distinct people
+// must not share an id. That one is detected and refused loudly; this one
+// was not detected at all.
 export function appearanceId(
   parentId: string,
   athletes: readonly string[],
-): string {
-  return `${parentId}-app-${athletes.map(slug).join('-')}`;
+): string | null {
+  const slugs = athletes.map(nameSlug);
+  if (slugs.some((s) => s === null)) return null;
+  return `${parentId}-app-${slugs.join('-')}`;
 }
 
 export interface AppearanceSlot {
@@ -89,8 +103,12 @@ export function appearanceFor(
 ): AppearanceDraft | null {
   if (opts.refs.length === 0) return null;
   const names = opts.refs.map((r) => r.name);
+  // No id, no appearance. `refs.length === 0` was the only guard, and it
+  // does not catch a participant whose name normalises to nothing.
+  const id = appearanceId(parent.id, names);
+  if (id === null) return null;
   const base: Fixture = {
-    id: appearanceId(parent.id, names),
+    id,
     sport: parent.sport,
     competition: parent.competition,
     competitionId: appearanceSliceKey(parent.competitionId),

@@ -98,6 +98,35 @@ export function athleteNames(
   return { displayName, searchName, aliases };
 }
 
+// A SLUG BUILT FROM A NAME — the one constructor, and it returns `null`
+// rather than an empty string.
+//
+// Four sites computed this independently: `tennisTournaments.ts`,
+// `appearances.ts`, `reviewQueue.ts` and `providers/worldAthletics.ts`.
+// Two of them guarded the degenerate case and two only looked like they
+// did:
+//   - `tournamentKey` checks the slug's length and returns null, with a
+//     comment recording the review round that caught it: a
+//     punctuation-only summary must not mint the bare `tennis-t-` key and
+//     fold unrelated events into one followable.
+//   - `groupKey` does the same for World Athletics.
+//   - `promoterKey` validated `promoter` as a NON-EMPTY string — which is
+//     not the same test. A promoter named "???" passes validation and
+//     normalises to nothing, minting the bare `review-` key.
+//   - `appearanceId` guards `refs.length === 0` but not an individual
+//     name, so a punctuation-only participant yields `<parent>-app-` and
+//     two different bouts under one parent collide on one document id.
+// Emptiness and "normalises to nothing" are different tests, and the two
+// sites that got it right got it right by having been burned.
+//
+// `string | null` is the structural fix: a caller cannot use the result
+// as a key without deciding what happens when there is no name. That is a
+// compile error, not a convention.
+export function nameSlug(raw: string | null | undefined): string | null {
+  const s = normaliseName(raw ?? '').replace(/ /g, '-');
+  return s.length > 0 ? s : null;
+}
+
 // Participants, order-independent: "A vs B" and "B at A" are one fixture.
 export function participantsKey(f: Fixture): string {
   const named = [f.homeTeam, f.awayTeam].filter(

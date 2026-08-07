@@ -27,7 +27,7 @@ import { Firestore } from 'firebase-admin/firestore';
 import { boutAppearance } from './appearances';
 import { AppearanceDraft } from './athletes';
 import { Fixture } from './fixture';
-import { normaliseName } from './identity';
+import { nameSlug, normaliseName } from './identity';
 
 export type ReviewStatus = 'provisional' | 'confirmed' | 'cancelled';
 
@@ -142,8 +142,16 @@ export function validateSubmission(input: unknown): {
   };
 }
 
-export const promoterKey = (promoter: string): string =>
-  `review-${normaliseName(promoter).replace(/\s+/g, '-')}`;
+// NULL WHEN THE PROMOTER NORMALISES TO NOTHING. The submit validator
+// requires a non-empty string, which is NOT the same test: a promoter
+// named "???" passes it and used to mint the bare `review-` key, which
+// every such item would then share — one followable silently pooling
+// unrelated events, the exact failure `tournamentKey` records having been
+// caught for tennis in a review round.
+export const promoterKey = (promoter: string): string | null => {
+  const slug = nameSlug(promoter);
+  return slug === null ? null : `review-${slug}`;
+};
 
 // A CONFIRMED item becomes a fixture. Provisional and cancelled ones never
 // do — nothing reaches a calendar that a human has not approved.
@@ -154,15 +162,24 @@ export function reviewItemToFixture(
   if (item.status !== 'confirmed') return null;
   const main = item.bouts.find((b) => b.cardPosition === 'main');
   if (!main) return null;
+  // A promoter with no sluggable name yields no followable, so the item
+  // yields no fixture. It returns null the same way an unconfirmed item
+  // does — a bare `review-` key shared by every such item would pool
+  // unrelated events under one follow, and a fixture nobody can follow
+  // is worse than one that does not exist. The compiler is what forced
+  // this decision: `promoterKey` returns `string | null` now, so it
+  // could not be quietly stringified into the key.
+  const compKey = promoterKey(item.promoter);
+  if (compKey === null) return null;
   return {
     id: `review-${item.id}`,
     sport: 'boxing',
     competition: item.promoter,
-    competitionId: promoterKey(item.promoter),
+    competitionId: compKey,
     title: item.title,
     homeTeam: main.first,
     awayTeam: main.second,
-    followKeys: [promoterKey(item.promoter)],
+    followKeys: [compKey],
     startUtc: item.startUtc,
     status: 'scheduled',
     durationHours: 4,

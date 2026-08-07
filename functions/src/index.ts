@@ -37,6 +37,8 @@ import {
   resolveDrafts,
   stampDriverKeys,
   athletesCollection,
+  nameKey,
+  type AthleteKey,
   type AthleteUpdate,
 } from './athletes';
 import {
@@ -361,10 +363,10 @@ async function resolveAppearanceDrafts(
   const resolved = resolveDrafts(drafts, index, policy);
   let fixtures = resolved.appearances;
   if (resolved.toCreate.length > 0) {
-    const createKeyOf = (s: NewAthleteSpec): string =>
+    const createKeyOf = (s: NewAthleteSpec): AthleteKey =>
       s.ref.source && s.ref.externalId
         ? providerKey(s.ref.source, s.ref.externalId)
-        : `${s.sport}|${normaliseName(s.ref.name)}`;
+        : nameKey(s.sport, s.ref.name);
     const idOf = await createAthletes(
       db,
       resolved.toCreate,

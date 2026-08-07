@@ -207,18 +207,60 @@ export function accentHueOf(id: string): number {
 // ─── The index the matcher runs against ───────────────────────────────
 
 export interface AthleteIndex {
-  byProvider: Map<string, Athlete>; // `${source}:${externalId}`
-  byName: Map<string, Athlete[]>; // `${sport}|${normalised}` incl. aliases
+  byProvider: Map<ProviderKey, Athlete>;
+  byName: Map<AthleteNameKey, Athlete[]>; // incl. aliases
   all: Athlete[];
 }
 
-export function providerKey(source: string, externalId: string): string {
-  return `${source}:${externalId}`;
+// BRANDED TOO, and this was the gap that a deliberate attack found. The
+// name key alone was not enough: a create key is `providerKey(...)` OR
+// `nameKey(...)`, so as long as one of them returned a plain `string` the
+// union was `string` and the collections holding it accepted anything.
+// Branding only the half that looked dangerous left the other half as the
+// way in.
+declare const providerKeyBrand: unique symbol;
+export type ProviderKey = string & { readonly [providerKeyBrand]: true };
+
+export function providerKey(source: string, externalId: string): ProviderKey {
+  return `${source}:${externalId}` as ProviderKey;
+}
+
+// Either way of identifying an athlete before an id exists. The create
+// collections are keyed by THIS, so a hand-built template string cannot
+// reach them — which is what stops a divergent fold minting a second
+// document for somebody who already exists.
+export type AthleteKey = ProviderKey | AthleteNameKey;
+
+// THE NAME-KEYED HALF OF IDENTITY — branded, and for a sharper reason
+// than the others.
+//
+// `providerKey` has been a named constructor from the start; its sibling
+// `${sport}|${normaliseName(name)}` was written inline at FIVE sites —
+// two building a LOOKUP into `byName`, three building a CREATE key. That
+// split is what makes a divergence dangerous: it does not throw. A lookup
+// that folds differently from the create key simply misses, and a miss
+// means "no such athlete", so the resolver creates a SECOND document for
+// somebody who already exists. Two calendars for one person, no error
+// anywhere. F34's shape.
+//
+// `byName` is keyed by the brand, so `index.byName.get(\`${sport}|...\`)`
+// with a hand-built string does not compile — the map will not accept it.
+declare const athleteNameKeyBrand: unique symbol;
+export type AthleteNameKey = string & { readonly [athleteNameKeyBrand]: true };
+
+export function nameKey(sport: string, name: string): AthleteNameKey {
+  return `${sport}|${toSearchName(name)}` as AthleteNameKey;
+}
+
+// The already-normalised variant, for the index build, where the stored
+// `searchName` and its aliases are `SearchName` by construction.
+export function nameKeyOf(sport: string, folded: SearchName): AthleteNameKey {
+  return `${sport}|${folded}` as AthleteNameKey;
 }
 
 export function buildAthleteIndex(athletes: readonly Athlete[]): AthleteIndex {
-  const byProvider = new Map<string, Athlete>();
-  const byName = new Map<string, Athlete[]>();
+  const byProvider = new Map<ProviderKey, Athlete>();
+  const byName = new Map<AthleteNameKey, Athlete[]>();
   for (const a of athletes) {
     for (const [source, externalId] of Object.entries(a.providerIds)) {
       byProvider.set(providerKey(source, externalId), a);
@@ -226,7 +268,7 @@ export function buildAthleteIndex(athletes: readonly Athlete[]): AthleteIndex {
     const names = new Set([a.searchName, ...a.aliases]);
     for (const n of names) {
       if (!n) continue;
-      const key = `${a.sport}|${n}`;
+      const key = nameKeyOf(a.sport, n);
       const list = byName.get(key) ?? [];
       // One athlete can reach the same name via alias twice; dedupe.
       if (!list.some((x) => x.id === a.id)) list.push(a);
@@ -302,7 +344,7 @@ function reversedMatch(
   if (tokens.length !== 2) return null;
   const flipped = [tokens[1], tokens[0]].join(' ');
   if (flipped === tokens.join(' ')) return null; // "Ali Ali" — says nothing
-  const hits = index.byName.get(`${sport}|${flipped}`) ?? [];
+  const hits = index.byName.get(nameKeyOf(sport, flipped as SearchName)) ?? [];
   if (hits.length !== 1) return null;
   const theirs = hits[0].countryCode;
   if (ref.countryCode && theirs && ref.countryCode !== theirs) return null;
@@ -326,8 +368,7 @@ export function matchAthlete(
     // probe-confirmed). A match that already carries a DIFFERENT id
     // from this source is genuinely another person: create.
     if (isFullName(ref.name)) {
-      const hits =
-        index.byName.get(`${sport}|${normaliseName(ref.name)}`) ?? [];
+      const hits = index.byName.get(nameKey(sport, ref.name)) ?? [];
       if (
         hits.length === 1 &&
         hits[0].providerIds[ref.source] === undefined
@@ -344,7 +385,7 @@ export function matchAthlete(
     return { kind: 'unknown' };
   }
   if (!isFullName(ref.name)) return { kind: 'ambiguous' };
-  const hits = index.byName.get(`${sport}|${normaliseName(ref.name)}`) ?? [];
+  const hits = index.byName.get(nameKey(sport, ref.name)) ?? [];
   if (hits.length === 1) return { kind: 'confident', athlete: hits[0] };
   if (hits.length > 1) return { kind: 'ambiguous' };
   const flipped = reversedMatch(index, sport, ref);
@@ -419,7 +460,7 @@ export function resolveDrafts(
     nameCollisions: 0,
   };
   const collisionDetails: string[] = [];
-  const toCreate = new Map<string, NewAthleteSpec>();
+  const toCreate = new Map<AthleteKey, NewAthleteSpec>();
   // F34 detection: within one batch, one appearance DOC id can only carry
   // one identity per rendered name. Two DISTINCT provider ids sharing a
   // rendered name inside the same parent would collide on the name-built
@@ -484,7 +525,7 @@ export function resolveDrafts(
         const createKey =
           ref.source && ref.externalId
             ? providerKey(ref.source, ref.externalId)
-            : `${draft.fixture.sport}|${normaliseName(ref.name)}`;
+            : nameKey(draft.fixture.sport, ref.name);
         if (!toCreate.has(createKey)) {
           toCreate.set(createKey, {
             ref,
@@ -695,7 +736,7 @@ export function reconcileRoster(
 ): RosterReconciliation {
   const index = buildAthleteIndex(existing);
   const toCreate: RosterEntry[] = [];
-  const createKeys = new Set<string>();
+  const createKeys = new Set<AthleteKey>();
   const toUpdate = new Map<string, Partial<Athlete>>();
   const skippedAmbiguous: string[] = [];
   const seen = new Set<string>();
@@ -733,7 +774,7 @@ export function reconcileRoster(
       // still passes the contiguity proof — must create ONE athlete.
       const createKey = e.externalId
         ? providerKey(e.source, e.externalId)
-        : `${e.sport}|${normaliseName(e.name)}`;
+        : nameKey(e.sport, e.name);
       if (!createKeys.has(createKey)) {
         createKeys.add(createKey);
         toCreate.push(e);

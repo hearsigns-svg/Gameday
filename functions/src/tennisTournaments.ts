@@ -27,11 +27,12 @@
 // take it — a Wimbledon follow gets the tournament event, and match
 // events come from the player follows they already have.
 
-import { normaliseName } from './identity';
+import { nameSlug, normaliseName } from './identity';
 
-// slug of the full normalised title. No sponsor stripping.
+// slug of the full normalised title. No sponsor stripping. Empty when the
+// title normalises to nothing — `tournamentKey` turns that into null.
 export function tournamentSlug(title: string): string {
-  return normaliseName(title).replace(/\s+/g, '-');
+  return nameSlug(title) ?? '';
 }
 
 // Curated variant → canonical slug. Every entry cites its evidence.
@@ -65,8 +66,8 @@ const CANONICAL_DISPLAY: Record<string, string> = {
 // summary must not mint the bare `tennis-t-` key and fold unrelated
 // events into one followable (review round). Callers skip stamping.
 export function tournamentKey(title: string): string | null {
-  const slug = tournamentSlug(title);
-  if (slug.length === 0) return null;
+  const slug = nameSlug(title);
+  if (slug === null) return null;
   return `tennis-t-${TOURNAMENT_ALIASES[slug] ?? slug}`;
 }
 

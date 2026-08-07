@@ -2526,3 +2526,61 @@
   collapses. Consolidating needs its own test surface.
 - Not this shape, checked and excluded: `competitionKey`, `participantsKey`
   and `identityKey` each have exactly one definition and one caller path.
+
+## 2026-08-07 — Prompt 22c tail: three canonical forms, and what an attack found each time
+
+AGENTS rule 15 added: **a guard nobody has tried to defeat is not known to
+work.** Every guard below shipped with a deliberate attempt to break it,
+and every attempt but one changed the design.
+
+- **THE CLIENT FOLD — the live one, and it was benign.** Three copies:
+  `core/nameFold.ts` at 11 rules, `sameBout.ts` and `card.ts` at 9,
+  differing only on `&`. ESTABLISHED FIRST, as asked, whether it caused a
+  user-visible bug: no value crosses between the folds (each one's output
+  is only ever compared against its own), and of 4,102 distinct production
+  participant names, 64 fold differently while ZERO entity groups are
+  separated by one fold and united by the other. Benign — but by luck, and
+  the 11-rule version is strictly better, because it is what lets one
+  provider's "Brighton & Hove" match another's "Brighton and Hove".
+  Consolidated onto one fold with its own test surface: order-independence,
+  the ampersand union, diacritic union, and — the one that matters — that
+  it does NOT collapse two different people (AFC Liverpool vs Liverpool,
+  and F34's family-name reversal).
+  - ATTACKS: a hand-rolled fold in `sameBout` → compile error; a
+    `.toLowerCase()` bypass in `card`'s `pairOf` → compile error; a raw
+    lower-cased filter in a SEARCH screen → **compiles**. Honest limit: a
+    boolean `a.toLowerCase().includes(b)` produces no value a type can
+    constrain. Reported rather than papered over.
+- **THE SLUG — 2 of 4 sites were lucky, not safe.** `tournamentKey` and
+  `groupKey` return null for a name that normalises to nothing, both after
+  being burned (the tennis one carries a comment naming the review round).
+  `promoterKey` and `appearanceId` guarded EMPTINESS instead, which is a
+  different test: `str('promoter')` requires a non-empty trimmed string, so
+  a promoter named "???" passed it and minted the bare `review-` key that
+  every such item would then share. `appearanceId` guarded
+  `refs.length === 0` but not an individual name, so a punctuation-only
+  participant produced `<parent>-app-` — and that id keys the sync ledger,
+  so a collision does not duplicate an event, it OVERWRITES one.
+  `nameSlug` returns `string | null`, which forces every caller to decide.
+  - ATTACK: reverting either site to a raw string **compiles** — a
+    function's own signature is not something the type system defends.
+    The TESTS catch it (verified: re-applying the `promoterKey` regression
+    fails `nameSlug.test.ts`). A weaker guard than a brand, and worth
+    saying so plainly rather than claiming parity.
+- **THE DEDUPE KEY — the attack rewrote the design twice.** Five sites
+  building `${sport}|${normaliseName(name)}` inline, two lookup and three
+  create; a divergence does not throw, it silently mints a second athlete
+  for somebody who already exists.
+  - Branding `AthleteNameKey` and typing `byName` immediately found a
+    SIXTH site the grep-based census had missed — the family-name-first
+    `flipped` lookup.
+  - First attack: a hand-built key into a lookup → compile error. Second:
+    a divergent fold in a CREATE key → **compiled**. The create key is
+    `providerKey(...)` OR `nameKey(...)`, and `providerKey` still returned
+    a plain `string`, so the union was `string` and the collections holding
+    it accepted anything. Branding only the half that looked dangerous left
+    the other half as the way in.
+  - `ProviderKey` branded too, `AthleteKey` is their union, and the create
+    collections are keyed by it. Both attacks now fail to compile.
+- Gate: 81 suites / 1048 tests both timezones, both typechecks, functions
+  build. Not deployed — compile-time only; rides the next deploy.

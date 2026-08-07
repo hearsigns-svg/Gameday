@@ -10,7 +10,7 @@
 // disciplines within a meeting are Prompt 5's problem.
 
 import { Fixture } from '../fixture';
-import { normaliseName } from '../identity';
+import { nameSlug, normaliseName } from '../identity';
 import { ProviderFetch } from './fetchResult';
 
 const BASE = 'https://worldathletics.org/competition/calendar-results';
@@ -70,8 +70,8 @@ export function eventsFromNextData(data: unknown): {
 // with parkruns. The group is what a fan actually follows: the Diamond
 // League, the Continental Tour, the indoor circuit, the championships.
 export function groupKey(group: string | null | undefined): string | null {
-  const slug = normaliseName(group ?? '').replace(/\s+/g, '-');
-  return slug.length > 0 ? `wa-${slug}` : null;
+  const slug = nameSlug(group);
+  return slug === null ? null : `wa-${slug}`;
 }
 
 function dayToUtc(v: string | undefined): string | null {
