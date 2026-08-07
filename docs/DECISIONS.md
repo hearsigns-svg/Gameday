@@ -2622,3 +2622,59 @@ and every attempt but one changed the design.
   to be venue-LOCAL rather than UTC, there is no existing zone data to
   convert them with — it would have to be sourced from scratch. That is a
   gate on ingesting any time at all, not a detail to settle later.
+
+## 2026-08-07 — boxing-data.com, subscribed and measured: two blockers the docs did not mention
+
+Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
+21 of 100 monthly calls spent establishing the following. **Nothing wired
+— both of the brief's stop conditions triggered.**
+
+- **THE TIMESTAMPS ARE UTC. Established, not assumed.** The field carries
+  no offset and no `Z`, so this was the gate before any time could be
+  written.
+  - Williamson vs Simpson 2, First Direct Bank Arena, Leeds: the vendor
+    says `2026-08-08T18:00:00`. DAZN/ESPN publish the card as streaming
+    "from 7pm BST" — BST is UTC+1, so 7pm BST IS 18:00 UTC. Exact match.
+  - The same card's MAIN EVENT fight carries `21:00:00` — 22:00 BST,
+    the standard UK ring-walk slot, and internally consistent with the
+    18:00 card start.
+  - Nyika vs Masson, Auckland (UTC+12): `07:00:00` reads as 7pm NZST,
+    just after the published 6:30pm doors. Read as venue-local it is 7am,
+    which no boxing card has ever started at.
+  - Teremoana vs Savage, Gold Coast (UTC+10): `08:00:00` reads as 6pm
+    AEST; as local it is 8am. Same impossibility.
+  - `T00:00:00` is the NO-TIME-KNOWN sentinel, not midnight UTC, and must
+    map to date-only. Writing it as a real time would put an Orlando card
+    at 8pm the previous evening for a US user.
+- **THE FREE TIER CAPS THE FORWARD WINDOW AT 7 DAYS.** Undocumented on the
+  pricing page and in the docs. `days=90`, `days=30` and `days=14` all
+  return `{"code":"DateOutOfRange"}`; `days=7` returns 200. TSDB already
+  gives us 77 days of boxing, so this vendor can only ever enrich the next
+  week of it.
+  - AND THE REFUSAL ARRIVES INSIDE A SUCCESS-SHAPED ENVELOPE:
+    `{"pagination":{"total_items":0},"error":{...},"data":null}` with HTTP
+    403. A `?? []` on `data` reads a refused request as "no boxing next
+    month". Standing invariant 4, exactly.
+- **THE DOCS UNDERSTATE THE PAYLOAD, in our favour.** Three fields the
+  documentation never shows: `card_billing` ("Main Event", "Main Card") —
+  so card position is STORED, correcting the earlier report that it would
+  have to be derived; `promotion` and `co_promotion` — the promoter field
+  we want. Both are `null` on all five current cards, so the promoter gap
+  stays open and the review-queue-only rule stands unchanged.
+- **IDENTITY IS THE BLOCKER, AND IT IS OURS NOT THEIRS.** The vendor's
+  identity data is good: stable ids, full names, nationality, division.
+  - Of the 24 distinct fighters on the five upcoming cards, **11 map
+    certainly onto our 533 (46%)**. Of our 533, 174 (32.6%) match the
+    vendor's `/v2/fighters` list — but that list is a 1,007-name SUBSET,
+    not the roster: Nyika, Masson, Kraus and Hemphill all carry valid
+    `fighter_id`s on real cards while being absent from it.
+  - THE MISSES ARE NOT A MATCHER PROBLEM. Of 13 unmatched fighters, 11 are
+    ABSENT FROM OUR DIRECTORY ENTIRELY — including Callum Simpson, Michael
+    Zerafa and world champion Dina Thorslund. Exactly one is a real
+    matching failure, and it is our data: we store "Tamm Thibeault" for
+    Tammara Thibeault.
+  - Our 533 come from a ranked roster of ~15-20 per division. Real cards
+    are mostly fighters outside any ranking. So "never mint from this
+    vendor" — correct as a rule — means **more than half of every card
+    cannot publish**, and only 2 of 5 main events have BOTH fighters
+    mapped.
