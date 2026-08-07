@@ -208,6 +208,24 @@ These apply to every stage. They do not need restating in a brief.
       committed, across all 131 commits.
     - A failed push is reported, not retried blind — same rule as a failed
       deploy.
+15. **A guard nobody has tried to defeat is not known to work** (owner
+    ruling 2026-08-07). Any guard — a branded type, a validation, a rate
+    limit, a rules check — ships with a DELIBERATE attempt to break it,
+    and the report states what was tried and what happened.
+    - The ruling came from a case that looked finished twice. Branding
+      `searchName` caught nothing on its own, because the offending
+      adapter never mentioned the `Athlete` type and
+      `db.collection(...)` returns `DocumentData`. Typing the collection
+      fixed the create path — and the MERGE path still silently accepted
+      a raw string, because Firestore's `PartialWithFieldValue<T>` is
+      recursive and widens a branded string back to `string`. Neither
+      gap was visible in a passing typecheck; both were visible the
+      moment the original bug was pasted back in.
+    - So: reintroduce the exact defect the guard exists to stop, on
+      EVERY path that writes (create and merge are different paths),
+      confirm it fails, then restore. Two-thirds of a guard reported as
+      a whole one is worse than no guard, because it stops anyone
+      looking again.
 
 ## Concurrency against production
 

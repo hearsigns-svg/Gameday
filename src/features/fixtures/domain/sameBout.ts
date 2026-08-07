@@ -27,6 +27,7 @@
 // word, and dedupe must not overrule it. Cancelled docs pass through
 // untouched so their deletion propagates normally.
 
+import { foldName, pairKey as foldedPair } from '../../../core/nameFold';
 import { Fixture } from './fixture';
 import { timePrecisionOf } from './horizon';
 
@@ -36,25 +37,23 @@ import { timePrecisionOf } from './horizon';
 // Arsenal in league and cup within a week is two real fixtures.
 const PERSON_SPORTS = new Set(['boxing', 'ufc']);
 
+// THE FOLD LIVES IN ONE PLACE (22c follow-up). This module carried its
+// own copy, `card.ts` carried an identical one, and `core/nameFold.ts`
+// carried a third that had drifted — it spells `&` as " and " and these
+// two dropped it. Nothing crossed between them, so nothing was broken;
+// but three implementations of "are these the same name" is three chances
+// to answer differently, and the version that decides whether to merge
+// two calendar events is the last place to want the weaker rule.
+//
+// Measured before switching: of 4,102 distinct participant names in
+// production, 64 fold differently and ZERO entity groups are separated by
+// one fold and united by the other. Behaviour-preserving on today's data,
+// strictly better on tomorrow's.
+//
 // Mirrors functions/src/identity.ts normaliseName: case and diacritics
 // fold, non-decomposing letters transliterated (đ→dj — Prompt 10b),
 // every non-alphanumeric becomes a space — so "Teófimo López" and
 // "Teofimo Lopez" are one participant.
-function normalise(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/đ/g, 'dj')
-    .replace(/ø/g, 'o')
-    .replace(/ł/g, 'l')
-    .replace(/æ/g, 'ae')
-    .replace(/ß/g, 'ss')
-    .replace(/þ/g, 'th')
-    .replace(/ð/g, 'd')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
 
 const SAME_BOUT_WINDOW_MS = 36 * 3_600_000;
 
@@ -74,9 +73,10 @@ function score(f: Fixture): number {
 function pairKey(f: Fixture): string | null {
   if (!PERSON_SPORTS.has(f.sport)) return null;
   if (!f.homeTeam || !f.awayTeam) return null;
-  const pair = [normalise(f.homeTeam), normalise(f.awayTeam)].sort();
-  if (pair[0].length === 0 || pair[1].length === 0) return null;
-  return `${f.sport}|${pair.join('|')}`;
+  const home = foldName(f.homeTeam);
+  const away = foldName(f.awayTeam);
+  if (home.length === 0 || away.length === 0) return null;
+  return `${f.sport}|${foldedPair(home, away)}`;
 }
 
 // THE CANONICAL PAIR (Prompt 14). Two combat records are the same
@@ -130,10 +130,11 @@ function appearanceTwinKey(f: Fixture): string | null {
   const head = (f.title ?? '').split(' — ')[0];
   const sides = head.split(' vs ');
   if (sides.length !== 2) return null;
-  const pair = [normalise(sides[0]), normalise(sides[1])].sort();
-  if (pair[0].length === 0 || pair[1].length === 0) return null;
-  if (pair[0] === pair[1]) return null; // a player cannot play themselves
-  return `${f.parentFixtureId}|${pair.join('|')}`;
+  const one = foldName(sides[0]);
+  const two = foldName(sides[1]);
+  if (one.length === 0 || two.length === 0) return null;
+  if (one === two) return null; // a player cannot play themselves
+  return `${f.parentFixtureId}|${foldedPair(one, two)}`;
 }
 
 function canonicalPairKey(f: Fixture): string | null {

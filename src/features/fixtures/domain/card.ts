@@ -15,26 +15,17 @@
 // start-list connector) a meeting's events are the same shape. Nothing
 // here is combat-specific except the vocabulary.
 
+import { foldName, pairKey } from '../../../core/nameFold';
 import { Fixture } from './fixture';
 import { isPast } from './horizon';
 
-// Mirrors sameBout.ts::normalise, which mirrors the server's
-// identity.ts::normaliseName. Kept local so this module stays a leaf.
-function normalise(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/đ/g, 'dj')
-    .replace(/ø/g, 'o')
-    .replace(/ł/g, 'l')
-    .replace(/æ/g, 'ae')
-    .replace(/ß/g, 'ss')
-    .replace(/þ/g, 'th')
-    .replace(/ð/g, 'd')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
+// THE FOLD IS SHARED NOW (22c follow-up). This module carried a copy,
+// sameBout.ts carried an identical one, and core/nameFold.ts carried a
+// third that had DRIFTED — it spells `&` as " and " and these two dropped
+// it. Nothing crossed between them so nothing was broken, but three
+// answers to "are these the same name" is two too many, and the copy that
+// decides whether to merge two calendar events is the last place to keep
+// the weaker rule.
 
 const VS = /\s+(?:vs\.?|v)\s+/i;
 
@@ -45,18 +36,18 @@ const VS = /\s+(?:vs\.?|v)\s+/i;
 function pairOf(f: Fixture): string | null {
   const fromAthletes =
     f.athletes && f.athletes.length === 2
-      ? f.athletes.map(normalise)
+      ? f.athletes.map(foldName)
       : null;
   const fromTitle = (() => {
     // Titles may carry a trailing qualifier ("A vs B — US Open").
     const base = f.title.split(' — ')[0];
     if (!VS.test(base)) return null;
-    const parts = base.split(VS).map(normalise);
+    const parts = base.split(VS).map(foldName);
     return parts.length === 2 ? parts : null;
   })();
   const pair = fromAthletes ?? fromTitle;
   if (!pair || pair.some((p) => p.length === 0)) return null;
-  return [...pair].sort().join('|');
+  return pairKey(pair[0], pair[1]);
 }
 
 export interface CardEntry {
@@ -85,9 +76,10 @@ export interface CardEntry {
 // stamped by only one connector.
 function isParentHeadline(parent: CardParent, child: Fixture): boolean {
   if (!parent.homeTeam || !parent.awayTeam) return false;
-  const parentPair = [normalise(parent.homeTeam), normalise(parent.awayTeam)]
-    .sort()
-    .join('|');
+  const parentPair = pairKey(
+    foldName(parent.homeTeam),
+    foldName(parent.awayTeam),
+  );
   return parentPair.length > 1 && pairOf(child) === parentPair;
 }
 

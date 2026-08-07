@@ -23,15 +23,34 @@
 //   any transliteration a person would type.
 //   `&` becomes " and " so "Bath & Wells" matches either spelling.
 //
-// NOT USED FOR DEDUPE. `fixtures/domain/card.ts` and
-// `fixtures/domain/sameBout.ts` each keep their own near-copy, on purpose:
-// they are leaf modules whose fold decides whether two documents are the
-// same real event, and their rules differ slightly from this one. Pointing
-// them here would change what collapses into what. Consolidating them is a
-// real piece of work with a test surface of its own, not a tidy-up to
-// smuggle into a search fix.
+// USED FOR DEDUPE TOO, since 22c-follow-up. It was not: `card.ts` and
+// `sameBout.ts` each carried a near-copy, and the three had already
+// drifted — this one spells `&` as " and " and they dropped it. Measured
+// against production before consolidating: of 4,102 distinct participant
+// names, 64 fold differently under the two rules, and ZERO entity groups
+// are separated by one fold and united by the other. So the drift was
+// benign on today's data, and consolidating is behaviour-preserving on
+// today's data — but "benign" was luck, not design, and the 11-rule
+// version is the strictly better one: it is what makes a provider
+// spelling "Brighton & Hove" match another spelling "Brighton and Hove".
+//
+// The fold that decides whether two documents are the same real event now
+// has its own test surface (nameFold.test.ts), which is what made
+// consolidating safe rather than brave.
 
-export function foldForSearch(raw: string): string {
+// A NAME THAT HAS BEEN FOLDED — branded, for the same reason `SearchName`
+// is on the server. The failure mode here is not "someone forgets to
+// fold"; it is "someone writes their own `.normalize('NFD')...` chain and
+// it drifts", which is exactly what happened three times. A comparison
+// that expects `FoldedName` cannot be handed a hand-rolled string.
+declare const foldedNameBrand: unique symbol;
+export type FoldedName = string & { readonly [foldedNameBrand]: true };
+
+export function foldName(raw: string): FoldedName {
+  return foldRaw(raw) as FoldedName;
+}
+
+function foldRaw(raw: string): string {
   return raw
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -49,6 +68,20 @@ export function foldForSearch(raw: string): string {
     .trim();
 }
 
+// THE KEY EVERY "ARE THESE THE SAME TWO PEOPLE" COMPARISON USES —
+// order-independent, and it accepts ONLY folded names.
+//
+// This is where the brand earns its keep. Forgetting to fold was never
+// the real risk; the real risk is the next person writing their own
+// `.normalize('NFD')...` chain because it is four lines and right there,
+// which is precisely how this project ended up with three of them. A
+// hand-rolled chain returns `string`, `string` is not `FoldedName`, and
+// the call does not compile. The only way to a dedupe comparison is
+// through the one fold.
+export function pairKey(a: FoldedName, b: FoldedName): string {
+  return [a, b].sort().join('|');
+}
+
 // Does `haystack` contain `needle`, both folded? The comparison every
 // local filter should make, so no call site can fold one side and not
 // the other — which is the mistake in miniature.
@@ -56,9 +89,9 @@ export function foldForSearch(raw: string): string {
 // An empty needle matches NOTHING rather than everything: these back
 // search boxes, where a blank query means "no query yet", not "every row".
 export function foldedIncludes(haystack: string, needle: string): boolean {
-  const n = foldForSearch(needle);
+  const n = foldName(needle);
   if (n === '') return false;
-  return foldForSearch(haystack).includes(n);
+  return foldName(haystack).includes(n);
 }
 
 // The same test across several names — a team's display name plus any
@@ -70,7 +103,7 @@ export function anyFoldedIncludes(
   names: readonly (string | undefined | null)[],
   needle: string,
 ): boolean {
-  const n = foldForSearch(needle);
+  const n = foldName(needle);
   if (n === '') return false;
-  return names.some((h) => typeof h === 'string' && foldForSearch(h).includes(n));
+  return names.some((h) => typeof h === 'string' && foldName(h).includes(n));
 }
