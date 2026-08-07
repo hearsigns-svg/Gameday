@@ -3,6 +3,7 @@
 // people whose names are each other's reversal.
 
 import { buildAthleteIndex, matchAthlete, Athlete } from '../athletes';
+import { athleteNames } from '../identity';
 
 // searchName is DERIVED, so a fixture can never disagree with itself
 // about what the athlete is called.
@@ -10,14 +11,17 @@ const athlete = (over: Partial<Athlete>): Athlete => {
   const displayName = over.displayName ?? 'Shang Juncheng';
   return {
     id: 'athlete_000001',
-    aliases: [],
     sport: 'tennis',
     providerIds: {},
     identities: [],
     active: true,
     ...over,
-    displayName,
-    searchName: displayName.toLowerCase(),
+    // Through the constructor, exactly like production. This used
+    // `displayName.toLowerCase()` — the precise shape of the bug that put
+    // 12 athletes beyond search — and the `as Athlete` cast meant the new
+    // brand could not catch it here either. A fixture that models a broken
+    // writer teaches the suite to accept one.
+    ...athleteNames(displayName),
   } as Athlete;
 };
 

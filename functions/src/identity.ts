@@ -45,6 +45,59 @@ export function normaliseName(raw: string): string {
     .trim();
 }
 
+// ---------------------------------------------------------------------------
+// A NAME THAT HAS BEEN NORMALISED — as a TYPE, not as a convention.
+//
+// `searchName` had four independent writers and one of them lower-cased
+// instead of normalising, which put 12 real athletes in the store
+// unreachable by any ASCII spelling. The comment above already recorded
+// that exact failure as caught and fixed once; a new adapter brought it
+// straight back, because "remember to call normaliseName" is a rule that
+// lives in a reviewer's head and nowhere in the code.
+//
+// A brand puts it in the code. `searchName: SearchName` cannot be
+// satisfied by `p.name.toLowerCase()`, or by a raw string of any kind —
+// the only value that inhabits the type is one this module produced. The
+// next adapter does not have to remember; it cannot compile.
+declare const searchNameBrand: unique symbol;
+export type SearchName = string & { readonly [searchNameBrand]: true };
+
+// The ONE constructor. Everything that stores a searchable name goes
+// through here, so the normalisation rules above have exactly one caller
+// to answer to.
+export function toSearchName(raw: string): SearchName {
+  return normaliseName(raw) as SearchName;
+}
+
+// Documents READ back from Firestore arrive as plain strings — the brand
+// is a compile-time guard on what we WRITE, and cannot survive JSON. This
+// is the one sanctioned way back into the type, named so it is obvious in
+// review that a value came off the wire rather than out of the
+// constructor. It re-normalises rather than trusting: a doc written
+// before the brand existed may hold anything.
+export function searchNameFromStore(stored: string): SearchName {
+  return toSearchName(stored);
+}
+
+// The three name fields of an athlete document, built together.
+//
+// The brand makes the wrong value impossible; this makes the right one
+// effortless, which matters just as much — a writer that has to assemble
+// three fields by hand is a writer that will assemble two of them.
+// `aliases` are de-duplicated and never contain the searchName itself,
+// which is what every reader already assumes when it does
+// `[a.searchName, ...a.aliases]`.
+export function athleteNames(
+  displayName: string,
+  alternates: readonly string[] = [],
+): { displayName: string; searchName: SearchName; aliases: SearchName[] } {
+  const searchName = toSearchName(displayName);
+  const aliases = [
+    ...new Set(alternates.map(toSearchName).filter((a) => a !== '' && a !== searchName)),
+  ];
+  return { displayName, searchName, aliases };
+}
+
 // Participants, order-independent: "A vs B" and "B at A" are one fixture.
 export function participantsKey(f: Fixture): string {
   const named = [f.homeTeam, f.awayTeam].filter(

@@ -13,7 +13,7 @@ import {
   deriveBoutAppearances,
   retiredAppearanceIds,
 } from './appearances';
-import { normaliseName } from './identity';
+import { athleteNames, normaliseName, toSearchName } from './identity';
 import { imageryAllowed, withImageryPolicy } from './imagery';
 import {
   artIsFresh,
@@ -36,6 +36,8 @@ import {
   providerKey,
   resolveDrafts,
   stampDriverKeys,
+  athletesCollection,
+  type AthleteUpdate,
 } from './athletes';
 import {
   createAthletes,
@@ -1792,55 +1794,53 @@ async function applyAtpDirectory(
     fn();
     if (++n >= 400) await flush();
   };
+  const athletes = athletesCollection(db);
   for (const k of plan.keep) {
-    const ref = db.collection('athletes').doc(k.athleteId);
+    const ref = athletes.doc(k.athleteId);
     const held = (byId.get(k.athleteId)?.providerIds ?? {}) as Record<string, string>;
-    await queue(() =>
-      batch.set(
-        ref,
-        {
-          rank: k.player.rank,
-          groupingKey: groupingFor(k.player.rank),
-          ...(k.player.countryCode ? { countryCode: k.player.countryCode } : {}),
-          providerIds: { ...held, [ATP_VENDOR]: k.player.vendorId },
-          // SELF-HEALING, so this needs no migration. The keep path never
-          // wrote `searchName`, which meant fixing the create path alone
-          // would have left the twelve already-stored names broken for
-          // good — a scheduled job that repairs nothing is how a one-line
-          // bug becomes permanent. Derived from the doc's OWN
-          // `displayName` rather than the vendor's spelling, because
-          // display is the string this has to agree with; four of these
-          // docs were manually merged and keep our canonical name.
-          searchName: normaliseName(
-            String(byId.get(k.athleteId)?.displayName ?? k.player.name),
-          ),
-          // The vendor's spelling becomes an alias when it differs, so a
-          // merged player is findable by both. `search.ts` already
-          // searches aliases alongside searchName.
-          ...(normaliseName(k.player.name) !==
-          normaliseName(String(byId.get(k.athleteId)?.displayName ?? k.player.name))
-            ? { aliases: FieldValue.arrayUnion(normaliseName(k.player.name)) }
-            : {}),
-          active: true,
-          updatedAt: startedAt,
-        },
-        { merge: true },
+    // ANNOTATED, not inferred: the annotation is what makes the brand
+    // reach a merge write at all (see AthleteUpdate).
+    const update: AthleteUpdate = {
+      rank: k.player.rank,
+      groupingKey: groupingFor(k.player.rank),
+      ...(k.player.countryCode ? { countryCode: k.player.countryCode } : {}),
+      providerIds: { ...held, [ATP_VENDOR]: k.player.vendorId },
+      // SELF-HEALING, so this needs no migration. The keep path never
+      // wrote `searchName`, which meant fixing the create path alone
+      // would have left the twelve already-stored names broken for good
+      // — a scheduled job that repairs nothing is how a one-line bug
+      // becomes permanent. Derived from the doc's OWN `displayName`
+      // rather than the vendor's spelling, because display is the string
+      // this has to agree with; four of these docs were manually merged
+      // and keep our canonical name.
+      searchName: toSearchName(
+        String(byId.get(k.athleteId)?.displayName ?? k.player.name),
       ),
-    );
+      // The vendor's spelling becomes an alias when it differs, so a
+      // merged player is findable by both. `search.ts` already searches
+      // aliases alongside searchName.
+      ...(toSearchName(k.player.name) !==
+      toSearchName(String(byId.get(k.athleteId)?.displayName ?? k.player.name))
+        ? { aliases: FieldValue.arrayUnion(toSearchName(k.player.name)) }
+        : {}),
+      active: true,
+      updatedAt: startedAt,
+    };
+    await queue(() => batch.set(ref, update, { merge: true }));
   }
   for (const f of plan.keepFollowed) {
     // Followed but unranked: they stay, and stop claiming a ranking
     // they no longer hold.
     await queue(() =>
       batch.set(
-        db.collection('athletes').doc(f.athleteId),
+        athletes.doc(f.athleteId),
         { rank: FieldValue.delete(), groupingKey: 'atp-directory', updatedAt: startedAt },
         { merge: true },
       ),
     );
   }
   for (const r of plan.remove) {
-    await queue(() => batch.delete(db.collection('athletes').doc(r.athleteId)));
+    await queue(() => batch.delete(athletes.doc(r.athleteId)));
   }
   await flush();
 
@@ -1857,19 +1857,14 @@ async function applyAtpDirectory(
   n = 0;
   plan.create.forEach((p, i) => {
     const id = `athlete_${String(start + i).padStart(6, '0')}`;
-    batch.set(db.collection('athletes').doc(id), {
+    batch.set(athletes.doc(id), {
       id,
-      displayName: p.name,
-      // `normaliseName`, NOT `.toLowerCase()` (22c). Every other writer of
-      // this field already used it (athletes.ts:527, :857) and the query
-      // side always has (search.ts:233), so lower-casing here put the ONE
-      // population in the store that could not be searched: 12 men whose
-      // names carry a diacritic or a hyphen were unreachable by any ASCII
-      // spelling a user would type. "Hamad Medjedović" is the same case
-      // identity.ts:32 records as caught and fixed once already — this
-      // reintroduced it for the ATP directory alone.
-      searchName: normaliseName(p.name),
-      aliases: [],
+      // All three name fields from one call. This adapter used to set
+      // `searchName: p.name.toLowerCase()` — the one writer in the store
+      // that did not normalise — which left 12 men unreachable by any
+      // ASCII spelling. It cannot do that now: `searchName` is branded
+      // and this collection is typed, so a raw string does not compile.
+      ...athleteNames(p.name),
       sport: 'tennis',
       providerIds: { [ATP_VENDOR]: p.vendorId },
       provenance: 'roster',

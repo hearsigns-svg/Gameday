@@ -29,7 +29,7 @@ import {
   resolveDrafts,
 } from '../athletes';
 import { Fixture } from '../fixture';
-import { isSameFixture, normaliseName } from '../identity';
+import { athleteNames, isSameFixture, normaliseName } from '../identity';
 import { enrichBoutParticipants } from '../participants';
 
 const card = (over: Partial<Fixture> = {}): Fixture => ({
@@ -55,9 +55,7 @@ const dirAthlete = (
   ids: Record<string, string> = {},
 ): Athlete => ({
   id,
-  displayName: name,
-  searchName: normaliseName(name),
-  aliases: [],
+  ...athleteNames(name),
   sport,
   providerIds: ids,
   identities: [],

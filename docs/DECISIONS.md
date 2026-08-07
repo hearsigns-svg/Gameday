@@ -2457,3 +2457,72 @@
   only by the owner's GLOBAL ignore file, which does not travel with a
   repository. AGENTS rule 14 makes the push part of the end-of-stage
   routine, paired with the simulator rebuild.
+
+## 2026-08-07 — Prompt 22c follow-up: making the searchName regression impossible
+
+- **A BRAND, NOT A CONVENTION** (owner ruling: "not remember to use
+  `normaliseName` — a single writer that no adapter can bypass").
+  `SearchName` is `string & { readonly [unique symbol]: true }` in
+  `identity.ts`, produced only by `toSearchName`. `Athlete.searchName` and
+  `Athlete.aliases` carry it, so `p.name.toLowerCase()` is a COMPILE
+  ERROR rather than a code-review miss. `athleteNames(displayName, alts)`
+  builds all three name fields together, de-duplicating aliases and never
+  letting one equal the searchName — because a writer that has to
+  assemble three fields by hand is a writer that will assemble two.
+- **BRANDING THE FIELD ALONE WOULD HAVE CAUGHT NOTHING**, and this is the
+  part worth remembering. A brand only bites where a value is CHECKED
+  against the branded type, and `db.collection('athletes')` returns
+  `DocumentData` — every write through it is unchecked. The original bug
+  lived in an adapter that never mentioned the `Athlete` type at all. So
+  `athletesCollection(db)` returns a typed `CollectionReference<Athlete>`
+  and the ATP adapter's four write paths go through it.
+- **AND THAT STILL LEFT THE MERGE PATH OPEN.** Verified by deliberately
+  reintroducing the original bug on both paths: the create path failed to
+  compile, the merge path did not. Firestore's `PartialWithFieldValue<T>`
+  is RECURSIVE — it maps over the properties of every field's type, and
+  `SearchName` is a string intersection, so it descends into the string's
+  own members and widens to something a raw string satisfies. Hence
+  `AthleteUpdate`, one level deep, where `searchName?: SearchName |
+  FieldValue` means exactly that. Re-tested: both paths now reject it.
+  A guard nobody has tried to defeat is not known to work.
+- **THE SUITE ENCODED THE BUG.** Four test fixtures built `Athlete`
+  objects behind an `as Athlete` cast, and one of them —
+  `reversedNames.test.ts` — used `displayName.toLowerCase()`, the exact
+  shape of the defect, under a comment claiming searchName was derived.
+  All four now go through `athleteNames`. A fixture that models a broken
+  writer teaches the suite to accept one.
+- **WRITER CENSUS: 4 production sites, all legitimate, none needing
+  different treatment.** `mintFromSpec` and `mintFromRoster`
+  (`athletes.ts`) create from a single name; the ATP adapter's create path
+  does the same; its keep path repairs from the doc's OWN `displayName`
+  rather than the vendor's spelling, because four of those docs were
+  manually merged and keep our canonical name — the vendor's form becomes
+  an alias instead. One query site (`rosterStore.ts`) and one alias
+  accumulator (`athletes.ts`) read through the same fold.
+
+### Other canonical forms computed independently — named, not fixed
+
+- **`nameKey` — the dedupe key, 5 sites, HIGHEST RISK.** `providerKey(source,
+  externalId)` is already a named constructor, but its name-keyed sibling
+  is written inline as `` `${sport}|${normaliseName(name)}` `` at
+  `athletes.ts:330`, `:347`, `:487`, `:736` and `index.ts:367`. Two build a
+  LOOKUP and three build a CREATE key, so a divergence between them does
+  not throw — it silently creates a second athlete for a person who
+  already exists, which is F34's failure mode. They agree today.
+- **Normalise-then-hyphenate (a slug), 4 sites.** `appearances.ts:45`,
+  `tennisTournaments.ts:34`, `reviewQueue.ts:146`,
+  `providers/worldAthletics.ts:73`. Identical today except that
+  `worldAthletics` alone guards a null input. `tennisTournaments`' copy is
+  the one that mints `tennis-t-<slug>` — a stored follow key — so a
+  divergence there orphans follows.
+- **THE CLIENT FOLD HAS ALREADY DIVERGED, three copies.**
+  `core/nameFold.ts` (added today, mirroring the server) has 11 rules;
+  `fixtures/domain/sameBout.ts` and `fixtures/domain/card.ts` have 9 and
+  are identical to each other. The difference is real: `&` → " and " and a
+  space-preserving character class. "Bath & Wells" folds to
+  "bath and wells" for search and identity, "bath wells" for dedupe. The
+  dedupe pair were deliberately left alone — their fold decides whether
+  two documents are the same real event, and changing it changes what
+  collapses. Consolidating needs its own test surface.
+- Not this shape, checked and excluded: `competitionKey`, `participantsKey`
+  and `identityKey` each have exactly one definition and one caller path.

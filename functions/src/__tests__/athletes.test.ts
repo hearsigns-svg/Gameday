@@ -23,14 +23,12 @@ import {
 } from '../athletes';
 import { appearanceFor } from '../appearances';
 import { Fixture } from '../fixture';
-import { normaliseName } from '../identity';
+import { athleteNames, normaliseName, toSearchName } from '../identity';
 
 const NOW = '2026-08-03T00:00:00.000Z';
 
 const athlete = (over: Partial<Athlete> & { id: string }): Athlete => ({
-  displayName: 'Nobody',
-  searchName: normaliseName(over.displayName ?? 'Nobody'),
-  aliases: [],
+  ...athleteNames(over.displayName ?? 'Nobody'),
   sport: 'tennis',
   providerIds: {},
   identities: [],
@@ -167,7 +165,7 @@ describe('matchAthlete — the certainty ladder', () => {
       athlete({
         id: 'athlete_000005',
         displayName: 'Alexandra Eala',
-        aliases: [normaliseName('Alex Eala')],
+        aliases: [toSearchName('Alex Eala')],
       }),
     ]);
     expect(matchAthlete(withAlias, 'tennis', { name: 'Alex Eala' }).kind).toBe(

@@ -24,8 +24,9 @@
 // production device (2026-08-03), so there is no legacy to migrate and
 // no dual-key emission — a clean cut.
 
+import type { CollectionReference, FieldValue, Firestore } from 'firebase-admin/firestore';
 import { Fixture } from './fixture';
-import { normaliseName } from './identity';
+import { athleteNames, normaliseName, SearchName, toSearchName } from './identity';
 
 // ─── The entity ───────────────────────────────────────────────────────
 
@@ -42,6 +43,40 @@ export interface AthleteIdentity {
 
 export type AthleteProvenance = 'roster' | 'fixture_derived' | 'review';
 
+// THE ATHLETES COLLECTION, TYPED — the other half of the brand.
+//
+// A brand on the `Athlete` interface only bites where a value is CHECKED
+// against that interface, and `db.collection('athletes')` returns
+// `DocumentData`: every write through it is unchecked. That is precisely
+// how a raw lower-cased string reached `searchName` in an adapter that
+// never mentioned the `Athlete` type at all. Branding the field and
+// leaving the collection untyped would have caught nothing.
+//
+// Route writes through here and `batch.set` demands
+// `WithFieldValue<Athlete>` — so the brand reaches the Firestore call,
+// and a future adapter that assembles its own document literal fails to
+// compile rather than shipping.
+export function athletesCollection(db: Firestore): CollectionReference<Athlete> {
+  return db.collection('athletes') as unknown as CollectionReference<Athlete>;
+}
+
+// A MERGE WRITE TO AN ATHLETE DOC — and the reason it exists.
+//
+// Typing the collection makes the brand bite on a full `set`, but NOT on
+// `set(ref, obj, { merge: true })`. Firestore's `PartialWithFieldValue<T>`
+// is RECURSIVE: it maps over the properties of every field's type, and
+// `SearchName` is `string & { ... }`, so it descends into the string's own
+// members and widens to something a raw string satisfies. Verified by
+// deliberately reintroducing the original bug on both paths: the create
+// path failed to compile, the merge path did not.
+//
+// This is one level deep, so `searchName?: SearchName | FieldValue` means
+// exactly that. FieldValue stays allowed because the roster genuinely uses
+// `delete()` and `arrayUnion()` on these documents.
+export type AthleteUpdate = {
+  [K in keyof Athlete]?: Athlete[K] | FieldValue;
+};
+
 export interface Athlete {
   id: string; // athlete_000184 — provider-agnostic, and THE follow key
   // Deterministic accent hue (accentHueOf) — the generated colour
@@ -49,8 +84,11 @@ export interface Athlete {
   // created before the field existed.
   accentHue?: number;
   displayName: string;
-  searchName: string; // normalised displayName
-  aliases: string[]; // normalised alternate forms, from identities
+  // BRANDED (22c follow-up). Was `string`, which is how a fourth writer
+  // came to store `p.name.toLowerCase()` here and made 12 athletes
+  // unfindable. Only `toSearchName` produces this type.
+  searchName: SearchName;
+  aliases: SearchName[]; // normalised alternate forms, from identities
   sport: string;
   // Display title. STORED, but no longer authoritative: browse and
   // search both resolve the header through `groupTitleOf(groupingKey)`
@@ -523,9 +561,9 @@ export function newAthlete(
   return {
     id,
     accentHue: accentHueOf(id),
-    displayName: spec.ref.name,
-    searchName: normaliseName(spec.ref.name),
-    aliases: [],
+    // One call builds all three name fields, so a writer cannot set two
+    // of them and forget the third.
+    ...athleteNames(spec.ref.name),
     sport: spec.sport,
     ...(spec.grouping ? { grouping: spec.grouping } : {}),
     ...(spec.groupingKey ? { groupingKey: spec.groupingKey } : {}),
@@ -724,8 +762,8 @@ export function reconcileRoster(
         lastSeenAt: nowIso,
       })),
     ];
-    const aliasSet = new Set([...(prev.aliases ?? a.aliases)]);
-    const n = normaliseName(e.name);
+    const aliasSet = new Set<SearchName>([...(prev.aliases ?? a.aliases)]);
+    const n = toSearchName(e.name);
     if (n && n !== a.searchName) aliasSet.add(n);
     const providerIdAdds: Record<string, string> = {
       ...(e.externalId ? { [e.source]: e.externalId } : {}),
@@ -853,9 +891,7 @@ export function rosterAthlete(
   return {
     id,
     accentHue: accentHueOf(id),
-    displayName: e.name,
-    searchName: normaliseName(e.name),
-    aliases: [],
+    ...athleteNames(e.name),
     sport: e.sport,
     ...(e.grouping ? { grouping: e.grouping } : {}),
     ...(e.groupingKey ? { groupingKey: e.groupingKey } : {}),

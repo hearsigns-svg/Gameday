@@ -4,7 +4,7 @@
 // inactive athletes (hidden from curated lists, still findable).
 
 import { Athlete } from '../athletes';
-import { normaliseName } from '../identity';
+import { athleteNames } from '../identity';
 import {
   COMPETING_SOON_DAYS,
   GROUP_CAP,
@@ -15,9 +15,7 @@ import {
 const NOW = '2026-08-03T00:00:00.000Z';
 
 const athlete = (over: Partial<Athlete> & { id: string }): Athlete => ({
-  displayName: 'Nobody',
-  searchName: normaliseName(over.displayName ?? 'Nobody'),
-  aliases: [],
+  ...athleteNames(over.displayName ?? 'Nobody'),
   sport: 'boxing',
   providerIds: {},
   identities: [],
