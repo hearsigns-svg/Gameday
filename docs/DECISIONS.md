@@ -2731,3 +2731,49 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   three TSDB boxing bouts with one id are unmapped second fighters, not
   refusals. Tennis and WTA bouts carry one id BY DESIGN — their
   appearances are one per player.
+
+## 2026-08-07 — The connector that was deployed and inert
+
+- **THE SWEEP READS ITS WORKLIST FROM FIRESTORE, NOT FROM THE CODE.**
+  `sweep.ts::loadCataloguePaths` does `db.collection('catalogue').get()`;
+  `CATALOGUE_SEED` in `catalogue.ts` is only a seed array. So adding an
+  entry to the code does NOTHING on its own — and `boxingdata-cards`
+  shipped, deployed, tested and green while `scheduledSweep` had no idea
+  the route existed. The 6-call run that proved the connector worked was
+  invoked by hand. Nothing failed; the times simply would never have
+  arrived. AGENTS rule 13's shape again, from the other direction: not a
+  job that undoes a change, but a change no job knows about.
+- **`scripts/seed-catalogue.mjs` now exists** (it was referenced in
+  `catalogue.ts` and had never been written) and is **ADD-ONLY**. The
+  collection is documented as ops-editable — `enabled: false` cools a path
+  without a deploy, `priority` and `priorityByRegion` are tuned in the
+  console — so a seeder that reconciled every field would silently revert
+  ops decisions on its next run. It creates what is missing, reports what
+  is extra, and updates nothing.
+- **THE DRIFT WAS BIGGER THAN THE ONE ENTRY: 59 of 140 seed entries were
+  absent from Firestore.** Split before acting rather than seeding all of
+  them: 2 pollable (`boxingdata-cards`, `tennis-atp-sheet`) and 57
+  Olympic ordering-only rows. Only `boxingdata-cards` was written.
+  - The 57 carry browse `priority` weights, so creating them would change
+    what users see in ordering — beyond the brief, and not a decision to
+    make as a side effect of fixing a connector. Left for a ruling.
+  - `tennis-atp-sheet` is NOT inert despite being absent: `sourceRuns`
+    shows 32 runs, every one `trigger=manual`, most recently the same
+    day. The Apps Script drives it on its own two-hourly trigger. Seeding
+    it would ADD sweep polling on top of that, which is a live cadence
+    decision rather than a repair. Left alone deliberately.
+- **THE OTHER HALF OF THE DRIFT: 33 functions deployed, 3 redeployed.**
+  Since the 22c round, `identity.ts`, `athletes.ts`, `appearances.ts`,
+  `tennisTournaments.ts`, `worldAthletics.ts`, `reviewQueue.ts`,
+  `sweep.ts` and `sourceRuns.ts` all changed — and `nameSlug` returning
+  `null` where it used to return `''` is a real runtime change to
+  `tournamentKey`, `groupKey`, `promoterKey` and `appearanceId`. Thirty
+  functions were running the pre-22c version of shared code. Closed with
+  a full `--only functions` deploy.
+- **VERIFIED TO THE LAST TIME-GATED LINK.** Entry seeded and read back;
+  `sliceOfPollPath('pollBoxingData')` resolves to the right slice; the
+  route is in the sweep's allowlist (the catalogue invariant test caught
+  its absence before I did). The final link is a clock: tier 2 polls only
+  when `sweepUtcHour < 6`, and `scheduledSweep` runs every six hours, so
+  the 00–06 UTC run is the one that fires it. A manual sweep at 19:30 UTC
+  correctly polled 23 tier-1 paths and skipped it.
