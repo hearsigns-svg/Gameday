@@ -101,6 +101,22 @@ function poll() {
     status_('idle', 'no ATP tournament live or starting within 48h — 0 vendor requests');
     return;
   }
+  // ADAPTIVE COVERAGE, as a floor. Each tournament costs ~1 request per
+  // run once its ids are cached, 3 the first time. When the pooled
+  // budget is thin we cover the tournaments STARTING SOONEST and say
+  // what we dropped — a stated gap beats a silent one, and beats a run
+  // that fails wholesale because the last key ran dry on the ninth of
+  // thirteen draws.
+  var budget = quotaRemaining_().reduce(function (a, b) { return a + b; }, 0);
+  var affordable = Math.max(1, Math.floor((budget - RESERVE) / 3));
+  var dropped = [];
+  if (windows.length > affordable) {
+    windows = windows.slice().sort(function (a, b) {
+      return String(a.startUtc).localeCompare(String(b.startUtc));
+    });
+    dropped = windows.slice(affordable).map(function (w) { return w.tournamentKey; });
+    windows = windows.slice(0, affordable);
+  }
   var observations = [];
   var errors = [];
   for (var i = 0; i < windows.length; i++) {
@@ -116,9 +132,13 @@ function poll() {
   var mapped = updateMapping_(observations);
   rebuildCanonical_(observations, mapped);
   status_(
-    errors.length ? 'partial' : 'ok',
+    errors.length ? 'partial' : dropped.length ? 'budgeted' : 'ok',
     windows.length + ' tournament(s), ' + observations.length + ' matches, ' +
       Math.round((new Date() - t0) / 1000) + 's' +
+      (dropped.length
+        ? ' | BUDGET: covered ' + windows.length + ' of ' +
+          (windows.length + dropped.length) + ', deferred ' + dropped.join(', ')
+        : '') +
       (errors.length ? ' | ERRORS: ' + errors.join(' ; ') : '')
   );
 }
@@ -206,6 +226,30 @@ function keys_() {
  * remaining-quota header is stored per key so the status tab shows real
  * headroom rather than an estimate.
  */
+/**
+ * Remaining quota per key, as last reported by the vendor's own headers.
+ * Unknown counts as FULL: a key we have never called is not a key we
+ * know is empty, and treating unknown as zero would stall a fresh key.
+ */
+function quotaRemaining_() {
+  var props = PropertiesService.getScriptProperties();
+  var out = [];
+  for (var i = 0; i < keys_().length; i++) {
+    var raw = props.getProperty('QUOTA_' + i);
+    var n = raw ? parseInt(String(raw).split(' ')[0], 10) : NaN;
+    out.push(isNaN(n) ? DAILY_PER_KEY : n);
+  }
+  return out;
+}
+
+var DAILY_PER_KEY = 50;
+// Below this many requests left across ALL keys, the run stops taking on
+// new tournaments and covers the soonest ones only. A FLOOR, not the
+// primary fix: the fourth key is what buys the headroom, and this is
+// what keeps a lost key degrading freshness instead of stalling
+// everything mid-tournament.
+var RESERVE = 8;
+
 function vendorGet_(path) {
   var ks = keys_();
   var props = PropertiesService.getScriptProperties();
@@ -368,12 +412,16 @@ function ensureTabs_() {
 }
 
 function status_(state, detail) {
-  var props = PropertiesService.getScriptProperties();
-  var quota = [];
-  for (var i = 0; i < 6; i++) {
-    var q = props.getProperty('QUOTA_' + i);
-    if (q) quota.push('key' + (i + 1) + ': ' + q);
-  }
+  // HEADROOM, VISIBLE BEFORE IT BINDS. This used to record each key's
+  // last-seen remaining with a timestamp, which told you the ceiling had
+  // been hit only after it had. Now it reads "key1 41/50 · key2 50/50 …
+  // pool 182/200", so the margin is legible on every row.
+  var remaining = quotaRemaining_();
+  var quota = remaining.map(function (n, i) {
+    return 'key' + (i + 1) + ' ' + n + '/' + DAILY_PER_KEY;
+  });
+  var pool = remaining.reduce(function (a, b) { return a + b; }, 0);
+  quota.push('pool ' + pool + '/' + remaining.length * DAILY_PER_KEY);
   tab_(TAB_STATUS, ['at', 'state', 'detail', 'quota'])
     .appendRow([new Date().toISOString(), state, detail, quota.join(' | ')]);
 }

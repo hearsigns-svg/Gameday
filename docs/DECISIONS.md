@@ -2169,3 +2169,38 @@
   WHAT REMAINS TRUE AND SHIPPED: the majors appear under BOTH tour
   sections in browse, because both tours play them. They are simply one
   followable each.
+- 2026-08-07: **THE APPEARANCE MODEL IS PROVEN, ON REAL DATA.** The
+  claim it has always made — a match already in somebody's calendar gets
+  CORRECTED rather than replaced — was validated during the National
+  Bank Open by a watcher running against production, unprompted:
+  **19 documents CHANGED_IN_PLACE, 13 added, 0 removed.** Two shapes,
+  both from the same run:
+    tennis-…-app-ben-shelton   startUtc 2026-08-07T16:30Z → 17:40Z
+    tennis-…-app-arthur-fils   startUtc 2026-08-06T16:30Z → 2026-08-08T16:30Z
+                               title "… Round of 32" → "… Round of 16"
+  The second is the stronger one. A per-player appearance is a ROLLING
+  SLOT: the same document followed Fils through the draw, ceasing to be
+  his round-of-32 match and becoming his round-of-16 match, under an
+  unchanged id. A delete-and-recreate would have shown as a removal plus
+  an addition and would have destroyed the user's reminder and their
+  per-event settings; nothing was removed. The doc id cannot depend on
+  the time or the opponent BY CONSTRUCTION — it is parent + player — and
+  that is what makes the correction structural rather than lucky.
+- 2026-08-07: **F45 — THE MONTREAL/TORONTO ANTIPHASE TRAP.** A
+  city-keyed tournament lookup silently returns a STALE SEASON for the
+  Canadian Open in even years, on either tour, because the men's and
+  women's events swap cities in antiphase. Measured against the vendor:
+  `/search/montreal` returns id 2390 "Montreal" (ATP) AND id 2624
+  "Montreal" (WTA), and 2624's seasons are 2025, 2023, 2021, 2018,
+  2016 — there is no 2026. The women's 2026 event is `/search/toronto`
+  → id 2615, season "WTA Toronto, Canada Women Singles 2026". The trap
+  is symmetric: `/search/toronto` also returns the stale ATP id 2510 and
+  a "Simulated Reality" entity, id 15242.
+  NOTHING ERRORS. The lookup succeeds, the season id is real, and the
+  draw fetched is two years old — every layer reports success, which is
+  the class of bug that costs a day to find.
+  WHAT PROTECTS US TODAY: `vendorIdsFor_` (scripts/atp-sheet.gs)
+  resolves the season by matching `String(s.year) === year` against the
+  tournament's own start date, and THROWS when no season for that year
+  exists rather than falling back to the newest. Any future lookup must
+  do the same — never take `seasons[0]`.
