@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { monogramOf, FollowButton, ListRow } from '../../../core/components';
+import { monogramOf, FollowButton, SportCard, TileRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
@@ -144,39 +144,46 @@ export default function TeamListScreen({ navigation, route }: Props) {
         keyExtractor={(tm) => tm.key}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
-          <ListRow
-            title={item.name}
-            {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-            glyph={sport?.glyph ?? '🏟️'}
-            tileTheme={teamTheme(
-              colourFromKitText(item.colours) ?? sport?.accent ?? null,
-              mode,
-            )}
-            monogram={monogramOf(item.name)}
-            accessibilityLabel={`${item.name}, view fixtures`}
-            onPress={() =>
-              navigation.navigate('Team', {
-                teamKey: item.key,
-                name: item.name,
-                sportKey: route.params.sportKey,
-                ...(route.params.teamPollPath
-                  ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
-                  : {}),
-                ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
-                ...(item.colours ? { colours: item.colours } : {}),
-              })
-            }
+          <TileRow
             right={
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
-                <FollowButton
-                  following={isFollowed(item.key)}
-                  subject={item.name}
-                  busy={busyKey === item.key}
-                  onPress={() => void toggle(item)}
-                />
-              </View>
+              <FollowButton
+                following={isFollowed(item.key)}
+                subject={item.name}
+                busy={busyKey === item.key}
+                onPress={() => void toggle(item)}
+              />
             }
-          />
+          >
+            <SportCard
+              fullWidth
+              label={item.name}
+              // NO CAPTION. The crest and the name ARE a club's
+              // identity, and every team on this screen is in the
+              // league you just opened — "Premier League" under each of
+              // twenty rows says nothing and costs a line on all of
+              // them.
+              glyph={sport?.glyph ?? '🏟️'}
+              theme={teamTheme(
+                colourFromKitText(item.colours) ?? sport?.accent ?? null,
+                mode,
+              )}
+              monogram={monogramOf(item.name)}
+              {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+              accessibilityLabel={`${item.name}, view fixtures`}
+              onPress={() =>
+                navigation.navigate('Team', {
+                  teamKey: item.key,
+                  name: item.name,
+                  sportKey: route.params.sportKey,
+                  ...(route.params.teamPollPath
+                    ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
+                    : {}),
+                  ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                  ...(item.colours ? { colours: item.colours } : {}),
+                })
+              }
+            />
+          </TileRow>
         )}
       />
     </View>

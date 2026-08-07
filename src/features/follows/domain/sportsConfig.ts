@@ -180,8 +180,38 @@ export const SPORTS: SportConfig[] = [
     ],
   },
   { key: 'tennis', label: 'Tennis',
+    // REWRITTEN 22b (owner-set wording). The old note described a
+    // source that no longer exists: it said the men's list came from
+    // "Wikipedia's weekly table, which publishes the top 20 only" and
+    // that men's "have no approved source yet, so following a man
+    // delivers his events the moment one exists". Prompt 18 replaced
+    // the men's directory with a ranked vendor feed and put men's
+    // match times into calendars — the copy describing the source it
+    // replaced was never found. AGENTS rule 13, in prose rather than
+    // in a scheduler.
+    // THREE ACCURACY EDITS to the owner-set wording, measured against
+    // production 2026-08-07 (557 tennis docs, 156 upcoming) rather than
+    // assumed:
+    //
+    //   "a live ATP feed" -> "a live third-party feed". The men's list
+    //   comes from a RapidAPI vendor and a subscription ICS feed. Naming
+    //   the ATP as our source is exactly the claim the standing position
+    //   twelve lines below this refuses to make.
+    //
+    //   "available for tournaments we cover" -> "tournament by
+    //   tournament as each is played". The sheet polls ACTIVE windows,
+    //   so match times exist for the event in progress — 1 tournament,
+    //   the National Bank Open, on the day this was written — while 62
+    //   others hold dates only. The original phrasing is circular and
+    //   reads far broader than the pipeline is.
+    //
+    //   "has none published yet" -> "where we do not have matches yet".
+    //   The absence is OURS, not the publisher's: a tournament outside
+    //   the active window has a perfectly public draw. Standing
+    //   invariant 4 is about not letting our own gap read as the world's
+    //   — it applies to sentences as well as to `?? []`.
     coverageNote:
-      'Both ranked lists are live: the women’s from the WTA’s own feed, the men’s from Wikipedia’s weekly table, which publishes the top 20 only. Every other man we hold is listed A–Z below them — we are not told which of those are still competing. Women get draws and match times; men’s have no approved source yet, so following a man delivers his events the moment one exists. Retired players stay findable by name, but are not browsable and cannot be followed.',
+      'Men’s rankings and players come from a live third-party feed, and men’s match times arrive tournament by tournament as each is played. Women’s rankings, draws and order of play come from the WTA’s own API. Coverage varies — where we do not have the matches yet, we hold the tournament’s dates.',
     accent: '#65A30D',
     glyph: '🎾',
     enabled: true,

@@ -24,7 +24,6 @@ import {
 import {
   CoverageNote,
   FollowButton,
-  ListRow,
   monogramOf,
   SectionHeader,
   SportCard,
@@ -319,14 +318,18 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           {error}
         </Text>
       ) : null}
-      {/* The sport's coverage note, shown HERE as well as on the
-          competitions screen (Prompt 12). It is the same string and the
-          same mechanism — it was simply never visible on the screen it
-          describes: what the athlete groups are and are not built from
-          is athlete-browse information, and a user reading "Men's world
-          No. 1s" deserves to know in the same glance that no ATP
-          ranking source is approved. Browse only — a search has moved
-          past the question. */}
+      {/* The sport's coverage note. What the athlete groups are and
+          are not built from is athlete-browse information, and it
+          belongs in the same glance as the group headings. Browse only
+          — a search has moved past the question.
+
+          THIS IS TENNIS'S ONLY RENDER SITE. The comment here used to
+          say the note also showed on the competitions screen and that
+          "no ATP ranking source is approved"; Prompt 19 gave tennis its
+          own render path on LeagueListScreen, which returns before the
+          note and shows per-tour SECTION_NOTES instead, and Prompt 18
+          replaced the men's source outright. Both halves of the old
+          comment were stale (22b). */}
       {results === null && sport?.coverageNote ? (
         <CoverageNote note={sport.coverageNote} />
       ) : null}
@@ -391,7 +394,6 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               right={
                 followControlFor(a) ? (
                   <FollowButton
-                    iconOnly
                     following={isFollowed(a.key)}
                     subject={a.name}
                     busy={busyKey === a.key}

@@ -12,9 +12,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
-import { FollowButton, ListRow } from '../../../core/components';
+import { FollowButton, monogramOf, SportCard, TileRow } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
+import { teamTheme } from '../../../core/teamTheme';
+import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { follow, unfollow } from '../followActions';
@@ -22,11 +24,17 @@ import { followFeedback } from '../followFeedback';
 import { fetchTournaments, TournamentRow } from '../data/directoryRepo';
 import { isFollowed } from '../data/followStore';
 import { tournamentsFor } from '../domain/tennisBrowse';
+import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TournamentList'>;
 
 export default function TournamentListScreen({ navigation, route }: Props) {
   const t = useTheme();
+  const mode = useColorSchemeMode();
+  // This screen is reached only from the tennis browse sections, so the
+  // sport is fixed — but it comes from config rather than a literal, so
+  // a change to tennis's mark or accent reaches here too.
+  const tennis = sportByKey('tennis');
   const { tour, kind } = route.params;
   const [rows, setRows] = useState<TournamentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -102,18 +110,15 @@ export default function TournamentListScreen({ navigation, route }: Props) {
         data={rows}
         keyExtractor={(r) => r.key}
         renderItem={({ item }) => (
-          <ListRow
-            title={item.name}
-            caption={caption(item)}
-            accessibilityLabel={`${item.name}, see upcoming`}
-            onPress={() =>
-              navigation.navigate('Team', {
-                teamKey: item.key,
-                name: item.name,
-                sportKey: 'tennis',
-                followType: 'competition',
-              })
-            }
+          // THE ONE SURFACE THAT HAD NO MARK AT ALL. These rows were
+          // bare text — no glyph, no tile — so porting them to the tile
+          // pattern meant deciding what a tournament LOOKS like. It gets
+          // what tennis Competitions already got: the sport's ball, and
+          // the tournament's own initials as the generated monogram, so
+          // Wimbledon and the Western & Southern Open are distinguishable
+          // at a glance without inventing per-tournament artwork we do
+          // not hold (22b, owner ruling).
+          <TileRow
             right={
               <FollowButton
                 following={isFollowed(item.key)}
@@ -122,7 +127,25 @@ export default function TournamentListScreen({ navigation, route }: Props) {
                 onPress={() => void toggle(item)}
               />
             }
-          />
+          >
+            <SportCard
+              fullWidth
+              label={item.name}
+              caption={caption(item)}
+              glyph={tennis?.glyph ?? '\u{1F3BE}'}
+              theme={teamTheme(tennis?.accent ?? null, mode)}
+              monogram={monogramOf(item.name)}
+              accessibilityLabel={`${item.name}, see upcoming`}
+              onPress={() =>
+                navigation.navigate('Team', {
+                  teamKey: item.key,
+                  name: item.name,
+                  sportKey: 'tennis',
+                  followType: 'competition',
+                })
+              }
+            />
+          </TileRow>
         )}
       />
     </View>

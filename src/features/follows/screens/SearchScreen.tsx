@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 import { monogramOf,
   FollowButton,
-  ListRow,
   SectionHeader,
+  SportCard,
+  TileRow,
 } from '../../../core/components';
 import { RootScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
@@ -359,66 +360,52 @@ export default function SearchScreen({ navigation }: Props) {
           )}
           renderItem={({ item }) => {
             const sport = sportByKey(item.sportKey);
+            // EVERY KIND OF ROW OPENS SOMETHING (22b). The old branch
+            // keyed off `followable` rather than `kind`, and its middle
+            // arm returned `undefined` — so a COMPETITION hit, and an
+            // F1-style sport hit that carries a series follow, were the
+            // only rows in the app that did nothing when pressed. The
+            // same competition opened fine from browse.
+            //
+            // That was survivable on a row. It is not survivable on a
+            // tile: the tile IS the affordance, and one that opens
+            // nothing is a lie the press state tells on every tap. So
+            // the branch is by `kind`, which is total.
+            const open = () => {
+              if (item.kind === 'sport') {
+                navigation.navigate('LeagueList', { sportKey: item.sportKey });
+                return;
+              }
+              const f = item.followable;
+              navigation.navigate('Team', {
+                teamKey: f?.key ?? item.key,
+                name: item.title,
+                sportKey: item.sportKey,
+                // The type has to survive the trip: TeamScreen defaults
+                // to 'team', so an athlete re-followed from their own
+                // page would come back a team, and a competition a club.
+                ...(item.kind === 'athlete'
+                  ? { followType: 'athlete' as const }
+                  : {}),
+                ...(item.kind === 'competition'
+                  ? { followType: 'competition' as const }
+                  : {}),
+                ...(f?.pollPath ? { pollPath: f.pollPath } : {}),
+                ...(f?.crestUrl
+                  ? { crestUrl: f.crestUrl }
+                  : item.imageUrl
+                    ? { crestUrl: item.imageUrl }
+                    : {}),
+                ...(item.countryCode ? { countryCode: item.countryCode } : {}),
+                ...(f?.grouping ? { grouping: f.grouping } : {}),
+                ...(f?.careerStatus ? { careerStatus: f.careerStatus } : {}),
+                ...(f?.careerEndYear !== undefined
+                  ? { careerEndYear: f.careerEndYear }
+                  : {}),
+              });
+            };
             return (
-              <ListRow
-                title={item.title}
-                caption={item.caption}
-                glyph={sport?.glyph ?? '🏟️'}
-                tileTheme={teamTheme(
-                  item.followable?.brandColour ?? sport?.accent ?? null,
-                  mode,
-                )}
-                monogram={
-                  item.kind === 'sport' ? undefined : monogramOf(item.title)
-                }
-                {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
-                {...(item.tileBadge ? { tileBadge: item.tileBadge } : {})}
-                accessibilityLabel={`${item.title}, ${item.caption}`}
-                onPress={
-                  (item.kind === 'team' || item.kind === 'athlete') &&
-                  item.followable
-                    ? () =>
-                        navigation.navigate('Team', {
-                          teamKey: item.followable!.key,
-                          name: item.title,
-                          sportKey: item.sportKey,
-                          // An athlete opened from search must stay an
-                          // athlete through re-follow — TeamScreen
-                          // defaults the type to 'team' otherwise.
-                          ...(item.kind === 'athlete'
-                            ? { followType: 'athlete' as const }
-                            : {}),
-                          ...(item.followable!.pollPath
-                            ? { pollPath: item.followable!.pollPath }
-                            : {}),
-                          ...(item.followable!.crestUrl
-                            ? { crestUrl: item.followable!.crestUrl }
-                            : item.imageUrl
-                              ? { crestUrl: item.imageUrl }
-                              : {}),
-                          ...(item.countryCode
-                            ? { countryCode: item.countryCode }
-                            : {}),
-                          ...(item.followable!.grouping
-                            ? { grouping: item.followable!.grouping }
-                            : {}),
-                          ...(item.followable!.careerStatus
-                            ? { careerStatus: item.followable!.careerStatus }
-                            : {}),
-                          ...(item.followable!.careerEndYear !== undefined
-                            ? {
-                                careerEndYear:
-                                  item.followable!.careerEndYear,
-                              }
-                            : {}),
-                        })
-                    : item.followable
-                      ? undefined
-                      : () =>
-                          navigation.navigate('LeagueList', {
-                            sportKey: item.sportKey,
-                          })
-                }
+              <TileRow
                 // A retired athlete is findable but not followable
                 // (owner ruling 2026-08-04) — the caption already says
                 // "Retired 2022", and that IS the row's answer. An
@@ -435,7 +422,34 @@ export default function SearchScreen({ navigation }: Props) {
                     />
                   ) : undefined
                 }
-              />
+              >
+                <SportCard
+                  // NOT COMPACT. The compact geometry exists for the
+                  // athlete directory's 500 names and caps the label at
+                  // one line; search results are a handful of mixed
+                  // entities, and the rows these replaced wrapped
+                  // freely, so taking that geometry here would truncate
+                  // long club names that used to read in full.
+                  fullWidth
+                  label={item.title}
+                  caption={item.caption}
+                  glyph={sport?.glyph ?? '🏟️'}
+                  theme={teamTheme(
+                    item.followable?.brandColour ?? sport?.accent ?? null,
+                    mode,
+                  )}
+                  // A SPORT keeps its own mark. Stamping "SO" over the
+                  // soccer ball would replace the one thing on the row
+                  // that already identifies it.
+                  {...(item.kind === 'sport'
+                    ? {}
+                    : { monogram: monogramOf(item.title) })}
+                  {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
+                  {...(item.tileBadge ? { tileBadge: item.tileBadge } : {})}
+                  accessibilityLabel={`${item.title}, ${item.caption}`}
+                  onPress={open}
+                />
+              </TileRow>
             );
           }}
           ListFooterComponent={

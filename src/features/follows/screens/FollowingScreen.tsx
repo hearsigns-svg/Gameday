@@ -6,7 +6,8 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { monogramOf,
   EmptyState,
   FollowButton,
-  ListRow,
+  SportCard,
+  TileRow,
 } from '../../../core/components';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
@@ -135,34 +136,13 @@ export default function FollowingScreen({ navigation }: Props) {
           renderItem={({ item }) => {
             const sport = sportByKey(item.sportKey);
             return (
-              <ListRow
-                title={item.label}
-                caption={captionFor(item, upcoming[item.key])}
-                glyph={sport?.glyph ?? '·'}
-                tileTheme={teamTheme(
-                  item.brandColour ?? sport?.accent ?? null,
-                  mode,
-                )}
-                monogram={monogramOf(item.label)}
-                {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-                {...(flagEmojiOf(item.countryCode)
-                  ? { tileBadge: flagEmojiOf(item.countryCode) as string }
-                  : {})}
-                accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
-                // A followed thing's own schedule was previously
-                // reachable only from browse or search — you could not
-                // open the page for something you already follow.
-                onPress={() =>
-                  navigation.navigate('Team', {
-                    teamKey: item.key,
-                    name: item.label,
-                    sportKey: item.sportKey,
-                    followType: item.type,
-                    ...(item.pollPath ? { pollPath: item.pollPath } : {}),
-                    ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
-                    ...(item.brandColour ? { colours: item.brandColour } : {}),
-                  })
-                }
+              // THE RAIL STAYS ROUND, THE LIST GOES SQUARE (owner
+              // ruling, 22b). Round reads as people and teams; square
+              // reads as things you open. The rail above and these rows
+              // are not the same object at two sizes — the rail is a
+              // shortcut strip, the list is the manage surface — so
+              // they are allowed to look different a few points apart.
+              <TileRow
                 right={
                   <FollowButton
                     following
@@ -171,7 +151,38 @@ export default function FollowingScreen({ navigation }: Props) {
                     onPress={() => void onUnfollow(item)}
                   />
                 }
-              />
+              >
+                <SportCard
+                  fullWidth
+                  label={item.label}
+                  caption={captionFor(item, upcoming[item.key])}
+                  glyph={sport?.glyph ?? '·'}
+                  theme={teamTheme(
+                    item.brandColour ?? sport?.accent ?? null,
+                    mode,
+                  )}
+                  monogram={monogramOf(item.label)}
+                  {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+                  {...(flagEmojiOf(item.countryCode)
+                    ? { tileBadge: flagEmojiOf(item.countryCode) as string }
+                    : {})}
+                  accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
+                  // A followed thing's own schedule was previously
+                  // reachable only from browse or search — you could not
+                  // open the page for something you already follow.
+                  onPress={() =>
+                    navigation.navigate('Team', {
+                      teamKey: item.key,
+                      name: item.label,
+                      sportKey: item.sportKey,
+                      followType: item.type,
+                      ...(item.pollPath ? { pollPath: item.pollPath } : {}),
+                      ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                      ...(item.brandColour ? { colours: item.brandColour } : {}),
+                    })
+                  }
+                />
+              </TileRow>
             );
           }}
           ListFooterComponent={

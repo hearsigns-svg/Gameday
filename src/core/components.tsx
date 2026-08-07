@@ -663,6 +663,54 @@ export function EventRow(props: {
   );
 }
 
+// PRESS FEEDBACK, IN ONE PLACE. `ListRow` and `SportCard` each grew
+// their own copy of this, and they had already drifted: the row honoured
+// `isReduceMotionEnabled` and the tile did not. That was survivable while
+// the tile was a two-per-row grid on Home. It is not survivable now that
+// the tile is the press surface on EVERY browse screen (22b) — rolling it
+// out would have quietly removed reduced-motion handling from the whole
+// of browse, with nothing failing and nothing to see in a diff.
+//
+// The tint arrives INSTANTLY on touch-down and decays over motion.fast:
+// a brief stronger tint reads as responsive where a sustained one makes
+// the resting list busier. Reduced motion removes the FADE, never the
+// feedback — the tint still appears and disappears, it just does not
+// animate out.
+//
+// Opacity on an overlay rather than an animated backgroundColor, so it
+// runs on the native driver and a 500-row list does not drop frames
+// repainting a colour on the JS thread.
+function usePressFade(): {
+  press: Animated.Value;
+  setPress: (down: boolean) => void;
+} {
+  const press = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
+      if (live) setReduceMotion(on);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  return {
+    press,
+    setPress: (down: boolean) =>
+      Animated.timing(press, {
+        toValue: down ? 1 : 0,
+        duration: down || reduceMotion ? 0 : motion.fast,
+        useNativeDriver: true,
+      }).start(),
+  };
+}
+
 export function ListRow(props: {
   title: string;
   caption?: string;
@@ -718,33 +766,7 @@ export function ListRow(props: {
   // "something is happening", not "which thing" — which is why it can
   // be quick and quiet rather than loud.
   //
-  // Opacity on an overlay rather than an animated backgroundColor: it
-  // runs on the native driver, so a long list does not drop frames
-  // repainting a colour on the JS thread.
-  const press = useRef(new Animated.Value(0)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
-      if (live) setReduceMotion(on);
-    });
-    const sub = AccessibilityInfo.addEventListener(
-      'reduceMotionChanged',
-      setReduceMotion,
-    );
-    return () => {
-      live = false;
-      sub.remove();
-    };
-  }, []);
-  // Reduced motion removes the FADE, never the feedback: the tint still
-  // appears and disappears, it just does not animate out.
-  const setPress = (down: boolean) =>
-    Animated.timing(press, {
-      toValue: down ? 1 : 0,
-      duration: down || reduceMotion ? 0 : motion.fast,
-      useNativeDriver: true,
-    }).start();
+  const { press, setPress } = usePressFade();
   const openable = props.onPress !== undefined && props.disabled !== true;
   const body = (
     <>
@@ -838,7 +860,11 @@ export function SportCard(props: {
   label: string;
   glyph: string;
   theme: TeamTheme;
-  caption: string;
+  // OPTIONAL, and omitted rather than empty. A club in a league you
+  // just opened has no second line worth spending on — every team on
+  // the screen shares it — and `caption=""` would still render a Text
+  // and still cost its line height on every row.
+  caption?: string;
   captionAccent?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
@@ -856,25 +882,28 @@ export function SportCard(props: {
   compact?: boolean;
   // Full width in a LIST; the Home grid still wants two per row.
   fullWidth?: boolean;
+  // A tile that is NOT yet openable — a "Coming soon" sport. The row
+  // version carried this and the tile has to as well, or the sport
+  // picker would have to keep one row type for eleven sports and
+  // another for the rest. Dimmed and inert, never hidden: the sport
+  // being listed at all is the point.
+  disabled?: boolean;
 }) {
   const t = useTheme();
-  const press = useRef(new Animated.Value(0)).current;
-  const setPress = (down: boolean) =>
-    Animated.timing(press, {
-      toValue: down ? 1 : 0,
-      duration: down ? 0 : motion.fast,
-      useNativeDriver: true,
-    }).start();
+  const { press, setPress } = usePressFade();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={props.accessibilityLabel}
+      accessibilityState={props.disabled ? { disabled: true } : {}}
+      disabled={props.disabled === true}
       onPress={props.onPress}
       onPressIn={() => setPress(true)}
       onPressOut={() => setPress(false)}
       style={[
         styles.sportCard,
         props.compact && styles.sportCardCompact,
+        props.disabled === true && { opacity: 0.45 },
         props.fullWidth && {
           flexBasis: 0,
           flexGrow: 1,
@@ -918,15 +947,24 @@ export function SportCard(props: {
         >
           {props.label}
         </Text>
-        <Text
-          style={[
-            type.caption,
-            { color: props.captionAccent ? t.accent : t.textSecondary },
-          ]}
-          numberOfLines={1}
-        >
-          {props.caption}
-        </Text>
+        {props.caption ? (
+          <Text
+            style={[
+              type.caption,
+              { color: props.captionAccent ? t.accent : t.textSecondary },
+            ]}
+            // TWO LINES ON A FULL TILE, one when compact — the same cut
+            // the label makes, for the same reason. The rows these tiles
+            // replaced wrapped their caption freely, so a single line
+            // clipped "American football · no upcoming fixtures yet"
+            // mid-word on the Following list. Compact stays at one line:
+            // that geometry exists to hold a 500-name directory to a
+            // fixed height, and a caption there is a rank and a country.
+            numberOfLines={props.compact ? 1 : 2}
+          >
+            {props.caption}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -939,14 +977,18 @@ export function SportCard(props: {
 // exactly the bug that made pressing Follow light the whole row, and no
 // amount of styling fixes a structure that routes both to one handler.
 //
-// THE TIGHT-ROW FALLBACK. "All four majors / 4 tournaments" beside a
-// "Follow all" button leaves the label about 150pt on a 402pt screen,
-// and the label is the part that must not truncate — a button reading
-// "Follow all" is legible as an icon; a tournament reading "All four
-// maj…" is not. So the CONTROL yields, not the label: past a threshold
-// the button drops its text and becomes a square glyph control with the
-// same accessibility label. Nothing stacks and nothing wraps, because a
-// list whose rows change height as you scroll is worse than either.
+// WIDTH IS SOLVED BY SHORTER WORDS, NOT BY A SMALLER BUTTON (22b). The
+// first cut let the control collapse to a bare `+` / `✓` glyph when the
+// row got tight. That traded one legibility problem for a worse one: a
+// square `+` beside a tile does not say what it follows, and `✓` reads
+// as "selected" at least as readily as "following" — ambiguous in a way
+// the word never is. The width it was buying back came from "Follow
+// all", a label that only ever meant the same thing as "Follow".
+//
+// So the control is ALWAYS text now, and the tile yields instead: it
+// carries `flexShrink: 1, minWidth: 0` and wraps its label to two lines
+// (one when `compact`). Nothing stacks, because a list whose rows change
+// height as you scroll is worse than a wrapped label.
 export function TileRow(props: {
   children: ReactNode; // the tile
   right?: ReactNode; // its control, if any
@@ -1022,13 +1064,15 @@ export function FollowButton(props: {
   subject: string;
   onPress: () => void;
   busy?: boolean;
-  label?: string; // e.g. 'Follow all' on competition rows
-  // THE CONTROL YIELDS, NEVER THE LABEL. Beside a tile there is not
-  // room for both a full tournament name and the words "Follow all", so
-  // past that threshold the button drops its text for a single glyph
-  // and keeps its accessibility label verbatim. A button reading "+" is
-  // legible; a tournament reading "All four maj..." is not.
-  iconOnly?: boolean;
+  // NO `label` AND NO `iconOnly` (22b). Both existed to solve width and
+  // both cost meaning. "Follow all" said nothing "Follow" did not — the
+  // action is identical whether it covers one competition or four
+  // majors, and the extra word was the reason the button ran out of
+  // room in the first place. The glyph fallback was worse still: `+`
+  // beside a tile names nothing, and `✓` is the mark this app already
+  // uses for "chosen" on the calendar picker.
+  //
+  // Two words, always, everywhere: Follow, or Following.
 }) {
   const t = useTheme();
   return (
@@ -1041,7 +1085,6 @@ export function FollowButton(props: {
       disabled={props.busy}
       style={[
         styles.followButton,
-        props.iconOnly && styles.followButtonIcon,
         props.following
           ? { backgroundColor: 'transparent', borderColor: t.border }
           : { backgroundColor: t.primary, borderColor: t.primary },
@@ -1052,16 +1095,6 @@ export function FollowButton(props: {
           size="small"
           color={props.following ? t.textPrimary : t.onPrimary}
         />
-      ) : props.iconOnly ? (
-        <Text
-          style={[
-            type.heading,
-            { color: props.following ? t.textPrimary : t.onPrimary },
-          ]}
-          accessible={false}
-        >
-          {props.following ? '\u2713' : '+'}
-        </Text>
       ) : (
         <Text
           style={[
@@ -1071,8 +1104,17 @@ export function FollowButton(props: {
               fontWeight: '600',
             },
           ]}
+          numberOfLines={1}
+          // A BOUND ON THE CONTROL SO THE TILE KEEPS ROOM. The button
+          // no longer shrinks (`flexShrink: 0`, so "Following" cannot
+          // be clipped), which means at large system text sizes it
+          // would grow without limit and squeeze the tile — the tile
+          // being the only way to OPEN anything now. 1.8x is still a
+          // 25pt label; past that the word stops growing rather than
+          // taking the row with it.
+          maxFontSizeMultiplier={1.8}
         >
-          {props.following ? 'Following' : (props.label ?? 'Follow')}
+          {props.following ? 'Following' : 'Follow'}
         </Text>
       )}
     </Pressable>
@@ -1401,20 +1443,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   followButton: {
-    paddingHorizontal: spacing.l,
+    paddingHorizontal: spacing.m,
     borderRadius: radius.button,
     borderWidth: 1,
     minHeight: 44,
-    minWidth: 104,
+    // ONE WIDTH FOR BOTH STATES, so a row does not reflow the instant
+    // you press it: "Following" is the longer word, and pinning the
+    // button to its width means Follow -> Following moves nothing.
+    minWidth: 96,
+    // The control never yields (22b) — without this a flex parent
+    // happily squeezes it to fit an over-long tile label.
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Square, and still a 44pt target — the geometry the tight-row
-  // fallback needs without ever shrinking below the touch minimum.
-  followButtonIcon: {
-    minWidth: 44,
-    width: 44,
-    paddingHorizontal: 0,
   },
   banner: {
     flexDirection: 'row',

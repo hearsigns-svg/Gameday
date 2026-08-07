@@ -2236,3 +2236,98 @@
   LIVE THE SAME DAY: 26 WTA appearance docs carrying sf:2, qf:4, r32:20
   — the semi-finals and quarter-finals the vendor had never shown us for
   women.
+
+## 2026-08-07 — Prompt 22b: two words, three weights, and a search row that opens
+
+- **The Follow control is always the word, never the glyph.** Prompt 22
+  gave `FollowButton` an `iconOnly` mode so a tight row could collapse it
+  to `+` / `✓`. That bought width and sold meaning: `+` beside a tile
+  names nothing it would follow, and `✓` is the mark this app already
+  uses on the calendar picker for "chosen", so the same glyph meant two
+  things two screens apart. Removed — the prop, the style, and all three
+  call sites.
+- **"Follow all" is gone; there is only Follow / Following.** The label
+  was the reason the button ran out of room, and it never earned the
+  extra word: the action is identical whether it covers one competition
+  or four majors. `FollowButton` no longer accepts a `label` at all, so
+  the convention cannot drift back — it is structural, not a habit. The
+  button also pins to one width across both states (`minWidth: 96`,
+  `flexShrink: 0`) so Follow → Following reflows nothing.
+- **Width is solved by the tile yielding, not the control.** The tile
+  carries `flexShrink: 1, minWidth: 0` and wraps to two lines; the
+  control never shrinks. Measured against the real catalogue: of 105
+  static competitions, every name of 20 characters or more is
+  `followOnly` — so it renders tile + Follow only and has 167pt for two
+  lines. The single long name that also shows a Teams button is "Indian
+  Premier League" (21 chars, 111pt over two lines). Nothing truncates.
+- **Three targets in a competition row, distinguished by weight.** The
+  owner reversed an earlier instruction to move team browse into
+  competition detail: browsing a league's clubs is a different intent
+  from opening the competition, so Teams stays on the row. Tile (raised
+  surface, border, artwork) is the object; Follow (solid fill) is the
+  primary action; Teams lost its box entirely — text only, `t.primary`,
+  44pt target, press dims rather than fills. Losing the border and the
+  12pt padding is also what buys the width back.
+- **A tile that opens nothing is a lie the press state tells.** Search
+  branched its `onPress` on `followable` rather than on `kind`, and the
+  middle arm returned `undefined` — so competition hits, and F1-style
+  sport hits carrying a series follow, were the only rows in the app
+  that did nothing when pressed, while the same competition opened fine
+  from browse. Survivable on a row; not on a tile, where the tile IS the
+  affordance. The branch is now by `kind`, which is total.
+- **The unreachable TOURNAMENTS footer is deleted, not converted.** It
+  rendered `tournaments`, only ever populated for a sport with
+  `tournamentBrowse` — and the only such sport is tennis, which returns
+  above that block. Dead since Prompt 19 split tennis into its own render
+  path. Its `tournamentCaption` helper went with it.
+- **The tennis coverage note described a source that no longer exists.**
+  It still said the men's list came from "Wikipedia's weekly table, which
+  publishes the top 20 only" and that men's "have no approved source yet".
+  Prompt 18 replaced the men's directory with a ranked vendor feed and put
+  men's match times into calendars; the copy describing the replaced
+  source was never found. AGENTS rule 13 in prose rather than in a
+  scheduler — a migration that swaps a source has to sweep the sentences
+  that name it, not only the code that writes it. Wording owner-set.
+  A sibling error was fixed the same day: `SECTION_NOTES.atp` claimed the
+  top 100 were browsable against a server `GROUP_CAP` of 50.
+- **`SportCard` extended, never forked**: `disabled` (the picker's
+  "Coming soon" sports, dimmed and inert rather than hidden) and an
+  optional `caption` (a club in the league you just opened has no second
+  line worth a line-height on every row).
+- **What the review round changed, before anything shipped.** Six lenses
+  and an adversarial refutation pass over the diff; 16 of 18 findings
+  refuted, and the survivors were real:
+  - `SportCard` never honoured `isReduceMotionEnabled` while `ListRow`
+    did. Harmless while the tile was a grid on Home; rolling it out would
+    have silently removed reduced-motion handling from the whole of
+    browse. Both now share one `usePressFade` — the drift is not fixable
+    by discipline, only by there being one implementation.
+  - The caption was capped at one line where `ListRow` wrapped freely,
+    clipping "American football · no upcoming fixtures yet" mid-word on
+    the Following list. Full tiles now give the caption the same two
+    lines the label has; `compact` stays at one, because that geometry
+    exists to hold a 500-name directory to a fixed height.
+  - Search took the compact geometry and with it a one-line label. Search
+    is not the directory — a handful of mixed results — so it takes the
+    full tile and long club names read in full again.
+  - Removing the control cluster's `gap` left two 44pt targets exactly
+    adjacent: Teams' padding sits INSIDE its target, so a tap one point
+    wide of Follow navigated instead of subscribing. Restored.
+  - `flexShrink: 0` on the button (which stops "Following" being clipped)
+    means it grows without limit under large system text and squeezes the
+    tile — the tile being the only way to open anything now. Both controls
+    are bounded at `maxFontSizeMultiplier` 1.8.
+  - The sport picker rendered the raw config label where Home, Following
+    and the team page use the region's word: "Football" on Home and
+    "Soccer" one tap away. Survivable while the screens looked different,
+    absurd once they are the same component.
+- **OPEN, owner's call: three targets do not fit at 375pt.** Measured, not
+  estimated. At 375 (iPhone SE, and 360dp Android) a competition row with
+  tile + Follow + Teams leaves the name 99pt over two lines, and the two
+  longest SERVED soccer competitions — "UEFA Champions League" and
+  "European Championship", both 21 characters, both carrying a
+  `teamPollPath` and therefore a Teams button — do not break cleanly into
+  it. At 393pt and above they fit. The first measurement missed this by
+  reading `sportsConfig.ts` static competitions, where every name of 20+
+  characters is `followOnly` and shows no Teams button; the served
+  `fdorg` list is the one that actually carries all three.
