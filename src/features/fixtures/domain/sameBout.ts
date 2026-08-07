@@ -96,6 +96,46 @@ function pairKey(f: Fixture): string | null {
 // them.
 const CANONICAL_ATHLETE = /^athlete_\d{6}$/;
 
+// THE PER-PLAYER TWIN (Prompt 20). Tennis appearances are ONE DOC PER
+// PLAYER — `index.ts` emits both sides separately because a single doc
+// carrying two id-bearing refs trips resolution's F34 guard. That is
+// right for identity and wrong for calendars: 45 production pairs
+// describe the SAME match, so a user following both players of a match
+// gets two events for it today, and it would become the default the day
+// a competition follow delivers matches.
+//
+// Neither existing rule catches them. `pairKey`/`canonicalPairKey` are
+// gated on PERSON_SPORTS (boxing, UFC) and `tournamentPairKey` returns
+// null for anything carrying a parentFixtureId.
+//
+// The key is the PARENT plus the unordered pair of names, taken from the
+// title's own prefix — which is safe to read here in a way the round
+// suffix is not, because the pair is everything BEFORE the first em
+// dash and the separator is a literal " vs " this codebase writes
+// itself (`matchTitle`, and the WTA provider's title builder).
+//
+// DROPPING THE LOSER IS CORRECT, not lossy: a user who follows only one
+// of the two players never fetches the other's doc, so there is no twin
+// to collapse; when both are followed either doc is the same match, and
+// the survivor still carries a key that user holds.
+function appearanceTwinKey(f: Fixture): string | null {
+  if (!f.parentFixtureId) return null;
+  // A FINALS SLOT IS NOT A TWIN. Once a final is confirmed the slot doc
+  // names the same two players under the same parent as their own
+  // appearances, so this rule would collapse it — stealing a decision
+  // `dedupeFinalSlots` already owns and makes follow-key-aware, and
+  // which deliberately STANDS DOWN without that context rather than
+  // deleting an event the user wanted (regression test, Prompt 11).
+  if (f.followKeys.some((k) => k.endsWith('-finals'))) return null;
+  const head = (f.title ?? '').split(' — ')[0];
+  const sides = head.split(' vs ');
+  if (sides.length !== 2) return null;
+  const pair = [normalise(sides[0]), normalise(sides[1])].sort();
+  if (pair[0].length === 0 || pair[1].length === 0) return null;
+  if (pair[0] === pair[1]) return null; // a player cannot play themselves
+  return `${f.parentFixtureId}|${pair.join('|')}`;
+}
+
 function canonicalPairKey(f: Fixture): string | null {
   if (!PERSON_SPORTS.has(f.sport)) return null;
   const ids = f.followKeys.filter((k) => CANONICAL_ATHLETE.test(k)).sort();
@@ -262,6 +302,7 @@ export function dedupeSameBout(
     for (const [kind, key] of [
       ['id', canonicalPairKey(f)],
       ['name', pairKey(f)],
+      ['twin', appearanceTwinKey(f)],
     ] as const) {
       if (!key) continue;
       const k = `${kind}:${key}`;

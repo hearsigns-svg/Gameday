@@ -12,6 +12,27 @@ export type FixtureStatus =
   | 'in_play'
   | 'finished';
 
+// The knockout rungs we normalise to. Deliberately short: these are the
+// only positions that mean the same thing in every knockout format, and
+// a rung we cannot recognise stays in `label` rather than being forced
+// into the nearest one.
+export type RoundCode =
+  | 'r128'
+  | 'r64'
+  | 'r32'
+  | 'r16'
+  | 'qf'
+  | 'sf'
+  | 'f'
+  | 'third-place';
+
+export interface FixtureStage {
+  label?: string; // verbatim provider text, never parsed for meaning
+  round?: RoundCode; // knockout position, only where unambiguous
+  group?: string; // pool label, orthogonal to round
+  ordinal?: number; // matchday / golf round — a sequence, not a ladder
+}
+
 export interface Fixture {
   id: string; // provider-scoped stable id, e.g. 'apisports-1030318'
   sport: string; // sport key from the client config, e.g. 'soccer'
@@ -35,6 +56,34 @@ export interface Fixture {
   // 10,483 documents, which is a claim, not a default.
   venueTz?: string;
   status: FixtureStatus;
+  // WHERE THIS FIXTURE SITS IN ITS COMPETITION'S STRUCTURE.
+  //
+  // Every provider we use sends some of this and every adapter threw it
+  // away at the interface boundary: TheSportsDB publishes `intRound` on
+  // every event, football-data publishes `stage` and `group`, api-sports
+  // publishes `league.round` (its banked payload literally reads
+  // "Quarter-finals"), and the ATP review sheet carries a `round`
+  // column. A census of all 14,018 production documents found ZERO
+  // carrying any structural field — 556 of them in cup competitions that
+  // genuinely have ladders, with the T20 World Cup final stored as
+  // "India Cricket vs New Zealand Cricket", indistinguishable from a
+  // group game.
+  //
+  // THE THREE CONCEPTS ARE KEPT APART ON PURPOSE (owner ruling: do not
+  // flatten). "Quarter-final", "Group A" and "Matchday 5" answer
+  // different questions, and a single string would make a scope ladder
+  // guess which one it was holding:
+  //   round   — position in a KNOCKOUT ladder. Normalised, and only
+  //             where the provider is unambiguous.
+  //   group   — a POOL label. Orthogonal to round: a World Cup fixture
+  //             can be group-stage with no round, or knockout with no
+  //             group.
+  //   ordinal — a SEQUENCE number, where the competition is a series
+  //             rather than a ladder: a league matchday, a golf round.
+  //   label   — what the provider actually wrote, kept verbatim and
+  //             never parsed for meaning, so nothing is lost when our
+  //             normalisation does not recognise a value.
+  stage?: FixtureStage;
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
   // HOW PRECISELY THE START TIME IS KNOWN. Separate from `status`, which

@@ -417,3 +417,66 @@ describe('canonical athlete ids pair fights names cannot', () => {
     expect(out).toHaveLength(2);
   });
 });
+
+describe('the per-player twin — one match, two docs', () => {
+  // Tennis appearances are one doc per PLAYER (index.ts emits both sides
+  // separately to avoid the F34 guard). 45 production pairs describe the
+  // same match, so following both players yielded two calendar events.
+  const side = (over: Partial<Fixture>): Fixture =>
+    ({
+      id: 'x',
+      sport: 'tennis',
+      competition: 'ATP Tour',
+      competitionId: 'tennis-atp-appearances',
+      title: 'Alex de Minaur vs Cameron Norrie — National Bank Open, Round of 32',
+      followKeys: ['tennis-atp-appearances', 'athlete_001114'],
+      startUtc: '2026-08-06T17:40:00.000Z',
+      status: 'scheduled',
+      parentFixtureId: 'tennis-nbo-2026',
+      timePrecision: 'exact',
+      ...over,
+    }) as Fixture;
+
+  const twins = [
+    side({ id: 'app-de-minaur' }),
+    side({
+      id: 'app-norrie',
+      title: 'Cameron Norrie vs Alex de Minaur — National Bank Open, Round of 32',
+      followKeys: ['tennis-atp-appearances', 'athlete_001148'],
+    }),
+  ];
+
+  it('COLLAPSES TO ONE EVENT', () => {
+    expect(dedupeSameEvent(twins)).toHaveLength(1);
+  });
+
+  it('keeps them apart when they are different matches', () => {
+    const other = side({
+      id: 'app-other',
+      title: 'Arthur Fils vs Mariano Navone — National Bank Open, Round of 32',
+      startUtc: '2026-08-06T16:30:00.000Z',
+    });
+    expect(dedupeSameEvent([...twins, other])).toHaveLength(2);
+  });
+
+  it('keeps them apart across DIFFERENT tournaments', () => {
+    // The same two players can meet twice in a week. The parent is part
+    // of the key precisely so the second meeting is its own event.
+    const rematch = twins.map((f) =>
+      side({ ...f, id: `${f.id}-cincy`, parentFixtureId: 'tennis-cincy-2026' }),
+    );
+    expect(dedupeSameEvent([...twins, ...rematch])).toHaveLength(2);
+  });
+
+  it('never merges a doc with no parent — those are tournaments', () => {
+    const parents = twins.map((f) => {
+      const { parentFixtureId: _drop, ...rest } = f;
+      return rest as Fixture;
+    });
+    expect(dedupeSameEvent(parents)).toHaveLength(2);
+  });
+
+  it('a pinned twin survives, like every other dedupe rule', () => {
+    expect(dedupeSameEvent(twins, new Set(['app-norrie']))).toHaveLength(2);
+  });
+});

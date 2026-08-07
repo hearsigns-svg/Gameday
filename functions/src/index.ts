@@ -62,6 +62,7 @@ import {
 // drift into two different provider namespaces.
 const SHEET_VENDOR = 'tennisapi1';
 import { leaseDecision } from './sourceLease';
+import { stageFrom } from './stage';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
 import { diffFixtures } from './diff';
@@ -2773,20 +2774,28 @@ export const pollSheetAtp = onRequest(
                   }),
             });
             if (!draft) return [];
+            // ROUND AS A FIELD, not a title suffix. The suffix survives
+            // for display, but "A vs B — National Bank Open presented by
+            // Rogers, Round of 32" cannot be parsed back: the format is
+            // `pair — name, round` and tournament names contain commas.
+            const stage = stageFrom({ round: p.row.round });
+            const withStage = stage
+              ? { ...draft, fixture: { ...draft.fixture, stage } }
+              : draft;
             // A withdrawal has to REMOVE an event already sitting in
             // somebody's calendar; that is the whole reason a human can
             // edit this sheet at all.
             return p.cancelled
               ? [
                   {
-                    ...draft,
+                    ...withStage,
                     fixture: {
-                      ...draft.fixture,
+                      ...withStage.fixture,
                       status: 'cancelled' as FixtureStatus,
                     },
                   },
                 ]
-              : [draft];
+              : [withStage];
           });
         });
 

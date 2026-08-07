@@ -11,6 +11,7 @@
 // when TIMED lands.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { stageFrom } from '../stage';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.football-data.org/v4';
@@ -28,6 +29,14 @@ export interface FdMatch {
   competition: { id: number; name: string; code: string };
   homeTeam: FdTeamRef;
   awayTeam: FdTeamRef;
+  // Both published by football-data v4 and dropped here until Prompt 20.
+  // `stage` is REGULAR_SEASON | GROUP_STAGE | LAST_16 | QUARTER_FINALS |
+  // SEMI_FINALS | FINAL; `group` is "GROUP_A" and friends. They are
+  // orthogonal — a group-stage match has both, a quarter-final has only
+  // the first.
+  stage?: string | null;
+  group?: string | null;
+  matchday?: number | null;
 }
 
 const STATUS_MAP: Record<string, FixtureStatus> = {
@@ -64,6 +73,11 @@ export function normaliseFdMatch(m: FdMatch, updatedAt: string): Fixture {
       competitionId,
     ],
     startUtc: new Date(m.utcDate).toISOString(),
+    // WHERE IN THE COMPETITION. `stage` and `group` are orthogonal and
+    // are kept apart; `matchday` is a sequence, not a rung.
+    ...(stageFrom({ round: m.stage, group: m.group, ordinal: m.matchday })
+      ? { stage: stageFrom({ round: m.stage, group: m.group, ordinal: m.matchday }) }
+      : {}),
     // football-data publishes no venue timezone.
     status: STATUS_MAP[m.status] ?? 'scheduled',
     durationHours: 2,

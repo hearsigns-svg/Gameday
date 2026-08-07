@@ -2145,3 +2145,27 @@
   "Rendered more hooks than during the previous render". Typecheck and
   972 tests were all green — only running it found this, which is the
   argument for rule 9 in one sentence.
+- 2026-08-07: **THE TOUR DIMENSION ON A TENNIS FOLLOW IS DROPPED**
+  (owner ruling, after investigation). The idea was that following
+  Wimbledon from the ATP section would store `tours: ['atp']` and
+  deliver men's content only. It does not earn its cost, for a DATA
+  reason before a code one: **Wimbledon has five production documents
+  and all five are `tennis-atp`**, so a WTA-section follow would
+  correctly deliver nothing, and only **4 of 99** tournaments (US Open,
+  China Open, National Bank Open, Cincinnati) hold parents from both
+  feeds — for the other 95 a tour dimension separates nothing.
+  THE COST IT WOULD HAVE TAKEN, recorded so this is not re-proposed:
+  every tennis parent carries ONE shared, tour-agnostic `tennis-t-<slug>`
+  key, so per-tour keys would have to be stamped at ingest and all 389
+  parents re-ingested; it cannot be done client-side instead, because
+  `queryChunk` is `array-contains-any` and Firestore permits ONE array
+  predicate per query, making "tennis-t-wimbledon AND tennis-atp"
+  inexpressible; `Followable` identity IS its key, so "unfollow from
+  ATP, keep WTA" is a new partial-unfollow operation across followStore,
+  `unfollow`, `refollow`/Undo and `followFeedback`; `isFollowed(key)` is
+  key-only at 15 call sites; and `scope` is a scalar enum while `tours`
+  is set-valued, making `followQueryKeys` a cross-product that
+  `setFollowScope`'s replace-semantics cannot model.
+  WHAT REMAINS TRUE AND SHIPPED: the majors appear under BOTH tour
+  sections in browse, because both tours play them. They are simply one
+  followable each.

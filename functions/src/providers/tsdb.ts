@@ -4,6 +4,7 @@
 // none). The only file that knows this provider's shapes.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { stageFrom } from '../stage';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://www.thesportsdb.com/api/v1/json';
@@ -28,6 +29,11 @@ export interface TsdbEvent {
   // licensed venue-photography layer uses. A venue NAME is a fact, not
   // imagery.
   strVenue?: string | null;
+  // Published on EVERY TSDB event and discarded here until Prompt 20.
+  // A bare number: "38" is a league matchday, "1" a cup's first round —
+  // the value alone cannot say which, so it becomes an ordinal and the
+  // label keeps the raw text (src/stage.ts).
+  intRound?: string | null;
 }
 
 function tsdbStatus(e: TsdbEvent, startUtc: string, hasTime: boolean): FixtureStatus {
@@ -102,6 +108,9 @@ export function normaliseTsdbEvent(
     ...(e.strVenue?.trim() ? { venue: e.strVenue.trim() } : {}),
     followKeys,
     startUtc,
+    // intRound is a SEQUENCE for leagues and a rung name for some cups;
+    // stageFrom decides which, and keeps the raw text either way.
+    ...(stageFrom({ round: e.intRound }) ? { stage: stageFrom({ round: e.intRound }) } : {}),
     // TheSportsDB gives a venue-local TIME (strTimeLocal) but never a zone
     // name, and an offset is not an IANA zone. Omitted rather than guessed.
     status: tsdbStatus(e, startUtc, hasTime),

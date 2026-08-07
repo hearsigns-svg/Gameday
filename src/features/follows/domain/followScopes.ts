@@ -41,10 +41,16 @@ const GOLF_LEAGUES = new Set([
   'tsdb-league-5329', // LIV Golf
 ]);
 
+// CORRECTED 2026-08-07: this said "ATP match times have no approved
+// source", which stopped being true the day the review sheet shipped —
+// production holds ATP matches at exact times. What is still true is
+// that the FINAL as a scoped event is built from the WTA draw feed,
+// which is the only source exposing a round marker.
 const TENNIS_FINALS_NOTE =
   'The final as a calendar event comes from the WTA feed — for joint ' +
-  'events that is the women’s final. ATP match times have no approved ' +
-  'source, so ATP-only tournaments deliver the tournament banner alone.';
+  'events that is the women’s final. Men’s matches arrive through the ' +
+  'reviewed ATP feed, but without a round marker, so an ATP-only ' +
+  'tournament delivers its banner and its matches rather than a final.';
 
 const GOLF_FINAL_NOTE =
   'Only rounds the provider publishes as “Final Round” — a tournament ' +

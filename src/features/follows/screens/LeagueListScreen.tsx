@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { FollowButton, ListRow, monogramOf , CoverageNote } from '../../../core/components';
-import { BrowseRow, tennisBrowseRows } from '../domain/tennisBrowse';
+import { BrowseRow, SLAM_KEYS, tennisBrowseRows } from '../domain/tennisBrowse';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -236,6 +236,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   // belong to neither tour. It used to be one Players row and one
   // undifferentiated block of every tournament, with a single coverage
   // note trying to describe two tours that no longer match.
+  // The four majors' keys, for the row-level Follow all. Derived from the
+  // served tournaments so a slam we do not hold is never claimed.
+  const slamKeys = tournaments
+    .filter((x) => SLAM_KEYS.includes(x.key))
+    .map((x) => x.key);
+
   const tennisRows: BrowseRow[] | null =
     route.params.sportKey === 'tennis' && leagues
       ? tennisBrowseRows(leagues, tournaments)
@@ -288,7 +294,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           <ListRow
             title={r.name}
             caption="Every event on the tour"
-            glyph={sport?.glyph ?? '🎾'}
+            glyph="📅"
             tileTheme={teamTheme(sport?.accent ?? null, mode)}
             monogram={monogramOf(r.name)}
             accessibilityLabel={`${r.name}, see upcoming`}
@@ -310,11 +316,18 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       case 'others': {
         const isSlams = r.kind === 'slams';
         const title = isSlams ? 'All four majors' : 'Other tournaments';
+        // ICON SWEEP (Prompt 20): inside a tennis section, Players, the
+        // tour row and Other tournaments ALL fell back to the sport
+        // glyph, so three different things carried one tennis ball and
+        // the tile stopped distinguishing anything. A trophy for the
+        // majors, a medal for the rest, the ball reserved for Players —
+        // whose row is about people, which is the one thing the sport's
+        // own mark reads as here.
         return (
           <ListRow
             title={title}
             caption={`${r.count} ${r.count === 1 ? 'tournament' : 'tournaments'}`}
-            glyph={isSlams ? '🏆' : (sport?.glyph ?? '🎾')}
+            glyph={isSlams ? '🏆' : '🏅'}
             tileTheme={teamTheme(sport?.accent ?? null, mode)}
             accessibilityLabel={`${title}, ${r.tour.toUpperCase()}`}
             onPress={() =>
@@ -325,9 +338,29 @@ export default function LeagueListScreen({ navigation, route }: Props) {
               })
             }
             right={
-              <Text style={[type.heading, { color: t.primary }]} accessible={false}>
-                ›
-              </Text>
+              isSlams ? (
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}
+                >
+                  <FollowButton
+                    following={slamKeys.every((k) => isFollowed(k))}
+                    subject="all four majors"
+                    busy={busyKey === 'slams'}
+                    label="Follow all"
+                    onPress={() => void followAll(slamKeys, 'slams')}
+                  />
+                  <Text
+                    style={[type.heading, { color: t.primary }]}
+                    accessible={false}
+                  >
+                    ›
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[type.heading, { color: t.primary }]} accessible={false}>
+                  ›
+                </Text>
+              )
             }
           />
         );

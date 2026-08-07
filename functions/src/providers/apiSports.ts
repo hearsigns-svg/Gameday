@@ -12,6 +12,7 @@
 // are all in the past and the horizon rule freezes them.
 
 import { Fixture, FixtureStatus } from '../fixture';
+import { stageFrom } from '../stage';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://v3.football.api-sports.io';
@@ -46,7 +47,9 @@ export interface ApiFixtureRow {
     timezone: string;
     status: { short: string };
   };
-  league: { id: number; name: string };
+  // `round` was absent from this type and therefore discarded, though
+  // the banked contract payload literally carries "Quarter-finals".
+  league: { id: number; name: string; round?: string | null };
   teams: {
     home: { id: number; name: string };
     away: { id: number; name: string };
@@ -114,6 +117,9 @@ export function normaliseRow(row: ApiFixtureRow, updatedAt: string): Fixture {
       competitionId,
     ],
     startUtc: new Date(row.fixture.date).toISOString(),
+    ...(stageFrom({ round: row.league.round })
+      ? { stage: stageFrom({ round: row.league.round }) }
+      : {}),
     // Only recorded when the provider names a zone that is not the default.
     ...(row.fixture.timezone && row.fixture.timezone !== 'UTC'
       ? { venueTz: row.fixture.timezone }
