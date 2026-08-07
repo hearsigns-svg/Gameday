@@ -1450,7 +1450,15 @@ const styles = StyleSheet.create({
     // ONE WIDTH FOR BOTH STATES, so a row does not reflow the instant
     // you press it: "Following" is the longer word, and pinning the
     // button to its width means Follow -> Following moves nothing.
-    minWidth: 96,
+    //
+    // 90, MEASURED, NOT PICKED. CoreText puts "Following" at 64.17pt in
+    // the system font at 14pt semibold, so the button's content width is
+    // 88.17 — 90 pins both states without a point of slack. The first
+    // cut used 96, and those six points came straight out of the tile's
+    // label on the one row that carries two controls: at 390pt (iPhone
+    // 12/13/14) "UEFA Champions" needs 115.53pt and had 114.21. Six
+    // points of nothing were the whole defect on that width class.
+    minWidth: 90,
     // The control never yields (22b) — without this a flex parent
     // happily squeezes it to fit an over-long tile label.
     flexShrink: 0,

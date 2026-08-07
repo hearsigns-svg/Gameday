@@ -2321,13 +2321,39 @@
     and the team page use the region's word: "Football" on Home and
     "Soccer" one tap away. Survivable while the screens looked different,
     absurd once they are the same component.
-- **OPEN, owner's call: three targets do not fit at 375pt.** Measured, not
-  estimated. At 375 (iPhone SE, and 360dp Android) a competition row with
-  tile + Follow + Teams leaves the name 99pt over two lines, and the two
-  longest SERVED soccer competitions — "UEFA Champions League" and
-  "European Championship", both 21 characters, both carrying a
-  `teamPollPath` and therefore a Teams button — do not break cleanly into
-  it. At 393pt and above they fit. The first measurement missed this by
-  reading `sportsConfig.ts` static competitions, where every name of 20+
-  characters is `followOnly` and shows no Teams button; the served
-  `fdorg` list is the one that actually carries all three.
+- **The three-target row, measured properly — and the character count was
+  the wrong instrument.** Two earlier passes at this were wrong in ways
+  worth recording, because both failures were methodological.
+  - The FIRST measurement read `sportsConfig.ts` static competitions,
+    where every name of 20+ characters is `followOnly` and shows no Teams
+    button. The rows that actually carry all three targets come from the
+    SERVED `fdorg` list, which the config file cannot see. Measuring the
+    population you can reach instead of the population that fails.
+  - The SECOND used an average-advance estimate (~0.55em) and a character
+    count. Both longest names are 21 characters, which suggested they
+    behave alike. They do not: CoreText puts "UEFA Champions" at 115.53pt
+    and "European Championship" breaks after "European", so one truncates
+    and the other never does. Proportional type does not care how many
+    characters there are, and neither does the wrap point.
+  - MEASURED, with `CTTypesetterSuggestLineBreak` against the real system
+    font: exactly one served competition truncates — "UEFA Champions
+    League", which breaks to UEFA / Champions / League and loses the third
+    line to `numberOfLines={2}`. It needs a 115.53pt label box.
+- **Six points of nothing were most of that defect.** `followButton`
+  carried `minWidth: 96`, picked rather than measured; "Following" is
+  64.17pt, so its content width is 88.17. Pinning to 90 keeps both states
+  identical — the reason the floor exists — and hands six points back to
+  the tile on the one row that carries two controls. That is the whole
+  difference between truncating and fitting at 390pt: the label box goes
+  114.21 → 120.21 against the 115.53 it needs.
+  - AFTER: fits at 390pt and above — iPhone 12 through 17, and every Pro
+    and Max. Still truncates at 375pt (SE 2/3, 12/13 mini, X/XS/11 Pro),
+    where the box reaches 105.21 and cannot reach 115.53 without taking
+    the space from the mark or moving Teams off the row.
+- **OPEN, owner's call: one row on 375pt-class phones.** Closing it needs
+  a layout change rather than tuning — the remaining 10pt does not exist
+  anywhere in the row. Options: shrink the mark to 28pt on competition
+  rows (buys 12pt, but tennis Competitions were signed off with the 36pt
+  mark and would change too); let Teams drop below the caption under a
+  width threshold; or accept one wrapped-and-clipped name on the narrowest
+  class. Not decided here.
