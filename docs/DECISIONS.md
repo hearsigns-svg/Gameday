@@ -2204,3 +2204,35 @@
   tournament's own start date, and THROWS when no season for that year
   exists rather than falling back to the newest. Any future lookup must
   do the same — never take `seasons[0]`.
+- 2026-08-07: **WTA ROUNDS ARE DERIVED, NOT BOUGHT — the integration was
+  REMOVED rather than built** (the owner asked for the check first; it
+  paid for itself). The WTA feed's `MatchID` is a BRACKET POSITION in a
+  full 2^k tree laid out top-down — 1 is the final, 2–3 the semis, 4–7
+  the quarters, 8–15 the round of 16 — so the rung is the DEPTH of the
+  slot, `31 - Math.clz32(n)`. We had been fetching it since the
+  connector shipped and reading only its second character, as a doubles
+  filter.
+  WHAT PROVES IT IS A BRACKET AND NOT A COUNTER: on the DC Open's last
+  day the WTA singles final, the ATP singles final and the ATP doubles
+  final are LS001, MS001 and MD001 — three draws, two tours, one number.
+  And LS028 exists in a 28-player draw that plays only 27 matches, so a
+  contiguous counter could never mint it; the numbering must be
+  full-bracket-with-byes.
+  THE HYPOTHESIS THAT WOULD HAVE SHIPPED A BUG: "count the first round
+  and double it". The DC Open has 28 players and 4 byes, so 12
+  first-round matches, and 2 × 12 = 24 is not a round. The bracket
+  formula is immune because it reads the SLOT, not the ordinal.
+  WHAT THIS AVOIDS: a second player-id namespace for the 226 canonical
+  women (0 of whom carried a vendor id), the per-match mapping tab the
+  men needed, and the vendor requests that pushed the projected peak to
+  156/day against a 150 ceiling.
+  FOUR REFUSALS, each a wrong rung avoided: qualifying is excluded
+  (RS007 would otherwise read as a quarter-final); a depth beyond the
+  ladder yields nothing rather than the nearest rung; a malformed id
+  yields nothing, never a default, and never a fixed slice(2); and
+  `r64`/`r128` are PREDICTED, NOT OBSERVED — the only draw we hold is
+  28/32, so the first one that appears is a checkpoint to confirm, not a
+  fact yet.
+  LIVE THE SAME DAY: 26 WTA appearance docs carrying sf:2, qf:4, r32:20
+  — the semi-finals and quarter-finals the vendor had never shown us for
+  women.
