@@ -1,13 +1,13 @@
 /**
- * KickOffCal — ATP men's matches into the review sheet.
+ * KickOffCal -- ATP men's matches into the review sheet.
  *
- * Paste this into the sheet's Extensions → Apps Script, set the two
+ * Paste this into the sheet's Extensions -> Apps Script, set the two
  * Script Properties named below, then run `install()` once.
  *
  * WHAT THIS IS. No feed we can use publishes men's draws, so the men's
  * tour is assembled from a vendor API into a sheet a human can correct,
  * and a Cloud Function reads the sheet into Firestore. The sheet is an
- * INGESTION SOURCE, never the serving layer — the app never reads it.
+ * INGESTION SOURCE, never the serving layer -- the app never reads it.
  *
  * THE THREE RULES IT IS BUILT AROUND:
  *
@@ -18,7 +18,7 @@
  *    early when nothing is on.
  * 2. A HUMAN'S EDIT SURVIVES EVERY REBUILD. Tab 2 is rewritten each run.
  *    Overrides are read first, keyed by canonical match key, and written
- *    back — otherwise the first refresh after somebody fixes a time
+ *    back -- otherwise the first refresh after somebody fixes a time
  *    silently discards the fix, which is worse than never having the
  *    column.
  * 3. AN UNMAPPED PLAYER IS LEFT BLANK, NEVER GUESSED. Auto-mapping
@@ -27,7 +27,7 @@
  *    publish a row with a blank id, so the cost of not knowing is a
  *    missing match, never a wrong one.
  *
- * Script Properties (File → Project Settings → Script Properties):
+ * Script Properties (File -> Project Settings -> Script Properties):
  *   RAPID_KEYS      comma-separated RapidAPI keys, rotated in order
  *   FUNCTIONS_BASE  https://us-central1-gameday-fixtures.cloudfunctions.net
  */
@@ -74,7 +74,7 @@ var TOURNAMENTS_HEADER = [
   'resolved_at', 'note',
 ];
 
-// ─── Entry points ─────────────────────────────────────────────────────
+// --- Entry points -----------------------------------------------------
 
 function install() {
   ensureTabs_();
@@ -92,19 +92,19 @@ function poll() {
   try {
     windows = activeWindows_();
   } catch (e) {
-    // Our own backend failing is not "no tennis on" — say so and stop,
+    // Our own backend failing is not "no tennis on" -- say so and stop,
     // rather than writing an empty sheet over a good one.
     status_('error', 'active windows: ' + e);
     return;
   }
   if (windows.length === 0) {
-    status_('idle', 'no ATP tournament live or starting within 48h — 0 vendor requests');
+    status_('idle', 'no ATP tournament live or starting within 48h -- 0 vendor requests');
     return;
   }
   // ADAPTIVE COVERAGE, as a floor. Each tournament costs ~1 request per
   // run once its ids are cached, 3 the first time. When the pooled
   // budget is thin we cover the tournaments STARTING SOONEST and say
-  // what we dropped — a stated gap beats a silent one, and beats a run
+  // what we dropped -- a stated gap beats a silent one, and beats a run
   // that fails wholesale because the last key ran dry on the ninth of
   // thirteen draws.
   var budget = quotaRemaining_().reduce(function (a, b) { return a + b; }, 0);
@@ -143,7 +143,7 @@ function poll() {
   );
 }
 
-// ─── Our own backend (free) ───────────────────────────────────────────
+// --- Our own backend (free) -------------------------------------------
 
 function base_() {
   var b = PropertiesService.getScriptProperties().getProperty('FUNCTIONS_BASE');
@@ -160,11 +160,11 @@ function activeWindows_() {
 }
 
 /**
- * Our directory, for auto-mapping. Exact unique full-name hits — plus
+ * Our directory, for auto-mapping. Exact unique full-name hits -- plus
  * ONE widening, for name ORDER.
  *
  * Measured against the vendor's 500 ranked men: 356 match our roster
- * exactly, and SIX are the same person written the other way round —
+ * exactly, and SIX are the same person written the other way round --
  * "Juncheng Shang" here is "Shang Juncheng" in our directory, and the
  * same for Wu Yibing, Zhang Zhizhen, Zhou Yi, Sun Fajing. Chinese and
  * Korean names are rendered family-name-first by some sources and
@@ -194,7 +194,7 @@ function lookupAthlete_(name, iso3) {
     return norm_(a.name) === norm_(name);
   });
   if (straight.length === 1) return straight[0];
-  if (straight.length > 1) return null; // ambiguous — a human decides
+  if (straight.length > 1) return null; // ambiguous -- a human decides
   // ASK AGAIN, REVERSED. Reversing the candidate list is not enough:
   // measured, our search returns ZERO hits for "Juncheng Shang" while
   // the directory holds him as "Shang Juncheng", so there was never a
@@ -212,7 +212,7 @@ function lookupAthlete_(name, iso3) {
   return flipped[0];
 }
 
-// ─── Vendor, with key rotation and quota tracking ─────────────────────
+// --- Vendor, with key rotation and quota tracking ---------------------
 
 function keys_() {
   var raw = PropertiesService.getScriptProperties().getProperty('RAPID_KEYS');
@@ -275,12 +275,12 @@ function vendorGet_(path) {
   throw new Error(lastErr);
 }
 
-// ─── Tournament id discovery, paid once ───────────────────────────────
+// --- Tournament id discovery, paid once -------------------------------
 
 /**
  * Vendor tournament + season ids, cached in the tournaments tab. Costs
  * two vendor requests the first time a tournament appears and nothing
- * ever again — which is what keeps a 50/day budget viable.
+ * ever again -- which is what keeps a 50/day budget viable.
  */
 function vendorIdsFor_(win) {
   var sh = tab_(TAB_TOURNAMENTS, TOURNAMENTS_HEADER);
@@ -295,7 +295,7 @@ function vendorIdsFor_(win) {
   for (var j = 1; j < values.length; j++) {
     if (values[j][0] === win.tournamentKey) {
       throw new Error(
-        win.tournamentKey + ': tournaments tab row has no vendor ids yet — ' +
+        win.tournamentKey + ': tournaments tab row has no vendor ids yet -- ' +
         'fill vendor_tournament_id and vendor_season_id by hand'
       );
     }
@@ -311,7 +311,7 @@ function vendorIdsFor_(win) {
     candidates.push(String(win.venueCity).split(/[\s,]+/)[0]);
     candidates.push(String(win.venueCity));
   }
-  candidates.push(win.name.split(/[,—-]/)[0].trim());
+  candidates.push(win.name.split(/[,\u2014-]/)[0].trim());
   var tried = [];
   var entity = null;
   for (var c = 0; c < candidates.length && !entity; c++) {
@@ -320,7 +320,7 @@ function vendorIdsFor_(win) {
     tried.push(term);
     var found = vendorGet_('/api/tennis/search/' + encodeURIComponent(term));
     // Doubles and the WTA event share the city name, so the category
-    // has to be checked — taking the first hit would publish the
+    // has to be checked -- taking the first hit would publish the
     // women's draw into the men's slice.
     ((found && found.results) || []).forEach(function (r) {
       var e = r.entity || {};
@@ -334,7 +334,7 @@ function vendorIdsFor_(win) {
     // picks up whatever they type.
     sh.appendRow([
       win.tournamentKey, win.name, '', '', new Date().toISOString(),
-      'AUTO-DISCOVERY FAILED — searched: ' + tried.join(', ') +
+      'AUTO-DISCOVERY FAILED -- searched: ' + tried.join(', ') +
         '. Fill vendor_tournament_id and vendor_season_id by hand.',
     ]);
     throw new Error('no ATP singles entity; searched ' + tried.join(', '));
@@ -384,7 +384,7 @@ function fetchTournament_(win) {
   });
 }
 
-// ─── Tabs ─────────────────────────────────────────────────────────────
+// --- Tabs -------------------------------------------------------------
 
 function book_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 
@@ -414,7 +414,7 @@ function ensureTabs_() {
 function status_(state, detail) {
   // HEADROOM, VISIBLE BEFORE IT BINDS. This used to record each key's
   // last-seen remaining with a timestamp, which told you the ceiling had
-  // been hit only after it had. Now it reads "key1 41/50 · key2 50/50 …
+  // been hit only after it had. Now it reads "key1 41/50 | key2 50/50 ...
   // pool 182/200", so the margin is legible on every row.
   var remaining = quotaRemaining_();
   var quota = remaining.map(function (n, i) {
@@ -439,7 +439,7 @@ function appendRaw_(obs) {
   sh.getRange(sh.getLastRow() + 1, 1, rows.length, RAW_HEADER.length).setValues(rows);
 }
 
-// ─── Player mapping (Tab 3) ───────────────────────────────────────────
+// --- Player mapping (Tab 3) -------------------------------------------
 
 /**
  * Fold to a comparable form. THE COMBINING-MARK RANGE IS WRITTEN AS
@@ -447,12 +447,12 @@ function appendRaw_(obs) {
  * that re-normalises its input, and a copy-paste through a browser. The
  * same range written as literal characters is invisible in the source
  * and silently stopped stripping when this file was pasted into Apps
- * Script — after which "Jiří Lehečka" and "Jiri Lehečka" folded to
+ * Script -- after which "Ji?? Lehe?ka" and "Jiri Lehe?ka" folded to
  * DIFFERENT strings, the exact-match test failed, and six of nine
  * Montreal matches went unmapped over players we hold.
  *
  * The second replace matters just as much: anything left non-ASCII
- * becomes a SPACE, so a mark that survives does not merely disappear —
+ * becomes a SPACE, so a mark that survives does not merely disappear --
  * it splits the word ("jir i lehec ka") and can never match again.
  */
 function norm_(s) {
@@ -466,7 +466,7 @@ function norm_(s) {
 }
 
 /**
- * Returns vendorPlayerId → canonical athlete id for everyone we can be
+ * Returns vendorPlayerId -> canonical athlete id for everyone we can be
  * SURE about. New vendor players get one lookup against our own
  * directory; an exact unique full-name hit is auto-mapped, anything else
  * is written with a blank id for a human. Never guessed.
@@ -488,7 +488,7 @@ function updateMapping_(obs) {
         if (!p[0] || seen[p[0]]) return;
         seen[p[0]] = true;
         var row = known[p[0]];
-        // A FILLED id is final — it may be a human's decision and is
+        // A FILLED id is final -- it may be a human's decision and is
         // never second-guessed. A BLANK one is an open question, so it
         // is asked again every run: the matcher may have been fixed
         // (it was), or the player may have entered our directory since.
@@ -511,7 +511,7 @@ function updateMapping_(obs) {
           new Date().toISOString(),
         ];
         if (row) {
-          // Update in place — appending would grow a duplicate row
+          // Update in place -- appending would grow a duplicate row
           // every two hours for every player we cannot resolve.
           sh.getRange(row.row, 1, 1, MAP_HEADER.length).setValues([cells]);
           row.id = hit ? hit.key : '';
@@ -526,7 +526,7 @@ function updateMapping_(obs) {
   return out;
 }
 
-// ─── Canonical matches (Tab 2) ────────────────────────────────────────
+// --- Canonical matches (Tab 2) ----------------------------------------
 
 /**
  * Stable across reschedules and across vendors: the tournament, the
