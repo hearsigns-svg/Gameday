@@ -894,3 +894,82 @@ any new class is never "what algorithm" but "what is this event's
 identity to a user, and does a canonical id exist for it" — and if no
 canonical id exists, the honest answer is to build the identity layer
 first, exactly as Prompt 8 did for athletes before this became safe.
+
+## From the boxing-data.com connector round (2026-08-07)
+
+### F48 — Appearance doc ids are built from REF ORDER, so a provider swapping a pair destroys the user's reminder
+`functions/src/appearances.ts` — `appearanceId(parentId, athletes)` joins the
+refs **as given**, and `appearanceFor` passes `opts.refs.map(r => r.name)`
+straight through. Nothing sorts them. Confirmed against production rather
+than read off the code: the stored id
+`boxingdata-…-app-shurretta-metcalf-amanda-galle` is in the vendor's order,
+where a sorted pair would be `amanda-galle-shurretta-metcalf`.
+
+boxing-data.com returns `fighter_1`/`fighter_2` in no fixed order — **6 of 12
+captured bouts differ from sorted order**. If a provider swaps a pair between
+polls, the id changes; ingest then retires the old document and creates a new
+one. **The doc id keys the sync ledger and is embedded in the calendar note,
+so the user loses the reminder they set, their per-event settings, and their
+place in the day.** That is the identity-across-updates rule — the reason F28
+and the whole update-in-place design exist — broken by a field-ordering
+accident.
+
+Not observed firing yet: it needs a provider to actually swap, and the two
+polls so far agreed. It is a live data-loss path, not a theoretical one.
+
+AFFECTS both boxing sources (PBC's performer array has the same exposure).
+NOT tennis or WTA, whose appearances carry a single ref.
+
+COST TO FIX: sorting the pair changes existing doc ids — **6 of the 12 stored
+boxing-data bouts would move** — so it is a migration (retire-and-recreate, or
+a dual-read window), not an edit. Owner's, per the standing rule. Left recorded
+because the alternative is that it lives only in a chat report.
+
+### F49 — `changes: 0` can coexist with a real repair, and there is no counter that says otherwise
+`functions/src/diff.ts:21-49`. `diffFixtures` counts exactly three kinds:
+`created`, `time_changed`, `status_changed`. That is the right definition for
+its actual job — deciding what is worth propagating to a device — and it is
+not a bug in the counter.
+
+The hazard is how it READS. Every poll response surfaces it as `changes` /
+`appearanceChanges`, and it is natural to take that as "documents written".
+It is not: a change to `followKeys` — that is, to WHO a fixture belongs to —
+produces no change record at all.
+
+Observed 2026-08-07: the run that repaired the F34 slot bug rewrote 4 bout
+documents from one athlete key to two, and reported `appearanceChanges: 0`.
+Anyone verifying that fix from the run output alone would have concluded
+nothing happened. The repair was confirmed only by reading the store directly
+(standing convention 8, which exists for exactly this).
+
+COST TO LEAVE: identity repairs are invisible in run output and in
+`sourceRuns`, so a follow-key regression could run for weeks with every
+report showing zeroes. A separate `identityChanges` count would close it.
+
+### F50 — "Floyd  Masson" carries a double space in `displayName`
+`athletes/athlete_000276`. Same class as the "Tamm Thibeault" truncation fixed
+this round: a blemish in the roster-sourced display name. `searchName`
+normalises correctly (`floyd masson`), so search and matching are unaffected —
+but an exact-match query on `displayName` misses him, which is how it was
+found. Cosmetic and one document; fix when convenient.
+
+### F51 — REGISTER: audit for guards whose tests would pass if the guard were deleted
+Not a defect; a hunt worth running. The F34 provider-id collision guard
+(`athletes.ts`, `slotOwner`) was written after a real incident and, until
+2026-08-07, **deleting it entirely left all 1,092 tests green**. Its test
+asserted `nameCollisions >= 1` and one surviving appearance — both of which an
+unrelated duplicate-draft check also produces. The test passed on a SYMPTOM
+something else was causing, so the safety code had no coverage of its own for
+two prompts while looking fully covered.
+
+The shape to hunt: a guard whose test asserts on an OUTCOME rather than on the
+guard's own signature, where another mechanism produces the same outcome. The
+method that found it is rule 15 applied bluntly — delete the guard, run
+everything, see what fails.
+
+CANDIDATES worth checking first (each is safety code with an outcome another
+path could produce): the `removalGuard` truncation floor in
+`providers/tennisApiAtp.ts`; the `requireArray` shape-vs-content distinction in
+`providers/fetchResult.ts`; the imagery takedown filter in `imagery.ts`; the
+`isPast` horizon gate; and the sweep's cap/deadline skips, which record the
+same `skipped` prefix as three different conditions.
