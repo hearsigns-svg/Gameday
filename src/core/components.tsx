@@ -842,20 +842,68 @@ export function SportCard(props: {
   captionAccent?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
+  // Identity artwork, where the entity has any: a crest, a competition
+  // logo, an athlete's generated monogram and flag. The tile is now the
+  // pattern for EVERY navigating thing (Prompt 22), not only sports, so
+  // it has to carry what an entity row carried.
+  monogram?: string;
+  imageUrl?: string;
+  tileBadge?: string;
+  // DENSITY. A 500-name athlete directory pays for every point of tile
+  // height, so a list can ask for the tighter geometry: a smaller mark,
+  // one line of label, less padding. Same component, same edge, same
+  // press — extended rather than forked, so the two cannot drift.
+  compact?: boolean;
+  // Full width in a LIST; the Home grid still wants two per row.
+  fullWidth?: boolean;
 }) {
   const t = useTheme();
+  const press = useRef(new Animated.Value(0)).current;
+  const setPress = (down: boolean) =>
+    Animated.timing(press, {
+      toValue: down ? 1 : 0,
+      duration: down ? 0 : motion.fast,
+      useNativeDriver: true,
+    }).start();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={props.accessibilityLabel}
       onPress={props.onPress}
-      style={({ pressed }) => [
+      onPressIn={() => setPress(true)}
+      onPressOut={() => setPress(false)}
+      style={[
         styles.sportCard,
+        props.compact && styles.sportCardCompact,
+        props.fullWidth && {
+          flexBasis: 0,
+          flexGrow: 1,
+          flexShrink: 1,
+          // Without this a long label sets the tile's minimum width and
+          // the control is pushed off the screen edge — measured, on
+          // "Other tournaments" beside a Follow all.
+          minWidth: 0,
+        },
         { backgroundColor: t.surfaceRaised, borderColor: t.border },
-        pressed && { backgroundColor: t.surface },
       ]}
     >
-      <GlyphTile glyph={props.glyph} theme={props.theme} size={36} />
+      {/* The same tonal, brief press the rows use — the tile's edge says
+          "pressable", the wash says "pressed". */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: t.border, opacity: press, borderRadius: radiusTokens.card },
+        ]}
+      />
+      <GlyphTile
+        glyph={props.glyph}
+        theme={props.theme}
+        size={props.compact ? 28 : 36}
+        {...(props.monogram ? { monogram: props.monogram } : {})}
+        {...(props.imageUrl ? { imageUrl: props.imageUrl } : {})}
+        {...(props.tileBadge ? { badge: props.tileBadge } : {})}
+      />
       <View style={{ flex: 1 }}>
         {/* TWO LINES, not one. A sport name is content, not chrome —
             "American football" truncated to "American f…" long before
@@ -866,7 +914,7 @@ export function SportCard(props: {
             one. */}
         <Text
           style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}
-          numberOfLines={2}
+          numberOfLines={props.compact ? 1 : 2}
         >
           {props.label}
         </Text>
@@ -881,6 +929,34 @@ export function SportCard(props: {
         </Text>
       </View>
     </Pressable>
+  );
+}
+
+// A TILE AND ITS CONTROL, SIDE BY SIDE (Prompt 22).
+//
+// The tile is the thing you open; the button is the thing you press to
+// follow. They are SIBLINGS — nesting the button inside the pressable is
+// exactly the bug that made pressing Follow light the whole row, and no
+// amount of styling fixes a structure that routes both to one handler.
+//
+// THE TIGHT-ROW FALLBACK. "All four majors / 4 tournaments" beside a
+// "Follow all" button leaves the label about 150pt on a 402pt screen,
+// and the label is the part that must not truncate — a button reading
+// "Follow all" is legible as an icon; a tournament reading "All four
+// maj…" is not. So the CONTROL yields, not the label: past a threshold
+// the button drops its text and becomes a square glyph control with the
+// same accessibility label. Nothing stacks and nothing wraps, because a
+// list whose rows change height as you scroll is worse than either.
+export function TileRow(props: {
+  children: ReactNode; // the tile
+  right?: ReactNode; // its control, if any
+  compact?: boolean;
+}) {
+  return (
+    <View style={[styles.tileRow, props.compact && styles.tileRowCompact]}>
+      {props.children}
+      {props.right}
+    </View>
   );
 }
 
@@ -947,6 +1023,12 @@ export function FollowButton(props: {
   onPress: () => void;
   busy?: boolean;
   label?: string; // e.g. 'Follow all' on competition rows
+  // THE CONTROL YIELDS, NEVER THE LABEL. Beside a tile there is not
+  // room for both a full tournament name and the words "Follow all", so
+  // past that threshold the button drops its text for a single glyph
+  // and keeps its accessibility label verbatim. A button reading "+" is
+  // legible; a tournament reading "All four maj..." is not.
+  iconOnly?: boolean;
 }) {
   const t = useTheme();
   return (
@@ -959,6 +1041,7 @@ export function FollowButton(props: {
       disabled={props.busy}
       style={[
         styles.followButton,
+        props.iconOnly && styles.followButtonIcon,
         props.following
           ? { backgroundColor: 'transparent', borderColor: t.border }
           : { backgroundColor: t.primary, borderColor: t.primary },
@@ -969,6 +1052,16 @@ export function FollowButton(props: {
           size="small"
           color={props.following ? t.textPrimary : t.onPrimary}
         />
+      ) : props.iconOnly ? (
+        <Text
+          style={[
+            type.heading,
+            { color: props.following ? t.textPrimary : t.onPrimary },
+          ]}
+          accessible={false}
+        >
+          {props.following ? '\u2713' : '+'}
+        </Text>
       ) : (
         <Text
           style={[
@@ -1316,6 +1409,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Square, and still a 44pt target — the geometry the tight-row
+  // fallback needs without ever shrinking below the touch minimum.
+  followButtonIcon: {
+    minWidth: 44,
+    width: 44,
+    paddingHorizontal: 0,
+  },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1354,6 +1454,19 @@ const styles = StyleSheet.create({
   },
   railItem: { width: 76, alignItems: 'center', gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },
+  tileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.xs,
+  },
+  tileRowCompact: { paddingVertical: 3 },
+  sportCardCompact: {
+    minHeight: 48,
+    paddingVertical: spacing.s,
+    gap: spacing.s,
+  },
   sportCard: {
     flexBasis: '46%',
     flexGrow: 1,
@@ -1365,6 +1478,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.m,
     borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
   statusChip: {
     flexDirection: 'row',

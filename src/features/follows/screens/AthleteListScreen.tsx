@@ -27,6 +27,8 @@ import {
   ListRow,
   monogramOf,
   SectionHeader,
+  SportCard,
+  TileRow,
 } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
@@ -379,15 +381,36 @@ export default function AthleteListScreen({ navigation, route }: Props) {
             );
           }}
           renderItem={({ item: a }) => (
-            <ListRow
-              title={a.name}
+            <TileRow
+              compact
+              // DENSITY IS THE RISK HERE, not on any other surface: the
+              // ATP directory alone is 500 names. The compact tile keeps
+              // the edge and the press that make it obviously openable
+              // while giving back most of the height — a 28pt mark, one
+              // line of name, tighter padding.
+              right={
+                followControlFor(a) ? (
+                  <FollowButton
+                    iconOnly
+                    following={isFollowed(a.key)}
+                    subject={a.name}
+                    busy={busyKey === a.key}
+                    onPress={() => void toggle(a)}
+                  />
+                ) : null
+              }
+            >
+            <SportCard
+              compact
+              fullWidth
+              label={a.name}
               caption={captionFor(a, results !== null)}
-              glyph={sport?.glyph ?? '·'}
+              glyph={sport?.glyph ?? '\u00B7'}
               monogram={monogramOf(a.name)}
               {...(flagEmojiOf(a.countryCode)
                 ? { tileBadge: flagEmojiOf(a.countryCode) as string }
                 : {})}
-              tileTheme={teamTheme(
+              theme={teamTheme(
                 (() => {
                   // Division colour where the grouping IS a category
                   // (a boxer's weight class); the per-athlete hue
@@ -433,22 +456,8 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                     : {}),
                 })
               }
-              // A retired athlete offers NO follow (owner ruling
-              // 2026-08-04): a follow is a promise of future events,
-              // and there are none coming. An EXISTING follow keeps
-              // its control so it can still be undone — hiding that
-              // would strand whoever followed them yesterday.
-              right={
-                followControlFor(a) ? (
-                  <FollowButton
-                    following={isFollowed(a.key)}
-                    subject={a.name}
-                    busy={busyKey === a.key}
-                    onPress={() => void toggle(a)}
-                  />
-                ) : null
-              }
             />
+            </TileRow>
           )}
         />
       )}

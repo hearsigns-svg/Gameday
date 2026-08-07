@@ -4,7 +4,14 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
-import { FollowButton, ListRow, monogramOf , CoverageNote } from '../../../core/components';
+import {
+  CoverageNote,
+  FollowButton,
+  ListRow,
+  monogramOf,
+  SportCard,
+  TileRow,
+} from '../../../core/components';
 import { BrowseRow, SLAM_KEYS, tennisBrowseRows } from '../domain/tennisBrowse';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
@@ -270,43 +277,49 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         );
       case 'players':
         return (
-          <ListRow
-            title={r.title}
-            caption="Rankings, champions, who's competing"
-            glyph={sport?.glyph ?? '🎾'}
-            tileTheme={teamTheme(sport?.accent ?? null, mode)}
-            accessibilityLabel={`Browse ${r.tour.toUpperCase()} players`}
-            onPress={() =>
-              navigation.navigate('AthleteList', {
-                sportKey: route.params.sportKey,
-                tour: r.tour,
-              })
-            }
-
-          />
+          <TileRow>
+            <SportCard
+              fullWidth
+              label={r.title}
+              caption="Rankings, champions, who's competing"
+              glyph={sport?.glyph ?? '🎾'}
+              theme={teamTheme(sport?.accent ?? null, mode)}
+              accessibilityLabel={`Browse ${r.tour.toUpperCase()} players`}
+              onPress={() =>
+                navigation.navigate('AthleteList', {
+                  sportKey: route.params.sportKey,
+                  tour: r.tour,
+                })
+              }
+            />
+          </TileRow>
         );
       case 'competition':
         return (
-          <ListRow
-            title={r.name}
-            caption="Every event on the tour"
-            glyph="📅"
-            tileTheme={teamTheme(sport?.accent ?? null, mode)}
-            monogram={monogramOf(r.name)}
-            accessibilityLabel={`${r.name}, see upcoming`}
-            onPress={() => openEntity(r.key, r.name)}
+          <TileRow
             right={
               <FollowButton
+                iconOnly
                 following={isFollowed(r.key)}
                 subject={r.name}
                 busy={busyKey === r.key}
-                label="Follow all"
                 onPress={() =>
                   void toggle({ id: r.key, name: r.name, country: '', key: r.key, followOnly: true })
                 }
               />
             }
-          />
+          >
+            <SportCard
+              fullWidth
+              label={r.name}
+              caption="Every event on the tour"
+              glyph="\u{1F4C5}"
+              theme={teamTheme(sport?.accent ?? null, mode)}
+              monogram={monogramOf(r.name)}
+              accessibilityLabel={`${r.name}, see upcoming`}
+              onPress={() => openEntity(r.key, r.name)}
+            />
+          </TileRow>
         );
       case 'slams':
       case 'others': {
@@ -320,31 +333,35 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         // whose row is about people, which is the one thing the sport's
         // own mark reads as here.
         return (
-          <ListRow
-            title={title}
-            caption={`${r.count} ${r.count === 1 ? 'tournament' : 'tournaments'}`}
-            glyph={isSlams ? '🏆' : '🏅'}
-            tileTheme={teamTheme(sport?.accent ?? null, mode)}
-            accessibilityLabel={`${title}, ${r.tour.toUpperCase()}`}
-            onPress={() =>
-              navigation.navigate('TournamentList', {
-                tour: r.tour,
-                kind: isSlams ? 'slams' : 'others',
-                title,
-              })
-            }
+          <TileRow
             right={
               isSlams ? (
                 <FollowButton
+                  iconOnly
                   following={slamKeys.every((k) => isFollowed(k))}
                   subject="all four majors"
                   busy={busyKey === 'slams'}
-                  label="Follow all"
                   onPress={() => void followAll(slamKeys, 'slams')}
                 />
               ) : undefined
             }
-          />
+          >
+            <SportCard
+              fullWidth
+              label={title}
+              caption={`${r.count} ${r.count === 1 ? 'tournament' : 'tournaments'}`}
+              glyph={isSlams ? '\u{1F3C6}' : '\u{1F3C5}'}
+              theme={teamTheme(sport?.accent ?? null, mode)}
+              accessibilityLabel={`${title}, ${r.tour.toUpperCase()}`}
+              onPress={() =>
+                navigation.navigate('TournamentList', {
+                  tour: r.tour,
+                  kind: isSlams ? 'slams' : 'others',
+                  title,
+                })
+              }
+            />
+          </TileRow>
         );
       }
     }
