@@ -221,12 +221,6 @@ function keys_() {
 }
 
 /**
- * Try each key in turn. A key that is out of quota (429) is skipped and
- * its exhaustion recorded; only when EVERY key refuses do we throw. The
- * remaining-quota header is stored per key so the status tab shows real
- * headroom rather than an estimate.
- */
-/**
  * Remaining quota per key, as last reported by the vendor's own headers.
  * Unknown counts as FULL: a key we have never called is not a key we
  * know is empty, and treating unknown as zero would stall a fresh key.
@@ -250,6 +244,12 @@ var DAILY_PER_KEY = 50;
 // everything mid-tournament.
 var RESERVE = 8;
 
+/**
+ * Try each key in turn. A key that is out of quota (429) is skipped and
+ * its exhaustion recorded; only when EVERY key refuses do we throw. The
+ * remaining-quota header is stored per key so the status tab shows real
+ * headroom rather than an estimate.
+ */
 function vendorGet_(path) {
   var ks = keys_();
   var props = PropertiesService.getScriptProperties();
