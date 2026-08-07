@@ -61,7 +61,12 @@ export const SECTION_NOTES = {
     'Tournament dates from the tour calendar, and match times once a ' +
     'draw is published — assembled from a ranked feed and reviewed by ' +
     'hand, so an occasional match arrives late rather than wrong. The ' +
-    'top 100 are browsable; 500 are searchable.',
+    // CORRECTED 2026-08-07: this said "the top 100 are browsable",
+    // which the server contradicts — GROUP_CAP is 50 (search.ts), so
+    // the ranked section serves 50 and the A-Z directory carries the
+    // rest uncapped. The ranking cut and the browse cut are two
+    // different numbers and the copy had merged them.
+    'top 50 are listed by rank, the rest A-Z; 500 are searchable.',
   wta:
     'The fullest coverage we have: tournaments, draws and order of ' +
     'play from the WTA’s own feed, so a match appears with her ' +
