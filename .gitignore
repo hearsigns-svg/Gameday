@@ -79,6 +79,14 @@ application_default_credentials.json
 # Android signing
 *.keystore
 
+# UPLOAD SIGNING CREDENTIALS — the whole directory, not just the key.
+# `*.jks` above already covers the keystore itself; this also covers the
+# properties file beside it, which holds the store and key passwords in
+# plaintext because Gradle has no other way to read them. Ignoring the
+# directory rather than the two filenames means a third file added here
+# later is covered by default rather than by remembering.
+/credentials/
+
 # Agent scratch: local settings carry machine paths and permissions, and
 # were previously covered ONLY by the owner's global ~/.config/git/ignore —
 # protection that does not travel with the repo.

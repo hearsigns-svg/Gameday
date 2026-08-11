@@ -57,7 +57,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.hearsigns.Gameday",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -89,7 +90,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#1463F3"
         }
-      ]
+      ],
+      "./plugins/withUploadSigning"
     ]
   }
 }

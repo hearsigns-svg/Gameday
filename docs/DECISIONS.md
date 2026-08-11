@@ -2777,3 +2777,50 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   when `sweepUtcHour < 6`, and `scheduledSweep` runs every six hours, so
   the 00–06 UTC run is the one that fires it. A manual sweep at 19:30 UTC
   correctly polled 23 tier-1 paths and skipped it.
+
+## 2026-08-11 — An upload keystore, and the release build that was signing itself with the debug key
+
+- **THE EXPO TEMPLATE SIGNS `release` WITH `signingConfigs.debug`.** Verified
+  in this project's generated `android/app/build.gradle` before changing
+  anything: `buildTypes.release` pointed at the debug config, under a
+  comment telling you to fix it. A debug-signed release APK builds,
+  installs and runs perfectly — nothing announces the problem — and it
+  cannot be replaced by a properly-signed build later without an
+  uninstall. Confirmed fixed by comparing certificate digests, not by
+  reading the gradle file: the APK's V2 signer is `f4fa05fc…8f1380`,
+  identical to the upload cert and nothing like the debug cert
+  (`fac61745…`).
+- **A CONFIG PLUGIN, NOT AN EDIT.** `/android` is CNG-generated and
+  gitignored, so a hand edit survives exactly until the next
+  `prebuild --clean` and then silently reverts to debug signing.
+  `plugins/withUploadSigning.js` injects the signing config at prebuild
+  time and THROWS if the template's line ever changes, rather than
+  falling through and leaving a release build debug-signed. It is a no-op
+  when `credentials/` is absent, so a fresh clone can still build debug.
+- **PLAY APP SIGNING, AND TWO CORRECTIONS TO THE BRIEF'S PREMISE**
+  (checked against Google's own documentation rather than assumed):
+  - "Losing the upload keystore means never being able to update on Play"
+    is NOT true. Google supports an upload key RESET — new keystore, PEM,
+    a request through Play Console. The irreplaceable key is the APP
+    SIGNING key, and under Play App Signing Google holds it.
+  - The sideloaded APK CANNOT be updated in place by a future Play build
+    regardless of what it is signed with, because Play generates its own
+    app signing key and its APKs carry a different signature. Achieving
+    that would require handing Google a copy of this key at enrolment,
+    which Google explicitly advises against ("your upload key and app
+    signing key should be different"). OWNER RULING: take the
+    recommended posture and accept one uninstall of the test install
+    before launch.
+- **Keystore facts**: `credentials/upload-keystore.jks`, alias `upload`,
+  RSA 2048 / SHA384withRSA, valid to 2053-12-27,
+  `CN=KickOffCal, O=Hearsigns, C=GB`. The whole `credentials/` directory
+  is gitignored — not just `*.jks` — because the properties file beside
+  it holds both passwords in plaintext, which is the only way Gradle can
+  read them. The ignore rule was added and VERIFIED with
+  `git check-ignore` before the key was generated.
+- **The APK is universal: 87 MB, four ABIs.** `x86` and `x86_64` are
+  39.8 MB of that and are dead weight on every physical phone. Fine for a
+  USB sideload; the Play AAB splits per-device automatically, so this is
+  not a number that ever reaches a user.
+- `versionCode` is now explicit in `app.json` (1) rather than relying on
+  the template default — Play rejects a re-upload that reuses one.
