@@ -27,6 +27,28 @@ export interface RecoveredEvent {
 // branding, or recovery breaks on every rename.
 export const NOTES_TAG = 'gameday-fixture:';
 
+// Is this error the platform saying "that event no longer exists"?
+//
+// PURE, and matched against the libraries' VERBATIM throw sites rather
+// than guessed patterns — because a guessed pattern already wedged a
+// real phone (Prompt 26 §2 hardware pass). expo-calendar's actual
+// messages:
+//   Android CalendarModule.kt:127   "Event with id X could not be found"
+//   iOS CalendarExceptions.swift:35 "Event with id X could not be found"
+//   iOS Next/ExpoCalendarEvent:72   "EKevent not found"
+// The old pattern was /not.?found|.../: `.?` is AT MOST ONE character,
+// so "could not be found" — the primary message on BOTH platforms —
+// never matched. A delete of an already-gone event (app killed between
+// the provider delete and the ledger write) therefore read as a REAL
+// failure, the run aborted to protect the ledger entry, and every later
+// sync aborted on the same op first: a permanent, invisible wedge, found
+// only because a physical Pixel parked at 174 events for forty minutes.
+export function isEventGoneError(message: string): boolean {
+  return /could not be found|not.?found|EventNotFoundException|no such event|does not exist/i.test(
+    message,
+  );
+}
+
 // The raw shape the platform hands back from a calendar scan. Only the
 // fields ownership and recovery actually need.
 export interface ScannedEvent {

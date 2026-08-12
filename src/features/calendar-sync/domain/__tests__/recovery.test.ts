@@ -235,3 +235,48 @@ describe('a blind scan must not be allowed to conclude anything', () => {
     expect(orphanEventIds([], ledger)).toEqual([]);
   });
 });
+
+// ─── isEventGoneError (Prompt 26 §2 hardware wedge) ───────────────────
+//
+// Matched against expo-calendar's VERBATIM throw sites. The old pattern
+// /not.?found/ could not match "could not be found" (`.?` is at most one
+// character), so the primary message on BOTH platforms read as a real
+// failure, the run aborted to protect the ledger entry, and every later
+// sync aborted on the same op: a phone parked at 174 events for forty
+// minutes with no error anywhere.
+
+import { isEventGoneError } from '../recovery';
+
+describe('isEventGoneError', () => {
+  it('matches the Android message, verbatim from CalendarModule.kt:127', () => {
+    expect(
+      isEventGoneError('Error: Event with id 4213 could not be found'),
+    ).toBe(true);
+  });
+
+  it('matches the iOS message, verbatim from CalendarExceptions.swift:35', () => {
+    expect(
+      isEventGoneError('Event with id ABC-123 could not be found'),
+    ).toBe(true);
+  });
+
+  it('matches the iOS next-API variant "EKevent not found"', () => {
+    expect(isEventGoneError('EKevent not found')).toBe(true);
+  });
+
+  it('still matches the legacy phrasings the old pattern covered', () => {
+    expect(isEventGoneError('event not found')).toBe(true);
+    expect(isEventGoneError('no such event')).toBe(true);
+    expect(isEventGoneError('object does not exist')).toBe(true);
+  });
+
+  // A real failure must stay a failure — the asymmetry protects the
+  // ledger, and widening this into "any error is fine" would resurrect
+  // the orphaned-duplicates bug the comment in the driver cites.
+  it('does not classify real failures as gone', () => {
+    expect(isEventGoneError('permission denied')).toBe(false);
+    expect(isEventGoneError('database is locked')).toBe(false);
+    expect(isEventGoneError('refused: not our event')).toBe(false);
+    expect(isEventGoneError('network unavailable')).toBe(false);
+  });
+});

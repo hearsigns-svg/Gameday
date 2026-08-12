@@ -226,6 +226,15 @@ async function withSyncLock<T>(
   try {
     const result = await run();
     lastErrorMessage = result.ok ? null : messageOf(result.error);
+    // Logcat is the only instrument a hardware session has. A wedged
+    // sync aborted invisibly for forty minutes on a physical Pixel
+    // because every failure exit was silent: the UI string above is
+    // in-memory, and the foreground call sites discard the Result.
+    if (!result.ok) {
+      console.warn(
+        `[gameday] sync failed: ${result.error.kind} — ${messageOf(result.error)}`,
+      );
+    }
     return result;
   } catch (e) {
     // Nothing inside may leak an uncaught rejection to the UI.

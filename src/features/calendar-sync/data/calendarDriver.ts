@@ -34,6 +34,7 @@ import {
   fixtureIdFromNotes,
   foreignEventCount,
   NOTES_TAG,
+  isEventGoneError,
   ourEventsIn,
   RecoveredEvent,
   ScannedEvent,
@@ -732,7 +733,7 @@ export async function deleteFixtureEvent(eventId: string): Promise<Result<true>>
     // other failure must abort the sync BEFORE the ledger entry is
     // dropped — swallowing real errors once orphaned events into
     // duplicates (see DECISIONS.md).
-    if (/not.?found|no such event|does not exist/i.test(String(e))) {
+    if (isEventGoneError(String(e))) {
       return ok(true);
     }
     return err({ kind: 'unknown', message: `event delete failed: ${e}` });
