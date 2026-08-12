@@ -26,6 +26,7 @@ import {
   sourceKindOf,
   accountLabelOf,
   SourceKind,
+  mayRecolour,
 } from '../domain/calendarTarget';
 import { allDayAlarmMinutesBefore } from '../domain/allDayAlarm';
 import { AllDayReminder } from '../domain/prefs';
@@ -159,11 +160,24 @@ export type ColourOutcome = 'applied' | 'saved' | 'not-ours';
 export async function setCalendarColour(hex: string): Promise<ColourOutcome> {
   writeJson(CAL_COLOUR_KEY, hex);
   const target = storedTarget();
-  if (target && target.kind === 'user') return 'not-ours';
-  const id = target?.calendarId ?? readJson<string | null>(CAL_KEY, null);
-  if (!id) return 'saved';
+  // OWNERSHIP PROOF, not record trust (Prompt 26 §4). The old guard
+  // refused only an explicit kind:'user' record; a null record fell
+  // through to the cached id, and a stale 'ours' record was trusted
+  // without looking at the calendar it named — an id the platform later
+  // reused for a user calendar would have been recoloured. The colour
+  // still SAVES either way and lands on the next calendar we create.
+  if (!target || target.kind !== 'ours') return 'not-ours';
   try {
-    const cal = await Calendar.ExpoCalendar.get(id);
+    const cal = await Calendar.ExpoCalendar.get(target.calendarId);
+    if (
+      !mayRecolour(
+        target,
+        { id: cal.id, title: cal.title ?? '' },
+        [CAL_TITLE, ...LEGACY_CAL_TITLES],
+      )
+    ) {
+      return 'not-ours';
+    }
     await cal.update({ color: hex });
     return 'applied';
   } catch {
@@ -336,6 +350,14 @@ async function resolveOurCalendar(
 }
 
 // Rename + recolour, ours only. Both are cosmetic: never fail a sync.
+//
+// PROOF BY CALL SITE, stated as the invariant it is (Prompt 26 §4):
+// every caller reaches this with a calendar that came out of
+// resolveOurCalendar, i.e. one that passed provablyOurs — our record or
+// our title PLUS a scan showing zero foreign events. That is a STRONGER
+// proof than setCalendarColour's mayRecolour (which cannot afford the
+// scan on every swatch tap). A new caller that has not run the proof is
+// a bug; there is deliberately no unproven recolour path to reach for.
 async function conformOurCalendar(c: Calendar.ExpoCalendar): Promise<void> {
   if ((c.title ?? '') !== CAL_TITLE) {
     try {

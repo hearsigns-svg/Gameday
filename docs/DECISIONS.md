@@ -2877,3 +2877,53 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   TSDB bouts couldn't stamp until the full deploy. Rule 13's shape,
   self-inflicted, caught by measuring the store rather than trusting the
   deploy log.
+
+## 2026-08-12 — Prompt 26: the recolour guard, and the platform facts under the free tier
+
+- **NEVER RECOLOUR A CALENDAR WE DID NOT CREATE** (owner hard rule). The
+  flagged "asymmetry" — premium-Android colour riding the user's own
+  Google calendar until the REST build exists — was the original
+  green-work-events complaint inverted and applied by us. Colour applies
+  ONLY to a calendar we created; on Android that means **the REST/OAuth
+  calendar is a PREREQUISITE for Android premium**, not a follow-up, and
+  until it exists the sheet says colour is not yet available on Android
+  rather than applying it to the wrong calendar.
+- **`mayRecolour` is the proof, pure and attacked.** The old guard
+  refused only an explicit kind:'user' record. Holes closed: a missing
+  record fell through to a cached id; a stale 'ours' record was trusted
+  without looking at the calendar it named — a platform-reused id would
+  have recoloured somebody's calendar. Now: our kind AND our id AND our
+  title, or refusal (colour saves and lands on the next calendar we
+  create). Rule 15: reverting to the old shape fails 4 tests; dropping
+  only the title check fails the id-reuse test; the choke-point audit
+  found exactly two colour writes — the guarded one and
+  `conformOurCalendar`, whose stronger scan-based proof
+  (provablyOurs) was verified at all four call sites and stated as an
+  invariant in place.
+- **iOS pending-notification cap CONFIRMED at 64**, semantics better
+  than feared: the system keeps the SOONEST-FIRING 64 and discards the
+  rest — which is half of a rolling window by itself. Design consequence
+  (proposal, not built): schedule the soonest ~50 (headroom for
+  app-level notices), reschedule at every sync; a gap needs 50+ reminders
+  to fire between two syncs, which at our intervals means 50 followed
+  events inside ~12 hours.
+- **Android: ship WITHOUT exact alarms first.** SDK 57 expo-notifications
+  documents SCHEDULE_EXACT_ALARM as an opt-in manifest addition for
+  exact-time triggers; without it alarms are inexact (batched, Doze-
+  deferred — minutes of drift, not hours, outside deep Doze). At 1h/6h/1d
+  intervals that drift is immaterial, so the proposal avoids the
+  permission entirely — which also avoids the stop-and-ask condition.
+  Measure drift on hardware; escalate to USE_EXACT_ALARM (calendar-app
+  policy category) only if observed drift exceeds tolerance.
+- **The two-week cold case, stated rather than assumed**: reminders whose
+  fixtures DIDN'T move fire correctly forever — they are locally
+  scheduled. Reminders whose fixtures MOVED fire at the stale time until
+  any sync runs (foreground open, silent push, or the OS's discretionary
+  ~12h background window — all of which degrade as the OS buckets an
+  unopened app). The free tier's ad-driven open cadence is the real
+  correction loop; the failure mode is a moved fixture + a fortnight of
+  never opening the app, and its blast radius is one wrong-time
+  notification per moved fixture.
+- §7 remainder: owner ruled NO on spending ~20 vendor calls for
+  flag-only name lookups — quota buys times and undercards, not
+  decoration. The 20 gain ids naturally as they appear on cards.

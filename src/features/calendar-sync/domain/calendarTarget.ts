@@ -86,6 +86,28 @@ export function targetSummary(
   return `${d.label} · ${consequenceForTarget(d)}`;
 }
 
+// MAY THIS CALENDAR BE RECOLOURED? (Prompt 26 §4, owner hard rule:
+// "never apply a colour to a calendar we did not create".) PURE, so the
+// refusal logic is testable and attackable without a native calendar.
+//
+// The stored record alone is NOT proof: a stale 'ours' record whose
+// platform id was later reused by a user calendar would pass an id-only
+// check and recolour somebody's work calendar — the exact complaint that
+// started the colour work, inverted, applied by us. So the record must
+// AGREE with the calendar it points at: our kind, our id, and a title
+// only our own conform/create paths ever write. Anything else refuses;
+// the caller falls back to 'saved', which applies the colour only when a
+// calendar of ours is next created.
+export function mayRecolour(
+  target: { kind: 'ours' | 'user'; calendarId: string } | null,
+  cal: { id: string; title: string } | null,
+  ourTitles: readonly string[],
+): boolean {
+  if (!target || target.kind !== 'ours') return false;
+  if (!cal || cal.id !== target.calendarId) return false;
+  return ourTitles.includes(cal.title);
+}
+
 export interface TargetChoice {
   calendarId: string | null; // null = create our own
   createInSourceId?: string; // iOS: which source to create in

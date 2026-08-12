@@ -2072,3 +2072,8 @@ enabled) rather than reading as an empty sheet.
 OWNER SETUP — `docs/atp-sheet-setup.md`: enable the Sheets API, share
 the sheet with `188261010398-compute@developer.gserviceaccount.com`,
 paste the Apps Script, set two script properties, run `install()`.
+
+- **Android premium prerequisite (owner ruling 2026-08-12):** the
+  Google-Calendar REST/OAuth secondary calendar must exist before Android
+  premium can ship — calendar colour is premium, colour only ever applies
+  to a calendar we created, and on Android only the REST calendar is ours.
