@@ -266,6 +266,16 @@ for (const [ioc, code2, name, iso3] of ROWS) {
 for (const [code, { name }] of Object.entries(UK_NATIONS)) {
   BY_CODE.set(code, { code2: code, name });
 }
+// ISO alpha-2 joined the mixture when boxing-data became an enrichment
+// source (Prompt 25 §7: its roster speaks alpha-2). Indexed LAST and
+// only where unclaimed — though a clash is impossible by construction:
+// every existing key is three letters and these are two.
+for (const [, code2] of ROWS.map((r) => [r[0], r[1]] as const)) {
+  if (!BY_CODE.has(code2)) {
+    const nation = [...BY_CODE.values()].find((n) => n.code2 === code2);
+    if (nation) BY_CODE.set(code2, nation);
+  }
+}
 
 // A country code we do not recognise resolves to NOTHING — never to a
 // guess, and never to a half-flag. Unknown is a real answer: the row

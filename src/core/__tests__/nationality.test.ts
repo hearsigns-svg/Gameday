@@ -133,3 +133,18 @@ describe('codeFromDemonym', () => {
     expect(codeFromDemonym(undefined)).toBeNull();
   });
 });
+
+// Alpha-2 joined the mixture with the boxing-data enrichment (Prompt 25).
+describe('alpha-2 codes resolve', () => {
+  it('renders the same flag for GB and GBR, AU and AUS', () => {
+    expect(flagEmojiOf('GB')).toBe(flagEmojiOf('GBR'));
+    expect(flagEmojiOf('AU')).toBe(flagEmojiOf('AUS'));
+    expect(flagEmojiOf('US')).toBe(flagEmojiOf('USA'));
+    expect(flagEmojiOf('GB')).not.toBeNull();
+  });
+  it('still refuses what no scheme contains', () => {
+    // 'EN' is not ISO, not IOC, not a UK nation code — the backfill
+    // normalises it to ENG rather than teaching the lookup a wrong code.
+    expect(flagEmojiOf('EN')).toBeNull();
+  });
+});

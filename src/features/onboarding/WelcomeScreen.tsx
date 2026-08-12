@@ -14,7 +14,11 @@ type Props = RootScreenProps<'Welcome'>;
 const PROMISES = [
   ['📅', 'Fixtures land in your phone calendar, automatically'],
   ['🔄', 'Times change, games move — your calendar stays correct'],
-  ['🤫', 'No account, no feed, no notifications to manage'],
+  // Owner-ruled wording (Prompt 25 §6). The old line promised "no
+  // notifications" — false today (calendar alarms ARE notifications by
+  // any reading a user cares about) and falser after the trial, when
+  // push becomes the free tier's delivery channel.
+  ['🤫', 'No account needed — just follow and go.'],
 ] as const;
 
 export default function WelcomeScreen({ navigation }: Props) {
