@@ -15,22 +15,46 @@ import { runSync, shouldAutoSync } from './syncEngine';
 const REFRESH_TASK = 'gameday-refresh';
 const PUSH_SYNC_TASK = 'gameday-push-sync';
 
-// RNFB messaging (which iOS carries for its FCM token since Prompt 6)
-// swizzles the remote-notification delegate and holds the system
-// completion handler for a FULL 25 SECONDS per silent push when no
-// background message handler is registered — pressing against iOS's
-// ~30s silent-push budget on every sweep fan-out, with an error log
-// each time. Registering a handler releases the completion as soon as
-// it resolves; the actual sync work stays with the expo-notifications
-// task below, so the handler only needs to exist. Guarded lazy require,
-// same rule as deviceRegistry: a pre-RNFB binary must not crash.
-if (Platform.OS === 'ios' && rnfbMessagingAvailable()) {
+// RNFB's background message handler, BOTH platforms — for two different
+// reasons, and the Android one was found on hardware (Prompt 26 §2).
+//
+// ANDROID: RNFB's FirebaseMessagingService wins the merged-manifest
+// intent, so a background data message is dispatched to RNFB's OWN
+// headless task — never to the expo-notifications task below. With no
+// handler registered, the first real silent push on a physical Pixel
+// unfroze the app ("sync unfroze com.hearsigns.Gameday") and then logged
+// "No task registered for key ReactNativeFirebaseMessagingHeadlessTask"
+// and did nothing: delivery proven, propagation dead. The handler IS the
+// Android background path, so here it does the real work.
+//
+// iOS: RNFB swizzles the remote-notification delegate and holds the
+// system completion handler for a FULL 25 SECONDS per silent push when
+// no handler is registered — pressing against iOS's ~30s budget on
+// every sweep fan-out. The sync work stays with the expo-notifications
+// task below (which iOS DOES route); this handler only needs to exist
+// and resolve fast.
+//
+// Guarded lazy require, same rule as deviceRegistry: a pre-RNFB binary
+// must not crash. Module scope on purpose — a HEADLESS launch (app
+// killed, push arrives) loads the bundle and runs only what module
+// scope registered.
+if (rnfbMessagingAvailable()) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { getMessaging, setBackgroundMessageHandler } =
       require('@react-native-firebase/messaging');
     setBackgroundMessageHandler(getMessaging(), async () => {
-      console.log('[gameday] fcm background message received');
+      if (Platform.OS === 'ios') {
+        console.log('[gameday] fcm background message received');
+        return;
+      }
+      console.log('[gameday] fcm background message received — syncing');
+      if (shouldAutoSync()) {
+        const r = await runSync();
+        console.log(
+          `[gameday] background push sync: ${r.ok ? JSON.stringify(r.value) : r.error.kind}`,
+        );
+      }
     });
   } catch (e) {
     console.warn('[gameday] fcm background handler unavailable:', String(e));
