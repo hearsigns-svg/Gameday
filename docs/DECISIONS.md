@@ -2824,3 +2824,56 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   not a number that ever reaches a user.
 - `versionCode` is now explicit in `app.json` (1) rather than relying on
   the template default — Play rejects a re-upload that reuses one.
+
+## 2026-08-11 — Prompt 24: the first real-device pass, and what it found
+
+- **A1 was the all-day case, diagnosed before touching anything.** The
+  hero card's reminder chips rendered `disabled` at 0.45 opacity whenever
+  the event was all-day — date_only, postponed, or the global all-day
+  preference — with nothing saying why, and the engine deliberately wrote
+  no alarm on any all-day entry (minutes before a midnight sentinel fire
+  at arbitrary hours). On a phone whose follows are mostly date-only
+  fixtures, the feature read as broken. Geometry was fine (4 chips ×
+  44pt fit; 32pt height was an incidental undershoot, now 40).
+- **All-day entries now carry DAY-SHAPED reminders at civil hours** —
+  evening before 6pm, morning of 9am, hours fixed by design. Translated
+  to platform offsets at write time: Android anchors an all-day DTSTART
+  at UTC midnight, EventKit at local midnight, so the same civil instant
+  is a different offset per platform (`allDayAlarm.ts`; the two-zone
+  suite genuinely exercises it — the anchors differ by 7 hours in the LA
+  run). iOS half is doctrine pending an iOS device. Postponed events
+  render NO reminder row: a reminder for an event with no date is a
+  promise nobody can keep. Every rendered chip works.
+- **Ledger doctrine for the new field, stated**: absent `allDayReminder`
+  means null — the OLD engine's actual testimony (it never wrote one) —
+  the deliberate opposite of `reminderMinutes`' unknown-is-mismatch rule,
+  and the reason this ships without rewriting every all-day event.
+- **A2: one invisible-bounds destructive target existed** — the
+  remove-from-calendar row, full-width 52pt, exactly where a collapse tap
+  lands. Now a words-only outlined self-sized button; the sweep found
+  EventRow's and BoutRow's controls already bounded.
+- **B2 intervals: Off / 1h / 6h / 1d.** 15m/30m are already-watching
+  times; the set now matches the three real decisions a fixture asks —
+  plan the day, arrange the evening, leave the house. Stored 15/30 keep
+  working; the chips just show no selection. Hero chips scroll
+  horizontally so every option is reachable at any width or type scale.
+- **B3: one appearance store, both theme hooks, and the nav chrome.**
+  `tokens.useTheme` had to join `useColorSchemeMode` on the same store or
+  a pinned Dark flipped cards while the chrome stayed light. The store
+  lazy-requires MMKV: a static import from tokens made LOADING the design
+  tokens need a native runtime and killed every pure suite that touches a
+  component — caught by the gate, not by review.
+- **C2 flags are stamped server-side, whole pairs only.** `resolveDrafts`
+  writes `participantCountries` when EVERY participant resolved to an
+  athlete carrying a country — a lone flag beside a bout misstates who is
+  fighting. Client renders the pair where a team fixture shows its
+  ground; photography still wins. Measured after restamp: 6 of 20 future
+  combat bouts carry pairs. The levers are data, not code: roster boxers
+  with missing countryCode (backfillable from the boxing vendor's own
+  roster, BY ID — a migration, owner's per the standing rule) and TSDB
+  headline bouts where only one side resolves by name.
+- **The shared-module drift rule bit ME this time**: I deployed 3
+  pair-resolving routes and left pollTsdbLeague on the old resolver —
+  TSDB bouts couldn't stamp until the full deploy. Rule 13's shape,
+  self-inflicted, caught by measuring the store rather than trusting the
+  deploy log.
