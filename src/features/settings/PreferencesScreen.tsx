@@ -7,7 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RootScreenProps } from '../../core/navigation';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
-import { CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
+import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import {
   calendarColour,
@@ -27,6 +27,11 @@ import {
   regionOverride,
   setRegionOverride,
 } from '../../core/regionStore';
+import {
+  AppearanceChoice,
+  appearanceChoice,
+  setAppearanceChoice,
+} from '../../core/appearanceStore';
 import { refreshPriorities } from '../follows/data/browsePriority';
 
 // Colour choices for the Gameday calendar as it appears in the OS
@@ -72,6 +77,7 @@ export default function PreferencesScreen({
   navigation,
 }: RootScreenProps<'Preferences'>) {
   const [region, setRegion] = useState<RegionKey | null>(regionOverride());
+  const [appearance, setAppearance] = useState<AppearanceChoice>(appearanceChoice);
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
   const [colour, setColour] = useState<string>(calendarColour);
@@ -155,6 +161,52 @@ export default function PreferencesScreen({
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         Reminder changes apply to fixtures as they are added or updated.
       </Text>
+
+      {/* The all-day channel: fixtures whose TIME is not published yet
+          get day-shaped reminders anchored to civil hours, because
+          "1 hour before" means nothing against a date. Off by default —
+          turning it on is a choice that adds an alarm to every
+          date-only fixture (Prompt 24 A1/B2). */}
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Days without a time yet
+      </Text>
+      <View style={styles.group}>
+        {ALL_DAY_REMINDER_OPTIONS.map((opt) => (
+          <OptionRow
+            key={String(opt.value)}
+            label={opt.label}
+            selected={prefs.allDayReminder === opt.value}
+            onPress={() => apply({ ...prefs, allDayReminder: opt.value })}
+          />
+        ))}
+      </View>
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Appearance
+      </Text>
+      <View style={styles.group}>
+        {(
+          [
+            { key: 'system', label: 'Match my device' },
+            { key: 'light', label: 'Light' },
+            { key: 'dark', label: 'Dark' },
+          ] as Array<{ key: AppearanceChoice; label: string }>
+        ).map((o) => (
+          <OptionRow
+            key={o.key}
+            label={o.label}
+            selected={appearance === o.key}
+            onPress={() => {
+              setAppearanceChoice(o.key);
+              setAppearance(o.key);
+            }}
+          />
+        ))}
+      </View>
 
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}

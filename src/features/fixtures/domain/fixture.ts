@@ -63,6 +63,9 @@ export interface Fixture {
   // updates in place instead of duplicating.
   parentFixtureId?: string; // present ⇒ this fixture is an appearance
   athletes?: string[]; // display names, first-named first
+  // ISO codes, same order — present only when every participant has one
+  // (server: resolveDrafts). The combat hero's flag pair reads this.
+  participantCountries?: string[];
   firstSeenAt?: string;
   updatedAt: string; // ISO 8601, server write time
 }

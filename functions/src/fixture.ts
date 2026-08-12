@@ -132,6 +132,12 @@ export interface Fixture {
   // updates in place instead of duplicating.
   parentFixtureId?: string; // present ⇒ this fixture is an appearance
   athletes?: string[]; // display names, first-named first
+  // ISO country codes for the same people, SAME ORDER as `athletes`, and
+  // only when EVERY named participant resolved to a directory athlete
+  // carrying one — a bout with one known flag renders no flags, because
+  // half a flag pair misidentifies the fight (Prompt 24 C2). Display
+  // data: never matched on, never part of identity.
+  participantCountries?: string[];
   firstSeenAt?: string; // first ingest — decides which id users keep
   updatedAt: string;
 }

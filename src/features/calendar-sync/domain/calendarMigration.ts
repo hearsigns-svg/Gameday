@@ -49,6 +49,9 @@ export function movedEntry(
   // whatever the old entry recorded — carrying the stale value forward
   // would make the planner see a phantom change on the next pass.
   reminderMinutes?: number | null,
+  // Same rule for the all-day channel: the move re-applies the CURRENT
+  // day-shaped choice, so the ledger must record what was written.
+  allDayReminder?: import('./prefs').AllDayReminder,
 ): LedgerEntry {
   return {
     ...entry,
@@ -56,6 +59,7 @@ export function movedEntry(
     calendarId: targetCalendarId,
     strayEventId: entry.eventId,
     ...(reminderMinutes !== undefined ? { reminderMinutes } : {}),
+    ...(allDayReminder !== undefined ? { allDayReminder } : {}),
   };
 }
 

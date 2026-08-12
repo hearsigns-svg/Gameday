@@ -57,13 +57,14 @@ import { calendarCapabilities } from '../data/calendarDriver';
 import {
   loadEventSettings,
   setEventColour,
+  setEventAllDayReminder,
   setEventReminder,
 } from '../data/eventSettingsStore';
 import { isExcluded, setExcluded } from '../data/exclusionStore';
 import { isPinned, setPinned } from '../data/pinStore';
 import { loadPrefs } from '../data/prefsStore';
-import { hasReminderOverride } from '../domain/eventSettings';
-import { REMINDER_OPTIONS } from '../domain/prefs';
+import { hasAllDayReminderOverride, hasReminderOverride } from '../domain/eventSettings';
+import { ALL_DAY_REMINDER_OPTIONS, AllDayReminder, REMINDER_OPTIONS } from '../domain/prefs';
 import { runSync, subscribeSync, upcomingFixtures } from '../syncEngine';
 
 // What a caller hands the host to fly a card.
@@ -85,6 +86,7 @@ interface Displayed {
   confidence?: 'confirmed' | 'provisional';
   parentFixtureId?: string;
   athletes?: string[];
+  participantCountries?: string[];
   homeTeam?: string;
   awayTeam?: string;
   venue?: string;
@@ -213,6 +215,10 @@ export function FixtureCardBody(props: {
   const chosen = overridden
     ? (settings[fixture.id]?.reminderMinutes ?? null)
     : prefs.reminderMinutes;
+  const allDayOverridden = hasAllDayReminderOverride(fixture.id, settings);
+  const allDayChosen = allDayOverridden
+    ? (settings[fixture.id]?.allDayReminder ?? null)
+    : prefs.allDayReminder;
   const excluded = isExcluded(fixture.id);
   const pinned = isPinned(fixture.id);
   const covered = fixture.followKeys.some((k) => loadFollowKeys().includes(k));
@@ -221,6 +227,12 @@ export function FixtureCardBody(props: {
 
   const applyReminder = (minutes: number | null | undefined) => {
     setEventReminder(fixture.id, minutes);
+    repaint();
+    void runSync();
+  };
+
+  const applyAllDayReminder = (r: AllDayReminder | undefined) => {
+    setEventAllDayReminder(fixture.id, r);
     repaint();
     void runSync();
   };
@@ -319,6 +331,9 @@ export function FixtureCardBody(props: {
         ? { crestUrl: owner.crestUrl }
         : {})}
       {...(art?.url ? { photoUrl: art.url } : {})}
+      {...(fixture.participantCountries?.length
+        ? { participantCountries: fixture.participantCountries }
+        : {})}
     >
       <ScrollView
         contentContainerStyle={{ paddingBottom: spacing.l }}
@@ -364,15 +379,39 @@ export function FixtureCardBody(props: {
         <Animated.View style={body}>
           {past ? null : (
             <>
-              <Rule theme={theme} />
-              <ReminderRow
-                theme={theme}
-                chosen={chosen}
-                overridden={overridden}
-                inert={banner}
-                onPick={applyReminder}
-                onReset={() => applyReminder(undefined)}
-              />
+              {fixture.status === 'postponed' ? null : banner ? (
+                // AN ALL-DAY ENTRY GETS DAY-SHAPED CHOICES, NOT DEAD
+                // CHIPS (Prompt 24 A1). This row used to render the
+                // minutes set disabled at 0.45 opacity with nothing
+                // saying why — on a phone whose follows are mostly
+                // date-only fixtures, the feature read as broken. Every
+                // chip shown here works; inapplicable options are simply
+                // not offered. Postponed events render no row at all:
+                // the card already says postponed, and a reminder for an
+                // event with no date is not a control, it is a promise
+                // nobody can keep.
+                <>
+                  <Rule theme={theme} />
+                  <AllDayReminderRow
+                    theme={theme}
+                    chosen={allDayChosen}
+                    overridden={allDayOverridden}
+                    onPick={applyAllDayReminder}
+                    onReset={() => applyAllDayReminder(undefined)}
+                  />
+                </>
+              ) : (
+                <>
+                  <Rule theme={theme} />
+                  <ReminderRow
+                    theme={theme}
+                    chosen={chosen}
+                    overridden={overridden}
+                    onPick={applyReminder}
+                    onReset={() => applyReminder(undefined)}
+                  />
+                </>
+              )}
               {colourCapable ? (
                 <>
                   <Rule theme={theme} />
@@ -388,28 +427,41 @@ export function FixtureCardBody(props: {
                 </>
               ) : null}
               <Rule theme={theme} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  inCalendar
-                    ? `Remove ${fixture.title} from your calendar`
-                    : `Add ${fixture.title} to your calendar`
-                }
-                onPress={toggleCalendar}
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed ? { opacity: 0.6 } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    type.body,
-                    { color: theme.onGradient, opacity: inCalendar ? 0.75 : 1 },
+              {/* THE WORDS ARE THE TARGET (Prompt 24 A2). This was a
+                  full-width 52pt pressable row, which put a destructive
+                  action exactly where a collapse tap lands — the owner
+                  removed real events trying to close the card. The
+                  visible outline now IS the boundary of the target,
+                  the same contract BoutRow's toggle already keeps. */}
+              <View style={styles.row}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    inCalendar
+                      ? `Remove ${fixture.title} from your calendar`
+                      : `Add ${fixture.title} to your calendar`
+                  }
+                  onPress={toggleCalendar}
+                  style={({ pressed }) => [
+                    styles.calendarToggle,
+                    { borderColor: theme.onGradient },
+                    pressed ? { opacity: 0.55 } : null,
                   ]}
                 >
-                  {inCalendar ? 'Remove from calendar' : 'Add to calendar'}
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[
+                      type.secondary,
+                      {
+                        fontWeight: '600',
+                        color: theme.onGradient,
+                        opacity: inCalendar ? 0.9 : 1,
+                      },
+                    ]}
+                  >
+                    {inCalendar ? 'Remove from calendar' : 'Add to calendar'}
+                  </Text>
+                </Pressable>
+              </View>
             </>
           )}
 
@@ -462,31 +514,44 @@ function Rule(props: { theme: TeamTheme }) {
 // ONE ROW. Four durations, and — only once a duration has been chosen —
 // a reset back to the preference, which is a different kind of answer
 // and therefore not a fifth chip.
-function ReminderRow(props: {
+// One segmented row serves both reminder kinds — the chips differ only
+// in what they carry. Every rendered chip is pressable: the caller
+// chooses WHICH set applies (minutes on timed events, day-shaped on
+// all-day entries) rather than disabling the wrong one in place.
+function SegmentedReminderRow<T>(props: {
   theme: TeamTheme;
-  chosen: number | null;
+  options: ReadonlyArray<{ label: string; short: string; value: T }>;
+  chosen: T;
   overridden: boolean;
-  inert: boolean;
-  onPick: (m: number | null) => void;
+  onPick: (v: T) => void;
   onReset: () => void;
 }) {
   const { theme } = props;
   return (
-    <View style={[styles.row, props.inert ? { opacity: 0.45 } : null]}>
+    <View style={styles.row}>
       <Text style={[type.body, { color: theme.onGradient, flex: 1 }]}>
         Reminder
       </Text>
-      <View style={styles.segments}>
-        {DURATIONS.map((o) => {
+      {/* Horizontal scroll, not wrap: the set has to stay one row (a
+          list whose rows change height as you scroll is worse), and a
+          chip that falls off a narrow screen must be REACHABLE rather
+          than silently cropped — "so I can pick" (Prompt 24 B2). */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.segments}
+        style={{ flexGrow: 0 }}
+      >
+        {props.options.map((o) => {
           const selected = props.chosen === o.value;
           return (
             <Pressable
               key={o.label}
               accessibilityRole="button"
-              accessibilityState={{ selected, disabled: props.inert }}
-              accessibilityLabel={`${o.short} reminder${selected ? ', selected' : ''}`}
-              disabled={props.inert}
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${o.label}${selected ? ', selected' : ''}`}
               onPress={() => props.onPick(o.value)}
+              hitSlop={6}
               style={[
                 styles.segment,
                 selected
@@ -517,8 +582,8 @@ function ReminderRow(props: {
             </Pressable>
           );
         })}
-      </View>
-      {props.overridden && !props.inert ? (
+      </ScrollView>
+      {props.overridden ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Use my default reminder"
@@ -532,6 +597,44 @@ function ReminderRow(props: {
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+function ReminderRow(props: {
+  theme: TeamTheme;
+  chosen: number | null;
+  overridden: boolean;
+  onPick: (m: number | null) => void;
+  onReset: () => void;
+}) {
+  return (
+    <SegmentedReminderRow
+      theme={props.theme}
+      options={DURATIONS}
+      chosen={props.chosen}
+      overridden={props.overridden}
+      onPick={props.onPick}
+      onReset={props.onReset}
+    />
+  );
+}
+
+function AllDayReminderRow(props: {
+  theme: TeamTheme;
+  chosen: AllDayReminder;
+  overridden: boolean;
+  onPick: (r: AllDayReminder) => void;
+  onReset: () => void;
+}) {
+  return (
+    <SegmentedReminderRow
+      theme={props.theme}
+      options={ALL_DAY_REMINDER_OPTIONS}
+      chosen={props.chosen}
+      overridden={props.overridden}
+      onPick={props.onPick}
+      onReset={props.onReset}
+    />
   );
 }
 
@@ -667,7 +770,8 @@ const styles = StyleSheet.create({
   segments: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   segment: {
     minWidth: 44,
-    minHeight: 32,
+    // 40 + the row's padding reaches the 44pt target; 32 undershot it.
+    minHeight: 40,
     paddingHorizontal: spacing.s,
     borderRadius: radius.pill,
     borderWidth: 1,
@@ -683,6 +787,16 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   reset: { minWidth: 28, alignItems: 'center' },
+  // Self-sized, outlined, 44pt: the visible bounds ARE the tap bounds.
+  calendarToggle: {
+    minHeight: 44,
+    paddingHorizontal: spacing.l,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
   bout: {
     minHeight: 56,
     flexDirection: 'row',

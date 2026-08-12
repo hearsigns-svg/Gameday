@@ -43,6 +43,29 @@ export function setEventReminder(
   writeJson(KEY, all);
 }
 
+// The all-day counterpart, same undefined-clears / null-is-a-choice
+// contract as setEventReminder above.
+export function setEventAllDayReminder(
+  fixtureId: string,
+  reminder: import('../domain/prefs').AllDayReminder | undefined,
+): void {
+  const all = loadEventSettings();
+  if (reminder === undefined) {
+    const existing = all[fixtureId];
+    if (!existing) return;
+    const { allDayReminder: _drop, ...rest } = existing;
+    if (Object.keys(rest).length <= 1) delete all[fixtureId];
+    else all[fixtureId] = { ...rest, at: new Date().toISOString() };
+  } else {
+    all[fixtureId] = {
+      ...all[fixtureId],
+      allDayReminder: reminder,
+      at: new Date().toISOString(),
+    };
+  }
+  writeJson(KEY, all);
+}
+
 export function setEventColour(
   fixtureId: string,
   colour: string | undefined,
@@ -52,7 +75,11 @@ export function setEventColour(
   if (colour === undefined) {
     if (!existing) return;
     const { colour: _drop, ...rest } = existing;
-    if (rest.reminderMinutes === undefined) delete all[fixtureId];
+    // A record still carrying EITHER reminder channel survives — the
+    // one-field check here silently deleted an all-day override the
+    // moment its event's colour was cleared.
+    if (rest.reminderMinutes === undefined && rest.allDayReminder === undefined)
+      delete all[fixtureId];
     else all[fixtureId] = { ...rest, at: new Date().toISOString() };
   } else {
     all[fixtureId] = { ...existing, colour, at: new Date().toISOString() };

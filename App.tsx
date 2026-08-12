@@ -12,7 +12,7 @@ import {
 } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState, Pressable, useColorScheme, View } from 'react-native';
+import { AppState, Pressable, View } from 'react-native';
 // Side effect: defines background tasks at module scope (headless launches).
 import { registerBackgroundSync } from './src/features/calendar-sync/backgroundSync';
 import {
@@ -24,6 +24,8 @@ import { loadFollowables } from './src/features/follows/data/followStore';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
+import { useColorSchemeMode } from './src/core/useColorSchemeMode';
+import { Wordmark } from './src/core/components';
 import SearchScreen from './src/features/follows/screens/SearchScreen';
 import WelcomeScreen from './src/features/onboarding/WelcomeScreen';
 import CalendarPrimingScreen from './src/features/calendar-sync/screens/CalendarPrimingScreen';
@@ -61,8 +63,8 @@ const TAB_ICONS: Record<
 function SettingsButton() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const scheme = useColorScheme();
-  const t = scheme === 'dark' ? palette.dark : palette.light;
+  const mode = useColorSchemeMode();
+  const t = mode === 'dark' ? palette.dark : palette.light;
   return (
     <Pressable
       accessibilityRole="button"
@@ -101,6 +103,7 @@ function Tabs() {
         component={HomeScreen}
         options={{
           title: 'KickOffCal',
+          headerTitle: () => <Wordmark />,
           tabBarLabel: 'Home',
           headerRight: () => <SettingsButton />,
         }}
@@ -112,8 +115,10 @@ function Tabs() {
 }
 
 export default function App() {
-  const scheme = useColorScheme();
-  const t = scheme === 'dark' ? palette.dark : palette.light;
+  // The appearance CHOICE, not the raw OS scheme — a pinned Dark must
+  // flip the navigation chrome along with every screen (Prompt 24 B3).
+  const mode = useColorSchemeMode();
+  const t = mode === 'dark' ? palette.dark : palette.light;
   // Evaluated once at launch: first run (never welcomed, nothing
   // followed) opens on the welcome screen; everyone else on the tabs.
   const [initialRoute] = useState<keyof RootStackParamList>(() =>
@@ -135,9 +140,9 @@ export default function App() {
   }, []);
 
   const navTheme = {
-    ...(scheme === 'dark' ? DarkTheme : DefaultTheme),
+    ...(mode === 'dark' ? DarkTheme : DefaultTheme),
     colors: {
-      ...(scheme === 'dark' ? DarkTheme : DefaultTheme).colors,
+      ...(mode === 'dark' ? DarkTheme : DefaultTheme).colors,
       background: t.bg,
       card: t.bg,
       text: t.textPrimary,

@@ -20,13 +20,16 @@
 // changing it produces a real calendar operation instead of sitting in
 // storage doing nothing.
 
-import { CalendarPrefs } from './prefs';
+import { AllDayReminder, CalendarPrefs } from './prefs';
 
 export interface EventSettings {
   // The user's explicit reminder for this fixture. `null` is a real
   // choice (no reminder at all) and is NOT the same as the field being
   // absent, which means "follow the global preference".
   reminderMinutes?: number | null;
+  // The all-day counterpart: a day-shaped choice for a fixture whose
+  // time is unpublished. Same absent-vs-null distinction as above.
+  allDayReminder?: AllDayReminder;
   // Per-event colour, only ever set where the calendar layer supports
   // one (data/calendarDriver.ts::calendarCapabilities). On a layer that
   // does not, the control is never rendered, so this is never written —
@@ -74,9 +77,32 @@ export function hasReminderOverride(
   return map[fixtureId]?.reminderMinutes !== undefined;
 }
 
-// The reminder this event should carry, in minutes before the start.
+export function hasAllDayReminderOverride(
+  fixtureId: string,
+  map: EventSettingsMap,
+): boolean {
+  return map[fixtureId]?.allDayReminder !== undefined;
+}
+
+// The day-shaped reminder an ALL-DAY entry should carry. Timed events
+// return null here the same way all-day ones do from reminderMinutesFor:
+// each entry kind has exactly one reminder channel, so the two can never
+// stack into a double alarm.
+export function allDayReminderFor(
+  fixtureId: string,
+  map: EventSettingsMap,
+  prefs: CalendarPrefs,
+  allDay: boolean,
+): AllDayReminder {
+  if (!allDay) return null;
+  const override = map[fixtureId]?.allDayReminder;
+  return override === undefined ? prefs.allDayReminder : override;
+}
+
+// The MINUTES-BEFORE reminder this event should carry.
 //
-// ALL-DAY EVENTS TAKE NO ALARM, override or not. An all-day fixture's
+// ALL-DAY EVENTS TAKE NO MINUTES ALARM, override or not — they carry a
+// day-shaped one from allDayReminderFor above instead. An all-day fixture's
 // start is a midnight day sentinel, so "15 minutes before" means 23:45
 // the night before in UTC — an alert at an arbitrary hour for an event
 // whose time nobody has published yet. The override is still KEPT: when

@@ -27,6 +27,8 @@ import {
   accountLabelOf,
   SourceKind,
 } from '../domain/calendarTarget';
+import { allDayAlarmMinutesBefore } from '../domain/allDayAlarm';
+import { AllDayReminder } from '../domain/prefs';
 import {
   fixtureIdFromNotes,
   foreignEventCount,
@@ -571,6 +573,9 @@ export interface EventInput {
   endUtc: string;
   allDay: boolean;
   reminderMinutesBefore: number | null;
+  // Day-shaped reminder for ALL-DAY entries (Prompt 24 A1) — the civil
+  // choice, translated to a platform offset below at write time.
+  allDayReminder?: AllDayReminder;
   // Per-event colour, where the layer supports one. Never set on a
   // platform whose probe says no — the UI cannot offer it there, so the
   // planner never has one to want, and the write below never sends it.
@@ -621,10 +626,24 @@ function toEventDetails(input: EventInput) {
     notes: input.note
       ? `${NOTES_TAG}${input.fixtureId}\n\n${input.note}`
       : `${NOTES_TAG}${input.fixtureId}`,
-    alarms:
-      input.reminderMinutesBefore === null
-        ? []
-        : [{ relativeOffset: -input.reminderMinutesBefore }],
+    alarms: (() => {
+      // One channel per entry kind: timed events carry minutes-before,
+      // all-day entries carry the day-shaped choice. The translation to
+      // an offset happens HERE because the anchor is a platform fact:
+      // Android's provider stores an all-day DTSTART at UTC midnight
+      // (and we pin timeZone: 'UTC' above); EventKit treats all-day
+      // events as floating, day boundaries local — 'local-midnight'
+      // there. The iOS half is doctrine, not yet hardware-verified
+      // (M6: no iOS device); Android is verified by today's install.
+      const minutes = input.allDay
+        ? allDayAlarmMinutesBefore(
+            input.startUtc,
+            input.allDayReminder ?? null,
+            Platform.OS === 'ios' ? 'local-midnight' : 'utc-midnight',
+          )
+        : input.reminderMinutesBefore;
+      return minutes === null ? [] : [{ relativeOffset: -minutes }];
+    })(),
     ...(input.colour && calendarCapabilities().perEventColour
       ? { color: input.colour }
       : {}),

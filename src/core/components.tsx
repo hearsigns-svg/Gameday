@@ -17,6 +17,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { flagEmojiOf } from './nationality';
 import { SportPattern } from './sportPattern';
 import { motion, radius as radiusTokens, spacing, type, useTheme } from './tokens';
 const radius = radiusTokens;
@@ -258,6 +259,13 @@ export function PosterSurface(props: {
   monogram?: string;
   crestUrl?: string;
   photoUrl?: string;
+  // The combat identity layer (Prompt 24 C2): both fighters' flags,
+  // rendered large where a team fixture would show its ground. Comes
+  // from the fixture's own participantCountries — stamped server-side
+  // only when EVERY participant resolved with a country, so a pair is
+  // always a pair. Photography still wins where it exists; flags beat
+  // the bare generated treatment.
+  participantCountries?: string[];
   radius?: number;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
@@ -290,6 +298,18 @@ export function PosterSurface(props: {
           photography reads as damage. */}
       {!photo && props.sportKey ? (
         <SportPattern sportKey={props.sportKey} color={th.onGradient} />
+      ) : null}
+      {!photo && props.participantCountries?.length ? (
+        // Two big flags, meeting at the centre the way the names do in
+        // the title. Emoji flags: freely usable, sharp at any size, and
+        // they render in every locale the app ships in.
+        <View style={styles.heroFlags} accessible={false}>
+          {props.participantCountries.map((cc, i) => (
+            <Text key={`${cc}-${i}`} style={styles.heroFlag}>
+              {flagEmojiOf(cc) ?? ''}
+            </Text>
+          ))}
+        </View>
       ) : null}
       {props.children}
     </View>
@@ -396,6 +416,7 @@ export function HeroCard(props: {
   theme: TeamTheme;
   photoUrl?: string;
   photoCredit?: string;
+  participantCountries?: string[];
   timingNote?: string | null;
   onPress?: () => void;
   standalone?: boolean;
@@ -436,6 +457,9 @@ export function HeroCard(props: {
         {...(props.monogram ? { monogram: props.monogram } : {})}
         {...(props.crestUrl ? { crestUrl: props.crestUrl } : {})}
         {...(props.photoUrl ? { photoUrl: props.photoUrl } : {})}
+        {...(props.participantCountries
+          ? { participantCountries: props.participantCountries }
+          : {})}
       >
         <PosterFace
           title={props.title}
@@ -850,6 +874,31 @@ export function CarouselDots(props: { count: number; active: number }) {
         />
       ))}
     </View>
+  );
+}
+
+// The app's name, set as an identity rather than left as navigation
+// default text (Prompt 24 C3). Brand accent + heavy weight + tightened
+// tracking — the same voice as the icon, which is a white mark on
+// KickOffCal blue. Two weights inside one word carry the "Kick·Off·Cal"
+// rhythm without resorting to two colours, which read as a typo in the
+// header's small size.
+export function Wordmark(props: { size?: number }) {
+  const t = useTheme();
+  const size = props.size ?? 20;
+  return (
+    <Text
+      accessibilityRole="header"
+      style={{
+        fontSize: size,
+        letterSpacing: -0.5,
+        color: t.primary,
+        fontWeight: '800',
+      }}
+    >
+      KickOff
+      <Text style={{ fontWeight: '400', color: t.primary }}>Cal</Text>
+    </Text>
   );
 }
 
@@ -1343,6 +1392,21 @@ const styles = StyleSheet.create({
   hero: {
     padding: spacing.l,
   },
+  // Centred pair, oversized and slightly translucent so the type block
+  // stays the loudest thing on the card — imagery, not decoration war.
+  heroFlags: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.l,
+    opacity: 0.9,
+  },
+  heroFlag: { fontSize: 72 },
   heroPhoto: {
     position: 'absolute',
     top: 0,

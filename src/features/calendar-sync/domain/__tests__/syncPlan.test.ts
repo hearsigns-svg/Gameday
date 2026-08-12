@@ -77,6 +77,7 @@ describe('desiredEventFor', () => {
       startUtc: '2023-10-21T11:30:00.000Z',
       endUtc: '2023-10-21T13:30:00.000Z',
       allDay: false,
+      allDayReminder: null,
       reminderMinutes: DEFAULT_PREFS.reminderMinutes,
     });
   });
@@ -88,6 +89,7 @@ describe('desiredEventFor', () => {
       startUtc: '2023-10-21T00:00:00.000Z',
       endUtc: '2023-10-22T00:00:00.000Z',
       allDay: true,
+      allDayReminder: null,
       reminderMinutes: null,
     });
   });
@@ -157,6 +159,7 @@ describe('planSync', () => {
         startUtc: '2023-12-20T20:00:00.000Z',
         endUtc: '2023-12-20T22:00:00.000Z',
         allDay: false,
+      allDayReminder: null,
         reminderMinutes: DEFAULT_PREFS.reminderMinutes,
       });
     }
@@ -251,6 +254,7 @@ describe('planSync', () => {
       startUtc: '2023-10-21T00:00:00.000Z',
       endUtc: '2023-10-26T00:00:00.000Z',
       allDay: true,
+      allDayReminder: null,
       reminderMinutes: null,
     });
   });
@@ -270,6 +274,7 @@ describe('planSync', () => {
       startUtc: '2023-07-01T00:00:00.000Z',
       endUtc: '2023-07-05T00:00:00.000Z',
       allDay: true,
+      allDayReminder: null,
       reminderMinutes: null,
     });
   });
@@ -383,6 +388,7 @@ const createOp = (id: string): SyncOp => ({
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
     reminderMinutes: 60,
+    allDayReminder: null,
   },
 });
 const deleteOp = (id: string): SyncOp => ({
@@ -405,6 +411,7 @@ const updateOp = (id: string): SyncOp => ({
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
     reminderMinutes: 60,
+    allDayReminder: null,
   },
   entry: {
     eventId: `ev-${id}`,

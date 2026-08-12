@@ -8,6 +8,7 @@ import { Ledger, planSync } from '../syncPlan';
 
 const PREFS: CalendarPrefs = {
   reminderMinutes: null,
+  allDayReminder: null,
   eventStyle: 'timed',
   seriesSessions: 'all',
   autoDeletePast: false,

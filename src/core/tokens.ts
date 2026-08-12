@@ -4,14 +4,27 @@
 // Colour values live in palette.ts (pure data) so teamTheme and tests
 // can import them without react-native.
 
+import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { appearanceChoice, subscribeAppearance } from './appearanceStore';
 import { palette, Theme } from './palette';
 
 export { palette };
 export type { Theme };
 
 export function useTheme(): Theme {
-  return useColorScheme() === 'dark' ? palette.dark : palette.light;
+  // The user's pinned appearance wins over the OS scheme (Prompt 24 B3).
+  // BOTH theme hooks — this one for the shell, useColorSchemeMode for
+  // team surfaces — resolve through the same choice, or a pinned Dark
+  // would flip the cards while the chrome stayed light.
+  const system = useColorScheme();
+  const [choice, setChoice] = useState(appearanceChoice);
+  useEffect(
+    () => subscribeAppearance(() => setChoice(appearanceChoice())),
+    [],
+  );
+  const dark = choice === 'system' ? system === 'dark' : choice === 'dark';
+  return dark ? palette.dark : palette.light;
 }
 
 export const spacing = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 } as const;

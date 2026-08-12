@@ -20,7 +20,7 @@ import {
   isPast,
   timePrecisionOf,
 } from '../../fixtures/domain/horizon';
-import { EventSettingsMap, reminderMinutesFor } from './eventSettings';
+import { allDayReminderFor, EventSettingsMap, reminderMinutesFor } from './eventSettings';
 import { CalendarPrefs } from './prefs';
 
 // Re-exported so existing consumers keep their import site; the one
@@ -45,6 +45,14 @@ export interface LedgerEntry {
   // with what was assumed applied (data/ledger.ts::stampMissingReminders)
   // precisely so "unknown" is rare rather than universal.
   reminderMinutes?: number | null;
+  // The day-shaped reminder last written to an ALL-DAY entry (Prompt 24
+  // A1). ABSENT MEANS NULL, not unknown — the deliberate opposite of the
+  // reminderMinutes rule above, because before this field existed the
+  // engine wrote NO alarm on any all-day entry, ever. Absent therefore
+  // IS the old engine's testimony, and treating it as a mismatch would
+  // rewrite every all-day event in every calendar on first sync while
+  // the global default is off and nothing has actually changed.
+  allDayReminder?: import('./prefs').AllDayReminder;
   // Set only while a target switch is in flight: the event this fixture
   // used to occupy in the OLD calendar, still awaiting deletion. It
   // rides IN the entry so repointing the ledger and recording the
@@ -59,6 +67,9 @@ export interface DesiredEvent {
   startUtc: string;
   endUtc: string;
   allDay: boolean;
+  // Day-shaped reminder for all-day entries; null on timed events. One
+  // channel per entry kind, so the two can never stack (eventSettings).
+  allDayReminder: import('./prefs').AllDayReminder;
   // Minutes before the start, or null for no alarm. Part of the DESIRED
   // state rather than something the engine decides at write time, so
   // that (a) a delete-and-recreate re-applies it by construction and
@@ -148,9 +159,11 @@ export function desiredEventFor(
       startUtc: day,
       endUtc: addDaysUtc(day, days),
       allDay: true,
-      // No alarm on a day sentinel — see reminderMinutesFor. The user's
-      // override is kept and lands the moment a real time arrives.
+      // No minutes alarm on a day sentinel — see reminderMinutesFor. The
+      // day-SHAPED reminder is the all-day channel (Prompt 24 A1); the
+      // minutes override is kept and lands when a real time arrives.
       reminderMinutes: reminderMinutesFor(f.id, settings, prefs, true),
+      allDayReminder: allDayReminderFor(f.id, settings, prefs, true),
     };
   };
 
@@ -199,6 +212,7 @@ export function desiredEventFor(
     endUtc: eventEndUtc(f.startUtc, f.durationHours),
     allDay: false,
     reminderMinutes: reminderMinutesFor(f.id, settings, prefs, false),
+    allDayReminder: null,
     // Nominal: a real instant, but not the settled one. Said in the
     // description rather than the title — the title is read at a glance
     // fifty times, the description once when it matters.
@@ -214,6 +228,10 @@ function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
     // must not be read as "matches" — that is the read-failure-as-empty
     // shape the standing invariant forbids, applied to the ledger.
     entry.reminderMinutes === desired.reminderMinutes &&
+    // Absent-means-null, per the LedgerEntry comment: the old engine
+    // never wrote an all-day alarm, so an unstamped entry testifies to
+    // exactly that.
+    (entry.allDayReminder ?? null) === desired.allDayReminder &&
     entry.startUtc === desired.startUtc &&
     // endUtc joined the compare in Prompt 5: without it a change ONLY to
     // an event's duration — a confirmed appearance slot at the same
@@ -399,6 +417,9 @@ export interface SnapshotFixture {
   confidence?: 'confirmed' | 'provisional';
   parentFixtureId?: string;
   athletes?: string[];
+  // Both participants' flags, where the server proved the whole pair
+  // (Prompt 24 C2) — the combat hero's imagery.
+  participantCountries?: string[];
   // Venue NAME where a provider publishes one (TSDB strVenue) — the
   // key the licensed venue-photography layer prefers over the
   // home-team lookup (Prompt 9b).
@@ -448,6 +469,9 @@ export function upcomingSnapshot(
         ? { timePrecision: f.timePrecision }
         : {}),
       ...(f.confidence !== undefined ? { confidence: f.confidence } : {}),
+      ...(f.participantCountries !== undefined
+        ? { participantCountries: f.participantCountries }
+        : {}),
       ...(f.parentFixtureId !== undefined
         ? { parentFixtureId: f.parentFixtureId }
         : {}),

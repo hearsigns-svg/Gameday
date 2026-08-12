@@ -551,6 +551,9 @@ export function resolveDrafts(
   );
   for (const draft of sorted) {
     const keys: string[] = [];
+    // Matched directory athletes for THIS draft, in ref order — the flag
+    // pair (participantCountries) is built from them below.
+    const matched: (Athlete | null)[] = [];
     const slots = stableSlots(draft.refs);
     for (const [refIndex, ref] of draft.refs.entries()) {
       const m = matchAthlete(index, draft.fixture.sport, ref);
@@ -577,6 +580,7 @@ export function resolveDrafts(
         }
         counts[m.kind]++;
         if (!keys.includes(m.athlete!.id)) keys.push(m.athlete!.id);
+        matched.push(m.athlete!);
         continue;
       }
       if (m.kind === 'ambiguous') {
@@ -629,9 +633,18 @@ export function resolveDrafts(
       }
       continue;
     }
+    // Flags only when the WHOLE pair resolved with countries: a lone
+    // flag beside a bout misstates who is fighting (Prompt 24 C2).
+    const countries =
+      matched.length === draft.refs.length &&
+      matched.length >= 2 &&
+      matched.every((a) => a?.countryCode)
+        ? matched.map((a) => a!.countryCode!)
+        : null;
     appearances.push({
       ...draft.fixture,
       followKeys: [...draft.fixture.followKeys, ...keys],
+      ...(countries ? { participantCountries: countries } : {}),
     });
   }
   return {

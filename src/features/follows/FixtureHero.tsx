@@ -37,6 +37,7 @@ export interface HeroFixture {
   homeTeam?: string;
   venue?: string;
   venueCity?: string;
+  participantCountries?: string[];
 }
 
 export function FixtureHero(props: {
@@ -86,6 +87,9 @@ export function FixtureHero(props: {
       monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
       {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
       photoUrl={art?.url}
+      {...(item.participantCountries?.length
+        ? { participantCountries: item.participantCountries }
+        : {})}
       photoCredit={
         art
           ? [

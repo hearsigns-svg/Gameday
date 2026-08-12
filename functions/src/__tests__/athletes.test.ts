@@ -914,3 +914,97 @@ describe('bout docs: both fighters keep their key', () => {
     expect(r.collisionDetails.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ─── participantCountries (Prompt 24 C2) ──────────────────────────────
+//
+// The combat hero's flag pair. Stamped ONLY when the whole pair resolved
+// with countries — a lone flag beside a bout misstates who is fighting.
+
+describe('participantCountries stamping', () => {
+  const bout2 = (id: string): Fixture => ({
+    id,
+    sport: 'boxing',
+    competition: 'Boxing',
+    competitionId: 'boxingdata-cards',
+    title: 'A vs B',
+    followKeys: ['boxingdata-cards'],
+    startUtc: '2026-09-01T20:00:00.000Z',
+    status: 'scheduled',
+    durationHours: 4,
+    timePrecision: 'nominal',
+    confidence: 'provisional',
+    updatedAt: NOW,
+  });
+  const withCc = athlete({
+    id: 'athlete_000275',
+    displayName: 'David Nyika',
+    providerIds: { boxingdata: 'aaa' },
+    sport: 'boxing',
+    countryCode: 'NZ',
+  });
+  const withCc2 = athlete({
+    id: 'athlete_000276',
+    displayName: 'Floyd Masson',
+    providerIds: { boxingdata: 'bbb' },
+    sport: 'boxing',
+    countryCode: 'AU',
+  });
+  const noCc = athlete({
+    id: 'athlete_000277',
+    displayName: 'Sean Hemphill',
+    providerIds: { boxingdata: 'ccc' },
+    sport: 'boxing',
+  });
+  const refs2 = [
+    { name: 'David Nyika', source: 'boxingdata', externalId: 'aaa' },
+    { name: 'Floyd Masson', source: 'boxingdata', externalId: 'bbb' },
+  ];
+
+  it('stamps both codes, in ref order, when the whole pair has them', () => {
+    const d = appearanceFor(bout2('p1'), {
+      refs: refs2,
+      title: 'David Nyika vs Floyd Masson',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([d], buildAthleteIndex([withCc, withCc2]), {
+      create: 'never',
+    });
+    expect(r.appearances[0].participantCountries).toEqual(['NZ', 'AU']);
+  });
+
+  it('stamps NOTHING when one side has no country — never half a pair', () => {
+    const d = appearanceFor(bout2('p2'), {
+      refs: [refs2[0], { name: 'Sean Hemphill', source: 'boxingdata', externalId: 'ccc' }],
+      title: 'David Nyika vs Sean Hemphill',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([d], buildAthleteIndex([withCc, noCc]), {
+      create: 'never',
+    });
+    expect(r.appearances[0].participantCountries).toBeUndefined();
+  });
+
+  it('stamps nothing when a side did not resolve at all', () => {
+    const d = appearanceFor(bout2('p3'), {
+      refs: [refs2[0], { name: 'Unknown Fighter', source: 'boxingdata', externalId: 'zzz' }],
+      title: 'David Nyika vs Unknown Fighter',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([d], buildAthleteIndex([withCc, withCc2]), {
+      create: 'never',
+    });
+    expect(r.appearances[0]?.participantCountries).toBeUndefined();
+  });
+
+  it('never stamps a single-ref (tennis-shaped) appearance', () => {
+    const d = appearanceFor(bout2('p4'), {
+      refs: [refs2[0]],
+      title: 'David Nyika — Somewhere Open',
+      updatedAt: NOW,
+    })!;
+    const r = resolveDrafts([d], buildAthleteIndex([withCc]), {
+      create: 'never',
+    });
+    expect(r.appearances[0].participantCountries).toBeUndefined();
+  });
+});
