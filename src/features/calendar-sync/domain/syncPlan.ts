@@ -408,13 +408,27 @@ export function shouldStopPass(
 // gate counts deletions pending at upsync time, so back-to-back passes
 // would re-accumulate; DELETE_CHUNK_SPACING_MS gives the adapter a
 // cycle to drain each chunk before the next lands.
-// MEASUREMENT ROUND (owner-directed, 2026-08-13): the 10 first shipped
-// here was inherited from Google API throttling lore — an adjacent
-// system, not this gate. The real threshold is being measured on
-// hardware by stepping this cap against live unfollow drains (40, then
-// 80 if clean); the measured value replaces this constant and this
-// comment records the method. Erring low stays safe; erring slow costs
-// a Premier League unfollow ~28 minutes of spaced passes.
+// MEASURED on hardware, 2026-08-13, with a live 320-event NFL drain:
+//
+// - The gate fires on deletions PENDING AT UPSYNC TIME, not on our
+//   pass size. The adapter barely ran between spaced 40-chunks, ~293
+//   accumulated, and the dialog appeared anyway. Chunk size alone
+//   cannot avoid the gate — at any value.
+// - Threshold bracket: ~40–50 pending upsynced cleanly (including the
+//   prune sweep of 74 server-resurrected events, in two capped
+//   passes); 166 and ~293 pending both tripped it.
+// - So the cap stays 40 as BATCH HYGIENE, not gate avoidance: batches
+//   this size are proven to upsync without complaint whenever the
+//   adapter does run between them. Truly avoiding the gate for large
+//   unfollows needs one of (owner decision pending): the Android REST
+//   calendar path (no provider, no adapter, no dialog — already the
+//   Android-premium prerequisite), or a native tombstone probe to
+//   pace chunks against actual purge (chunk-and-wait), or accepting
+//   the OS dialog for the largest unfollows.
+// - Also measured: 320 creates < 45s; 320-delete drain 3m20s through
+//   a mid-drain force-stop (resume via ledger replan in ~7s); sync
+//   trigger interleaving compresses the spacing below 45s (benign —
+//   the cap still bounds every pass).
 export const SYNCED_DELETE_CAP = 40;
 export const DELETE_CHUNK_SPACING_MS = 45_000;
 

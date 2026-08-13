@@ -2935,3 +2935,9 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   does not publish the threshold, so the cap keeps a wide margin under
   the one hard datapoint. iOS has no documented equivalent gate
   (EventKit commits directly); empirical iOS check belongs to M6.
+- 2026-08-13 (eve): threshold measurement outcome — the tooManyDeletions
+  gate keys on deletions PENDING AT UPSYNC, so chunk size cannot avoid
+  it; bracket measured at ~50 clean / 166 tripped. Cap stays 40 as
+  batch hygiene (small batches proven clean, incl. prune's sweep of 74
+  sync-resurrected events). Queued for owner: REST path vs native
+  purge-paced chunking vs accept-the-dialog for large unfollows.
