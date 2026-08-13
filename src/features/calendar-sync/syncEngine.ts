@@ -231,9 +231,11 @@ async function withSyncLock<T>(
     // because every failure exit was silent: the UI string above is
     // in-memory, and the foreground call sites discard the Result.
     if (!result.ok) {
-      console.warn(
-        `[gameday] sync failed: ${result.error.kind} — ${messageOf(result.error)}`,
-      );
+      // The RAW error, not messageOf: that maps kinds to user-facing
+      // copy, and "Something went wrong — we will retry." cost a second
+      // 17-minute build-and-reinstall cycle to learn nothing. Diagnostic
+      // channels carry diagnostics.
+      console.warn(`[gameday] sync failed: ${JSON.stringify(result.error)}`);
     }
     return result;
   } catch (e) {
