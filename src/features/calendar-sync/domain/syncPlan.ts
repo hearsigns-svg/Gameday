@@ -390,6 +390,31 @@ export function shouldStopPass(
   return applied > 0 && elapsedMs >= budgetMs;
 }
 
+// PROVIDER DELETIONS PER PASS, capped — because Android's sync framework
+// has a mass-deletion safety valve our drain can trip. An adapter that
+// finds "too many" pending deletions at upsync sets
+// SyncResult.tooManyDeletions and the OS HALTS the sync behind a
+// user-facing confirmation about mass-deleting calendar data — which is
+// exactly what a user who just unfollowed a league must never meet.
+// Proven on hardware 2026-08-13: 166 deletions in one pass wedged the
+// "Social" feed upsync in mesg=too-many-deletions until manually
+// confirmed, while phone + web kept showing every "deleted" event.
+//
+// Google's adapter threshold is not published (the adapter is closed
+// source; the framework documents only the flag), so the cap is chosen
+// WELL under the one hard datapoint (166 trips it) and matches the
+// batch size the Apps-Script community independently converged on for
+// Google Calendar write bursts (~10). Chunks must also be SPACED — the
+// gate counts deletions pending at upsync time, so back-to-back passes
+// would re-accumulate; DELETE_CHUNK_SPACING_MS gives the adapter a
+// cycle to drain each chunk before the next lands.
+export const SYNCED_DELETE_CAP = 10;
+export const DELETE_CHUNK_SPACING_MS = 45_000;
+
+export function shouldStopForDeletes(deletesApplied: number): boolean {
+  return deletesApplied >= SYNCED_DELETE_CAP;
+}
+
 // Presentation snapshot of what's ahead — Home and Schedule render this.
 // It must show only what the calendar actually wants: same
 // desiredEventFor gate as the planner, so a cancelled fixture (or a

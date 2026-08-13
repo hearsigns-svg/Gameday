@@ -234,6 +234,20 @@ These apply to every stage. They do not need restating in a brief.
       confirm it fails, then restore. Two-thirds of a guard reported as
       a whole one is worse than no guard, because it stops anyone
       looking again.
+16. **The verification chain for calendar writes is provider → sync
+    adapter → server → the user's other clients. It ends at what the
+    user sees, not at a table you can query** (owner ruling 2026-08-13).
+    A provider query is a hypothesis, not a result — twice in one night
+    it was confidently wrong in a new way: a raw count read a code
+    failure into a device state, then read soft-delete tombstones as
+    live rows, and a drain declared "proven" at the provider layer was
+    parked one layer up behind the sync adapter's mass-deletion gate
+    (`mesg=too-many-deletions`) while phone and web kept showing every
+    "deleted" event. Verification on hardware means the app on the
+    phone or the calendar app on the phone; queries generate leads.
+    Corollary: bursts of provider deletions into a synced calendar must
+    stay under the adapter's gate — see SYNCED_DELETE_CAP in
+    domain/syncPlan.ts before touching the drain machinery.
 
 ## Concurrency against production
 

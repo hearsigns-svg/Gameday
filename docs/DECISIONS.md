@@ -2927,3 +2927,11 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
 - §7 remainder: owner ruled NO on spending ~20 vendor calls for
   flag-only name lookups — quota buys times and undercards, not
   decoration. The 20 gain ids naturally as they appear on cards.
+- 2026-08-13: provider deletions are CHUNKED (SYNCED_DELETE_CAP=10 per
+  pass, 45s spacing) rather than documenting Android's mass-deletion
+  confirmation. Owner ruling: a user who unfollows a league must never
+  meet a system dialog about mass-deleting calendar data. 166-in-one-pass
+  tripped the adapter gate (mesg=too-many-deletions) on hardware; Google
+  does not publish the threshold, so the cap keeps a wide margin under
+  the one hard datapoint. iOS has no documented equivalent gate
+  (EventKit commits directly); empirical iOS check belongs to M6.
