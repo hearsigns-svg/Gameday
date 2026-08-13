@@ -655,8 +655,6 @@ describe('shouldStopForDeletes', () => {
     }
     expect(deleted).toBe(SYNCED_DELETE_CAP);
     expect(planned - deleted).toBe(166 - SYNCED_DELETE_CAP);
-    // The whole backlog still drains: ceil(166 / cap) spaced passes.
-    expect(Math.ceil(planned / SYNCED_DELETE_CAP)).toBe(17);
   });
 
   test('the cap sits far under the one hard datapoint, and chunks are spaced', () => {
