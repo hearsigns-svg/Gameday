@@ -723,16 +723,15 @@ export async function updateFixtureEvent(
 
 export async function deleteFixtureEvent(eventId: string): Promise<Result<true>> {
   try {
+    // THE NEXT-API CONTRACT, corrected twice and finally taken from the
+    // device: the Kotlin layer returns null for a missing event
+    // (findById `?: return null`), but expo's JS wrapper rehydrates
+    // results into SharedObjects and THROWS
+    // "TypeError: setPrototypeOf argument is not coercible to Object"
+    // on that null — so callers see an exception, not a null. The catch
+    // below classifies it via isEventGoneError. The null check stays
+    // for any expo version that fixes the wrapper to pass null through.
     const event = await Calendar.ExpoCalendarEvent.get(eventId);
-    // THE NEXT-API CONTRACT, learned on a wedged Pixel: `get` of a
-    // missing event RETURNS NULL — it does not throw. (Android
-    // next/ExpoCalendarEvent.kt findById: `?: return null`. The
-    // "could not be found" throw lives in the LEGACY module this app
-    // does not call.) `event.notes` on that null was a TypeError that
-    // matched no not-found pattern, so a delete of an already-gone
-    // event aborted the run — and because the poisoned op sorted
-    // first, every sync aborted at op one, forever. Null IS the
-    // desired state: the event is gone.
     if (event === null || event === undefined) return ok(true);
     // Last line of defence before an irreversible act. Callers only ever
     // pass ids that came from the ledger or from ourEventsIn(), so

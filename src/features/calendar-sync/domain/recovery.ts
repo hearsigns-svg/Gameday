@@ -43,8 +43,18 @@ export const NOTES_TAG = 'gameday-fixture:';
 // failure, the run aborted to protect the ledger entry, and every later
 // sync aborted on the same op first: a permanent, invisible wedge, found
 // only because a physical Pixel parked at 174 events for forty minutes.
+// One more verbatim entry, and this one came off the DEVICE rather than
+// from source-reading (which had already been wrong once about which
+// layer throws): expo's JS wrapper rehydrates a native result into a
+// SharedObject via setPrototypeOf, so the next-API's null-for-missing
+// never reaches caller code — the wrapper throws
+//   "TypeError: setPrototypeOf argument is not coercible to Object"
+// captured verbatim from a Pixel 10 Pro (SDK 57) on `get` of a deleted
+// event. Scoped here because callers only classify errors from
+// get/delete/update of a SPECIFIC event id, where a null rehydration
+// means exactly "that event no longer exists".
 export function isEventGoneError(message: string): boolean {
-  return /could not be found|not.?found|EventNotFoundException|no such event|does not exist/i.test(
+  return /could not be found|not.?found|EventNotFoundException|no such event|does not exist|setPrototypeOf argument is not coercible/i.test(
     message,
   );
 }

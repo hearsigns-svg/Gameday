@@ -280,3 +280,14 @@ describe('isEventGoneError', () => {
     expect(isEventGoneError('network unavailable')).toBe(false);
   });
 });
+
+  // Captured VERBATIM from a Pixel 10 Pro running the SDK 57 build:
+  // expo's SharedObject wrapper throws this when native returns null for
+  // a missing event — the null itself never reaches caller code.
+  it('matches the JS wrapper null-rehydration TypeError, verbatim from the device', () => {
+    expect(
+      isEventGoneError(
+        'event delete failed: TypeError: setPrototypeOf argument is not coercible to Object',
+      ),
+    ).toBe(true);
+  });
