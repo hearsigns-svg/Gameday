@@ -12,6 +12,12 @@ export type AppError =
   | { kind: 'sync-in-progress' }
   | { kind: 'suspect-empty' }
   | { kind: 'scan-anomaly'; scanned: number; ledgerEntries: number }
+  // The Google authorization died under us — in Testing status refresh
+  // tokens expire every 7 days, and in production a user can revoke at
+  // any time. A dedicated kind so it can NEVER melt into 'unknown':
+  // this is the "sync silently stops" failure class, and it must reach
+  // the chip as a reconnect ask, not as a shrug.
+  | { kind: 'auth-expired' }
   | { kind: 'unknown'; message: string };
 
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
@@ -40,6 +46,8 @@ export function messageOf(e: AppError): string {
       // The calendar could not be read back. Saying "up to date" here
       // would be a lie, and acting on it would delete real events.
       return 'Could not read your calendar — nothing was changed.';
+    case 'auth-expired':
+      return 'Google sign-in expired — reconnect to keep your calendar in sync.';
     case 'unknown':
       // Never surface raw SDK text: long, jargon-laden, and sometimes
       // contains developer instructions. Callers put detail in logs.
