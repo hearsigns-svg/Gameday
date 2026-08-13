@@ -713,10 +713,19 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           op.op === 'update' &&
           (op.entry.allDay ?? false) !== op.desired.allDay;
         if (kindFlip) await deleteFixtureEvent(op.entry.eventId);
-        const r =
+        let r =
           op.op === 'create' || kindFlip
             ? await createFixtureEvent(calObj.value, input)
             : await updateFixtureEvent(op.entry.eventId, input);
+        // A hand-deleted event whose fixture then changed: the update
+        // finds nothing, but the fixture is still WANTED — recreate it
+        // and let the ledger repoint below. Without this, one missing
+        // event aborted every sync from the moment its time moved
+        // (the delete-side twin of the same wedge parked a real phone
+        // at 174 events for an evening).
+        if (!r.ok && r.error.kind === 'not-found' && op.op === 'update') {
+          r = await createFixtureEvent(calObj.value, input);
+        }
         if (!r.ok) return r;
         upsertLedgerEntry(f.id, {
           eventId: r.value,

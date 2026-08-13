@@ -703,9 +703,20 @@ export async function updateFixtureEvent(
 ): Promise<Result<string>> {
   try {
     const event = await Calendar.ExpoCalendarEvent.get(eventId);
+    // Same null contract as delete, one wedge over: a user hand-deletes
+    // an event, its fixture later changes, the planner emits an update,
+    // and `null.update(...)` would abort every sync from then on. A
+    // typed 'not-found' lets the engine recreate instead — the fixture
+    // is still wanted; only its event vanished.
+    if (event === null || event === undefined) {
+      return err({ kind: 'not-found', what: 'event' });
+    }
     await event.update(toEventDetails(input));
     return ok(eventId);
   } catch (e) {
+    if (isEventGoneError(String(e))) {
+      return err({ kind: 'not-found', what: 'event' });
+    }
     return err({ kind: 'unknown', message: `event update failed: ${e}` });
   }
 }
@@ -713,6 +724,16 @@ export async function updateFixtureEvent(
 export async function deleteFixtureEvent(eventId: string): Promise<Result<true>> {
   try {
     const event = await Calendar.ExpoCalendarEvent.get(eventId);
+    // THE NEXT-API CONTRACT, learned on a wedged Pixel: `get` of a
+    // missing event RETURNS NULL — it does not throw. (Android
+    // next/ExpoCalendarEvent.kt findById: `?: return null`. The
+    // "could not be found" throw lives in the LEGACY module this app
+    // does not call.) `event.notes` on that null was a TypeError that
+    // matched no not-found pattern, so a delete of an already-gone
+    // event aborted the run — and because the poisoned op sorted
+    // first, every sync aborted at op one, forever. Null IS the
+    // desired state: the event is gone.
+    if (event === null || event === undefined) return ok(true);
     // Last line of defence before an irreversible act. Callers only ever
     // pass ids that came from the ledger or from ourEventsIn(), so
     // reaching this branch with somebody else's event would mean a bug —
