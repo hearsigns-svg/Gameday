@@ -446,6 +446,7 @@ export default function TeamScreen({ navigation, route }: Props) {
           renderItem={({ item: f }) => (
             <TeamFixtureRow
               fixture={f}
+              pagerIds={fixtures.map((x) => x.id)}
               name={name}
               glyph={sport?.glyph ?? '🏟️'}
               theme={theme}
@@ -478,6 +479,7 @@ export default function TeamScreen({ navigation, route }: Props) {
 // itself: tapping it grows the card from exactly this row.
 function TeamFixtureRow(props: {
   fixture: Fixture;
+  pagerIds: readonly string[];
   name: string;
   glyph: string;
   theme: ReturnType<typeof teamTheme>;
@@ -503,7 +505,7 @@ function TeamFixtureRow(props: {
       {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
       theme={props.theme}
       onPress={() => {
-        void fixtureCardRequest(ref, f.id).then(expansion.open);
+        void fixtureCardRequest(ref, f.id, props.pagerIds).then(expansion.open);
       }}
       {...(props.excluded !== undefined ? { excluded: props.excluded } : {})}
       {...(props.onToggleExcluded ? { onToggleExcluded: props.onToggleExcluded } : {})}

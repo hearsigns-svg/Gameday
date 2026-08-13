@@ -166,6 +166,8 @@ export function CardExpansionHost(props: {
   const height = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current; // scrim only
   const bodyIn = useRef(new Animated.Value(0)).current;
+  // 1 except while the card is being let go in place (see close).
+  const cardFade = useRef(new Animated.Value(1)).current;
   const origin = useRef<CardFrame | null>(null);
   const contentHeight = useRef<number | null>(null);
   // Read inside animation callbacks, where the state value would be the
@@ -235,6 +237,34 @@ export function CardExpansionHost(props: {
       // frame is the tell that this was never one object.
       const now = (await req.remeasure?.()) ?? null;
       if (now) origin.current = now;
+      // NO LIVE HOME: the surface says the origin no longer matches —
+      // the row unmounted, or the card was PAGED to a sibling fixture.
+      // Flying to the last-known slot would land this card on content
+      // it no longer is, so it lets go in place instead.
+      if (!now && req.remeasure) {
+        Animated.parallel(
+          [
+            Animated.timing(cardFade, {
+              toValue: 0,
+              duration: reduceMotion ? 0 : motion.standard,
+              useNativeDriver: false,
+            }),
+            Animated.timing(progress, {
+              toValue: 0,
+              duration: reduceMotion ? 0 : motion.standard,
+              useNativeDriver: false,
+            }),
+          ],
+          { stopTogether: false },
+        ).start(({ finished }) => {
+          if (finished) {
+            setRequest(null);
+            setPhase('open');
+            cardFade.setValue(1);
+          }
+        });
+        return;
+      }
       const back = origin.current ?? req.frame;
       Animated.parallel(
         [
@@ -262,7 +292,7 @@ export function CardExpansionHost(props: {
         }
       });
     })();
-  }, [request, progress, bodyIn, reduceMotion]);
+  }, [request, progress, bodyIn, cardFade, reduceMotion]);
 
   // THE GEOMETRY WAITS FOR THE TARGET.
   //
@@ -320,6 +350,7 @@ export function CardExpansionHost(props: {
       setPhase('opening');
       progress.setValue(0);
       bodyIn.setValue(0);
+      cardFade.setValue(1);
       left.setValue(r.frame.x);
       top.setValue(r.frame.y);
       width.setValue(r.frame.width);
@@ -337,7 +368,7 @@ export function CardExpansionHost(props: {
       if (flightTimer.current) clearTimeout(flightTimer.current);
       flightTimer.current = setTimeout(() => beginFlight(null), 150);
     },
-    [progress, bodyIn, reduceMotion, left, top, width, height, beginFlight],
+    [progress, bodyIn, cardFade, reduceMotion, left, top, width, height, beginFlight],
   );
 
   // The body has measured itself: the FIRST report is the flight's
@@ -429,6 +460,7 @@ export function CardExpansionHost(props: {
               width,
               height,
               borderRadius: radius.hero,
+              opacity: cardFade,
             }}
           >
             {props.renderExpanded(request.payload as never, close, bodyIn, settleTo)}

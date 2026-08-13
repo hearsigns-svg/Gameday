@@ -37,6 +37,7 @@ import {
   FixtureCardBody,
   FixtureCardPayload,
 } from './src/features/calendar-sync/screens/FixtureCard';
+import { FixtureCardPager } from './src/features/calendar-sync/screens/FixtureCardPager';
 import AthleteListScreen from './src/features/follows/screens/AthleteListScreen';
 import TournamentListScreen from './src/features/follows/screens/TournamentListScreen';
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
@@ -157,14 +158,26 @@ export default function App() {
     // the header, because it is no longer a screen — it is the card the
     // user tapped, at a bigger size.
     <CardExpansionHost
-      renderExpanded={(payload, close, reveal, onContentHeight) => (
-        <FixtureCardBody
-          payload={payload as unknown as FixtureCardPayload}
-          close={close}
-          reveal={reveal}
-          onContentHeight={onContentHeight}
-        />
-      )}
+      renderExpanded={(payload, close, reveal, onContentHeight) => {
+        const p = payload as unknown as FixtureCardPayload;
+        // Siblings present → the expanded card pages laterally through
+        // them; a lone fixture stays a single body.
+        return p.pagerIds ? (
+          <FixtureCardPager
+            payload={p}
+            close={close}
+            reveal={reveal}
+            onContentHeight={onContentHeight}
+          />
+        ) : (
+          <FixtureCardBody
+            payload={p}
+            close={close}
+            reveal={reveal}
+            onContentHeight={onContentHeight}
+          />
+        );
+      }}
     >
     <View style={{ flex: 1 }}>
       <NavigationContainer theme={navTheme}>

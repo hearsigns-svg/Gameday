@@ -15,11 +15,21 @@ import {
 } from '../../core/cardExpansion';
 import { FixtureCardPayload } from './screens/FixtureCard';
 
+// Where the pager currently sits, written by FixtureCardPager. Module
+// state is safe here because exactly one expansion overlay exists at a
+// time (the host is a singleton outside the navigator).
+let pagedTo: string | null = null;
+export function reportPagedTo(fixtureId: string): void {
+  pagedTo = fixtureId;
+}
+
 export async function fixtureCardRequest(
   ref: RefObject<View | null>,
   fixtureId: string,
+  pagerIds?: readonly string[],
 ): Promise<ExpansionRequest<FixtureCardPayload>> {
   const measured: CardFrame | null = await measureFrame(ref as never);
+  pagedTo = fixtureId;
   // NO FRAME, NO FLIGHT — but still a card. A measurement can lose its
   // race on a busy frame, and a tap that silently does nothing is a
   // worse failure than one that opens without motion: the card starts
@@ -28,8 +38,16 @@ export async function fixtureCardRequest(
   return {
     key: fixtureId,
     frame: measured ? inColumn(measured) : expandedFrame(),
-    payload: { fixtureId },
+    payload: {
+      fixtureId,
+      ...(pagerIds && pagerIds.length > 1 ? { pagerIds: [...pagerIds] } : {}),
+    },
     remeasure: async () => {
+      // Paged away from the card that was tapped: its origin frame now
+      // belongs to DIFFERENT content, and flying B's card into A's slot
+      // reads as a glitch. Null tells the host there is no live home —
+      // it lets the card go in place instead of gliding it back.
+      if (pagedTo !== fixtureId) return null;
       const now = await measureFrame(ref as never);
       return now ? inColumn(now) : null;
     },

@@ -243,6 +243,7 @@ export default function HomeScreen({ navigation }: Props) {
                 item={item}
                 follows={follows}
                 width={cardWidth}
+                pagerIds={carousel.map((f) => f.id)}
                 removed={isExcluded(item.id)}
               />
             )}

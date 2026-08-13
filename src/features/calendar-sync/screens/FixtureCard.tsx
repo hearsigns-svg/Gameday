@@ -70,6 +70,13 @@ import { runSync, subscribeSync, upcomingFixtures } from '../syncEngine';
 // What a caller hands the host to fly a card.
 export interface FixtureCardPayload {
   fixtureId: string;
+  // The ordered set the tapped card belongs to — the carousel's cards,
+  // the schedule's visible fixtures. Present, the expanded view PAGES
+  // laterally through them (Prompt 26 device pass: "carousel scrolls
+  // but when you click into expanded view you cannot laterally scroll,
+  // which you should be able to do"). Absent or singular, the card is
+  // alone, exactly as before.
+  pagerIds?: string[];
 }
 
 interface Displayed {

@@ -15,6 +15,9 @@ export function ExpandingHero(props: {
   item: HeroFixture;
   follows: readonly Followable[];
   width: number;
+  // The ordered ids of every card in the rail this one sits in — the
+  // expanded card pages laterally through them, same gesture both sizes.
+  pagerIds?: readonly string[];
   // Removed from the calendar, but still on screen until you leave: the
   // card greys rather than disappearing under your finger.
   removed?: boolean;
@@ -29,7 +32,9 @@ export function ExpandingHero(props: {
       innerRef={ref}
       hidden={lifted}
       onPress={() => {
-        void fixtureCardRequest(ref, props.item.id).then(expansion.open);
+        void fixtureCardRequest(ref, props.item.id, props.pagerIds).then(
+          expansion.open,
+        );
       }}
       style={[
         { width: props.width, marginHorizontal: 0 },

@@ -115,6 +115,12 @@ export default function ScheduleScreen({ navigation }: Props) {
     [fixtures],
   );
   const sections = useMemo(() => sectionsFrom(ahead), [ahead]);
+  // Display order across every day heading — what the expanded card
+  // pages through, so a swipe follows the list exactly.
+  const listIds = useMemo(
+    () => sections.flatMap((s) => s.data.map((f) => f.id)),
+    [sections],
+  );
 
   const countsByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -164,9 +170,10 @@ export default function ScheduleScreen({ navigation }: Props) {
   // is defined at MODULE level (below), not here: a component created
   // inside the render is a new type on every sync tick, so every row
   // unmounted and remounted and its resolved photo was thrown away.
-  const Row = ({ item }: { item: UpcomingFixture }) => (
+  const Row = ({ item, pagerIds }: { item: UpcomingFixture; pagerIds: readonly string[] }) => (
     <ScheduleRow
       item={item}
+      pagerIds={pagerIds}
       follows={follows}
       mode={mode}
       excluded={excludedIds.has(item.id)}
@@ -244,7 +251,9 @@ export default function ScheduleScreen({ navigation }: Props) {
           />
           {selectedDay ? (
             dayFixtures.length > 0 ? (
-              dayFixtures.map((f) => <Row key={f.id} item={f} />)
+              dayFixtures.map((f) => (
+                <Row key={f.id} item={f} pagerIds={dayFixtures.map((d) => d.id)} />
+              ))
             ) : (
               <Text
                 style={[
@@ -283,7 +292,7 @@ export default function ScheduleScreen({ navigation }: Props) {
               {section.title}
             </Text>
           )}
-          renderItem={({ item }) => <Row item={item} />}
+          renderItem={({ item }) => <Row item={item} pagerIds={listIds} />}
           ListFooterComponent={
             <Text
               style={[
@@ -307,6 +316,7 @@ export default function ScheduleScreen({ navigation }: Props) {
 // renders (see the note at the call site).
 function ScheduleRow(props: {
   item: UpcomingFixture;
+  pagerIds: readonly string[];
   follows: Followable[];
   mode: 'light' | 'dark';
   excluded: boolean;
@@ -330,7 +340,9 @@ function ScheduleRow(props: {
       // rendered a monogram anyway (Prompt 16 C sweep).
       imageUrl={photo?.url ?? owner?.crestUrl}
       onPress={() => {
-        void fixtureCardRequest(ref, item.id).then(expansion.open);
+        void fixtureCardRequest(ref, item.id, props.pagerIds).then(
+          expansion.open,
+        );
       }}
       title={item.title}
       caption={item.competition}
