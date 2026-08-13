@@ -49,8 +49,16 @@ source of truth for build state — never chat history.
   (8GB host vs the AVD's 16GB suggestion): the calendar provider is the
   source of truth —
   `adb shell content query --uri content://com.android.calendar/calendars`
-  then `.../events --where "calendar_id=N"`. Stronger proof than a
-  screenshot, and immune to SystemUI hangs.
+  then `.../events --where "calendar_id=N AND deleted=0"`. Stronger
+  proof than a screenshot, and immune to SystemUI hangs.
+  **`AND deleted=0` is load-bearing.** The provider soft-deletes: a
+  deleted event stays in the table as a `deleted=1` tombstone until a
+  sync adapter purges it, and every real reader (the app's findById,
+  the Calendar app, Google sync) filters them out. A raw count includes
+  them — which made a fully successful 166-event drain read as "count
+  frozen, sync doing nothing" for 90 minutes on a real Pixel
+  (2026-08-13) while the app was right and the instrument was wrong.
+  Rule 8 applies to probes too: count the rows the readers read.
 - `ANDROID_HOME` is unset in the shell: prefix Android runs with
   `ANDROID_HOME="$HOME/Library/Android/sdk"` (Gradle fails with
   "SDK location not found" otherwise).

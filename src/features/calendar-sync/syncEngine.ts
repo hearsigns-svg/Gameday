@@ -241,6 +241,10 @@ async function withSyncLock<T>(
   } catch (e) {
     // Nothing inside may leak an uncaught rejection to the UI.
     lastErrorMessage = 'Sync failed — will retry';
+    // Same lesson as the Result branch above, for the THROW exit: this
+    // was the one failure path with no logcat line, which made "a run
+    // threw" indistinguishable from "no run happened" on a device.
+    console.warn(`[gameday] sync threw: ${e}`);
     return err({ kind: 'unknown', message: `sync failed: ${e}` });
   } finally {
     syncRunning = false;
