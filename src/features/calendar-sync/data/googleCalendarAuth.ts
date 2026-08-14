@@ -102,6 +102,13 @@ export async function connectGoogleCalendar(): Promise<Result<{ email: string | 
     setActiveBackend('rest');
     return ok({ email: res.data?.user?.email ?? null });
   } catch (e) {
+    // The RAW error, always — the priming screen shows friendly copy,
+    // and a failure that only ever appears as friendly copy costs a
+    // debugging session per occurrence (this codebase has paid that
+    // three times now). Testing-status test-user refusals,
+    // DEVELOPER_ERROR SHA-1 mismatches and cancelled pickers all look
+    // identical without this line.
+    console.warn(`[gameday] google connect failed: ${e}`);
     return err({ kind: 'unknown', message: `Google sign-in failed: ${e}` });
   }
 }
