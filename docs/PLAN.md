@@ -199,6 +199,16 @@ controls with volume preview → (5) composition: Schedule polish,
 federated global search, crest/colour data plumbing, motion pass.
 Then store readiness: privacy manifests + purpose strings, store
 listings, screenshots, name availability check.
+**Pre-launch, external lead time — Google OAuth verification (~10 days,
+owner ruling 2026-08-13, do not raise until launch prep):** the Android
+REST calendar path uses the sensitive scope `calendar.app.created`;
+publishing requires verification (privacy policy hosted on a verified
+domain, homepage, demo video of the OAuth flow + scope use, scope
+justification — Google states up to 10 days for sensitive scopes, brand
+verification 2–3 business days inside it). Until then the app runs in
+Testing status: 100 test users, refresh tokens expire every 7 days
+(weekly re-consent; surfaces as the typed auth-expired chip state, never
+silent).
 - DONE 2026-07-29 (steps 1–3): warm-shell tokens + motion tokens;
   teamTheme() OKLCH tone-mapper (44 contrast tests — no raw team hex
   reaches a UI slot); sport accent hues as config data; upcoming-fixture
