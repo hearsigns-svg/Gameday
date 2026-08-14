@@ -13,6 +13,7 @@
 // nothing to pick, vacate or adopt. The screens that use them are
 // hidden when the REST backend is active (P28-3).
 
+import { Platform } from 'react-native';
 import { ok, Result } from '../../../core/result';
 import { RecoveredEvent } from '../domain/recovery';
 import { activeBackend } from './calendarBackend';
@@ -114,4 +115,18 @@ export async function listTaggedEvents(
 export function calendarCapabilities(): provider.CalendarCapabilities {
   if (activeBackend() === 'rest') return { perEventColour: true };
   return provider.calendarCapabilities();
+}
+
+// How native calendar sync HAPPENS on this install — the UI asks this,
+// never Platform.OS. The platform knowledge lives here, in the driver,
+// because it is a driver fact: Android's provider path runs through
+// the OS sync adapter, whose mass-deletion gate is the reason Prompt
+// 28 exists, so Android's native route is a Google connect; iOS's
+// EventKit writes into iCloud directly and needs no sign-in at all
+// (forcing one there would be friction for its own sake — owner §2).
+export type NativeSyncRoute = 'provider' | 'google-connect';
+
+export function nativeSyncRoute(): NativeSyncRoute {
+  if (activeBackend() === 'rest') return 'google-connect';
+  return Platform.OS === 'android' ? 'google-connect' : 'provider';
 }

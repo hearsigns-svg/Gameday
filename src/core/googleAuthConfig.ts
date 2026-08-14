@@ -3,8 +3,8 @@
 // This is a PUBLIC identifier, same class as the Firebase apiKey in
 // firebase.ts: it ships inside every binary and needs no redaction.
 //
-// Empty until the owner's console setup lands (Prompt 28, 2026-08-13:
-// GCP project gameday-fixtures → Credentials → Web client). While
-// empty, connect attempts fail loudly and the backend stays on the
-// provider path — nothing silently half-works.
-export const GOOGLE_WEB_CLIENT_ID = '';
+// Console setup landed 2026-08-13: Calendar API enabled, consent
+// screen in Testing (owner as test user), calendar.app.created scope,
+// Android client matched by package + upload-key SHA-1.
+export const GOOGLE_WEB_CLIENT_ID =
+  '188261010398-tdkgf7slmajpqe0kkr9auphv098latde.apps.googleusercontent.com';

@@ -17,6 +17,9 @@ import { messageOf } from '../../../core/result';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { calendarChoice, setCalendarChoice } from '../data/calendarChoice';
+import { activeBackend } from '../data/calendarBackend';
+import { connectGoogleCalendar } from '../data/googleCalendarAuth';
+import { nativeSyncRoute } from '../data/driver';
 import {
   CalendarTarget,
   storedTarget,
@@ -94,6 +97,22 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
     setBusy(true);
     setFailure(null);
     const prior = calendarChoice();
+    // The Google route signs in FIRST: account picker, then the consent
+    // screen naming exactly one permission (app-created calendars only).
+    // A closed picker is an answer, not an error — quiet revert, stay.
+    if (nativeSyncRoute() === 'google-connect' && activeBackend() !== 'rest') {
+      const connected = await connectGoogleCalendar();
+      if (!connected.ok) {
+        setBusy(false);
+        if (
+          connected.error.kind === 'unknown' &&
+          !connected.error.message.includes('cancelled')
+        ) {
+          setFailure(`${messageOf(connected.error)} Try again in a moment.`);
+        }
+        return;
+      }
+    }
     setCalendarChoice('enabled');
     let r = await runSync();
     for (
@@ -219,6 +238,15 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         </Text>
       ) : null}
       <View style={{ flex: 1 }} />
+      {nativeSyncRoute() === 'google-connect' && activeBackend() !== 'rest' ? (
+        // A fact, stated once, no apology (owner §2 copy ruling).
+        <Text
+          style={[type.caption, { color: t.textSecondary, marginBottom: spacing.m }]}
+        >
+          Calendar sync needs a Google sign-in on Android. Without it, your
+          fixtures live in the app.
+        </Text>
+      ) : null}
       {denied ? (
         <Pressable
           accessibilityRole="button"
@@ -244,9 +272,11 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
           <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
             {busy
               ? 'Connecting…'
-              : total > 0
-                ? 'Add to my calendar'
-                : 'Connect my calendar'}
+              : nativeSyncRoute() === 'google-connect' && activeBackend() !== 'rest'
+                ? 'Connect Google Calendar'
+                : total > 0
+                  ? 'Add to my calendar'
+                  : 'Connect my calendar'}
           </Text>
         </Pressable>
       )}

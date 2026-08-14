@@ -18,6 +18,9 @@ import { syncStalenessHours } from '../calendar-sync/syncEngine';
 import { dataStaleness } from '../fixtures/data/freshnessRepo';
 import { loadFollowables } from '../follows/data/followStore';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
+import { activeBackend } from '../calendar-sync/data/calendarBackend';
+import { connectGoogleCalendar } from '../calendar-sync/data/googleCalendarAuth';
+import { nativeSyncRoute } from '../calendar-sync/data/driver';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
 import { showToast } from '../../core/toast';
@@ -114,34 +117,84 @@ export default function PreferencesScreen({
       contentContainerStyle={{ padding: spacing.l }}
     >
       <Text style={[type.heading, { color: t.textPrimary }]}>Calendar</Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          target
-            ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
-            : 'Choose where fixtures are written'
-        }
-        onPress={() => navigation.navigate('CalendarTarget')}
-        style={[
-          styles.option,
-          { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
-        ]}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={[type.body, { color: t.textPrimary }]}>
-            {target ? target.label : 'Choose a calendar'}
-          </Text>
-          <Text style={[type.caption, { color: t.textSecondary }]}>
-            {target
-              ? consequenceForTarget({
-                  accountLabel: target.accountLabel,
-                  sourceKind: target.sourceKind,
-                  ours: target.kind === 'ours',
-                })
-              : 'Picked automatically when your calendar connects'}
-          </Text>
-        </View>
-      </Pressable>
+      {activeBackend() === 'rest' ? (
+        // Google-connected: one calendar, ours by construction — nothing
+        // to pick. The row is the reconnect surface, which is also how a
+        // weekly-expired Testing grant heals (tap, pick account, done).
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
+          onPress={() =>
+            void connectGoogleCalendar().then((r) => {
+              if (r.ok) {
+                showToast({ message: 'Google Calendar reconnected' });
+                void runSync();
+              }
+            })
+          }
+          style={[
+            styles.option,
+            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[type.body, { color: t.textPrimary }]}>KickOffCal</Text>
+            <Text style={[type.caption, { color: t.textSecondary }]}>
+              In your Google Calendar — tap to reconnect the sign-in
+            </Text>
+          </View>
+        </Pressable>
+      ) : nativeSyncRoute() === 'google-connect' ? (
+        // Android, not yet connected: settings is the later door into
+        // the same priming flow onboarding offers (owner §3 ruling).
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Connect Google Calendar"
+          onPress={() => navigation.navigate('CalendarPriming', {})}
+          style={[
+            styles.option,
+            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[type.body, { color: t.textPrimary }]}>
+              Connect Google Calendar
+            </Text>
+            <Text style={[type.caption, { color: t.textSecondary }]}>
+              Fixtures live in the app until you do
+            </Text>
+          </View>
+        </Pressable>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            target
+              ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
+              : 'Choose where fixtures are written'
+          }
+          onPress={() => navigation.navigate('CalendarTarget')}
+          style={[
+            styles.option,
+            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[type.body, { color: t.textPrimary }]}>
+              {target ? target.label : 'Choose a calendar'}
+            </Text>
+            <Text style={[type.caption, { color: t.textSecondary }]}>
+              {target
+                ? consequenceForTarget({
+                    accountLabel: target.accountLabel,
+                    sourceKind: target.sourceKind,
+                    ours: target.kind === 'ours',
+                  })
+                : 'Picked automatically when your calendar connects'}
+            </Text>
+          </View>
+        </Pressable>
+      )}
 
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
