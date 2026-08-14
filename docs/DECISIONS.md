@@ -2941,3 +2941,10 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   batch hygiene (small batches proven clean, incl. prune's sweep of 74
   sync-resurrected events). Queued for owner: REST path vs native
   purge-paced chunking vs accept-the-dialog for large unfollows.
+- 2026-08-13: premium colour picker — iOS free-form, Android limited to
+  Google's eleven event swatches (colorId enum; the API accepts nothing
+  else). No conflict with the §4 entitlement ruling: that was about who
+  GETS the feature (gating stays identical on both platforms); this is
+  what the platform accepts once they have it. Android copy states the
+  limit as a fact, no apology: "Google calendars support these eleven
+  colours."

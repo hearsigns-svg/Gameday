@@ -67,6 +67,11 @@ export interface ResolvedTarget {
   sourceKind: SourceKind;
 }
 
+// The native calendar object this backend threads through a sync run —
+// named so the facade (data/driver.ts) can speak about it without
+// importing expo-calendar itself.
+export type ProviderCalendar = Calendar.ExpoCalendar;
+
 // Non-prompting probe: reports the existing grant WITHOUT ever showing
 // the OS dialog. Used as reinstall evidence — an existing grant means
 // this device already opted in through the primed flow once.

@@ -38,7 +38,7 @@ import {
   ResolvedTarget,
   TargetRequest,
   updateFixtureEvent,
-} from './data/calendarDriver';
+} from './data/driver';
 import {
   entriesFromRecoveredEvents,
   isScanAnomaly,

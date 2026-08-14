@@ -53,7 +53,7 @@ import {
   useVenuePhoto,
   useVenuePlacePhoto,
 } from '../../follows/useEntityPhoto';
-import { calendarCapabilities } from '../data/calendarDriver';
+import { calendarCapabilities } from '../data/driver';
 import {
   loadEventSettings,
   setEventColour,
