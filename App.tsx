@@ -20,6 +20,8 @@ import {
   shouldAutoSync,
 } from './src/features/calendar-sync/syncEngine';
 import { hasSeenWelcome } from './src/features/calendar-sync/data/calendarChoice';
+import { activeBackend } from './src/features/calendar-sync/data/calendarBackend';
+import { resumeGoogleCalendarAuth } from './src/features/calendar-sync/data/googleCalendarAuth';
 import { loadFollowables } from './src/features/follows/data/followStore';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { ToastHost } from './src/core/toast';
@@ -127,6 +129,10 @@ export default function App() {
   );
 
   useEffect(() => {
+    // BEFORE the first sync trigger: a REST-backed install must have
+    // its token provider armed, or the run answers auth-expired for a
+    // wiring reason instead of a real one.
+    if (activeBackend() === 'rest') resumeGoogleCalendarAuth();
     void registerBackgroundSync();
     void import('./src/features/calendar-sync/data/deviceRegistry').then(
       (m) => m.registerDevice(),
