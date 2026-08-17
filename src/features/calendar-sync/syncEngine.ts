@@ -59,14 +59,12 @@ import {
   upsertLedgerEntry,
 } from './data/ledger';
 import {
-  DELETE_CHUNK_SPACING_MS,
   horizonStartFrom,
   isRunAbandoned,
   nowFromHorizon,
   orderOps,
   passBudgetMs,
   planSync,
-  shouldStopForDeletes,
   shouldStopPass,
   SnapshotFixture,
   upcomingSnapshot,
@@ -186,9 +184,6 @@ let syncRunning = false;
 // alive run must never be mistaken for an abandoned one.
 let syncHeartbeatAt = 0;
 let rerunQueued = false;
-// A cap-deferred pass asks for its rerun to be SPACED, not immediate —
-// set by the run, consumed (and reset) by the hop in withSyncLock.
-let rerunDelayMs = 0;
 
 // Called from every long-running loop so the lock can tell "still working"
 // from "died mid-flight". Deliberately NOT a per-op timeout: abandoning a
@@ -257,13 +252,7 @@ async function withSyncLock<T>(
     emit(false);
     if (rerunQueued) {
       rerunQueued = false;
-      const delay = rerunDelayMs;
-      rerunDelayMs = 0;
-      // A JS timer dies with a suspended app; that is acceptable — the
-      // next foreground or push trigger resumes the drain through the
-      // ordinary coalescing path.
-      if (delay > 0) setTimeout(() => void runSync(), delay);
-      else void runSync();
+      void runSync();
     }
   }
 }
@@ -760,12 +749,6 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         else outcome.updated++;
         applied++;
       } else {
-        // Provider deletions are chunked (SYNCED_DELETE_CAP): a mass
-        // delete in one pass trips the OS sync adapter's
-        // too-many-deletions halt, which parks every deletion behind a
-        // system confirmation the user should never meet. The remainder
-        // defers to a SPACED rerun so the adapter can drain each chunk.
-        if (shouldStopForDeletes(outcome.deleted)) break;
         const del = await deleteFixtureEvent(op.entry.eventId);
         if (!del.ok) return del; // never drop a ledger entry on a failed delete
         removeLedgerEntry(op.fixtureId);
@@ -785,15 +768,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // returns ONLY events carrying our tag, so an appointment of theirs
     // can never become an "orphan".
     const postScan = await listTaggedEvents(calendarId);
-    let pruneDeferred = false;
     if (postScan.ok) {
       for (const eventId of orphanEventIds(postScan.value, loadLedger())) {
-        // Prune deletions hit the same provider and count against the
-        // same adapter gate as the apply loop's — one shared cap.
-        if (shouldStopForDeletes(outcome.deleted + (outcome.pruned ?? 0))) {
-          pruneDeferred = true;
-          break;
-        }
         await deleteFixtureEvent(eventId);
         outcome.pruned = (outcome.pruned ?? 0) + 1;
       }
@@ -813,17 +789,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     writeJson(LAST_SYNC_KEY, outcome);
     // Drain the remainder on the next pass. Reuses the lock's existing
     // coalescing hop rather than recursing here, so the run finishes and
-    // releases before the next one starts. A pass that stopped at the
-    // DELETE cap spaces its rerun (DELETE_CHUNK_SPACING_MS) so the sync
-    // adapter can upsync each chunk before the next lands — back-to-back
-    // passes would re-accumulate pending deletions and trip the gate the
-    // cap exists to avoid.
-    if (deferred > 0 || pruneDeferred) {
-      rerunQueued = true;
-      if (shouldStopForDeletes(outcome.deleted) || pruneDeferred) {
-        rerunDelayMs = DELETE_CHUNK_SPACING_MS;
-      }
-    }
+    // releases before the next one starts.
+    if (deferred > 0) rerunQueued = true;
     return ok(outcome);
   }
 }

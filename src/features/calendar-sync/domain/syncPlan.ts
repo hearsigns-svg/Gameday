@@ -408,33 +408,14 @@ export function shouldStopPass(
 // gate counts deletions pending at upsync time, so back-to-back passes
 // would re-accumulate; DELETE_CHUNK_SPACING_MS gives the adapter a
 // cycle to drain each chunk before the next lands.
-// MEASURED on hardware, 2026-08-13, with a live 320-event NFL drain:
-//
-// - The gate fires on deletions PENDING AT UPSYNC TIME, not on our
-//   pass size. The adapter barely ran between spaced 40-chunks, ~293
-//   accumulated, and the dialog appeared anyway. Chunk size alone
-//   cannot avoid the gate — at any value.
-// - Threshold bracket: ~40–50 pending upsynced cleanly (including the
-//   prune sweep of 74 server-resurrected events, in two capped
-//   passes); 166 and ~293 pending both tripped it.
-// - So the cap stays 40 as BATCH HYGIENE, not gate avoidance: batches
-//   this size are proven to upsync without complaint whenever the
-//   adapter does run between them. Truly avoiding the gate for large
-//   unfollows needs one of (owner decision pending): the Android REST
-//   calendar path (no provider, no adapter, no dialog — already the
-//   Android-premium prerequisite), or a native tombstone probe to
-//   pace chunks against actual purge (chunk-and-wait), or accepting
-//   the OS dialog for the largest unfollows.
-// - Also measured: 320 creates < 45s; 320-delete drain 3m20s through
-//   a mid-drain force-stop (resume via ledger replan in ~7s); sync
-//   trigger interleaving compresses the spacing below 45s (benign —
-//   the cap still bounds every pass).
-export const SYNCED_DELETE_CAP = 40;
-export const DELETE_CHUNK_SPACING_MS = 45_000;
-
-export function shouldStopForDeletes(deletesApplied: number): boolean {
-  return deletesApplied >= SYNCED_DELETE_CAP;
-}
+// The delete-chunking machinery that briefly lived here (cap + spaced
+// reruns) was DELETED with the REST swap, deliberately and completely
+// (Prompt 28 §1: dead machinery gets resurrected by a future session
+// that doesn't know why it exists). It existed to duck Android's
+// sync-adapter mass-deletion gate; the REST path never touches the
+// adapter, and iOS's EventKit never had a gate. The hardware
+// measurements that motivated and then obsoleted it are in
+// docs/DECISIONS.md (2026-08-13) and AGENTS.md rule 16.
 
 // Presentation snapshot of what's ahead — Home and Schedule render this.
 // It must show only what the calendar actually wants: same

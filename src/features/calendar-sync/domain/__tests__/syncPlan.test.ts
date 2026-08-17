@@ -1,14 +1,11 @@
 import { Fixture } from '../../../fixtures/domain/fixture';
 import { DEFAULT_PREFS } from '../prefs';
 import {
-  DELETE_CHUNK_SPACING_MS,
   desiredEventFor,
   horizonStartFrom,
   Ledger,
   LedgerEntry,
   planSync,
-  shouldStopForDeletes,
-  SYNCED_DELETE_CAP,
   SyncOp,
 } from '../syncPlan';
 
@@ -626,43 +623,5 @@ describe('per-follow seriesSessions override (Prompt 11)', () => {
       new Map([['f1-series-1', 'all' as const]]),
     );
     expect(all.filter((o) => o.op === 'create')).toHaveLength(2);
-  });
-});
-
-// The provider-deletion cap. Android's sync adapter halts a mass
-// deletion behind a user confirmation (SyncResult.tooManyDeletions —
-// 166 in one pass proved it on hardware, 2026-08-13); the cap keeps
-// each pass under the gate and the spacing gives the adapter a cycle
-// to drain each chunk.
-describe('shouldStopForDeletes', () => {
-  test('continues below the cap, stops at it', () => {
-    expect(shouldStopForDeletes(0)).toBe(false);
-    expect(shouldStopForDeletes(SYNCED_DELETE_CAP - 1)).toBe(false);
-    expect(shouldStopForDeletes(SYNCED_DELETE_CAP)).toBe(true);
-    expect(shouldStopForDeletes(SYNCED_DELETE_CAP + 1)).toBe(true);
-  });
-
-  test('a 166-delete drain consumes exactly one chunk per pass', () => {
-    // The apply loop's break-position semantics: the check runs BEFORE
-    // each delete, so a pass consumes exactly SYNCED_DELETE_CAP and
-    // defers the rest — re-running the wedge scenario that tripped the
-    // adapter gate, and proving the guarded loop cannot reproduce it.
-    const planned = 166;
-    let deleted = 0;
-    for (let i = 0; i < planned; i++) {
-      if (shouldStopForDeletes(deleted)) break;
-      deleted++;
-    }
-    expect(deleted).toBe(SYNCED_DELETE_CAP);
-    expect(planned - deleted).toBe(166 - SYNCED_DELETE_CAP);
-  });
-
-  test('the cap sits far under the one hard datapoint, and chunks are spaced', () => {
-    // 166 tripped the gate on hardware; the constant must keep a wide
-    // margin under it, and the spacing must be a real pause (not 0),
-    // or back-to-back passes re-accumulate pending deletions and trip
-    // the gate the cap exists to avoid.
-    expect(SYNCED_DELETE_CAP * 2).toBeLessThan(166);
-    expect(DELETE_CHUNK_SPACING_MS).toBeGreaterThanOrEqual(30_000);
   });
 });

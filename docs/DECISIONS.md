@@ -2948,3 +2948,12 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   what the platform accepts once they have it. Android copy states the
   limit as a fact, no apology: "Google calendars support these eleven
   colours."
+- 2026-08-14: chunking machinery DELETED with the REST swap (cap, spaced
+  reruns, tests) — not left dormant, per the owner's §1 ruling. The REST
+  path never meets the sync adapter's gate; iOS never had one. The
+  recolour question dissolves rather than simplifies: REST colour is
+  per-EVENT (colorId under calendar.app.created, ours by construction —
+  no guard has anything to check), while calendar-level setCalendarColour
+  and mayRecolour remain PROVIDER-ONLY surfaces where EventKit calendars
+  still need the ownership proof. mayRecolour is not a dropped rail — its
+  domain shrank to the one backend that still has the hazard.
