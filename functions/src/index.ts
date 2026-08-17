@@ -69,6 +69,7 @@ import { leaseDecision } from './sourceLease';
 import { stageFrom } from './stage';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 import { bestSeason, seasonsToTry } from './season';
+import { fetchCardParticipants } from './providers/cardParticipants';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import { loadCoverage } from './coverage';
@@ -1700,6 +1701,17 @@ const rosterSources = (): RosterSource[] => [
     source: 'ibf',
     sport: 'boxing',
     run: () => fetchIbfRatings(),
+  },
+  // Card participants (Part B ruling, 2026-08-17): the boxing
+  // directory's backstop — everyone who actually fights on an ingested
+  // card, minted through the roster lane the appearance funnel's
+  // id_backed policy correctly refuses. Catches every WBC/WBA/WBO name
+  // the moment they book.
+  {
+    slice: 'roster-boxing-cards',
+    source: 'cards',
+    sport: 'boxing',
+    run: () => fetchCardParticipants(db),
   },
   // ATP players via Wikidata (Prompt 10b) — behind the mint gate until
   // the owner approves the validated counts. The reconcile guard:

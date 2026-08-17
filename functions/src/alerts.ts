@@ -110,6 +110,10 @@ export const EXPECTED_ROSTER_SLICES = [
   // directory pass: one weekly refresh now owns the population, so its
   // silence is the only thing worth paging about.
   'tennisapi1|roster-atp-vendor',
+  // The boxing card-participant backstop (Part B, 2026-08-17): reads
+  // our own fixtures, so its silence means the refresh loop itself is
+  // broken — page-worthy.
+  'cards|roster-boxing-cards',
 ];
 
 export function evaluateRosterAlerts(
