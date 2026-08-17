@@ -1,5 +1,12 @@
 // Calendar preferences. Changes apply from the next sync; the event-
 // style switch flips every scheduled event's kind on that sync.
+//
+// VISUALLY REDESIGNED (Prompt 27 D, owner ruling: "full redesign"):
+// six intent-groups, each a heading over ONE grouped card. Short
+// choices (two or three options) render as segmented controls on a
+// single row — the current value is always visible without tapping —
+// and only genuinely long lists (reminders' four, Region's many) stay
+// as rows. The destructive choice sits alone at the end, past a rule.
 
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,14 +35,12 @@ import { REGIONS, RegionKey, regionLabel } from '../../core/region';
 import {
   detectedRegion,
   regionOverride,
-  setRegionOverride,
 } from '../../core/regionStore';
 import {
   AppearanceChoice,
   appearanceChoice,
   setAppearanceChoice,
 } from '../../core/appearanceStore';
-import { refreshPriorities } from '../follows/data/browsePriority';
 
 // Colour choices for the Gameday calendar as it appears in the OS
 // calendar app. Named for accessibility; applied live when possible.
@@ -50,10 +55,86 @@ const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
   { name: 'Graphite', hex: '#52525B' },
 ];
 
+// One intent-group: a heading and its card. The card is the section —
+// rhythm and containment instead of a wall of rows (rule 12).
+function Section(props: { title?: string; children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <View style={{ marginTop: spacing.xl }}>
+      {props.title ? (
+        <Text style={[type.heading, { color: t.textPrimary, marginBottom: spacing.m }]}>
+          {props.title}
+        </Text>
+      ) : null}
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: t.surface, borderColor: t.border },
+        ]}
+      >
+        {props.children}
+      </View>
+    </View>
+  );
+}
+
+// A setting with few, short choices: label left, segments right —
+// the value is readable at a glance and changeable in one tap.
+function SegmentedRow(props: {
+  label: string;
+  options: Array<{ label: string; selected: boolean; onPress: () => void }>;
+  last?: boolean;
+}) {
+  const t = useTheme();
+  return (
+    <View
+      style={[
+        styles.row,
+        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
+        { borderColor: t.border },
+      ]}
+    >
+      <Text style={[type.body, { color: t.textPrimary, flex: 1 }]} numberOfLines={1}>
+        {props.label}
+      </Text>
+      <View style={[styles.segments, { backgroundColor: t.bg }]}>
+        {props.options.map((o) => (
+          <Pressable
+            key={o.label}
+            accessibilityRole="button"
+            accessibilityState={{ selected: o.selected }}
+            accessibilityLabel={`${props.label}: ${o.label}`}
+            onPress={o.onPress}
+            style={[
+              styles.segment,
+              o.selected && { backgroundColor: t.surfaceRaised },
+            ]}
+          >
+            <Text
+              style={[
+                type.secondary,
+                {
+                  color: o.selected ? t.textPrimary : t.textSecondary,
+                  fontWeight: o.selected ? '600' : '400',
+                },
+              ]}
+              maxFontSizeMultiplier={1.4}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// A radio row inside a card, for the lists short enough to stay flat.
 function OptionRow(props: {
   label: string;
   selected: boolean;
   onPress: () => void;
+  last?: boolean;
 }) {
   const t = useTheme();
   return (
@@ -62,14 +143,54 @@ function OptionRow(props: {
       accessibilityState={{ selected: props.selected }}
       accessibilityLabel={props.label}
       onPress={props.onPress}
-      style={[styles.option, { borderColor: t.border }]}
+      style={[
+        styles.row,
+        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
+        { borderColor: t.border },
+      ]}
     >
       <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
         {props.label}
       </Text>
       {props.selected ? (
-        <Text style={[type.body, { color: t.primary, fontWeight: '700' }]}>
-          ✓
+        <Text style={[type.body, { color: t.primary, fontWeight: '700' }]}>✓</Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+// A row whose right side is its current value; tapping navigates.
+function ValueRow(props: {
+  label: string;
+  value?: string;
+  caption?: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+  last?: boolean;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
+      onPress={props.onPress}
+      style={[
+        styles.row,
+        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
+        { borderColor: t.border, minHeight: 56 },
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[type.body, { color: t.textPrimary }]}>{props.label}</Text>
+        {props.caption ? (
+          <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={2}>
+            {props.caption}
+          </Text>
+        ) : null}
+      </View>
+      {props.value ? (
+        <Text style={[type.body, { color: t.textSecondary, marginLeft: spacing.m }]}>
+          {props.value}
         </Text>
       ) : null}
     </Pressable>
@@ -114,281 +235,195 @@ export default function PreferencesScreen({
     void runSync(); // re-plan immediately so the change is visible
   };
 
+  const regionValue =
+    region === null
+      ? `Match my device (${regionLabel(detectedRegion())})`
+      : region === 'default'
+        ? 'Default'
+        : regionLabel(region);
+
   return (
     <ScrollView
       style={{ backgroundColor: t.bg }}
-      contentContainerStyle={{ padding: spacing.l }}
+      contentContainerStyle={{ padding: spacing.l, paddingTop: 0 }}
     >
-      <Text style={[type.heading, { color: t.textPrimary }]}>Calendar</Text>
-      {activeBackend() === 'rest' ? (
-        // Google-connected: one calendar, ours by construction — nothing
-        // to pick. The row is the reconnect surface, which is also how a
-        // weekly-expired Testing grant heals (tap, pick account, done).
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
-          onPress={() =>
-            void connectGoogleCalendar().then((r) => {
-              if (r.ok) {
-                showToast({ message: 'Google Calendar reconnected' });
-                void runSync();
-              }
-            })
-          }
-          style={[
-            styles.option,
-            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
-          ]}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[type.body, { color: t.textPrimary }]}>KickOffCal</Text>
-            <Text style={[type.caption, { color: t.textSecondary }]}>
-              In your Google Calendar — tap to reconnect the sign-in
-            </Text>
-          </View>
-        </Pressable>
-      ) : nativeSyncRoute() === 'google-connect' ? (
-        // Android, not yet connected: settings is the later door into
-        // the same priming flow onboarding offers (owner §3 ruling).
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Connect Google Calendar"
-          onPress={() => navigation.navigate('CalendarPriming', {})}
-          style={[
-            styles.option,
-            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
-          ]}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[type.body, { color: t.textPrimary }]}>
-              Connect Google Calendar
-            </Text>
-            <Text style={[type.caption, { color: t.textSecondary }]}>
-              Fixtures live in the app until you do
-            </Text>
-          </View>
-        </Pressable>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            target
-              ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
-              : 'Choose where fixtures are written'
-          }
-          onPress={() => navigation.navigate('CalendarTarget')}
-          style={[
-            styles.option,
-            { borderColor: t.border, marginTop: spacing.m, minHeight: 60 },
-          ]}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[type.body, { color: t.textPrimary }]}>
-              {target ? target.label : 'Choose a calendar'}
-            </Text>
-            <Text style={[type.caption, { color: t.textSecondary }]}>
-              {target
+      <Section title="Calendar">
+        {activeBackend() === 'rest' ? (
+          // Google-connected: one calendar, ours by construction —
+          // nothing to pick. The row is the reconnect surface, which is
+          // also how a weekly-expired Testing grant heals.
+          <ValueRow
+            label="KickOffCal"
+            caption="In your Google Calendar — tap to reconnect the sign-in"
+            accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
+            onPress={() =>
+              void connectGoogleCalendar().then((r) => {
+                if (r.ok) {
+                  showToast({ message: 'Google Calendar reconnected' });
+                  void runSync();
+                }
+              })
+            }
+          />
+        ) : nativeSyncRoute() === 'google-connect' ? (
+          // Android, not yet connected: settings is the later door into
+          // the same priming flow onboarding offers.
+          <ValueRow
+            label="Connect Google Calendar"
+            caption="Fixtures live in the app until you do"
+            accessibilityLabel="Connect Google Calendar"
+            onPress={() => navigation.navigate('CalendarPriming', {})}
+          />
+        ) : (
+          <ValueRow
+            label={target ? target.label : 'Choose a calendar'}
+            caption={
+              target
                 ? consequenceForTarget({
                     accountLabel: target.accountLabel,
                     sourceKind: target.sourceKind,
                     ours: target.kind === 'ours',
                   })
-                : 'Picked automatically when your calendar connects'}
+                : 'Picked automatically when your calendar connects'
+            }
+            accessibilityLabel={
+              target
+                ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
+                : 'Choose where fixtures are written'
+            }
+            onPress={() => navigation.navigate('CalendarTarget')}
+          />
+        )}
+        {/* The calendar's colour lives WITH the calendar. */}
+        {ownCalendar ? (
+          <View style={styles.swatchRow}>
+            <Text style={[type.body, { color: t.textPrimary, marginBottom: spacing.s }]}>
+              Colour
+            </Text>
+            <View style={styles.swatches}>
+              {CALENDAR_COLOURS.map((c) => (
+                <Pressable
+                  key={c.hex}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: colour === c.hex }}
+                  accessibilityLabel={`Calendar colour ${c.name}`}
+                  onPress={() => void pickColour(c.hex, c.name)}
+                  style={[
+                    styles.swatch,
+                    { backgroundColor: c.hex },
+                    colour === c.hex && {
+                      borderWidth: 3,
+                      borderColor: t.textPrimary,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+              How KickOffCal events look inside your phone's calendar app.
             </Text>
           </View>
-        </Pressable>
-      )}
-      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
-        Calendar colour
-      </Text>
-      {/* A colour belongs to the CALENDAR, not to the events in it — so
-          this only ever applies to a calendar of ours. Offering swatches
-          over someone's own calendar would be a promise we refuse to
-          keep: we do not restyle a user's calendar. */}
-      {ownCalendar ? (
-        <>
-          <View style={styles.swatches}>
-            {CALENDAR_COLOURS.map((c) => (
-              <Pressable
-                key={c.hex}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: colour === c.hex }}
-                accessibilityLabel={`Calendar colour ${c.name}`}
-                onPress={() => void pickColour(c.hex, c.name)}
-                style={[
-                  styles.swatch,
-                  { backgroundColor: c.hex },
-                  colour === c.hex && {
-                    borderWidth: 3,
-                    borderColor: t.textPrimary,
-                  },
-                ]}
-              />
-            ))}
+        ) : (
+          <View style={styles.swatchRow}>
+            <Text style={[type.caption, { color: t.textSecondary }]}>
+              Your fixtures take the colour of {target?.label ?? 'your calendar'},
+              which is yours to set in your calendar app.
+            </Text>
           </View>
-          <Text
-            style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}
-          >
-            How KickOffCal events look inside your phone's calendar app.
-          </Text>
-        </>
-      ) : (
-        <Text
-          style={[type.caption, { color: t.textSecondary, marginTop: spacing.m }]}
-        >
-          Your fixtures take the colour of {target?.label ?? 'your calendar'},
-          which is yours to set in your calendar app. Switch to a KickOffCal
-          calendar above to colour them separately.
-        </Text>
-      )}
+        )}
+      </Section>
 
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Events
-      </Text>
-      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
-        Event style
-      </Text>
-      <View style={styles.group}>
-        <OptionRow
-          label="Timed events (kick-off to full time)"
-          selected={prefs.eventStyle === 'timed'}
-          onPress={() => apply({ ...prefs, eventStyle: 'timed' })}
+      <Section title="Events">
+        <SegmentedRow
+          label="Event style"
+          options={[
+            {
+              label: 'Timed',
+              selected: prefs.eventStyle === 'timed',
+              onPress: () => apply({ ...prefs, eventStyle: 'timed' }),
+            },
+            {
+              label: 'All-day',
+              selected: prefs.eventStyle === 'all-day',
+              onPress: () => apply({ ...prefs, eventStyle: 'all-day' }),
+            },
+          ]}
         />
-        <OptionRow
-          label="All-day events"
-          selected={prefs.eventStyle === 'all-day'}
-          onPress={() => apply({ ...prefs, eventStyle: 'all-day' })}
+        <SegmentedRow
+          label="Race weekends"
+          last
+          options={[
+            {
+              label: 'All sessions',
+              selected: prefs.seriesSessions === 'all',
+              onPress: () => apply({ ...prefs, seriesSessions: 'all' }),
+            },
+            {
+              label: 'Race only',
+              selected: prefs.seriesSessions === 'race-only',
+              onPress: () => apply({ ...prefs, seriesSessions: 'race-only' }),
+            },
+          ]}
         />
-      </View>
+      </Section>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Applies to every synced fixture on the next sync.
-      </Text>
-      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
-        Race weekends
-      </Text>
-      <View style={styles.group}>
-        <OptionRow
-          label="All sessions (practice, qualifying, race)"
-          selected={prefs.seriesSessions === 'all'}
-          onPress={() => apply({ ...prefs, seriesSessions: 'all' })}
-        />
-        <OptionRow
-          label="Race only"
-          selected={prefs.seriesSessions === 'race-only'}
-          onPress={() => apply({ ...prefs, seriesSessions: 'race-only' })}
-        />
-      </View>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        For series like Formula 1.
+        Timed events run kick-off to full time. Changes apply to every synced
+        fixture on the next sync.
       </Text>
 
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Reminders
-      </Text>
-      <View style={styles.group}>
-        {REMINDER_OPTIONS.map((opt) => (
+      <Section title="Reminders">
+        {REMINDER_OPTIONS.map((opt, i) => (
           <OptionRow
             key={String(opt.value)}
             label={opt.label}
             selected={prefs.reminderMinutes === opt.value}
             onPress={() => apply({ ...prefs, reminderMinutes: opt.value })}
+            last={i === REMINDER_OPTIONS.length - 1 && ALL_DAY_REMINDER_OPTIONS.length === 0}
           />
         ))}
-      </View>
+        <SegmentedRow
+          label="Days without a time yet"
+          last
+          options={ALL_DAY_REMINDER_OPTIONS.map((opt) => ({
+            // The short form is what fits a segment; the full wording
+            // ("Evening before, 6pm") belongs to the radio-row world.
+            label: (opt as { short?: string }).short ?? opt.label,
+            selected: prefs.allDayReminder === opt.value,
+            onPress: () => apply({ ...prefs, allDayReminder: opt.value }),
+          }))}
+        />
+      </Section>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         Reminder changes apply to fixtures as they are added or updated.
       </Text>
 
-      {/* The all-day channel: fixtures whose TIME is not published yet
-          get day-shaped reminders anchored to civil hours, because
-          "1 hour before" means nothing against a date. Off by default —
-          turning it on is a choice that adds an alarm to every
-          date-only fixture (Prompt 24 A1/B2). */}
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Days without a time yet
-      </Text>
-      <View style={styles.group}>
-        {ALL_DAY_REMINDER_OPTIONS.map((opt) => (
-          <OptionRow
-            key={String(opt.value)}
-            label={opt.label}
-            selected={prefs.allDayReminder === opt.value}
-            onPress={() => apply({ ...prefs, allDayReminder: opt.value })}
-          />
-        ))}
-      </View>
-
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        App
-      </Text>
-      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
-        Appearance
-      </Text>
-      <View style={styles.group}>
-        {(
-          [
-            { key: 'system', label: 'Match my device' },
+      <Section title="App">
+        <SegmentedRow
+          label="Appearance"
+          options={[
+            { key: 'system', label: 'Auto' },
             { key: 'light', label: 'Light' },
             { key: 'dark', label: 'Dark' },
-          ] as Array<{ key: AppearanceChoice; label: string }>
-        ).map((o) => (
-          <OptionRow
-            key={o.key}
-            label={o.label}
-            selected={appearance === o.key}
-            onPress={() => {
-              setAppearanceChoice(o.key);
-              setAppearance(o.key);
-            }}
-          />
-        ))}
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Region"
-        onPress={() => navigation.navigate('Region')}
-        style={[styles.option, { borderColor: t.border, marginTop: spacing.l }]}
-      >
-        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>Region</Text>
-        <Text style={[type.body, { color: t.textSecondary }]}>
-          {region === null
-            ? `Match my device (${regionLabel(detectedRegion())})`
-            : region === 'default'
-              ? 'Default'
-              : regionLabel(region)}
-        </Text>
-      </Pressable>
+          ].map((o) => ({
+            label: o.label,
+            selected: appearance === o.key,
+            onPress: () => {
+              setAppearanceChoice(o.key as AppearanceChoice);
+              setAppearance(o.key as AppearanceChoice);
+            },
+          }))}
+        />
+        <ValueRow
+          label="Region"
+          value={regionValue}
+          accessibilityLabel={`Region: ${regionValue}. Change region`}
+          onPress={() => navigation.navigate('Region')}
+          last
+        />
+      </Section>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      {/* Sync health, both halves of it: the DEVICE's last successful
-          sync (syncStalenessHours) and the SOURCES' last confirmed
-          activity upstream (dataStaleness). They are different facts —
-          a perfectly syncing device against a dead source was showing
-          green until Prompt 7. Unknown renders as unknown. */}
-
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+      {/* Status, not settings — the quiet tail. */}
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.xl }]}>
         {(() => {
           const device = syncStalenessHours();
           const data = dataStaleness(loadFollowables());
@@ -406,48 +441,29 @@ export default function PreferencesScreen({
           return `${deviceLine} · ${dataLine}`;
         })()}
       </Text>
-
       {/* A device over the 200-key rule limit is REJECTED wholesale by
           Firestore, so it silently stops being swept. Say so. */}
       {lastRegistryError() ? (
-        <Text
-          style={[
-            type.secondary,
-            { color: t.danger, marginTop: spacing.xl },
-          ]}
-        >
+        <Text style={[type.secondary, { color: t.danger, marginTop: spacing.m }]}>
           {lastRegistryError()}
         </Text>
       ) : null}
-
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Photo credits"
         onPress={() => navigation.navigate('Credits')}
-        style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
+        style={{ marginTop: spacing.m, minHeight: 44, justifyContent: 'center' }}
       >
-        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
+        <Text style={[type.secondary, { color: t.textSecondary }]}>
           Photo credits
         </Text>
       </Pressable>
 
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderColor: t.border,
-          marginTop: spacing.xxl,
-        }}
-      />
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Past games
-      </Text>
-      {/* Destructive and off by default. Finished games are normally left
-          alone forever — the event has stopped being a promise about the
-          future and become a record of something that happened. This is
-          the only way to opt out of keeping that record. */}
-      <View style={styles.group}>
+      {/* Destructive, last, and past a rule — finished games are a
+          record of something that happened, and this is the only way
+          to opt out of keeping that record. */}
+      <View style={[styles.rule, { borderColor: t.border }]} />
+      <Section title="Past games">
         <OptionRow
           label="Keep past games in my calendar"
           selected={!prefs.autoDeletePast}
@@ -457,8 +473,9 @@ export default function PreferencesScreen({
           label={`Remove them ${PAST_RETENTION_DAYS} days after they finish`}
           selected={prefs.autoDeletePast}
           onPress={() => apply({ ...prefs, autoDeletePast: true })}
+          last
         />
-      </View>
+      </Section>
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         Only games KickOffCal added are ever removed, and only ones it still
         has a record of. Switching back stops further removals — it does not
@@ -470,9 +487,9 @@ export default function PreferencesScreen({
           accessibilityRole="button"
           accessibilityLabel="Open theme gallery"
           onPress={() => navigation.navigate('ThemeGallery')}
-          style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
+          style={{ marginTop: spacing.xl, minHeight: 44, justifyContent: 'center' }}
         >
-          <Text style={[type.body, { color: t.textSecondary, flex: 1 }]}>
+          <Text style={[type.body, { color: t.textSecondary }]}>
             Theme gallery (dev)
           </Text>
         </Pressable>
@@ -482,27 +499,47 @@ export default function PreferencesScreen({
 }
 
 const styles = StyleSheet.create({
+  card: {
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.s,
+    gap: spacing.s,
+  },
+  segments: {
+    flexDirection: 'row',
+    borderRadius: radius.button,
+    padding: 2,
+  },
+  segment: {
+    paddingHorizontal: spacing.m,
+    minHeight: 36,
+    borderRadius: radius.button - 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swatchRow: {
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
+  },
   swatches: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.m,
-    marginTop: spacing.m,
   },
   swatch: {
     width: 44,
     height: 44,
     borderRadius: 22,
   },
-  group: {
-    marginTop: spacing.m,
-    borderRadius: radius.card,
-    overflow: 'hidden',
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.l,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  rule: {
+    borderTopWidth: 1,
+    marginTop: spacing.xxl,
   },
 });

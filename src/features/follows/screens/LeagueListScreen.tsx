@@ -3,7 +3,7 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import {
   CoverageNote,
   FollowButton,
@@ -81,7 +81,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       ]);
       return;
     }
-    if (sport?.staticCompetitions) {
+    if (sport?.staticCompetitions && route.params.sportKey !== 'soccer') {
       // Single-league sports: the rows are config; their ORDER is
       // catalogue-weight data (Prompt 11), live rows before dormant
       // ones (11b), config order as the offline fallback.
@@ -112,11 +112,21 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     void (async () => {
       const r = await fetchLeagues();
       if (r.ok) {
-        setLeagues(r.value);
+        // Soccer is the one directory-served sport, and its statics
+        // (Copa Libertadores) are competitions the directory does not
+        // carry — MERGED as ordinary rows, never a replacement. The
+        // statics-only early return above swallowing the directory is
+        // exactly how 19 leagues once vanished behind one row
+        // (2026-08-17, owner-caught).
+        const statics = (sport?.staticCompetitions ?? []).filter(
+          (c) => !r.value.some((l) => l.key === c.key),
+        );
+        const merged = [...r.value, ...statics];
+        setLeagues(merged);
         // Fresh directory rows are also the only chance to repair a
         // stored follow's artwork: the follow store captures a crest
         // once and never revisits it (domain/followArt.ts).
-        hydrateFollowArt(r.value);
+        hydrateFollowArt(merged);
       } else setError(messageOf(r.error));
     })();
   }, [sport]);
@@ -399,27 +409,6 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 />
               </TileRow>
             ) : null}
-            {/* ONE screen-level teams entry replacing every per-row
-                Teams button (Prompt 27 C): the same placement the
-                athlete row established, opening the sport's whole
-                team population sectioned by competition. */}
-            {sport?.browse.includes('team') ? (
-              <TileRow>
-                <SportCard
-                  fullWidth
-                  label="Browse teams"
-                  caption="Every club, competition by competition"
-                  glyph={sport?.glyph ?? '🏟️'}
-                  theme={teamTheme(sport?.accent ?? null, mode)}
-                  accessibilityLabel="Browse teams"
-                  onPress={() =>
-                    navigation.navigate('TeamList', {
-                      sportKey: route.params.sportKey,
-                    })
-                  }
-                />
-              </TileRow>
-            ) : null}
           </>
         }
         // NO TOURNAMENTS FOOTER. It rendered `tournaments`, which is
@@ -428,44 +417,71 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         // entirely. Unreachable since Prompt 19 split tennis into its
         // own render path; deleted rather than converted (22b).
         renderItem={({ item }) => (
-          // TWO TARGETS (Prompt 27 C, was three): the tile opens the
-          // competition, Follow subscribes. The per-row Teams button
-          // moved to ONE screen-level "Browse teams" row above — the
-          // same position no longer means different things down the
-          // list, and Follow inherits the trailing space whole.
-          <TileRow
-            right={
-              // A competition with no league-level poller offers no
-              // follow at all: NHL and MLB are served team-by-team,
-              // and the button used to build a route that 400s or
-              // returns an empty 200. Their teams live in the header's
-              // Browse teams row like everyone else's.
-              item.followable !== false ? (
-                <FollowButton
-                  following={isFollowed(item.key)}
-                  subject={item.name}
-                  busy={busyKey === item.key}
-                  onPress={() => void toggle(item)}
-                />
-              ) : null
-            }
-          >
-            <SportCard
-              fullWidth
-              label={item.name}
-              caption={item.country}
-              glyph={sport?.glyph ?? '🏟️'}
-              theme={teamTheme(sport?.accent ?? null, mode)}
-              monogram={monogramOf(item.name)}
-              {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-              accessibilityLabel={`${item.name}, see upcoming`}
-              // The tile is the COMPETITION, not a shortcut to its
-              // teams — "Premier League" shows Premier League fixtures.
-              // A followOnly row (ATP Tour, a series) was a dead end
-              // before Prompt 19.
-              onPress={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
-            />
-          </TileRow>
+          // THE COMPETITION ROW, then ITS teams row (Prompt 27 C,
+          // owner mockup): tile opens the competition, Follow keeps
+          // the whole trailing space — and a competition with teams
+          // carries its own full-width "Browse teams" row BENEATH,
+          // replacing the cramped side-button. The row belongs to the
+          // competition above it, so a row without one (FIBA, a
+          // series) is simply shorter — no same-position ambiguity.
+          <View>
+            <TileRow
+              right={
+                // A competition with no league-level poller offers no
+                // follow at all: NHL and MLB are served team-by-team;
+                // their teams row below still works.
+                item.followable !== false ? (
+                  <FollowButton
+                    following={isFollowed(item.key)}
+                    subject={item.name}
+                    busy={busyKey === item.key}
+                    onPress={() => void toggle(item)}
+                  />
+                ) : null
+              }
+            >
+              <SportCard
+                fullWidth
+                label={item.name}
+                caption={item.country}
+                glyph={sport?.glyph ?? '🏟️'}
+                theme={teamTheme(sport?.accent ?? null, mode)}
+                monogram={monogramOf(item.name)}
+                {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+                accessibilityLabel={`${item.name}, see upcoming`}
+                // The tile is the COMPETITION, not a shortcut to its
+                // teams — "Premier League" shows Premier League fixtures.
+                // A followOnly row (ATP Tour, a series) was a dead end
+                // before Prompt 19.
+                onPress={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
+              />
+            </TileRow>
+            {!item.followOnly ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Browse ${item.name} teams`}
+                onPress={() =>
+                  navigation.navigate('TeamList', {
+                    sportKey: route.params.sportKey,
+                    leagueId: item.id,
+                    leagueName: item.name,
+                    ...(item.teamPollPath
+                      ? { teamPollPath: item.teamPollPath }
+                      : {}),
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.browseTeams,
+                  { borderColor: t.border, backgroundColor: t.surface },
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Text style={[type.secondary, { color: t.primary, fontWeight: '600' }]}>
+                  Browse teams
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         )}
       />
     </View>
@@ -474,4 +490,18 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
 const styles = {
   center: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
+  // The competition's own teams entry, full-width beneath its tile —
+  // quiet on purpose: the tile is the object, Follow is the primary,
+  // this is the drill-down (owner mockup, 2026-08-17).
+  browseTeams: {
+    minHeight: 44,
+    marginHorizontal: spacing.l,
+    marginTop: -spacing.s,
+    marginBottom: spacing.m,
+    paddingHorizontal: spacing.l,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
 };
