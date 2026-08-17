@@ -2972,3 +2972,21 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   available on TSDB, ruled out for launch. Ops edits queued for owner:
   disable live fdorg-comp-WC/EC docs; season-bump tsdb-4482 FA Cup
   →2026-2027, tsdb-4460 IPL →2027, tsdb-5103 T20WC →2028.
+- 2026-08-17 (season question, measured): catalogue seasons are already
+  HINTS — the Prompt 3 resolver tries hint + computed candidates and
+  picks the season with most upcoming fixtures. The three "rollover
+  deaths" were not resolver bypasses: FA Cup tried 2026-2027 and TSDB
+  simply hasn't published it (vendor lag — born_dead now surfaces it);
+  IPL's calendar-shape candidates look backward before November, so the
+  2027 hint bump does real work; fd.org's route passes the hint
+  literally (fine — its seasoned rows are cycle rows where literal
+  intent is correct). Hints stay: cheap first hit, forward reach beyond
+  the two-candidate window, and the only way to express tournament
+  cycles (2030). The class is retired by resolver + born_dead together,
+  not by removing seasons.
+- 2026-08-17 (boxing bodies robots posture): WBA allowed (WP-standard),
+  WBO allowed (empty disallow), WBC allowed for our use
+  (Content-Signal: search=yes, ai-train=no, use=reference — a rankings
+  read for the directory is reference, not training). All three
+  proceed; ops edits applied same day (fdorg WC/EC disabled live,
+  4482→2026-2027, 4460→2027, 5103→2028).
