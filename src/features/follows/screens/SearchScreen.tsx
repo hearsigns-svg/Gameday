@@ -30,9 +30,11 @@ import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   fetchLeagues,
+  fetchTournaments,
   searchEntities,
   SearchAthleteHit,
   SearchTeamHit,
+  TournamentRow,
 } from '../data/directoryRepo';
 import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed, Followable } from '../data/followStore';
@@ -44,6 +46,7 @@ import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 import { sportLabelFor, sportMatches } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { foldedIncludes } from '../../../core/nameFold';
+import { expandQuery } from '../domain/searchAliases';
 
 type Props = RootScreenProps<'Search'>;
 
@@ -77,12 +80,15 @@ function sportNameOf(sportKey: string): string {
 function localMatches(q: string): { sports: Row[]; comps: Row[] } {
   const needle = q.trim().toLowerCase();
   if (needle.length < 2) return { sports: [], comps: [] };
+  // The query plus its aliases — "Super Bowl" must find the NFL row,
+  // and every channel matches the same expanded set (Part A).
+  const needles = expandQuery(q.trim()).map((n) => n.toLowerCase());
   // MATCH EVERY NAME, DISPLAY THE LOCAL ONE (22c). This filtered on the
   // bundled config label while Home, Following, the team page and the
   // sport picker all showed the REGIONAL word — so in the UK the app
   // said "Football", and then found nothing when you typed it back.
   const sports: Row[] = SPORTS.filter(
-    (s) => s.enabled && sportMatches(s.key, s.label, needle),
+    (s) => s.enabled && needles.some((n) => sportMatches(s.key, s.label, n)),
   ).map((s) => ({
     kind: 'sport',
     key: `sport-${s.key}`,
@@ -108,7 +114,7 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
       // Folded, like the server's athlete and team search in the same
       // result list — an unfolded competition filter meant one screen
       // answered to "Brasileirao" for a player and not for the league.
-      .filter((c) => s.enabled && foldedIncludes(c.name, needle))
+      .filter((c) => s.enabled && needles.some((n) => foldedIncludes(c.name, n)))
       .map((c) => ({
         kind: 'competition' as const,
         key: c.key,
@@ -140,6 +146,7 @@ export default function SearchScreen({ navigation }: Props) {
   const mode = useColorSchemeMode();
   const [query, setQuery] = useState('');
   const [soccerLeagues, setSoccerLeagues] = useState<DirectoryLeague[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [teams, setTeams] = useState<SearchTeamHit[]>([]);
   const [athletes, setAthletes] = useState<SearchAthleteHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -152,11 +159,17 @@ export default function SearchScreen({ navigation }: Props) {
   useEffect(() => void refreshPriorities(), []);
 
   // Soccer competitions live in the directory, not config — one cached
-  // fetch makes them searchable alongside everything else.
+  // fetch makes them searchable alongside everything else. Tournaments
+  // the same (Part A, 2026-08-14): the tennis majors lived ONLY behind
+  // browse's section entry rows, so "Wimbledon" found a football club
+  // and not the tournament. Anything followable must be findable by
+  // typing its name — so every followable population search reads.
   useEffect(() => {
     void (async () => {
       const r = await fetchLeagues();
       if (r.ok) setSoccerLeagues(r.value);
+      const t = await fetchTournaments();
+      if (t.ok) setTournaments(t.value);
     })();
   }, []);
 
@@ -291,10 +304,34 @@ export default function SearchScreen({ navigation }: Props) {
     // (Prompt 11): priority reorders the merged rows, nothing more —
     // so "Champions League" outranks "Championship" for "champion"
     // whichever source each came from.
+    // Tournaments (Part A): tennis majors and the rest of the tour
+    // calendar, searchable under every name the query expands to and
+    // followable with exactly the shape the browse rows use.
+    const needles =
+      needle.length >= 2
+        ? expandQuery(query.trim()).map((n) => n.toLowerCase())
+        : [];
+    const tournamentRows: Row[] = needles.length
+      ? tournaments
+          .filter((tr) => needles.some((n) => foldedIncludes(tr.name, n)))
+          .map((tr) => ({
+            kind: 'competition' as const,
+            key: tr.key,
+            title: tr.name,
+            caption: `Tournament · ${sportNameOf('tennis')}`,
+            sportKey: 'tennis',
+            followable: {
+              key: tr.key,
+              label: tr.name,
+              sportKey: 'tennis',
+              type: 'competition' as const,
+            },
+          }))
+      : [];
     const seen = new Set<string>();
     const pr = cachedPriorities();
     const compRows = byPriorityLive(
-      [...comps, ...soccerRows].filter((r) =>
+      [...comps, ...soccerRows, ...tournamentRows].filter((r) =>
         seen.has(r.key) ? false : (seen.add(r.key), true),
       ),
       (r) => r.key,
@@ -310,7 +347,7 @@ export default function SearchScreen({ navigation }: Props) {
         data: byPriority(sports, (r) => r.sportKey ?? r.key, pr.sportWeights),
       },
     ].filter((s) => s.data.length > 0);
-  }, [query, teams, athletes, soccerLeagues]);
+  }, [query, teams, athletes, soccerLeagues, tournaments]);
 
   const toggle = useCallback(
     async (row: Row) => {
