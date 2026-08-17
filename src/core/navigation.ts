@@ -29,8 +29,10 @@ export type RootStackParamList = {
   AthleteList: { sportKey: string; tour?: 'atp' | 'wta' };
   TeamList: {
     sportKey: string;
-    leagueId: number | string;
-    leagueName: string;
+    // Absent → the screen-level "Browse teams" mode (Prompt 27 C): every
+    // team-capable league of the sport, sectioned, one search across all.
+    leagueId?: number | string;
+    leagueName?: string;
     teamPollPath?: string;
   };
   Team: {

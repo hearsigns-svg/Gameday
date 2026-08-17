@@ -3,7 +3,7 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import {
   CoverageNote,
   FollowButton,
@@ -381,23 +381,46 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         // individual sport arrives looking for, and the entry point must
         // not hide behind global search.
         ListHeaderComponent={
-          sport?.browse.includes('athlete') ? (
-            <TileRow>
-              <SportCard
-                fullWidth
-                label={athleteRowTitle(route.params.sportKey)}
-                caption="Rankings, champions, who's competing"
-                glyph={sport?.glyph ?? '🏟️'}
-                theme={teamTheme(sport?.accent ?? null, mode)}
-                accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
-                onPress={() =>
-                  navigation.navigate('AthleteList', {
-                    sportKey: route.params.sportKey,
-                  })
-                }
-              />
-            </TileRow>
-          ) : null
+          <>
+            {sport?.browse.includes('athlete') ? (
+              <TileRow>
+                <SportCard
+                  fullWidth
+                  label={athleteRowTitle(route.params.sportKey)}
+                  caption="Rankings, champions, who's competing"
+                  glyph={sport?.glyph ?? '🏟️'}
+                  theme={teamTheme(sport?.accent ?? null, mode)}
+                  accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
+                  onPress={() =>
+                    navigation.navigate('AthleteList', {
+                      sportKey: route.params.sportKey,
+                    })
+                  }
+                />
+              </TileRow>
+            ) : null}
+            {/* ONE screen-level teams entry replacing every per-row
+                Teams button (Prompt 27 C): the same placement the
+                athlete row established, opening the sport's whole
+                team population sectioned by competition. */}
+            {sport?.browse.includes('team') ? (
+              <TileRow>
+                <SportCard
+                  fullWidth
+                  label="Browse teams"
+                  caption="Every club, competition by competition"
+                  glyph={sport?.glyph ?? '🏟️'}
+                  theme={teamTheme(sport?.accent ?? null, mode)}
+                  accessibilityLabel="Browse teams"
+                  onPress={() =>
+                    navigation.navigate('TeamList', {
+                      sportKey: route.params.sportKey,
+                    })
+                  }
+                />
+              </TileRow>
+            ) : null}
+          </>
         }
         // NO TOURNAMENTS FOOTER. It rendered `tournaments`, which is
         // only ever populated for a sport with `tournamentBrowse` — and
@@ -405,78 +428,26 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         // entirely. Unreachable since Prompt 19 split tennis into its
         // own render path; deleted rather than converted (22b).
         renderItem={({ item }) => (
-          // THREE TARGETS, THREE WEIGHTS (22b). This is the densest row
-          // in the app: the tile opens the competition, Follow
-          // subscribes to it, Teams browses its clubs. Three different
-          // intents, all three earning their place — so the row says
-          // which is which by WEIGHT rather than by making them look
-          // alike and hoping.
-          //
-          //   tile   raised surface, border, artwork  — the object
-          //   Follow solid fill                       — primary action
-          //   Teams  text only, no fill, no border    — secondary
-          //
-          // Teams losing its box is also what buys the width back: it
-          // was a bordered, 12pt-padded button, and beside a text
-          // Follow control that left the competition name about 100pt
-          // on a 375pt screen.
+          // TWO TARGETS (Prompt 27 C, was three): the tile opens the
+          // competition, Follow subscribes. The per-row Teams button
+          // moved to ONE screen-level "Browse teams" row above — the
+          // same position no longer means different things down the
+          // list, and Follow inherits the trailing space whole.
           <TileRow
             right={
-              // THE GAP IS A SAFETY MARGIN, not decoration. Teams'
-              // padding sits INSIDE its touch target, so without this
-              // the two 44pt targets are exactly adjacent and a tap
-              // one point wide of Follow silently navigates instead of
-              // subscribing — or worse, the reverse.
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.s,
-                }}
-              >
-                {/* A competition with no league-level poller offers no
-                    follow at all: NHL and MLB are served team-by-team,
-                    and the button used to build a route that 400s or
-                    returns an empty 200. Browsing their teams still
-                    works, which is why Teams sits outside this test. */}
-                {item.followable !== false ? (
-                  <FollowButton
-                    following={isFollowed(item.key)}
-                    subject={item.name}
-                    busy={busyKey === item.key}
-                    onPress={() => void toggle(item)}
-                  />
-                ) : null}
-                {!item.followOnly ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Browse ${item.name} teams`}
-                    onPress={() =>
-                      navigation.navigate('TeamList', {
-                        sportKey: route.params.sportKey,
-                        leagueId: item.id,
-                        leagueName: item.name,
-                        teamPollPath: item.teamPollPath,
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.teamsButton,
-                      pressed && { opacity: 0.55 },
-                    ]}
-                  >
-                    <Text
-                      style={[type.secondary, { color: t.primary, fontWeight: '600' }]}
-                      numberOfLines={1}
-                      // Bounded for the same reason as Follow: this row
-                      // carries two controls, and unbounded growth on
-                      // both leaves the tile nothing.
-                      maxFontSizeMultiplier={1.8}
-                    >
-                      Teams
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
+              // A competition with no league-level poller offers no
+              // follow at all: NHL and MLB are served team-by-team,
+              // and the button used to build a route that 400s or
+              // returns an empty 200. Their teams live in the header's
+              // Browse teams row like everyone else's.
+              item.followable !== false ? (
+                <FollowButton
+                  following={isFollowed(item.key)}
+                  subject={item.name}
+                  busy={busyKey === item.key}
+                  onPress={() => void toggle(item)}
+                />
+              ) : null
             }
           >
             <SportCard
@@ -503,15 +474,4 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
 const styles = {
   center: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
-  // SECONDARY: no fill, no border, no box — the tint and the weight
-  // are the whole affordance. Still a full 44pt target, and still
-  // inside the control cluster, so it reads as a button rather than as
-  // a caption. Pressing DIMS it rather than filling it, because a fill
-  // is what Follow uses to mean primary.
-  teamsButton: {
-    minHeight: 44,
-    paddingHorizontal: spacing.s,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
 };
