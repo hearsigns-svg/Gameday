@@ -64,6 +64,15 @@ export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
     pollPath:
       'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5',
   },
+  // Part B (owner ruling, 2026-08-17).
+  '4546': {
+    tsdbName: 'EuroLeague Basketball',
+    cacheKey: 'basketball-4546',
+    sportKey: 'basketball',
+    label: 'EuroLeague',
+    pollPath:
+      'pollTsdbLeague?leagueId=4546&season=2026-2027&sport=basketball&durationHours=2.5',
+  },
   '4391': {
     tsdbName: 'NFL',
     cacheKey: 'nfl-nfl',

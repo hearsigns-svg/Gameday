@@ -154,8 +154,13 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('fdorg-comp-DED', 'Eredivisie', 'soccer', 'pollFdCompetition?code=DED&season=2026', 38),
   T2('fdorg-comp-PPL', 'Primeira Liga', 'soccer', 'pollFdCompetition?code=PPL&season=2026', 34),
   T2('fdorg-comp-BSA', 'Brasileirão', 'soccer', 'pollFdCompetition?code=BSA&season=2026', 43),
-  T2('fdorg-comp-EC', 'Euros', 'soccer', 'pollFdCompetition?code=EC&season=2026', 88),
-  T2('fdorg-comp-WC', 'World Cup', 'soccer', 'pollFdCompetition?code=WC&season=2026', 100),
+  // Born-dead 2026-08-17: seasoned 2026 — no Euros in 2026. Disabled
+  // until fd.org publishes 2028; the TSDB Euros row is the standby.
+  { ...T2('fdorg-comp-EC', 'Euros', 'soccer', 'pollFdCompetition?code=EC&season=2026', 88), enabled: false },
+  // Born-dead 2026-08-17: created two weeks after the 2026 final, so it
+  // never had a future fixture to yield. Disabled until 2030 nears;
+  // dual-sourced with the TSDB World Cup row (owner ruling).
+  { ...T2('fdorg-comp-WC', 'World Cup', 'soccer', 'pollFdCompetition?code=WC&season=2026', 100), enabled: false },
   // Season hints mirror the browse directory's EXACT strings (they are
   // hints — the server resolves — but the strings must match or the
   // union stops deduplicating against device-registered paths).
@@ -173,6 +178,23 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('tsdb-league-4830', 'KBO League', 'baseball', 'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3', 27),
   T2('tsdb-league-4714', 'Six Nations', 'rugby', 'pollTsdbLeague?leagueId=4714&season=2027&sport=rugby&durationHours=2', 40),
   T2('tsdb-league-4414', 'Premiership Rugby', 'rugby', 'pollTsdbLeague?leagueId=4414&season=2025-2026&sport=rugby&durationHours=2', 32),
+  // ── Part B additions (owner rulings, 2026-08-17) ──────────────────
+  T2('tsdb-league-4546', 'EuroLeague', 'basketball', 'pollTsdbLeague?leagueId=4546&season=2026-2027&sport=basketball&durationHours=2.5', 48),
+  T2('tsdb-league-4501', 'Copa Libertadores', 'soccer', 'pollTsdbLeague?leagueId=4501&season=2026&sport=soccer&durationHours=2', 47),
+  // Tournament-cycle rows, seeded DISABLED — born_dead's lesson applied
+  // at seeding time: a row enabled for a season that cannot yield pages
+  // from birth. FLIP each (enabled:true in the console) when its
+  // schedule publishes, and add its browse static + search alias in the
+  // same change — a followable row nobody polls is a promise that
+  // breaks silently. Probed empty on 2026-08-17.
+  { ...T2('tsdb-league-4429', 'World Cup (TSDB)', 'soccer', 'pollTsdbLeague?leagueId=4429&season=2030&sport=soccer&durationHours=2', 100), enabled: false },
+  { ...T2('tsdb-league-4496', 'Africa Cup of Nations', 'soccer', 'pollTsdbLeague?leagueId=4496&season=2027&sport=soccer&durationHours=2', 58), enabled: false },
+  { ...T2('tsdb-league-4499', 'Copa América', 'soccer', 'pollTsdbLeague?leagueId=4499&season=2028&sport=soccer&durationHours=2', 60), enabled: false },
+  { ...T2('tsdb-league-4502', 'Euros (TSDB)', 'soccer', 'pollTsdbLeague?leagueId=4502&season=2028&sport=soccer&durationHours=2', 88), enabled: false },
+  { ...T2('tsdb-league-4866', 'AFC Asian Cup', 'soccer', 'pollTsdbLeague?leagueId=4866&season=2027&sport=soccer&durationHours=2', 39), enabled: false },
+  { ...T2('tsdb-league-4873', 'CONCACAF Gold Cup', 'soccer', 'pollTsdbLeague?leagueId=4873&season=2027&sport=soccer&durationHours=2', 37), enabled: false },
+  { ...T2('tsdb-league-4461', 'Big Bash League', 'cricket', 'pollTsdbLeague?leagueId=4461&season=2026-2027&sport=cricket&durationHours=4', 38), enabled: false },
+  { ...T2('tsdb-league-4844', 'Test Match Series', 'cricket', 'pollTsdbLeague?leagueId=4844&season=2027&sport=cricket&durationHours=96', 45), enabled: false },
   T2('tsdb-league-4550', 'Champions Cup', 'rugby', 'pollTsdbLeague?leagueId=4550&season=2025-2026&sport=rugby&durationHours=2', 33),
   T2('tsdb-league-4430', 'Top 14', 'rugby', 'pollTsdbLeague?leagueId=4430&season=2025-2026&sport=rugby&durationHours=2', 30),
   T2('tsdb-league-4415', 'Super League', 'rugby', 'pollTsdbLeague?leagueId=4415&season=2026&sport=rugby&durationHours=2', 27),
@@ -208,6 +230,10 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   RANK('wa-world-athletics-indoor-tour-gold', 'Indoor Tour Gold', 'athletics', 35),
   RANK('wa-world-athletics-cross-country-tour-gold', 'Cross Country Tour Gold', 'athletics', 33),
   RANK('wa-national-senior-outdoor-championships', 'National Championships', 'athletics', 31),
+  RANK('wa-area-senior-outdoor-championships', 'Continental Championships', 'athletics', 44),
+  RANK('wa-world-athletics-label-road-races-platinum', 'Marathon Majors', 'athletics', 56),
+  RANK('wa-world-athletics-label-road-races-gold', 'Gold Label Road Races', 'athletics', 30),
+  RANK('wa-world-athletics-u20-championships-world-athletics-series', 'World U20 Championships', 'athletics', 29),
   // ── Sport rows (Prompt 11b/11c): the sports-grid order, its own knob ─
   // The 11c shape (owner tune): soccer clearly first; then a cluster of
   // genuinely global sports — F1, tennis, cricket, basketball (the NBA

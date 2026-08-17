@@ -69,6 +69,21 @@ export const SPORTS: SportConfig[] = [
     enabled: true,
     browse: ['competition', 'team'],
     followTypes: ['team', 'competition'],
+    // Soccer's browse is the leagues DIRECTORY; statics exist only for
+    // competitions the directory doesn't carry. Part B added the first
+    // (owner ruling, 2026-08-17). Part C makes statics render alongside
+    // directory rows on the Competitions screen.
+    staticCompetitions: [
+      {
+        id: '4501',
+        name: 'Copa Libertadores',
+        country: 'South America',
+        key: 'tsdb-league-4501',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4501&season=2026&sport=soccer&durationHours=2',
+      },
+    ],
   },
   {
     key: 'cricket',
@@ -319,6 +334,47 @@ export const SPORTS: SportConfig[] = [
         followOnly: true,
         pollPath: 'pollAthletics',
       },
+      // Part B promotions (owner rulings, 2026-08-17). The source labels
+      // every continent's championships identically ("Area Senior
+      // Outdoor"), so this is ONE group — each event self-describes in
+      // its title ("European Athletics Championships"); search aliases
+      // carry the human names in (domain/searchAliases.ts).
+      {
+        id: 'continental',
+        name: 'Continental Championships',
+        country: 'World',
+        key: 'wa-area-senior-outdoor-championships',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      // The Platinum label IS the marathon majors: Chicago, New York,
+      // London, Berlin. Arguably the survey's biggest miss after the
+      // World Cup — mass-participation events with followings larger
+      // than most of this list.
+      {
+        id: 'marathon-majors',
+        name: 'Marathon Majors',
+        country: 'World',
+        key: 'wa-world-athletics-label-road-races-platinum',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'gold-roads',
+        name: 'Gold Label Road Races',
+        country: 'World',
+        key: 'wa-world-athletics-label-road-races-gold',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
+      {
+        id: 'u20',
+        name: 'World U20 Championships',
+        country: 'World',
+        key: 'wa-world-athletics-u20-championships-world-athletics-series',
+        followOnly: true,
+        pollPath: 'pollAthletics',
+      },
       {
         id: 'all',
         name: 'Everything on the calendar',
@@ -366,6 +422,19 @@ export const SPORTS: SportConfig[] = [
         followOnly: true,
         pollPath:
           'pollTsdbLeague?leagueId=4549&season=2027&sport=basketball&durationHours=2',
+      },
+      // Part B (owner ruling, 2026-08-17): basketball's biggest
+      // competition outside the NBA. 380 future fixtures on TSDB at
+      // seeding time.
+      {
+        id: '4546',
+        name: 'EuroLeague',
+        country: 'Europe',
+        key: 'tsdb-league-4546',
+        pollPath:
+          'pollTsdbLeague?leagueId=4546&season=2026-2027&sport=basketball&durationHours=2.5',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4546&season=2026-2027&sport=basketball&durationHours=2.5',
       },
     ],
   },

@@ -2957,3 +2957,18 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   and mayRecolour remain PROVIDER-ONLY surfaces where EventKit calendars
   still need the ownership proof. mayRecolour is not a dropped rail — its
   domain shrank to the one backend that still has the hazard.
+- 2026-08-17 (Part B rulings): athletics promotes Continental
+  Championships (the ICS labels every continent "Area Senior Outdoor" —
+  one group, events self-describe, aliases carry the human names in),
+  Marathon Majors (Platinum labels), Gold Label Road Races, World U20;
+  Silver/Bronze tiers, race walking, combined events, FISU and Youth
+  Olympics stay in the catch-all. EuroLeague + Copa Libertadores seeded
+  ENABLED (both yield today). Seven tournament-cycle rows seeded
+  DISABLED with flip-notes (WC-TSDB, AFCON, Copa América, Euros-TSDB,
+  Asian Cup, Gold Cup, Big Bash, Test/Ashes) — born_dead's lesson at
+  seeding time; each flip adds its browse static + search alias in the
+  same change. fd.org WC and EC rows disabled in seed (born-dead;
+  TSDB rows are the standby — dual-source ruling). College football:
+  available on TSDB, ruled out for launch. Ops edits queued for owner:
+  disable live fdorg-comp-WC/EC docs; season-bump tsdb-4482 FA Cup
+  →2026-2027, tsdb-4460 IPL →2027, tsdb-5103 T20WC →2028.

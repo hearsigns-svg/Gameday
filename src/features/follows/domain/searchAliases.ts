@@ -16,6 +16,21 @@ const RULES: ReadonlyArray<{ when: string; add: string }> = [
   { when: 'super bowl', add: 'nfl' },
   { when: 'french open', add: 'roland garros' },
   { when: 'grand prix', add: 'formula 1' },
+  // Athletics continental championships (Part B, 2026-08-17): the
+  // source labels every continent identically ("Area Senior Outdoor"),
+  // the browse group is "Continental Championships", and the names
+  // people actually type are these:
+  { when: 'european athletics', add: 'continental championships' },
+  { when: 'european championships', add: 'continental championships' },
+  { when: 'african athletics', add: 'continental championships' },
+  { when: 'asian athletics', add: 'continental championships' },
+  { when: 'area senior outdoor', add: 'continental championships' },
+  // The marathon majors ARE the Platinum label group.
+  { when: 'london marathon', add: 'marathon majors' },
+  { when: 'berlin marathon', add: 'marathon majors' },
+  { when: 'new york marathon', add: 'marathon majors' },
+  { when: 'chicago marathon', add: 'marathon majors' },
+  { when: 'boston marathon', add: 'marathon majors' },
 ];
 
 // The query, plus every alias its folded form triggers. Always returns

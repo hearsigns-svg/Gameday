@@ -31,3 +31,9 @@ test('ATTACK: an alias must not fire on unrelated queries', () => {
   expect(expandQuery('bowling')).toEqual(['bowling']);
   expect(expandQuery('open')).toEqual(['open']);
 });
+
+test('Part B aliases: the human names reach the source-vocabulary groups', () => {
+  expect(expandQuery('European Athletics Championships')).toContain('continental championships');
+  expect(expandQuery('area senior outdoor')).toContain('continental championships');
+  expect(expandQuery('London Marathon')).toContain('marathon majors');
+});

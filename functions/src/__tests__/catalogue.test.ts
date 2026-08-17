@@ -69,7 +69,14 @@ test('priorities are 0–100, and within-sport ties are only the documented peer
   // on which archery outranks fencing, and manufacturing 54 distinct
   // weights would dress a coin-toss as a judgement. They tie, and the
   // list falls back to source order (alphabetical, as seeded).
-  const ALLOWED_TIES = new Set(['tennis:66', 'olympics:40']);
+  const ALLOWED_TIES = new Set([
+    'tennis:66',
+    'olympics:40',
+    // Same competition on two sources (Part B, 2026-08-17): fd.org and
+    // TSDB World Cup / Euros rows deliberately share a priority.
+    'soccer:100',
+    'soccer:88',
+  ]);
   const seen = new Map<string, string>();
   for (const e of CATALOGUE_SEED) {
     if (e.priority === undefined) continue;
@@ -185,10 +192,18 @@ test('DRIFT GUARD: every browse-offered competition pollPath is catalogued', () 
 });
 
 test('the seed stays under the stop-gate and the sweep cap with room for devices', () => {
-  expect(CATALOGUE_SEED.length).toBeLessThan(150);
-  // 250 slots minus the POLLABLE catalogue leaves ≥190 for device
-  // paths — rankOnly rows never become sweep paths.
-  expect(250 - ROUTES.length).toBeGreaterThanOrEqual(190);
+  // The raw length includes rankOnly ordering rows and DISABLED
+  // tournament-cycle rows (Part B), neither of which the sweep polls —
+  // the slot math below is the real cap; this is a runaway guard.
+  expect(CATALOGUE_SEED.length).toBeLessThan(200);
+  const pollable = CATALOGUE_SEED.filter((e) => e.enabled && e.pollPath !== '');
+  expect(pollable.length).toBeLessThan(150);
+  // 250 slots minus what the sweep actually POLLS leaves ≥190 for
+  // device paths — rankOnly rows never become sweep paths, and
+  // DISABLED tournament-cycle rows (Part B) sit in the allowlist
+  // without consuming a slot until flipped.
+  const polled = ROUTES.filter((e) => e.enabled);
+  expect(250 - polled.length).toBeGreaterThanOrEqual(190);
 });
 
 test('tier 2 polls only on the daily sweep', () => {
