@@ -75,6 +75,7 @@ export type RootStackParamList = {
     title: string;
   };
   Preferences: undefined;
+  Region: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to
   Credits: undefined;
   ThemeGallery: undefined; // dev-only design QA screen

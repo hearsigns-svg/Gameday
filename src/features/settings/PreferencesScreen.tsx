@@ -90,6 +90,9 @@ export default function PreferencesScreen({
   useFocusEffect(
     useCallback(() => {
       setTarget(storedTarget());
+      // Returning from the Region screen: the value row must show what
+      // was just chosen.
+      setRegion(regionOverride());
     }, []),
   );
   const ownCalendar = target === null || target.kind === 'ours';
@@ -195,6 +198,91 @@ export default function PreferencesScreen({
           </View>
         </Pressable>
       )}
+      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
+        Calendar colour
+      </Text>
+      {/* A colour belongs to the CALENDAR, not to the events in it — so
+          this only ever applies to a calendar of ours. Offering swatches
+          over someone's own calendar would be a promise we refuse to
+          keep: we do not restyle a user's calendar. */}
+      {ownCalendar ? (
+        <>
+          <View style={styles.swatches}>
+            {CALENDAR_COLOURS.map((c) => (
+              <Pressable
+                key={c.hex}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: colour === c.hex }}
+                accessibilityLabel={`Calendar colour ${c.name}`}
+                onPress={() => void pickColour(c.hex, c.name)}
+                style={[
+                  styles.swatch,
+                  { backgroundColor: c.hex },
+                  colour === c.hex && {
+                    borderWidth: 3,
+                    borderColor: t.textPrimary,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          <Text
+            style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}
+          >
+            How KickOffCal events look inside your phone's calendar app.
+          </Text>
+        </>
+      ) : (
+        <Text
+          style={[type.caption, { color: t.textSecondary, marginTop: spacing.m }]}
+        >
+          Your fixtures take the colour of {target?.label ?? 'your calendar'},
+          which is yours to set in your calendar app. Switch to a KickOffCal
+          calendar above to colour them separately.
+        </Text>
+      )}
+
+      <Text
+        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      >
+        Events
+      </Text>
+      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
+        Event style
+      </Text>
+      <View style={styles.group}>
+        <OptionRow
+          label="Timed events (kick-off to full time)"
+          selected={prefs.eventStyle === 'timed'}
+          onPress={() => apply({ ...prefs, eventStyle: 'timed' })}
+        />
+        <OptionRow
+          label="All-day events"
+          selected={prefs.eventStyle === 'all-day'}
+          onPress={() => apply({ ...prefs, eventStyle: 'all-day' })}
+        />
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        Applies to every synced fixture on the next sync.
+      </Text>
+      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
+        Race weekends
+      </Text>
+      <View style={styles.group}>
+        <OptionRow
+          label="All sessions (practice, qualifying, race)"
+          selected={prefs.seriesSessions === 'all'}
+          onPress={() => apply({ ...prefs, seriesSessions: 'all' })}
+        />
+        <OptionRow
+          label="Race only"
+          selected={prefs.seriesSessions === 'race-only'}
+          onPress={() => apply({ ...prefs, seriesSessions: 'race-only' })}
+        />
+      </View>
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+        For series like Formula 1.
+      </Text>
 
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
@@ -239,6 +327,9 @@ export default function PreferencesScreen({
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
       >
+        App
+      </Text>
+      <Text style={[type.label, { color: t.textSecondary, marginTop: spacing.l }]}>
         Appearance
       </Text>
       <View style={styles.group}>
@@ -260,103 +351,43 @@ export default function PreferencesScreen({
           />
         ))}
       </View>
-
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Region"
+        onPress={() => navigation.navigate('Region')}
+        style={[styles.option, { borderColor: t.border, marginTop: spacing.l }]}
       >
-        Region
-      </Text>
-      <View style={styles.group}>
-        <OptionRow
-          label={`Follow my device (${regionLabel(detectedRegion())})`}
-          selected={region === null}
-          onPress={() => {
-            setRegionOverride(null);
-            setRegion(null);
-            void refreshPriorities();
-          }}
-        />
-        {REGIONS.map((r) => (
-          <OptionRow
-            key={r.key}
-            label={r.label}
-            selected={region === r.key}
-            onPress={() => {
-              setRegionOverride(r.key);
-              setRegion(r.key);
-              void refreshPriorities();
-            }}
-          />
-        ))}
-        <OptionRow
-          label="Default"
-          selected={region === 'default'}
-          onPress={() => {
-            setRegionOverride('default');
-            setRegion('default');
-            void refreshPriorities();
-          }}
-        />
-      </View>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Region changes the ORDER sports and competitions appear in, and what
-        a few of them are called. It never changes what you can follow — every
-        competition stays searchable and followable from anywhere. Detected
-        from your device's language settings; no location is used.
-      </Text>
+        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>Region</Text>
+        <Text style={[type.body, { color: t.textSecondary }]}>
+          {region === null
+            ? `Match my device (${regionLabel(detectedRegion())})`
+            : region === 'default'
+              ? 'Default'
+              : regionLabel(region)}
+        </Text>
+      </Pressable>
 
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Event style
-      </Text>
-      <View style={styles.group}>
-        <OptionRow
-          label="Timed events (kick-off to full time)"
-          selected={prefs.eventStyle === 'timed'}
-          onPress={() => apply({ ...prefs, eventStyle: 'timed' })}
-        />
-        <OptionRow
-          label="All-day events"
-          selected={prefs.eventStyle === 'all-day'}
-          onPress={() => apply({ ...prefs, eventStyle: 'all-day' })}
-        />
-      </View>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Applies to every synced fixture on the next sync.
-      </Text>
 
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Race weekends
-      </Text>
-      <View style={styles.group}>
-        <OptionRow
-          label="All sessions (practice, qualifying, race)"
-          selected={prefs.seriesSessions === 'all'}
-          onPress={() => apply({ ...prefs, seriesSessions: 'all' })}
-        />
-        <OptionRow
-          label="Race only"
-          selected={prefs.seriesSessions === 'race-only'}
-          onPress={() => apply({ ...prefs, seriesSessions: 'race-only' })}
-        />
-      </View>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        For series like Formula 1.
-      </Text>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       {/* Sync health, both halves of it: the DEVICE's last successful
           sync (syncStalenessHours) and the SOURCES' last confirmed
           activity upstream (dataStaleness). They are different facts —
           a perfectly syncing device against a dead source was showing
           green until Prompt 7. Unknown renders as unknown. */}
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Sync health
-      </Text>
+
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
         {(() => {
           const device = syncStalenessHours();
@@ -389,6 +420,24 @@ export default function PreferencesScreen({
         </Text>
       ) : null}
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Photo credits"
+        onPress={() => navigation.navigate('Credits')}
+        style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
+      >
+        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
+          Photo credits
+        </Text>
+      </Pressable>
+
+      <View
+        style={{
+          borderTopWidth: 1,
+          borderColor: t.border,
+          marginTop: spacing.xxl,
+        }}
+      />
       <Text
         style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
       >
@@ -415,63 +464,6 @@ export default function PreferencesScreen({
         has a record of. Switching back stops further removals — it does not
         bring back anything already deleted.
       </Text>
-
-      <Text
-        style={[type.heading, { color: t.textPrimary, marginTop: spacing.xl }]}
-      >
-        Calendar colour
-      </Text>
-      {/* A colour belongs to the CALENDAR, not to the events in it — so
-          this only ever applies to a calendar of ours. Offering swatches
-          over someone's own calendar would be a promise we refuse to
-          keep: we do not restyle a user's calendar. */}
-      {ownCalendar ? (
-        <>
-          <View style={styles.swatches}>
-            {CALENDAR_COLOURS.map((c) => (
-              <Pressable
-                key={c.hex}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: colour === c.hex }}
-                accessibilityLabel={`Calendar colour ${c.name}`}
-                onPress={() => void pickColour(c.hex, c.name)}
-                style={[
-                  styles.swatch,
-                  { backgroundColor: c.hex },
-                  colour === c.hex && {
-                    borderWidth: 3,
-                    borderColor: t.textPrimary,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-          <Text
-            style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}
-          >
-            How KickOffCal events look inside your phone's calendar app.
-          </Text>
-        </>
-      ) : (
-        <Text
-          style={[type.caption, { color: t.textSecondary, marginTop: spacing.m }]}
-        >
-          Your fixtures take the colour of {target?.label ?? 'your calendar'},
-          which is yours to set in your calendar app. Switch to a KickOffCal
-          calendar above to colour them separately.
-        </Text>
-      )}
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Photo credits"
-        onPress={() => navigation.navigate('Credits')}
-        style={[styles.option, { borderColor: t.border, marginTop: spacing.xl }]}
-      >
-        <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
-          Photo credits
-        </Text>
-      </Pressable>
 
       {__DEV__ ? (
         <Pressable

@@ -47,6 +47,7 @@ import SportPickerScreen from './src/features/follows/screens/SportPickerScreen'
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
 import TeamScreen from './src/features/follows/screens/TeamScreen';
 import PreferencesScreen from './src/features/settings/PreferencesScreen';
+import RegionScreen from './src/features/settings/RegionScreen';
 import CalendarTargetScreen from './src/features/settings/CalendarTargetScreen';
 import CreditsScreen from './src/features/settings/CreditsScreen';
 import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
@@ -255,6 +256,11 @@ export default function App() {
           name="Preferences"
           component={PreferencesScreen}
           options={{ title: 'Preferences' }}
+        />
+        <Stack.Screen
+          name="Region"
+          component={RegionScreen}
+          options={{ title: 'Region' }}
         />
         <Stack.Screen
           name="CalendarTarget"
