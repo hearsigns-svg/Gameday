@@ -1,6 +1,12 @@
 // The alert rules. Few, loud, and never paging on an honest off-season.
 
-import { evaluateAlerts, NO_SUCCESS_HOURS, YIELD_DIED_HOURS } from '../alerts';
+import {
+  BORN_DEAD_HOURS,
+  BORN_DEAD_MIN_RUNS,
+  evaluateAlerts,
+  NO_SUCCESS_HOURS,
+  YIELD_DIED_HOURS,
+} from '../alerts';
 import { CoverageRow } from '../coverage';
 
 const NOW = Date.parse('2026-08-10T12:00:00.000Z');
@@ -12,6 +18,7 @@ const row = (over: Partial<CoverageRow> = {}): CoverageRow => ({
   sport: 'boxing',
   storedFutureDated: 10,
   runsInWindow: 8,
+  firstRunAt: hoursAgo(200),
   lastRunAt: hoursAgo(2),
   lastSuccessAt: hoursAgo(2),
   lastNonZeroYieldAt: hoursAgo(2),
@@ -75,9 +82,12 @@ test('an honest off-season NEVER pages — reason no_future_events suppresses yi
   expect(alerts).toEqual([]);
 });
 
-test('a slice that has never yielded is not yield_died — it may be new', () => {
+test('a slice that has never yielded is not yield_died — and while genuinely NEW, nothing fires', () => {
+  // "May be new" now has to mean actually new: an OLD never-yielded
+  // slice is born_dead (the World Cup hole), so the quiet grace period
+  // exists only while the slice is younger than BORN_DEAD_HOURS.
   const alerts = evaluateAlerts(
-    [row({ lastNonZeroYieldAt: null })],
+    [row({ lastNonZeroYieldAt: null, firstRunAt: hoursAgo(24) })],
     DEMANDED,
     NOW,
   );
@@ -147,5 +157,69 @@ describe('roster staleness — from the marker doc, never the run window', () =>
         NOW,
       ),
     ).toEqual([]);
+  });
+});
+
+describe('born_dead — the hole the World Cup fell through', () => {
+  // The exact production shape of fdorg-comp-WC on 2026-08-17: a slice
+  // created two weeks after its tournament ended — every run succeeds,
+  // reason says no_future_events, and nothing has ever yielded.
+  const wcShape = () =>
+    row({
+      lastNonZeroYieldAt: null,
+      hoursSinceLastNonZeroYield: null,
+      runsInWindow: 14,
+      firstRunAt: hoursAgo(BORN_DEAD_HOURS + 24),
+      lastReason: 'no_future_events',
+    });
+
+  test('ATTACK: fires DESPITE the honest-empty reason — forever-empty is the pathology', () => {
+    const alerts = evaluateAlerts([wcShape()], DEMANDED, NOW);
+    expect(alerts).toEqual([expect.objectContaining({ condition: 'born_dead' })]);
+  });
+
+  test('a slice that ever yielded is exempt — wind-downs stay with yield_died rules', () => {
+    const woundDown = row({
+      lastNonZeroYieldAt: hoursAgo(YIELD_DIED_HOURS + 500),
+      lastReason: 'no_future_events', // honest season end
+      firstRunAt: hoursAgo(1000),
+      runsInWindow: 50,
+    });
+    expect(evaluateAlerts([woundDown], DEMANDED, NOW)).toEqual([]);
+  });
+
+  test('too young or too few runs stays quiet — enabling a path is not an incident', () => {
+    const young = row({
+      lastNonZeroYieldAt: null,
+      hoursSinceLastNonZeroYield: null,
+      firstRunAt: hoursAgo(24),
+      runsInWindow: 14,
+    });
+    const sparse = row({
+      lastNonZeroYieldAt: null,
+      hoursSinceLastNonZeroYield: null,
+      firstRunAt: hoursAgo(BORN_DEAD_HOURS + 24),
+      runsInWindow: BORN_DEAD_MIN_RUNS - 1,
+    });
+    expect(evaluateAlerts([young, sparse], DEMANDED, NOW)).toEqual([]);
+  });
+
+  test('a slice that cannot even succeed pages as no_success, once, not twice', () => {
+    const broken = row({
+      lastSuccessAt: null,
+      lastError: 'dead key',
+      lastNonZeroYieldAt: null,
+      hoursSinceLastNonZeroYield: null,
+      firstRunAt: hoursAgo(BORN_DEAD_HOURS + 24),
+      runsInWindow: 14,
+    });
+    const alerts = evaluateAlerts([broken], DEMANDED, NOW);
+    expect(alerts).toEqual([
+      expect.objectContaining({ condition: 'no_success_24h' }),
+    ]);
+  });
+
+  test('undemanded slices never page — appearance funnels stay exempt', () => {
+    expect(evaluateAlerts([wcShape()], new Set<string>(), NOW)).toEqual([]);
   });
 });

@@ -22,6 +22,10 @@ export interface CoverageRow {
   sport: string | null;
   storedFutureDated: number;
   runsInWindow: number;
+  // The slice's oldest run still in the window — how long it has been
+  // TRYING. born_dead reads this: a slice that has run for a week and
+  // never yielded is broken whatever its reason field says.
+  firstRunAt: string | null;
   lastRunAt: string | null;
   lastSuccessAt: string | null; // most recent run with error === null
   lastNonZeroYieldAt: string | null; // most recent run that yielded a future fixture
@@ -177,6 +181,7 @@ export function buildCoverageReport(
       sport: slice?.sport ?? latest?.sport ?? null,
       storedFutureDated: slice?.futureDated ?? 0,
       runsInWindow: mine.length,
+      firstRunAt: mine[0]?.startedAt ?? null,
       lastRunAt: latest?.startedAt ?? null,
       lastSuccessAt: lastSuccess?.startedAt ?? null,
       lastNonZeroYieldAt: lastYield?.startedAt ?? null,

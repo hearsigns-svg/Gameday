@@ -41,7 +41,11 @@ import { ATP_ROSTER_ENABLED } from './providers/wikidataAtp';
 //     route to its PARENT slice), so an appearance funnel dying alone
 //     — parents healthy, bouts gone — does not page. The funnel's
 //     zeroYield history stays visible in coverageReport.
-export type AlertCondition = 'no_success_24h' | 'yield_died' | 'roster_stale';
+export type AlertCondition =
+  | 'no_success_24h'
+  | 'yield_died'
+  | 'born_dead'
+  | 'roster_stale';
 
 export interface Alert {
   sliceKey: string; // `${source}|${competitionId}`
@@ -51,6 +55,22 @@ export interface Alert {
 
 export const NO_SUCCESS_HOURS = 24;
 export const YIELD_DIED_HOURS = 72;
+// born_dead — the hole the World Cup fell through (2026-08-17). A
+// demanded slice that runs, succeeds, and has NEVER yielded a future
+// fixture is broken, whatever its reason field says. yield_died could
+// not see it (it requires a slice to have yielded ONCE — a birth
+// exemption), and the honest-empty exemption made it worse: the six
+// born-dead slices all sat at 'no_future_events' — the off-season
+// reason — because a path enabled for a season that already ENDED
+// (fdorg-comp-WC was created 2026-08-02, two weeks after the final)
+// looks exactly like off-season, forever. So this condition fires
+// REGARDLESS of lastReason: no_future_events for a week straight from
+// birth is the pathology, not an excuse. The F40 note ("never page on
+// a season that simply ended") still governs yield_died — a slice
+// that YIELDED and then wound down is honest; one that never yielded
+// at all is not.
+export const BORN_DEAD_HOURS = 7 * 24;
+export const BORN_DEAD_MIN_RUNS = 5;
 // Rosters refresh WEEKLY (scheduledRoster, Tuesdays); eight days of
 // silence means a refresh was missed — the directory is going stale.
 export const ROSTER_STALE_HOURS = 8 * 24;
@@ -152,6 +172,21 @@ export function evaluateAlerts(
         sliceKey,
         condition: 'yield_died',
         detail: `runs succeed but nothing future-dated since ${row.lastNonZeroYieldAt}`,
+      });
+    }
+    const hoursTrying =
+      row.firstRunAt === null
+        ? 0
+        : (nowMs - Date.parse(row.firstRunAt)) / 3_600_000;
+    if (
+      !yieldedOnce &&
+      row.runsInWindow >= BORN_DEAD_MIN_RUNS &&
+      hoursTrying > BORN_DEAD_HOURS
+    ) {
+      alerts.push({
+        sliceKey,
+        condition: 'born_dead',
+        detail: `${row.runsInWindow} runs since ${row.firstRunAt}, never a future-dated fixture (last reason: ${row.lastReason ?? 'none'})`,
       });
     }
   }
