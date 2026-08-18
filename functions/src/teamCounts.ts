@@ -68,6 +68,20 @@ export async function teamCountsByDoc(
   return out;
 }
 
+// THE STATED EXCEPTION (owner ruling 2026-08-18): a count earns its
+// place when it says what's behind Teams — a league's clubs. Where the
+// directory is a NATION LIST ("ODI Internationals · 108 teams") the
+// number is true and useless, so these rows never emit one. The Teams
+// segment itself stays live; only the subtitle count is suppressed.
+// Keys are client static row keys; fd national competitions are the
+// codes. Pinned to real client rows by teamCounts.test.ts.
+export const NATION_LIST_ROW_KEYS: ReadonlySet<string> = new Set([
+  'tsdb-league-4801', // ODI Internationals
+  'tsdb-league-4979', // T20 Internationals
+  'tsdb-league-4714', // Six Nations — six nations, same rule
+]);
+const NATION_LIST_FD_CODES: ReadonlySet<string> = new Set(['WC', 'EC']);
+
 // Which teamDirectory doc holds a served soccer row's squad, if any.
 // fd rows carry their resolved season (the doc id is per-season); the
 // three TSDB-seeded leagues map through the shared table; follow-only
@@ -79,6 +93,7 @@ export function soccerRowDocId(row: {
   followOnly?: boolean;
 }): string | undefined {
   if (row.followOnly) return undefined;
+  if (NATION_LIST_FD_CODES.has(String(row.id))) return undefined;
   const tsdb = TSDB_TEAM_LEAGUES[String(row.id)];
   if (tsdb) return tsdb.cacheKey;
   return row.season !== undefined
@@ -101,7 +116,7 @@ export function staticCountRows(): Array<{ docId: string; rowKey: string }> {
       .map(([id, l]) => ({ docId: l.cacheKey, rowKey: `tsdb-league-${id}` })),
     { docId: NHL_TEAMS_DOC_ID, rowKey: 'nhl-league-1' },
     { docId: mlbTeamsDocId(new Date().getFullYear()), rowKey: 'mlb-league-1' },
-  ];
+  ].filter((r) => !NATION_LIST_ROW_KEYS.has(r.rowKey));
 }
 
 export async function staticTeamCounts(

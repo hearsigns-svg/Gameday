@@ -677,16 +677,22 @@ export function EventRow(props: {
           }
           onPress={props.onToggleExcluded}
           hitSlop={8}
-          style={styles.excludeButton}
+          style={[styles.excludeButton, styles.excludeWord]}
         >
+          {/* Same ruling as the pin control: "×" named nothing. The
+              wider minWidth pins the box to the longer word so
+              Remove ↔ Removed reflows nothing. */}
           <Text
             style={[
-              type.heading,
+              type.secondary,
+              styles.pinWord,
               { color: dimmed ? t.accent : t.textSecondary },
             ]}
             accessible={false}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.8}
           >
-            {dimmed ? '↩' : '×'}
+            {dimmed ? 'Removed' : 'Remove'}
           </Text>
         </Pressable>
       ) : null}
@@ -1561,6 +1567,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pinWord: { fontWeight: '600' },
+  excludeWord: { minWidth: 66 },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',

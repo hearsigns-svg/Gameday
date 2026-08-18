@@ -14,6 +14,7 @@
 
 import {
   __resetCountCacheForTests,
+  NATION_LIST_ROW_KEYS,
   soccerRowDocId,
   staticCountRows,
   teamCountsByDoc,
@@ -46,9 +47,19 @@ describe('staticCountRows ↔ client sportsConfig', () => {
     (s.staticCompetitions ?? []).filter((c) => !c.followOnly).map((c) => c.key),
   );
 
-  it('covers every drillable client static, and nothing else', () => {
+  it('covers every drillable client static except the nation lists', () => {
     const rowKeys = staticCountRows().map((r) => r.rowKey);
-    expect(rowKeys.sort()).toEqual([...clientDrillable].sort());
+    expect(rowKeys.sort()).toEqual(
+      clientDrillable.filter((k) => !NATION_LIST_ROW_KEYS.has(k)).sort(),
+    );
+  });
+
+  it('every nation-list exception is a REAL drillable row', () => {
+    // A typo'd key here would silently exclude nothing — the same
+    // failure mode the sport-key pins exist for.
+    for (const k of NATION_LIST_ROW_KEYS) {
+      expect(clientDrillable).toContain(k);
+    }
   });
 });
 
@@ -58,6 +69,9 @@ describe('soccerRowDocId', () => {
       fdTeamsDocId('PL', 2026),
     );
     expect(soccerRowDocId({ id: '4482', followOnly: true })).toBeUndefined();
+    // Nation lists never emit a count, even when a season resolves and
+    // the row is drillable (World Cup, Euros).
+    expect(soccerRowDocId({ id: 'WC', season: 2026 })).toBeUndefined();
     // TSDB-seeded leagues go through the shared table, per-season not
     // applicable (the doc id is season-less by design).
     expect(soccerRowDocId({ id: '4396' })).toBe('soccer-4396');

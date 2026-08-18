@@ -27,12 +27,12 @@ export type RootStackParamList = {
   // tennis browses ATP and WTA as separate sections, each with its own
   // way in, rather than one shared list with a split inside it.
   AthleteList: { sportKey: string; tour?: 'atp' | 'wta' };
+  // One league's clubs — the card's Teams segment (27C revised; the
+  // all-leagues variant was deleted with the design that needed it).
   TeamList: {
     sportKey: string;
-    // With a league → that league's clubs (the card's Teams segment).
-    // Without → the sport's whole team population, sectioned (27C).
-    leagueId?: number | string;
-    leagueName?: string;
+    leagueId: number | string;
+    leagueName: string;
     teamPollPath?: string;
   };
   Team: {

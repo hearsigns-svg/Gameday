@@ -756,8 +756,12 @@ function BoutRow(props: {
               color: on ? theme.gradient[1] : theme.onGradient,
             },
           ]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.4}
         >
-          {on ? '✓' : '+'}
+          {/* The word, not the glyph (27C follow-up): same ruling as
+              the fixture-row pin. */}
+          {on ? 'Added' : 'Add'}
         </Text>
       </Pressable>
     </View>
@@ -811,11 +815,14 @@ const styles = StyleSheet.create({
     gap: spacing.m,
     paddingHorizontal: spacing.l,
   },
+  // A pill, not the old 32pt circle — "Added" needs the width, and the
+  // minWidth pins both words to one box so the toggle reflows nothing.
   boutToggle: {
-    width: 32,
+    minWidth: 60,
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
+    paddingHorizontal: spacing.s,
     alignItems: 'center',
     justifyContent: 'center',
   },
