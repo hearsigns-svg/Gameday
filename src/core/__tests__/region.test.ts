@@ -7,6 +7,8 @@ import {
   REGIONS,
 } from '../region';
 import {
+  FIXTURES_WORDED_SPORTS,
+  fixturesWordFor,
   REGIONALLY_NAMED_SPORTS,
   sportLabelFor,
   sportMatches,
@@ -110,6 +112,27 @@ describe('terminology is a display layer only', () => {
     // fine and the override would be dead.
     const keys = new Set(SPORTS.map((s) => s.key));
     for (const k of REGIONALLY_NAMED_SPORTS) expect(keys.has(k)).toBe(true);
+  });
+});
+
+// The competition card's first-segment word (27C) — same table
+// discipline as the regional terms above.
+describe('fixturesWordFor', () => {
+  test('every worded sport is a REAL sport key', () => {
+    // Same failure mode as the regional pin: a typo'd key would
+    // silently say "Fixtures" forever.
+    const keys = new Set(SPORTS.map((s) => s.key));
+    for (const k of FIXTURES_WORDED_SPORTS) expect(keys.has(k)).toBe(true);
+  });
+
+  test('the owner-ruled words, and the mockup default', () => {
+    expect(fixturesWordFor('boxing')).toBe('Fights');
+    expect(fixturesWordFor('cricket')).toBe('Matches');
+    expect(fixturesWordFor('tennis')).toBe('Tournaments');
+    expect(fixturesWordFor('f1')).toBe('Events');
+    // The mockup pins NBA (and every unlisted sport) at "Fixtures".
+    expect(fixturesWordFor('basketball')).toBe('Fixtures');
+    expect(fixturesWordFor('soccer')).toBe('Fixtures');
   });
 });
 

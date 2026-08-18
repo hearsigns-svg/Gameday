@@ -108,3 +108,28 @@ export function sportMatches(
 // Every sport whose name varies at all — for the report, and for a test
 // that keeps this list and the table honest with each other.
 export const REGIONALLY_NAMED_SPORTS = Object.keys(TERMS).sort();
+
+// What this sport's SCHEDULE is called — the competition card's first
+// footer segment (Prompt 27C). Same module as the regional terms
+// because it is the same job: display vocabulary keyed by sport,
+// identifiers untouched. Sparse: unlisted sports say "Fixtures", which
+// is the owner's mockup default (the NBA card reads Fixtures).
+const FIXTURES_WORDS: Readonly<Record<string, string>> = {
+  boxing: 'Fights',
+  ufc: 'Fights',
+  cricket: 'Matches',
+  tennis: 'Tournaments',
+  golf: 'Tournaments',
+  f1: 'Events',
+  motorsport: 'Events',
+  athletics: 'Events',
+  olympics: 'Events',
+};
+
+export function fixturesWordFor(sportKey: string): string {
+  return FIXTURES_WORDS[sportKey] ?? 'Fixtures';
+}
+
+// Same honesty pin as REGIONALLY_NAMED_SPORTS: a typo'd key here would
+// silently say "Fixtures" forever.
+export const FIXTURES_WORDED_SPORTS = Object.keys(FIXTURES_WORDS).sort();

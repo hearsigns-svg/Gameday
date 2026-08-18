@@ -32,6 +32,18 @@ export interface DirectoryTeam {
 // built from these documents could never improve.
 export const DIRECTORY_TTL_MS = 24 * 3_600_000;
 
+// teamDirectory doc ids, SINGLE-SOURCED at the writer. search.ts and
+// teamCounts.ts join on these docs; when the formats lived as separate
+// literals in each reader, renaming a writer key would have silently
+// orphaned every reader with nothing failing — the no-failure failure
+// class rule 13 warns about. The TSDB family's ids are already
+// single-sourced as TSDB_TEAM_LEAGUES[..].cacheKey.
+export const fdTeamsDocId = (code: string, season: number): string =>
+  `soccer-fd-${code}-${season}`;
+export const mlbTeamsDocId = (season: number): string =>
+  `baseball-mlb-${season}`;
+export const NHL_TEAMS_DOC_ID = 'ice-hockey-nhl';
+
 // SCHEMA EPOCH — a cache entry written before the shape changed is
 // STALE regardless of its age (Prompt 13). Crests came back in the
 // provider layer, but the 24h directory cache went on serving documents
@@ -193,7 +205,7 @@ export async function listFdSoccerTeams(
 ): Promise<DirectoryTeam[]> {
   // Cache key carries the season, so a season roll re-fetches rather than
   // serving last year's squad forever.
-  return cachedTeams(`soccer-fd-${code}-${season}`, async () =>
+  return cachedTeams(fdTeamsDocId(code, season), async () =>
     (await fetchFdCompetitionTeams(apiKey, code, season)).map((t) => ({
       id: t.id,
       name: t.name,
@@ -272,7 +284,7 @@ export async function listMlbTeams(
   season: number,
   tsdbKey?: string,
 ): Promise<DirectoryTeam[]> {
-  return cachedTeams(`baseball-mlb-${season}`, async () => {
+  return cachedTeams(mlbTeamsDocId(season), async () => {
     const badges = await tsdbBadgesByName(tsdbKey, 'MLB');
     return (await fetchMlbTeams(season)).map((t) => {
       const crestUrl = badges.get(normaliseName(t.name));
@@ -287,7 +299,7 @@ export async function listMlbTeams(
 }
 
 export async function listNhlTeams(tsdbKey?: string): Promise<DirectoryTeam[]> {
-  return cachedTeams('ice-hockey-nhl', async () => {
+  return cachedTeams(NHL_TEAMS_DOC_ID, async () => {
     const badges = await tsdbBadgesByName(tsdbKey, 'NHL');
     return (await fetchNhlTeams()).map((t) => {
       const crestUrl = badges.get(normaliseName(t.name));

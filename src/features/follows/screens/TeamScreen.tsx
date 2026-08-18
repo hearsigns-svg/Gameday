@@ -450,6 +450,14 @@ export default function TeamScreen({ navigation, route }: Props) {
               name={name}
               glyph={sport?.glyph ?? '🏟️'}
               theme={theme}
+              // On a competition's own page every row shares the page's
+              // competition — the header already names it, so the caption
+              // keeps just the date (27C). A team or athlete page spans
+              // competitions, where the name is the only thing
+              // distinguishing rows.
+              competitionInCaption={
+                followType !== 'competition' && followType !== 'series'
+              }
               {...(storedFollowCrest ? { crestUrl: storedFollowCrest } : {})}
               {...(following
                 ? {
@@ -464,7 +472,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               <Text
                 style={[type.caption, styles.footer, { color: t.textSecondary }]}
               >
-                Tap + to add a single match, or Follow for all of them —
+                Tap Add for a single match, or Follow for all of them —
                 you can remove individual matches afterwards.
               </Text>
             ) : null
@@ -483,6 +491,7 @@ function TeamFixtureRow(props: {
   name: string;
   glyph: string;
   theme: ReturnType<typeof teamTheme>;
+  competitionInCaption: boolean;
   crestUrl?: string;
   excluded?: boolean;
   onToggleExcluded?: () => void;
@@ -492,12 +501,15 @@ function TeamFixtureRow(props: {
   const f = props.fixture;
   const ref = useRef<View | null>(null);
   const expansion = useCardExpansion();
+  const when = whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision));
   return (
     <EventRow
       innerRef={ref}
       hidden={expansion.liftedKey === f.id}
       title={f.title}
-      caption={`${whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision))} · ${f.competition}`}
+      caption={
+        props.competitionInCaption ? `${when} · ${f.competition}` : when
+      }
       timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
       tbc={isDateOnly(f.status, f.timePrecision)}
       glyph={props.glyph}

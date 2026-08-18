@@ -6,6 +6,7 @@
 // deliver.
 
 import { Firestore } from 'firebase-admin/firestore';
+import { fdTeamsDocId, mlbTeamsDocId, NHL_TEAMS_DOC_ID } from './directory';
 import { normaliseName } from './identity';
 import { TSDB_TEAM_LEAGUES as TSDB_LEAGUES } from './tsdbTeamLeagues';
 import { searchTsdbTeams } from './providers/tsdb';
@@ -69,12 +70,12 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
   if (dirCache && Date.now() - dirCache.at < DIR_CACHE_MS) return dirCache.docs;
   const specs: Array<{ id: string; sportKey: string; league: string; tsdbPollPath?: string }> = [
     ...FD_ORDER.map((code) => ({
-      id: `soccer-fd-${code}-${FD_SEASON}`,
+      id: fdTeamsDocId(code, FD_SEASON),
       sportKey: 'soccer',
       league: FD_LABELS[code] ?? 'Soccer',
     })),
-    { id: `baseball-mlb-${FD_SEASON}`, sportKey: 'baseball', league: 'MLB' },
-    { id: 'ice-hockey-nhl', sportKey: 'ice-hockey', league: 'NHL' },
+    { id: mlbTeamsDocId(FD_SEASON), sportKey: 'baseball', league: 'MLB' },
+    { id: NHL_TEAMS_DOC_ID, sportKey: 'ice-hockey', league: 'NHL' },
     ...Object.values(TSDB_LEAGUES).map((l) => ({
       id: l.cacheKey,
       sportKey: l.sportKey,

@@ -68,6 +68,11 @@ const SHEET_VENDOR = 'tennisapi1';
 import { leaseDecision } from './sourceLease';
 import { stageFrom } from './stage';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
+import {
+  soccerRowDocId,
+  staticTeamCounts,
+  teamCountsByDoc,
+} from './teamCounts';
 import { bestSeason, seasonsToTry } from './season';
 import { fetchCardParticipants } from './providers/cardParticipants';
 import { diffFixtures } from './diff';
@@ -757,6 +762,14 @@ export const listLeagues = onRequest(async (_req, res) => {
     // lookup failure must never cost the league list itself.
     const art = await soccerLeagueBadges().catch(() => EMPTY_ART);
     const off = await loadImageryOff();
+    // Squad sizes for the card subtitles (27C) — decorative, so the
+    // helper degrades to "no count" rather than failing the list.
+    const counts = await teamCountsByDoc(
+      db,
+      leagues
+        .map(soccerRowDocId)
+        .filter((id): id is string => id !== undefined),
+    );
     res.json({
       leagues: leagues.map((l) => {
         const badge = leagueBadgeFor(
@@ -764,9 +777,14 @@ export const listLeagues = onRequest(async (_req, res) => {
           { id: String(l.id), name: l.name, country: l.country },
           normaliseName,
         );
-        const withBadge: typeof l & { crestUrl?: string } = badge
-          ? { ...l, crestUrl: badge }
-          : l;
+        const docId = soccerRowDocId(l);
+        const teamCount = docId !== undefined ? counts.get(docId) : undefined;
+        const withBadge: typeof l & { crestUrl?: string; teamCount?: number } =
+          {
+            ...l,
+            ...(badge ? { crestUrl: badge } : {}),
+            ...(teamCount !== undefined ? { teamCount } : {}),
+          };
         return withImageryPolicy(withBadge, l.key, off);
       }),
     });
@@ -1057,6 +1075,13 @@ export const listPriorities = onRequest(async (req, res) => {
       sportWeights: sportWeightsOf2(regionalMap, sportWeights),
       dormant,
       competitionArt: competitionArtOut,
+      // Squad sizes for the STATIC competition rows' card subtitles
+      // (27C), keyed by row key — those rows never touch listLeagues,
+      // and this is already the browse-metadata payload (see
+      // competitionArt above). Decorative: failure degrades to {}.
+      teamCounts: await staticTeamCounts(db).catch(
+        () => ({}) as Record<string, number>,
+      ),
       // Echoed so the client can prove which overlay it got rather
       // than assume: an unrecognised region silently serving defaults
       // is exactly the shape that hides a typo for weeks.

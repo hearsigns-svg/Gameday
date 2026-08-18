@@ -29,8 +29,10 @@ export type RootStackParamList = {
   AthleteList: { sportKey: string; tour?: 'atp' | 'wta' };
   TeamList: {
     sportKey: string;
-    leagueId: number | string;
-    leagueName: string;
+    // With a league → that league's clubs (the card's Teams segment).
+    // Without → the sport's whole team population, sectioned (27C).
+    leagueId?: number | string;
+    leagueName?: string;
     teamPollPath?: string;
   };
   Team: {

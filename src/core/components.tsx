@@ -649,14 +649,21 @@ export function EventRow(props: {
           hitSlop={8}
           style={styles.excludeButton}
         >
+          {/* The word, not the glyph (27C): "+" beside a row names
+              nothing — the same ruling FollowButton already carries.
+              Add and Added both fit inside the control's existing
+              44pt minimum, so the toggle reflows nothing. */}
           <Text
             style={[
-              type.heading,
+              type.secondary,
+              styles.pinWord,
               { color: props.pinned ? t.accent : t.primary },
             ]}
             accessible={false}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.8}
           >
-            {props.pinned ? '✓' : '+'}
+            {props.pinned ? 'Added' : 'Add'}
           </Text>
         </Pressable>
       ) : null}
@@ -1553,6 +1560,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pinWord: { fontWeight: '600' },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -2990,3 +2990,13 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   read for the directory is reference, not training). All three
   proceed; ops edits applied same day (fdorg WC/EC disabled live,
   4482→2026-2027, 4460→2027, 5103→2028).
+- 2026-08-18 (27C competition card): every competition on browse is ONE
+  card — informational title area, three equal labelled footer segments
+  [per-sport fixtures word | Teams | Follow]. Follow is the only filled
+  segment (followed = border-grey fill, never an outline); a missing
+  capability greys its segment rather than reshaping the card. Squad
+  counts ride the subtitle from the teamDirectory caches (listLeagues
+  per-row, listPriorities teamCounts map); doc-id formats single-sourced
+  at directory.ts builders. Fixture rows: the "+" pin control became
+  Add/Added, and competition/series pages drop the redundant competition
+  name from row captions (date stays).

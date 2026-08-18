@@ -245,7 +245,9 @@ export default function App() {
         <Stack.Screen
           name="TeamList"
           component={TeamListScreen}
-          options={({ route }) => ({ title: route.params.leagueName })}
+          // No league (the dormant all-leagues mode) must not title the
+          // header with the raw route name "TeamList".
+          options={({ route }) => ({ title: route.params.leagueName ?? 'Teams' })}
         />
         <Stack.Screen
           name="Team"

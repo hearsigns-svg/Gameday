@@ -21,6 +21,11 @@ export interface DirectoryLeague {
   // May contain the literal {teamId}, substituted when a team inside this
   // competition is followed.
   teamPollPath?: string;
+  // Squad size for the card subtitle ("England · 20 teams") — the cached
+  // directory's size, server-joined (27C). Optional in both directions:
+  // an old server never sends it, and a league whose directory has never
+  // been browsed has none to send.
+  teamCount?: number;
 }
 
 export interface DirectoryTeam {

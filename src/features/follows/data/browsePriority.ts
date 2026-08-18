@@ -17,7 +17,10 @@ export { byPriority, byPriorityLive } from '../domain/browseOrder';
 // read the previous region's ordering out of the cache, and a user
 // toggling the override should see the change immediately rather than
 // after the hourly refresh window.
-const CACHE_KEY_BASE = 'browsePriority.v2';
+// v3 (27C): teamCounts joined the payload — the bump discards the old
+// cache so the counts appear on first launch after update rather than
+// after the hourly refresh window.
+const CACHE_KEY_BASE = 'browsePriority.v3';
 const cacheKeyFor = (region: string) => `${CACHE_KEY_BASE}.${region}`;
 
 // The doc changes when ops tune the catalogue — rarely. Hourly matches
@@ -36,6 +39,11 @@ export interface BrowsePriorities {
   // absent for anything the imagery policy suppresses — both fall back
   // to the generated treatment, which is why an empty map is safe.
   competitionArt: Record<string, string>;
+  // Row KEY → squad size for the static competitions' card subtitles
+  // (27C). Keyed by key, not id — the NHL and MLB statics both carry
+  // id 1. Absent on an old server; a missing entry means the subtitle
+  // simply omits the count.
+  teamCounts: Record<string, number>;
 }
 
 interface PriorityCache extends BrowsePriorities {
@@ -49,6 +57,7 @@ export function cachedPriorities(): BrowsePriorities {
     sportWeights: c?.sportWeights ?? {},
     dormant: c?.dormant ?? [],
     competitionArt: c?.competitionArt ?? {},
+    teamCounts: c?.teamCounts ?? {},
   };
 }
 
@@ -84,6 +93,10 @@ export async function refreshPriorities(): Promise<void> {
       competitionArt:
         typeof body.competitionArt === 'object' && body.competitionArt !== null
           ? body.competitionArt
+          : {},
+      teamCounts:
+        typeof body.teamCounts === 'object' && body.teamCounts !== null
+          ? body.teamCounts
           : {},
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);

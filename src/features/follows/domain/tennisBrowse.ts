@@ -87,6 +87,20 @@ export const SECTION_NOTES = {
 const toursOf = (t: TournamentLike): ('atp' | 'wta')[] =>
   t.tours ?? t.coverage ?? [];
 
+// A tournament's dates as its card subtitle ("29 Jun – 12 Jul").
+// endUtc is EXCLUSIVE (the day after the final), hence the day
+// subtracted before formatting; UTC because tournament bounds are
+// calendar dates, not instants in the viewer's zone.
+export function tournamentDateRange(startUtc: string, endUtc: string): string {
+  const fmt = (ms: number) =>
+    new Date(ms).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'UTC',
+    });
+  return `${fmt(Date.parse(startUtc))} – ${fmt(Date.parse(endUtc) - 86_400_000)}`;
+}
+
 export function isSlam(key: string): boolean {
   return SLAM_KEYS.includes(key);
 }

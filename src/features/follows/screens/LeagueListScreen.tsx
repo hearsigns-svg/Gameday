@@ -1,9 +1,21 @@
-// Competition browse level: follow the whole competition, or drill into
-// its teams. League is navigation, not a filter (docs/PRODUCT.md).
+// Competition browse level (27C): every competition is ONE CARD —
+// title area is information, the three footer segments are the actions
+// ([Fixtures-word] [Teams] [Follow]). No per-row "Browse teams" bars,
+// no side buttons; a competition without teams greys its Teams segment
+// rather than losing it, so the same position always means the same
+// thing down the list. One search field at the top covers this sport's
+// competitions and teams.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   CoverageNote,
   FollowButton,
@@ -11,26 +23,36 @@ import {
   SportCard,
   TileRow,
 } from '../../../core/components';
-import { BrowseRow, SLAM_KEYS, tennisBrowseRows } from '../domain/tennisBrowse';
+import { BrowseRow, SLAM_KEYS, tennisBrowseRows, tournamentDateRange } from '../domain/tennisBrowse';
+import { anyFoldedIncludes } from '../../../core/nameFold';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
+import { activeRegion } from '../../../core/regionStore';
 import { teamTheme } from '../../../core/teamTheme';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
-import { spacing, type, useTheme } from '../../../core/tokens';
+import { radius, spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync } from '../../calendar-sync/syncEngine';
+import { CompetitionCard } from '../CompetitionCard';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   fetchLeagues,
   fetchTournaments,
+  searchEntities,
+  SearchTeamHit,
   TournamentRow,
 } from '../data/directoryRepo';
 import { byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
+import { colourFromKitText } from '../domain/entityColour';
+import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
+import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
+
+const DEBOUNCE_MS = 350;
 
 // What the people in this sport are CALLED. "Athletes" is right for
 // athletics and wrong everywhere else — a boxing fan is looking for
@@ -50,6 +72,15 @@ function athleteRowTitle(sportKey: string): string {
   }
 }
 
+// "England · 20 teams" — the subtitle says what's behind Teams before
+// it's tapped. No count known → the country stands alone (rule 10:
+// omit, never explain).
+function subtitleOf(item: DirectoryLeague): string {
+  return item.teamCount !== undefined
+    ? `${item.country} · ${item.teamCount} ${item.teamCount === 1 ? 'team' : 'teams'}`
+    : item.country;
+}
+
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -58,14 +89,20 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [queryText, setQueryText] = useState('');
+  const [teamHits, setTeamHits] = useState<SearchTeamHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [, forceRender] = useState(0);
+  const requestSeq = useRef(0);
+  const hasTeamSearch = sport?.browse.includes('team') === true;
 
-  // Toast Undo (and any other sync) must refresh Follow buttons here too.
+  // Toast Undo (and any other sync) must refresh Follow segments here too.
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
-    // Series sports (F1, boxing) render their one followable as a normal
-    // competition row — following is ALWAYS a visible button on a row,
+    // Series sports (F1) render their one followable as a normal
+    // competition card — following is ALWAYS a visible control on a row,
     // never a hidden tap side-effect on the sport itself.
     if (sport?.seriesFollowable && !sport.staticCompetitions) {
       const series = sport.seriesFollowable;
@@ -93,13 +130,17 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         pr.priorities,
         new Set(pr.dormant),
       ).map((c) => {
-          // Competition logo by TSDB league id (Prompt 13 follow-up).
-          // These rows are CONFIG, never served by listLeagues, which
-          // is why they alone still rendered a monogram while their
-          // soccer neighbours had logos. The id IS the TSDB id, so the
-          // join needs no name matching.
+        // Competition logo by TSDB league id (Prompt 13 follow-up);
+        // squad size by row KEY (27C) — both server maps riding
+        // listPriorities, joined onto CONFIG rows that no directory
+        // route ever serves.
         const art = pr.competitionArt[String(c.id)];
-        return art ? { ...c, crestUrl: art } : c;
+        const count = pr.teamCounts[c.key];
+        return {
+          ...c,
+          ...(art ? { crestUrl: art } : {}),
+          ...(count !== undefined ? { teamCount: count } : {}),
+        };
       });
       setLeagues(rows);
       // These rows are CONFIG rather than a served list, so they were
@@ -142,6 +183,43 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       else setError(messageOf(r.error));
     })();
   }, [sport]);
+
+  // The search field's TEAM half (27C): the same federated search the
+  // Search screen runs, filtered to THIS sport. Competitions filter
+  // locally below; a sport with no team browse never makes the call.
+  useEffect(() => {
+    const q = queryText.trim();
+    if (q.length < 2 || !hasTeamSearch) {
+      requestSeq.current++; // invalidate any in-flight search
+      setTeamHits([]);
+      setSearching(false);
+      setSearchError(null);
+      return;
+    }
+    setSearching(true);
+    const seq = ++requestSeq.current;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const r = await searchEntities(q);
+        if (seq !== requestSeq.current) return; // stale response
+        setSearching(false);
+        if (r.ok) {
+          const hits = r.value.teams.filter(
+            (h) => h.sportKey === route.params.sportKey,
+          );
+          setTeamHits(hits);
+          hydrateFollowArt(hits);
+          setSearchError(null);
+        } else {
+          // A failed team search must not read as "no teams" — the
+          // competitions half keeps working, the failure says so.
+          setTeamHits([]);
+          setSearchError(messageOf(r.error));
+        }
+      })();
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [queryText, hasTeamSearch, route.params.sportKey]);
 
   // EVERY HOOK IN THIS COMPONENT LIVES ABOVE THE LOADING EARLY-RETURN.
   // `if (!leagues) return <spinner/>` sits between here and the render
@@ -195,7 +273,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       sportKey: route.params.sportKey,
       type: isSeries ? ('series' as const) : ('competition' as const),
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
-      // The row one line below already renders this logo; not putting it
+      // The card one line below already renders this logo; not putting it
       // on the follow is why a followed competition lost it everywhere
       // else (Prompt 16 C).
       ...(league.crestUrl ? { crestUrl: league.crestUrl } : {}),
@@ -215,6 +293,53 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     forceRender((n) => n + 1);
   }, [route.params.sportKey, navigation, sport]);
 
+  // A team hit's follow carries exactly what the Search screen's would —
+  // same source, same shape (SearchScreen::teamRows).
+  const toggleTeamHit = useCallback(
+    async (hit: SearchTeamHit) => {
+      const brandColour = colourFromKitText(hit.colours);
+      const item = {
+        key: hit.key,
+        label: hit.name,
+        sportKey: hit.sportKey,
+        type: 'team' as const,
+        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
+        ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
+        ...(brandColour ? { brandColour } : {}),
+      };
+      setBusyKey(hit.key);
+      const wasFollow = !isFollowed(hit.key);
+      const r = wasFollow ? await follow(item) : await unfollow(item);
+      if (!r.ok && r.error.kind !== 'sync-in-progress') {
+        setError(messageOf(r.error));
+      } else {
+        setError(null);
+        followFeedback(r, item, wasFollow, () =>
+          navigation.navigate('CalendarPriming'),
+        );
+      }
+      setBusyKey((k) => (k === hit.key ? null : k));
+      forceRender((n) => n + 1);
+    },
+    [navigation],
+  );
+
+  const q = queryText.trim();
+  // The query, plus every alias it triggers (searchAliases) — "epl"
+  // style typing reaches the same rows here as on the Search screen.
+  const needles = useMemo(
+    () => (q.length >= 2 ? expandQuery(q) : []),
+    [q],
+  );
+
+  const visibleLeagues = useMemo(() => {
+    if (!leagues) return null;
+    if (needles.length === 0) return leagues;
+    return leagues.filter((l) =>
+      needles.some((n) => anyFoldedIncludes([l.name, l.country], n)),
+    );
+  }, [leagues, needles]);
+
   if (error && !leagues) {
     return (
       <View style={[styles.center, { backgroundColor: t.bg }]}>
@@ -222,7 +347,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       </View>
     );
   }
-  if (!leagues) {
+  if (!leagues || !visibleLeagues) {
     return (
       <View style={[styles.center, { backgroundColor: t.bg }]}>
         <ActivityIndicator color={t.primary} />
@@ -230,22 +355,227 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     );
   }
 
-  // TENNIS IS THREE THINGS (Prompt 19): ATP, WTA, and the majors, which
-  // belong to neither tour. It used to be one Players row and one
-  // undifferentiated block of every tournament, with a single coverage
-  // note trying to describe two tours that no longer match.
-  // The four majors' keys, for the row-level Follow all. Derived from the
-  // served tournaments so a slam we do not hold is never claimed.
-  const slamKeys = tournaments
-    .filter((x) => SLAM_KEYS.includes(x.key))
-    .map((x) => x.key);
+  // ONE CARD PER COMPETITION (27C). Everything the row family used to
+  // spread across a tile press, a trailing Follow and an under-row bar
+  // lives in the card's three labelled segments; a missing capability
+  // greys its segment instead of changing the card's shape.
+  const leagueCard = (item: DirectoryLeague) => (
+    <CompetitionCard
+      name={item.name}
+      subtitle={subtitleOf(item)}
+      theme={teamTheme(sport?.accent ?? null, mode)}
+      monogram={monogramOf(item.name)}
+      {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
+      glyph={sport?.glyph ?? '🏟️'}
+      fixturesWord={fixturesWordFor(route.params.sportKey)}
+      onFixtures={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
+      {...(!item.followOnly
+        ? {
+            onTeams: () =>
+              navigation.navigate('TeamList', {
+                sportKey: route.params.sportKey,
+                leagueId: item.id,
+                leagueName: item.name,
+                ...(item.teamPollPath ? { teamPollPath: item.teamPollPath } : {}),
+              }),
+          }
+        : {})}
+      {...(item.followable !== false
+        ? {
+            following: isFollowed(item.key),
+            onFollow: () => void toggle(item),
+          }
+        : {})}
+      busy={busyKey === item.key}
+    />
+  );
 
+  // A tennis tournament as a card: its contents are MATCHES (the tour's
+  // are tournaments), it has no teams, and its subtitle is its dates.
+  const tournamentCard = (row: TournamentRow) => (
+    <CompetitionCard
+      name={row.name}
+      subtitle={tournamentDateRange(row.startUtc, row.endUtc)}
+      theme={teamTheme(sport?.accent ?? null, mode)}
+      monogram={monogramOf(row.name)}
+      glyph={sport?.glyph ?? '🎾'}
+      fixturesWord="Matches"
+      onFixtures={() =>
+        navigation.navigate('Team', {
+          teamKey: row.key,
+          name: row.name,
+          sportKey: route.params.sportKey,
+          followType: 'competition',
+        })
+      }
+      following={isFollowed(row.key)}
+      onFollow={() =>
+        void toggle({ id: row.key, name: row.name, country: '', key: row.key, followOnly: true })
+      }
+      busy={busyKey === row.key}
+    />
+  );
+
+  const teamHitRow = (hit: SearchTeamHit) => (
+    <TileRow
+      key={hit.key}
+      right={
+        <FollowButton
+          following={isFollowed(hit.key)}
+          subject={hit.name}
+          busy={busyKey === hit.key}
+          onPress={() => void toggleTeamHit(hit)}
+        />
+      }
+    >
+      <SportCard
+        fullWidth
+        label={hit.name}
+        caption={hit.league}
+        glyph={sport?.glyph ?? '🏟️'}
+        theme={teamTheme(
+          colourFromKitText(hit.colours) ?? sport?.accent ?? null,
+          mode,
+        )}
+        monogram={monogramOf(hit.name)}
+        {...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {})}
+        accessibilityLabel={`${hit.name}, view fixtures`}
+        onPress={() =>
+          navigation.navigate('Team', {
+            teamKey: hit.key,
+            name: hit.name,
+            sportKey: hit.sportKey,
+            ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
+            ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
+            ...(hit.colours ? { colours: hit.colours } : {}),
+          })
+        }
+      />
+    </TileRow>
+  );
+
+  const searchField = (
+    <TextInput
+      accessibilityLabel={
+        hasTeamSearch
+          ? 'Search competitions and teams'
+          : 'Search competitions'
+      }
+      placeholder={
+        hasTeamSearch ? 'Search competitions and teams' : 'Search competitions'
+      }
+      placeholderTextColor={t.textSecondary}
+      value={queryText}
+      onChangeText={setQueryText}
+      autoCorrect={false}
+      style={[
+        styles.search,
+        {
+          backgroundColor: t.surface,
+          color: t.textPrimary,
+          borderColor: t.border,
+        },
+      ]}
+    />
+  );
+
+  // The sport's own name above its cards — the mockup's section header,
+  // in the user's regional vocabulary (a UK screen says FOOTBALL). The
+  // nav title is the level ("Competitions"); this is the group.
+  const sportHeader = sport ? (
+    <Text
+      accessibilityRole="header"
+      style={[
+        type.caption,
+        styles.sportHeading,
+        { color: t.textSecondary },
+      ]}
+    >
+      {sportLabelFor(sport.key, sport.label, activeRegion()).toUpperCase()}
+    </Text>
+  ) : null;
+
+  const banners = (
+    <>
+      {error ? (
+        <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
+          {error}
+        </Text>
+      ) : null}
+      {searchError ? (
+        <Text style={[type.secondary, { color: t.danger, paddingHorizontal: spacing.l }]}>
+          {searchError}
+        </Text>
+      ) : null}
+    </>
+  );
+
+  // TENNIS IS THREE THINGS (Prompt 19): ATP, WTA, and the majors, which
+  // belong to neither tour. Searching flattens that to the things a
+  // query can actually name — tour cards and tournament cards.
   const tennisRows: BrowseRow[] | null =
     route.params.sportKey === 'tennis' && leagues
       ? tennisBrowseRows(leagues, tournaments)
       : null;
 
-  const renderBrowseRow = (r: BrowseRow) => {
+  if (tennisRows) {
+    if (needles.length > 0) {
+      // Tour rows render as the same card searched or browsed — the
+      // subtitle says what the tour IS rather than "World".
+      const tourCards = visibleLeagues.map((l) => ({
+        ...l,
+        country: 'Every event on the tour',
+      }));
+      const tournamentCards = tournaments.filter((row) =>
+        needles.some((n) => anyFoldedIncludes([row.name], n)),
+      );
+      return (
+        <View style={{ flex: 1, backgroundColor: t.bg }}>
+          {searchField}
+          {banners}
+          <FlatList
+            data={[
+              ...tourCards.map((l) => ({ kind: 'tour' as const, l })),
+              ...tournamentCards.map((row) => ({ kind: 'tournament' as const, row })),
+            ]}
+            keyExtractor={(r) => (r.kind === 'tour' ? r.l.key : r.row.key)}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) =>
+              item.kind === 'tour'
+                ? // A tour's contents are tournaments; fixturesWordFor
+                  // already says so for tennis.
+                  leagueCard(item.l)
+                : tournamentCard(item.row)
+            }
+            ListEmptyComponent={
+              <Text style={[type.secondary, styles.noMatches, { color: t.textSecondary }]}>
+                Nothing here matches “{q}”.
+              </Text>
+            }
+          />
+        </View>
+      );
+    }
+    return (
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        {searchField}
+        {banners}
+        <FlatList
+          data={tennisRows}
+          keyExtractor={(r) => r.id}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => renderTennisRow(item)}
+        />
+      </View>
+    );
+  }
+
+  function renderTennisRow(r: BrowseRow) {
+    // The four majors' keys, for the row-level Follow all. Derived from
+    // the served tournaments so a slam we do not hold is never claimed.
+    const slamKeys = tournaments
+      .filter((x) => SLAM_KEYS.includes(x.key))
+      .map((x) => x.key);
     switch (r.kind) {
       case 'header':
         return (
@@ -285,32 +615,25 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             />
           </TileRow>
         );
-      case 'competition':
-        return (
-          <TileRow
-            right={
-              <FollowButton
-                following={isFollowed(r.key)}
-                subject={r.name}
-                busy={busyKey === r.key}
-                onPress={() =>
-                  void toggle({ id: r.key, name: r.name, country: '', key: r.key, followOnly: true })
-                }
-              />
-            }
-          >
-            <SportCard
-              fullWidth
-              label={r.name}
-              caption="Every event on the tour"
-              glyph="\u{1F4C5}"
-              theme={teamTheme(sport?.accent ?? null, mode)}
-              monogram={monogramOf(r.name)}
-              accessibilityLabel={`${r.name}, see upcoming`}
-              onPress={() => openEntity(r.key, r.name)}
-            />
-          </TileRow>
-        );
+      case 'competition': {
+        // The tour row is a competition like any other now — a card,
+        // with no Teams to browse and "Tournaments" as its contents.
+        // Built from the REAL static row so the follow carries its
+        // pollPath, exactly as following the same tour from Search
+        // does — the browse row used to be the one surface that
+        // dropped it.
+        const full = leagues?.find((l) => l.key === r.key);
+        const tourRow: DirectoryLeague = {
+          id: r.key,
+          name: r.name,
+          country: 'Every event on the tour',
+          key: r.key,
+          followOnly: true,
+          ...(full?.pollPath ? { pollPath: full.pollPath } : {}),
+          ...(full?.crestUrl ? { crestUrl: full.crestUrl } : {}),
+        };
+        return leagueCard(tourRow);
+      }
       case 'slams':
       case 'others': {
         const isSlams = r.kind === 'slams';
@@ -354,154 +677,94 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         );
       }
     }
-  };
-
-  if (tennisRows) {
-    return (
-      <View style={{ flex: 1, backgroundColor: t.bg }}>
-        {error ? (
-          <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
-            {error}
-          </Text>
-        ) : null}
-        <FlatList
-          data={tennisRows}
-          keyExtractor={(r) => r.id}
-          renderItem={({ item }) => renderBrowseRow(item)}
-        />
-      </View>
-    );
   }
 
+  const searchActive = needles.length > 0;
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      {error ? (
-        <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
-          {error}
-        </Text>
-      ) : null}
-      {/* What this sport's data honestly is — one line, opened on
-          demand. It used to be nine lines of prose above the rows. */}
-      {sport?.coverageNote ? <CoverageNote note={sport.coverageNote} /> : null}
+      {searchField}
+      {banners}
       <FlatList
-        data={leagues}
+        data={visibleLeagues}
         keyExtractor={(l) => l.key}
-        // Athlete browse rides ABOVE the competition rows for sports
+        keyboardShouldPersistTaps="handled"
+        // Athlete browse rides ABOVE the competition cards for sports
         // that have a directory (Prompt 8): people are what a fan of an
         // individual sport arrives looking for, and the entry point must
-        // not hide behind global search.
+        // not hide behind global search. Hidden while a query is active —
+        // results are the whole screen then.
         ListHeaderComponent={
-          <>
-            {sport?.browse.includes('athlete') ? (
-              <TileRow>
-                <SportCard
-                  fullWidth
-                  label={athleteRowTitle(route.params.sportKey)}
-                  caption="Rankings, champions, who's competing"
-                  glyph={sport?.glyph ?? '🏟️'}
-                  theme={teamTheme(sport?.accent ?? null, mode)}
-                  accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
-                  onPress={() =>
-                    navigation.navigate('AthleteList', {
-                      sportKey: route.params.sportKey,
-                    })
-                  }
-                />
-              </TileRow>
-            ) : null}
-          </>
-        }
-        // NO TOURNAMENTS FOOTER. It rendered `tournaments`, which is
-        // only ever populated for a sport with `tournamentBrowse` — and
-        // the only such sport is tennis, which returns above this block
-        // entirely. Unreachable since Prompt 19 split tennis into its
-        // own render path; deleted rather than converted (22b).
-        renderItem={({ item }) => (
-          // THE COMPETITION ROW, then ITS teams row (Prompt 27 C,
-          // owner mockup): tile opens the competition, Follow keeps
-          // the whole trailing space — and a competition with teams
-          // carries its own full-width "Browse teams" row BENEATH,
-          // replacing the cramped side-button. The row belongs to the
-          // competition above it, so a row without one (FIBA, a
-          // series) is simply shorter — no same-position ambiguity.
-          <View>
-            <TileRow
-              right={
-                // A competition with no league-level poller offers no
-                // follow at all: NHL and MLB are served team-by-team;
-                // their teams row below still works.
-                item.followable !== false ? (
-                  <FollowButton
-                    following={isFollowed(item.key)}
-                    subject={item.name}
-                    busy={busyKey === item.key}
-                    onPress={() => void toggle(item)}
+          searchActive ? null : (
+            <>
+              {sportHeader}
+              {/* What this sport's data honestly is — one line, opened
+                  on demand. */}
+              {sport?.coverageNote ? <CoverageNote note={sport.coverageNote} /> : null}
+              {sport?.browse.includes('athlete') ? (
+                <TileRow>
+                  <SportCard
+                    fullWidth
+                    label={athleteRowTitle(route.params.sportKey)}
+                    caption="Rankings, champions, who's competing"
+                    glyph={sport?.glyph ?? '🏟️'}
+                    theme={teamTheme(sport?.accent ?? null, mode)}
+                    accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
+                    onPress={() =>
+                      navigation.navigate('AthleteList', {
+                        sportKey: route.params.sportKey,
+                      })
+                    }
                   />
-                ) : null
-              }
-            >
-              <SportCard
-                fullWidth
-                label={item.name}
-                caption={item.country}
-                glyph={sport?.glyph ?? '🏟️'}
-                theme={teamTheme(sport?.accent ?? null, mode)}
-                monogram={monogramOf(item.name)}
-                {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-                accessibilityLabel={`${item.name}, see upcoming`}
-                // The tile is the COMPETITION, not a shortcut to its
-                // teams — "Premier League" shows Premier League fixtures.
-                // A followOnly row (ATP Tour, a series) was a dead end
-                // before Prompt 19.
-                onPress={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
-              />
-            </TileRow>
-            {!item.followOnly ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Browse ${item.name} teams`}
-                onPress={() =>
-                  navigation.navigate('TeamList', {
-                    sportKey: route.params.sportKey,
-                    leagueId: item.id,
-                    leagueName: item.name,
-                    ...(item.teamPollPath
-                      ? { teamPollPath: item.teamPollPath }
-                      : {}),
-                  })
-                }
-                style={({ pressed }) => [
-                  styles.browseTeams,
-                  { borderColor: t.border, backgroundColor: t.surface },
-                  pressed && { opacity: 0.6 },
-                ]}
-              >
-                <Text style={[type.secondary, { color: t.primary, fontWeight: '600' }]}>
-                  Browse teams
+                </TileRow>
+              ) : null}
+            </>
+          )
+        }
+        renderItem={({ item }) => leagueCard(item)}
+        // The TEAM half of the search (27C): server hits for this sport,
+        // below whatever competitions matched.
+        ListFooterComponent={
+          searchActive ? (
+            <>
+              {teamHits.map(teamHitRow)}
+              {searching ? (
+                <View style={styles.empty}>
+                  <ActivityIndicator color={t.primary} />
+                </View>
+              ) : null}
+              {!searching &&
+              !searchError &&
+              visibleLeagues.length === 0 &&
+              teamHits.length === 0 ? (
+                <Text style={[type.secondary, styles.noMatches, { color: t.textSecondary }]}>
+                  Nothing here matches “{q}”.
                 </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        )}
+              ) : null}
+            </>
+          ) : null
+        }
       />
     </View>
   );
 }
 
-const styles = {
-  center: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
-  // The competition's own teams entry, full-width beneath its tile —
-  // quiet on purpose: the tile is the object, Follow is the primary,
-  // this is the drill-down (owner mockup, 2026-08-17).
-  browseTeams: {
-    minHeight: 44,
-    marginHorizontal: spacing.l,
-    marginTop: -spacing.s,
-    marginBottom: spacing.m,
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  search: {
+    margin: spacing.l,
+    marginBottom: spacing.s,
     paddingHorizontal: spacing.l,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    minHeight: 44,
+    borderRadius: radius.button,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontSize: 16,
   },
-};
+  sportHeading: {
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.m,
+    paddingBottom: spacing.s,
+    fontWeight: '600',
+  },
+  noMatches: { padding: spacing.xl, textAlign: 'center' },
+  empty: { padding: spacing.xl, alignItems: 'center' },
+});
