@@ -115,10 +115,16 @@ export function isSlam(key: string): boolean {
 export function tournamentsFor(
   tournaments: readonly TournamentLike[],
   tour: 'atp' | 'wta',
-  kind: 'slams' | 'others',
+  kind: 'slams' | 'others' | 'all',
 ): TournamentLike[] {
-  if (kind === 'slams') return tournaments.filter((t) => isSlam(t.key));
-  return tournaments.filter((t) => !isSlam(t.key) && toursOf(t).includes(tour));
+  const slams = tournaments.filter((t) => isSlam(t.key));
+  if (kind === 'slams') return slams;
+  const others = tournaments.filter(
+    (t) => !isSlam(t.key) && toursOf(t).includes(tour),
+  );
+  // 'all' is the expanded tour card's one Tournaments destination
+  // (Stage 6): the full list, majors leading.
+  return kind === 'all' ? [...slams, ...others] : others;
 }
 
 export function tennisBrowseRows(

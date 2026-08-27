@@ -3050,3 +3050,18 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   a new native module costs a CNG prebuild; grid 1–59 min / 1–24 h /
   36–72 h per the brief. Card chips now show the USER'S offsets, all
   active ones lit; tapping one still narrows to a single override.
+- 2026-08-27 (Stage 6, owner brief — INTENTIONAL REVERSAL of the 27C
+  segmented competition card, not drift): every competition is a card
+  in the ORIGINAL card language, indistinguishable at rest from a
+  player/team card (tile + Follow in the standard position). Sub-levels
+  decide the tap: tournaments/teams expand the card IN PLACE offering
+  only what applies (tennis tours → Tournaments, team leagues → Teams);
+  a competition with neither navigates straight to its page. Non-
+  followable competitions (NHL/MLB) render without a control the way a
+  Players row does — the greyed placeholder was the segmented shape's
+  rule, not this language's. TournamentList gained kind 'all' (full
+  tour list, majors leading) as the expanded tour card's destination.
+  FLAGGED, not solved: the fixtures page of a competition WITH
+  sub-levels lost its browse entry (the old Fixtures segment); the
+  brief forbids a third button — where that destination lives is an
+  open ruling.

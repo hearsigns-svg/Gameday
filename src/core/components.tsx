@@ -1033,6 +1033,13 @@ export function SportCard(props: {
   // another for the rest. Dimmed and inert, never hidden: the sport
   // being listed at all is the point.
   disabled?: boolean;
+  // Content that grows OUT of the card, inside its border, below the
+  // tile row (Stage 6): the expanded competition card's destination
+  // buttons. The card's resting geometry is untouched — the shell
+  // keeps the border and the row keeps every padding it had.
+  expansion?: ReactNode;
+  // Read by assistive tech when the tile expands rather than navigates.
+  accessibilityExpanded?: boolean;
 }) {
   const t = useTheme();
   const { press, setPress } = usePressFade();
@@ -1040,14 +1047,18 @@ export function SportCard(props: {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={props.accessibilityLabel}
-      accessibilityState={props.disabled ? { disabled: true } : {}}
+      accessibilityState={{
+        ...(props.disabled ? { disabled: true } : {}),
+        ...(props.accessibilityExpanded !== undefined
+          ? { expanded: props.accessibilityExpanded }
+          : {}),
+      }}
       disabled={props.disabled === true}
       onPress={props.onPress}
       onPressIn={() => setPress(true)}
       onPressOut={() => setPress(false)}
       style={[
         styles.sportCard,
-        props.compact && styles.sportCardCompact,
         props.disabled === true && { opacity: 0.45 },
         props.fullWidth && {
           flexBasis: 0,
@@ -1070,6 +1081,9 @@ export function SportCard(props: {
           { backgroundColor: t.border, opacity: press, borderRadius: radiusTokens.card },
         ]}
       />
+      <View
+        style={[styles.sportCardRow, props.compact && styles.sportCardRowCompact]}
+      >
       <GlyphTile
         glyph={props.glyph}
         theme={props.theme}
@@ -1111,6 +1125,8 @@ export function SportCard(props: {
           </Text>
         ) : null}
       </View>
+      </View>
+      {props.expansion}
     </Pressable>
   );
 }
@@ -1689,23 +1705,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   tileRowCompact: { paddingVertical: 3 },
-  sportCardCompact: {
-    minHeight: 48,
-    paddingVertical: spacing.s,
-    gap: spacing.s,
-  },
+  // SHELL and ROW split (Stage 6): the shell keeps the border and the
+  // grid geometry, the row keeps every spacing the one-piece card had —
+  // so a card with an `expansion` grows inside its own border and a
+  // card without one is pixel-identical to what it was.
   sportCard: {
     flexBasis: '46%',
     flexGrow: 1,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  sportCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.m,
     minHeight: 64,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.m,
-    borderRadius: radius.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+    // The grid stretches cards to the tallest in their wrapped row; the
+    // row must grow with the shell or a stretched card leaves its
+    // content pinned to the top with dead space below.
+    flexGrow: 1,
+  },
+  sportCardRowCompact: {
+    minHeight: 48,
+    paddingVertical: spacing.s,
+    gap: spacing.s,
   },
   statusChip: {
     flexDirection: 'row',

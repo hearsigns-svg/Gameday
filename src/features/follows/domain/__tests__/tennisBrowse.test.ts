@@ -86,6 +86,15 @@ describe('placement', () => {
     expect(tournamentsFor([WIMBLEDON, CINCY], 'atp', 'others')).toEqual([CINCY]);
   });
 
+  it("'all' is the full tour list, majors leading (Stage 6 — the expanded card's Tournaments)", () => {
+    expect(tournamentsFor([CINCY, WIMBLEDON], 'atp', 'all')).toEqual([
+      WIMBLEDON,
+      CINCY,
+    ]);
+    // A single-tour event still only reaches its own tour's full list.
+    expect(tournamentsFor([WIMBLEDON, WARSAW], 'atp', 'all')).toEqual([WIMBLEDON]);
+  });
+
   it('a single-tour event appears under its tour only', () => {
     expect(tournamentsFor([WARSAW], 'atp', 'others')).toEqual([]);
     expect(tournamentsFor([WARSAW], 'wta', 'others')).toEqual([WARSAW]);

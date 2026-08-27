@@ -68,10 +68,11 @@ export type RootStackParamList = {
     grouping?: string;
   };
   // One tour's tournaments, behind their own entry rather than inline
-  // under the tour heading (Prompt 19 A).
+  // under the tour heading (Prompt 19 A). 'all' is the expanded tour
+  // card's Tournaments destination (Stage 6): the full list.
   TournamentList: {
     tour: 'atp' | 'wta';
-    kind: 'slams' | 'others';
+    kind: 'slams' | 'others' | 'all';
     title: string;
   };
   Preferences: undefined;

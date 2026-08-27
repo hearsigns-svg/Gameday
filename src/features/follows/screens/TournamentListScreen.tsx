@@ -5,10 +5,9 @@
 // behind their own entry now, so the browse screen stays two short
 // sections and the list is a list.
 //
-// EVERY TOURNAMENT IS ONE CARD (27C), the same card the Competitions
-// screen renders: title area is information, actions live in the
-// labelled footer. A tournament's contents are MATCHES — the tour's
-// are tournaments — and it has no teams, so that segment greys.
+// EVERY TOURNAMENT IS ONE CARD (Stage 6), the same original-language
+// card the Competitions screen renders: tile plus Follow. A tournament
+// has no sub-levels, so tapping it opens its matches directly.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
@@ -109,12 +108,11 @@ export default function TournamentListScreen({ navigation, route }: Props) {
           // not hold (22b, owner ruling).
           <CompetitionCard
             name={item.name}
-            subtitle={tournamentDateRange(item.startUtc, item.endUtc)}
+            caption={tournamentDateRange(item.startUtc, item.endUtc)}
             theme={teamTheme(tennis?.accent ?? null, mode)}
             monogram={monogramOf(item.name)}
             glyph={tennis?.glyph ?? '\u{1F3BE}'}
-            fixturesWord="Matches"
-            onFixtures={() =>
+            onOpen={() =>
               navigation.navigate('Team', {
                 teamKey: item.key,
                 name: item.name,

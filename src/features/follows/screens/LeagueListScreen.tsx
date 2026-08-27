@@ -1,10 +1,9 @@
-// Competition browse level (27C): every competition is ONE CARD —
-// title area is information, the three footer segments are the actions
-// ([Fixtures-word] [Teams] [Follow]). No per-row "Browse teams" bars,
-// no side buttons; a competition without teams greys its Teams segment
-// rather than losing it, so the same position always means the same
-// thing down the list. One search field at the top covers this sport's
-// competitions and teams.
+// Competition browse level (Stage 6): every competition is ONE CARD in
+// the ORIGINAL card language — the same tile-plus-Follow row a player
+// or team gets, indistinguishable at rest. A competition with
+// sub-levels (teams, tournaments) expands in place to offer them; one
+// without navigates straight to its page. One search field at the top
+// covers this sport's competitions and teams.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -48,7 +47,7 @@ import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
-import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
+import { sportLabelFor } from '../domain/sportTerms';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
@@ -355,52 +354,72 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     );
   }
 
-  // ONE CARD PER COMPETITION (27C). Everything the row family used to
-  // spread across a tile press, a trailing Follow and an under-row bar
-  // lives in the card's three labelled segments; a missing capability
-  // greys its segment instead of changing the card's shape.
-  const leagueCard = (item: DirectoryLeague) => (
-    <CompetitionCard
-      name={item.name}
-      subtitle={subtitleOf(item)}
-      theme={teamTheme(sport?.accent ?? null, mode)}
-      monogram={monogramOf(item.name)}
-      {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
-      glyph={sport?.glyph ?? '🏟️'}
-      fixturesWord={fixturesWordFor(route.params.sportKey)}
-      onFixtures={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
-      {...(!item.followOnly
-        ? {
-            onTeams: () =>
-              navigation.navigate('TeamList', {
-                sportKey: route.params.sportKey,
-                leagueId: item.id,
-                leagueName: item.name,
-                ...(item.teamPollPath ? { teamPollPath: item.teamPollPath } : {}),
-              }),
-          }
-        : {})}
-      {...(item.followable !== false
-        ? {
-            following: isFollowed(item.key),
-            onFollow: () => void toggle(item),
-          }
-        : {})}
-      busy={busyKey === item.key}
-    />
-  );
+  // ONE CARD PER COMPETITION (Stage 6), in the original card language.
+  // Sub-levels decide the tap: a tennis tour expands to Tournaments, a
+  // team league expands to Teams, and a competition with neither opens
+  // its own page directly, exactly as a team card does.
+  const tourOf = (key: string): 'atp' | 'wta' | null =>
+    route.params.sportKey !== 'tennis'
+      ? null
+      : key === 'tennis-atp'
+        ? 'atp'
+        : key === 'tennis-wta'
+          ? 'wta'
+          : null;
 
-  // A tennis tournament as a card: its contents are MATCHES (the tour's
-  // are tournaments), it has no teams, and its subtitle is its dates.
+  const leagueCard = (item: DirectoryLeague) => {
+    const tour = tourOf(item.key);
+    return (
+      <CompetitionCard
+        name={item.name}
+        caption={subtitleOf(item)}
+        theme={teamTheme(sport?.accent ?? null, mode)}
+        monogram={monogramOf(item.name)}
+        {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
+        glyph={sport?.glyph ?? '🏟️'}
+        onOpen={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
+        {...(tour
+          ? {
+              onTournaments: () =>
+                navigation.navigate('TournamentList', {
+                  tour,
+                  kind: 'all',
+                  title: `${tour.toUpperCase()} tournaments`,
+                }),
+            }
+          : {})}
+        {...(!item.followOnly
+          ? {
+              onTeams: () =>
+                navigation.navigate('TeamList', {
+                  sportKey: route.params.sportKey,
+                  leagueId: item.id,
+                  leagueName: item.name,
+                  ...(item.teamPollPath ? { teamPollPath: item.teamPollPath } : {}),
+                }),
+            }
+          : {})}
+        {...(item.followable !== false
+          ? {
+              following: isFollowed(item.key),
+              onFollow: () => void toggle(item),
+            }
+          : {})}
+        busy={busyKey === item.key}
+      />
+    );
+  };
+
+  // A tennis tournament as a card: no sub-levels, so tapping it opens
+  // its matches directly; its caption is its dates.
   const tournamentCard = (row: TournamentRow) => (
     <CompetitionCard
       name={row.name}
-      subtitle={tournamentDateRange(row.startUtc, row.endUtc)}
+      caption={tournamentDateRange(row.startUtc, row.endUtc)}
       theme={teamTheme(sport?.accent ?? null, mode)}
       monogram={monogramOf(row.name)}
       glyph={sport?.glyph ?? '🎾'}
-      fixturesWord="Matches"
-      onFixtures={() =>
+      onOpen={() =>
         navigation.navigate('Team', {
           teamKey: row.key,
           name: row.name,
@@ -542,9 +561,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) =>
               item.kind === 'tour'
-                ? // A tour's contents are tournaments; fixturesWordFor
-                  // already says so for tennis.
-                  leagueCard(item.l)
+                ? leagueCard(item.l)
                 : tournamentCard(item.row)
             }
             ListEmptyComponent={
