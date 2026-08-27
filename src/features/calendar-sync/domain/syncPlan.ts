@@ -458,6 +458,10 @@ export interface SnapshotFixture {
   // why those cards had no identity to show.
   homeTeam?: string;
   awayTeam?: string;
+  // Both sides' crests, stamped server-side at ingest (Stage 4B) — the
+  // hero composite renders them regardless of which follow owns the card.
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
 }
 
 export function upcomingSnapshot(
@@ -505,6 +509,8 @@ export function upcomingSnapshot(
       ...(f.athletes !== undefined ? { athletes: f.athletes } : {}),
       ...(f.homeTeam !== undefined ? { homeTeam: f.homeTeam } : {}),
       ...(f.awayTeam !== undefined ? { awayTeam: f.awayTeam } : {}),
+      ...(f.homeCrestUrl !== undefined ? { homeCrestUrl: f.homeCrestUrl } : {}),
+      ...(f.awayCrestUrl !== undefined ? { awayCrestUrl: f.awayCrestUrl } : {}),
       ...(f.venue !== undefined ? { venue: f.venue } : {}),
       ...(f.venueCity !== undefined ? { venueCity: f.venueCity } : {}),
     }));

@@ -20,7 +20,14 @@ type Resolver = (name: string) => Promise<
   Awaited<ReturnType<typeof resolveAthletePhoto>>
 >;
 
-// One lazy-resolve-and-cache loop; the two hooks below differ only in
+// Failed-resolve retry pacing (Stage 4B). 'failed' used to say "retry
+// on a later render", but the effect's deps never change on a render —
+// retry actually needed a REMOUNT, so a card that hit the rate limiter
+// at first paint stayed bare for as long as the user looked at it. Now
+// a failure schedules its own retry with backoff, without remounting.
+const RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 90_000];
+
+// One lazy-resolve-and-cache loop; the hooks below differ only in
 // which resolver runs and which namespace they cache under.
 function usePhoto(
   key: string | null,
@@ -30,6 +37,9 @@ function usePhoto(
   const [art, setArt] = useState<VenueArt | null | undefined>(() =>
     key ? cachedPhoto(key) : null,
   );
+  // Bumped to re-arm the effect after a transient failure — the retry
+  // mechanism, not part of the cache.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!key || !subject) {
@@ -43,17 +53,30 @@ function usePhoto(
     }
     if (!claimResolve(key)) return;
     let alive = true;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     void resolve(subject).then((r) => {
       releaseResolve(key);
-      if (r.status === 'failed') return; // retry on a later render
+      if (r.status === 'failed') {
+        // Transient (offline, 429): NOT cached. Re-arm this effect
+        // after a backoff; give up quietly after the last step — a
+        // remount starts the ladder again.
+        if (alive && attempt < RETRY_DELAYS_MS.length) {
+          retryTimer = setTimeout(
+            () => setAttempt((n) => n + 1),
+            RETRY_DELAYS_MS[attempt],
+          );
+        }
+        return;
+      }
       const resolved = r.status === 'found' ? r.art : null;
       putPhoto(key, resolved);
       if (alive) setArt(resolved);
     });
     return () => {
       alive = false;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
     };
-  }, [key, subject, resolve]);
+  }, [key, subject, resolve, attempt]);
 
   return art;
 }
@@ -86,14 +109,21 @@ export function useVenuePhoto(
 // Venue-NAME photos (Prompt 9b): keyed on the provider-published venue
 // itself (TSDB strVenue — golf courses, stadiums) and resolved as a
 // DIRECT entity → P18 lookup. Separate namespace from the team→home-
-// ground path, whose resolver a venue name can never satisfy.
+// ground path, whose resolver a venue name can never satisfy. The
+// feed's city, where it publishes one, disambiguates same-name venues
+// (Stage 4B); the cache stays keyed on the venue name alone.
 export function useVenuePlacePhoto(
   venueName: string | null | undefined,
+  city?: string,
 ): VenueArt | null | undefined {
+  const resolve = useCallback(
+    (name: string) => resolveVenueByName(name, city),
+    [city],
+  );
   return usePhoto(
     venueName ? placeKey(venueName) : null,
     venueName ?? null,
-    resolveVenueByName,
+    resolve,
   );
 }
 

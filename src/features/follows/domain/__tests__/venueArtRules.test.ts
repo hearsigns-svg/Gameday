@@ -2,6 +2,8 @@ import {
   commonsThumbUrl,
   isAllowedLicence,
   stripHtml,
+  teamCandidateOrder,
+  venueCandidateOrder,
 } from '../venueArtRules';
 
 describe('licence allowlist — commercial use only', () => {
@@ -188,5 +190,86 @@ describe('pickAthleteCandidate', () => {
     expect(isAthleteCandidate('American professional boxer', 'soccer')).toBe(
       false,
     );
+  });
+});
+
+describe('venueCandidateOrder — grounds beat hospitality, both qualify (Stage 4B)', () => {
+  test('a hotel-described venue now resolves (Caribe Royale acceptance case)', () => {
+    // The live candidate shape that used to be refused outright.
+    expect(
+      venueCandidateOrder([
+        { id: 'Q111392989', description: 'hotel in Orlando, United States' },
+      ]),
+    ).toEqual(['Q111392989']);
+  });
+
+  test('the specific venue beats its parent hotel (MGM Grand ruling)', () => {
+    expect(
+      venueCandidateOrder([
+        { id: 'Qhotel', description: 'hotel and casino in Las Vegas' },
+        { id: 'Qarena', description: 'arena at the MGM Grand, Las Vegas' },
+      ]),
+    ).toEqual(['Qarena', 'Qhotel']);
+  });
+
+  test('non-venues never qualify', () => {
+    expect(
+      venueCandidateOrder([
+        { id: 'Qband', description: 'British rock band' },
+        { id: 'Qpainting', description: 'painting by J. M. W. Turner' },
+      ]),
+    ).toEqual([]);
+  });
+
+  test('the feed city breaks ties within a tier', () => {
+    expect(
+      venueCandidateOrder(
+        [
+          { id: 'Qother', description: 'arena in Prague' },
+          { id: 'Qlondon', description: 'indoor arena in the O2, London' },
+        ],
+        'Greenwich, London',
+      ),
+    ).toEqual(['Qother', 'Qlondon']);
+    expect(
+      venueCandidateOrder(
+        [
+          { id: 'Qother', description: 'arena in Prague' },
+          { id: 'Qlondon', description: 'arena in Greenwich, London' },
+        ],
+        'Greenwich, London',
+      ),
+    ).toEqual(['Qlondon', 'Qother']);
+  });
+});
+
+describe('teamCandidateOrder — first teams before reserve sides (Stage 4B)', () => {
+  test('the Osasuna acceptance case: the reserve side stops outranking the club', () => {
+    // Real live candidate shapes: the reserve team ranked first in
+    // search order and its ground (Tajonar) photographed instead of
+    // El Sadar.
+    expect(
+      teamCandidateOrder([
+        { id: 'Q2657829', description: 'reserve team of CA Osasuna' },
+        { id: 'Q14892', description: 'association football club in Pamplona, Spain' },
+      ]),
+    ).toEqual(['Q14892', 'Q2657829']);
+  });
+
+  test('demoted, never excluded — a lone reserve side still resolves', () => {
+    expect(
+      teamCandidateOrder([
+        { id: 'Q2657829', description: 'reserve team of CA Osasuna' },
+      ]),
+    ).toEqual(['Q2657829']);
+  });
+
+  test('youth and academy sides demote the same way', () => {
+    expect(
+      teamCandidateOrder([
+        { id: 'Qyouth', description: 'youth academy of Arsenal F.C.' },
+        { id: 'Qclub', description: 'association football club in London, England' },
+      ]),
+    ).toEqual(['Qclub', 'Qyouth']);
   });
 });

@@ -154,6 +154,55 @@ export function pickAthleteCandidate(
   return shaped.length === 1 ? shaped[0].id : null;
 }
 
+// VENUE-NAME candidate ordering (Stage 4B). Two tiers, both venues by
+// ruling: purpose-built grounds first, hospitality second — so a name
+// matching both a parent hotel and its specific venue ("MGM Grand" the
+// hotel vs "MGM Grand Garden Arena") prefers the specific venue, while
+// a card whose venue IS the hotel ("Caribe Royale Orlando") still
+// resolves. The city the feed published breaks remaining ties within a
+// tier. Licence gate unchanged — this orders candidates, nothing more.
+const VENUE_CORE =
+  /stadium|arena|ground|golf|course|club|park|venue|circuit|track|hall|centre|center|field|speedway|links/;
+const VENUE_HOSPITALITY = /hotel|resort|casino/;
+
+export function venueCandidateOrder(
+  candidates: readonly WikidataCandidate[],
+  city?: string,
+): string[] {
+  const desc = (c: WikidataCandidate) => (c.description ?? '').toLowerCase();
+  const core = candidates.filter((c) => VENUE_CORE.test(desc(c)));
+  const hospitality = candidates.filter(
+    (c) => !VENUE_CORE.test(desc(c)) && VENUE_HOSPITALITY.test(desc(c)),
+  );
+  const cityFirst = (tier: WikidataCandidate[]): WikidataCandidate[] => {
+    if (!city || tier.length < 2) return tier;
+    const needle = city.toLowerCase().split(/[,\s]+/)[0];
+    return [
+      ...tier.filter((c) => desc(c).includes(needle)),
+      ...tier.filter((c) => !desc(c).includes(needle)),
+    ];
+  };
+  return [...cityFirst(core), ...cityFirst(hospitality)].map((c) => c.id);
+}
+
+// TEAM candidate ordering (Stage 4B). The team path used to take the
+// first search hit carrying a home ground — and for "Osasuna" that is
+// the RESERVE side, whose ground is Tajonar, not El Sadar. Reserve,
+// youth and academy sides are demoted, never excluded: if the reserve
+// team is the only candidate with a venue at all, it still resolves.
+const SECOND_TEAM_SHAPED = /reserve|youth|academy|\bb[- ]team\b|under-\d|\bu\d{2}\b/;
+
+export function teamCandidateOrder(
+  candidates: readonly WikidataCandidate[],
+): string[] {
+  const second = (c: WikidataCandidate) =>
+    SECOND_TEAM_SHAPED.test((c.description ?? '').toLowerCase());
+  return [
+    ...candidates.filter((c) => !second(c)),
+    ...candidates.filter(second),
+  ].map((c) => c.id);
+}
+
 export function pickTournamentCandidate(
   candidates: readonly WikidataCandidate[],
   city?: string,

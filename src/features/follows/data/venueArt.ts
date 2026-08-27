@@ -8,6 +8,8 @@
 import {
   pickAthleteCandidate,
   pickTournamentCandidate,
+  teamCandidateOrder,
+  venueCandidateOrder,
   VenueArt,
   verifiedArt,
 } from '../domain/venueArtRules';
@@ -16,8 +18,40 @@ const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const HEADERS = { 'User-Agent': 'KickOffCal-dev/1.0 (fixtures calendar app)' };
 
+// ONE SERIALIZED CLIENT, ~1 request/second (Stage 4B). The Home
+// carousel used to mount up to ten heroes at once, each firing its own
+// burst of Wikidata/Commons requests — measured, the API 429-bans an IP
+// after about ten near-simultaneous calls, which starved EVERY card's
+// imagery at first paint. All requests now queue through one chain with
+// enforced spacing; a 429 pauses the whole queue and surfaces as the
+// retryable 'failed' state rather than being retried in place (the
+// hooks own retry pacing). Requests run in mount order, and because the
+// carousel renders near-viewport cards first, on-screen cards resolve
+// first by construction.
+const REQUEST_SPACING_MS = 1100;
+const RATE_LIMIT_PAUSE_MS = 30_000;
+let chain: Promise<void> = Promise.resolve();
+let nextAllowedAt = 0;
+
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 async function getJson(url: string): Promise<unknown> {
+  const turn = chain.then(async () => {
+    const now = Date.now();
+    if (now < nextAllowedAt) await wait(nextAllowedAt - now);
+    nextAllowedAt = Date.now() + REQUEST_SPACING_MS;
+  });
+  // The chain never carries a rejection — each caller's failure is its
+  // own; the queue just spaces starts.
+  chain = turn.catch(() => undefined);
+  await turn;
   const res = await fetch(url, { headers: HEADERS });
+  if (res.status === 429) {
+    // Back the whole queue off, not just this caller: the limit is per
+    // client, and hammering on through it turns a pause into a ban.
+    nextAllowedAt = Date.now() + RATE_LIMIT_PAUSE_MS;
+    throw new Error('http 429');
+  }
   if (!res.ok) throw new Error(`http ${res.status}`);
   return res.json();
 }
@@ -41,16 +75,18 @@ async function claimValue(
 }
 
 // The entity for "Liverpool" is the city; the CLUB is the candidate
-// that has a home venue. Trying candidates in search order and keeping
-// the first with P115 disambiguates without any curated map.
+// that has a home venue. Candidates are tried in teamCandidateOrder —
+// first teams before reserve/youth sides (Stage 4B: "Osasuna" used to
+// resolve to Osasuna Promesas and photograph Tajonar instead of El
+// Sadar) — keeping the first with P115.
 async function entityWithVenue(
   name: string,
 ): Promise<{ venue: string } | null> {
   const d = (await getJson(
     `${WD}?action=wbsearchentities&search=${encodeURIComponent(name)}&language=en&type=item&limit=5&format=json&origin=*`,
-  )) as { search?: Array<{ id: string }> };
-  for (const cand of d.search ?? []) {
-    const venue = await claimValue(cand.id, 'P115');
+  )) as { search?: Array<{ id: string; description?: string }> };
+  for (const id of teamCandidateOrder(d.search ?? [])) {
+    const venue = await claimValue(id, 'P115');
     if (venue) return { venue };
   }
   return null;
@@ -122,22 +158,21 @@ export async function resolveVenuePhoto(
 // these (venues carry no P115): this one searches the name and takes
 // P18 from a venue-shaped candidate only, so a venue name that
 // happens to match a painting or a band can never supply a "photo of
-// the ground". Coverage is partial by nature (many venues carry no
-// P18) — the framing is photo-when-verifiable, treatment otherwise.
-const VENUE_SHAPED =
-  /stadium|arena|ground|golf|course|club|park|venue|circuit|track|hall|centre|center|field|speedway|links/;
-
+// the ground". Candidate order lives in venueCandidateOrder (Stage 4B:
+// purpose-built grounds beat hotels/resorts/casinos, which now qualify
+// too by ruling; the feed's city breaks ties). Coverage is partial by
+// nature (many venues carry no P18) — the framing is
+// photo-when-verifiable, treatment otherwise.
 export async function resolveVenueByName(
   venueName: string,
+  city?: string,
 ): Promise<VenueArtResult> {
   try {
     const d = (await getJson(
       `${WD}?action=wbsearchentities&search=${encodeURIComponent(venueName)}&language=en&type=item&limit=3&format=json&origin=*`,
     )) as { search?: Array<{ id: string; description?: string }> };
-    for (const cand of d.search ?? []) {
-      const desc = (cand.description ?? '').toLowerCase();
-      if (!VENUE_SHAPED.test(desc)) continue;
-      const file = await claimValue(cand.id, 'P18');
+    for (const id of venueCandidateOrder(d.search ?? [], city)) {
+      const file = await claimValue(id, 'P18');
       if (file) return artFromCommonsFile(file);
     }
     return { status: 'none' };

@@ -38,6 +38,10 @@ export interface HeroFixture {
   venue?: string;
   venueCity?: string;
   participantCountries?: string[];
+  // Both sides' crests, stamped on the fixture itself (Stage 4B) — the
+  // composite renders them whichever follow owns the card.
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
 }
 
 export function FixtureHero(props: {
@@ -62,7 +66,7 @@ export function FixtureHero(props: {
   // Venue NAME beats home-team lookup where a provider publishes one:
   // the photo is of the place, and a place resolves DIRECTLY (entity →
   // P18) where the team resolver's P115 hop never could.
-  const placeArt = useVenuePlacePhoto(item.venue);
+  const placeArt = useVenuePlacePhoto(item.venue, item.venueCity);
   // Tennis tournament PARENTS only: no venue name, no home team. An
   // appearance rides an -appearances key and must never feed its MATCH
   // title into the tournament lookup.
@@ -90,6 +94,8 @@ export function FixtureHero(props: {
       {...(item.participantCountries?.length
         ? { participantCountries: item.participantCountries }
         : {})}
+      {...(item.homeCrestUrl ? { homeCrestUrl: item.homeCrestUrl } : {})}
+      {...(item.awayCrestUrl ? { awayCrestUrl: item.awayCrestUrl } : {})}
       photoCredit={
         art
           ? [

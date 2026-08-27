@@ -27,6 +27,18 @@ export const tournamentPhotoKey = (name: string): string =>
 type Entry = { art: VenueArt | null; at: string };
 type Cache = Record<string, Entry>;
 
+// SCHEMA EPOCH for "none" verdicts — the client mirror of the server
+// directory's DIRECTORY_SCHEMA_EPOCH (Stage 4B). A null entry is a
+// verdict of the RESOLVER THAT WROTE IT, and this cache never expires:
+// verdicts recorded before the hotel/casino venue shapes, the
+// first-team ordering and the serialized client existed would deny
+// those fixes forever on any long-lived install. Entries older than
+// the epoch read as absent, so they re-resolve once under the current
+// rules. FOUND entries are untouched — they were licence-verified at
+// fetch and their credit is recorded. Bump when the resolution rules
+// widen.
+const NONE_STALE_BEFORE = Date.parse('2026-08-27T00:00:00.000Z');
+
 const inflight = new Set<string>();
 
 function load(): Cache {
@@ -34,7 +46,13 @@ function load(): Cache {
 }
 
 export function cachedPhoto(name: string): VenueArt | null | undefined {
-  return load()[name]?.art;
+  const entry = load()[name];
+  if (!entry) return undefined;
+  if (entry.art === null) {
+    const at = Date.parse(entry.at);
+    if (Number.isNaN(at) || at < NONE_STALE_BEFORE) return undefined;
+  }
+  return entry.art;
 }
 
 export function putPhoto(name: string, art: VenueArt | null): void {

@@ -120,6 +120,12 @@ export function appearanceFor(
     athletes: [...names],
     updatedAt: opts.updatedAt,
     ...(parent.venueTz ? { venueTz: parent.venueTz } : {}),
+    // A bout happens where its card does (Stage 4B): the child inherits
+    // the parent's venue so an athlete-followed appearance can carry the
+    // same venue imagery as the card, and the city rides along as the
+    // photo lookup's disambiguator.
+    ...(parent.venue ? { venue: parent.venue } : {}),
+    ...(parent.venueCity ? { venueCity: parent.venueCity } : {}),
   };
   if (opts.slot) {
     return {

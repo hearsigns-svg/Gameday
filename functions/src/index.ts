@@ -5,7 +5,8 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
 import { reconcileFixtures } from './reconcile';
-import { augmentFollowKeys, loadTeamAliases } from './aliases';
+import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
+import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
   appearanceEndMs,
@@ -211,7 +212,20 @@ async function ingest(
   // directories were populated, but the alias table now covers every
   // league with a team directory, and a cross-provider club is a
   // cross-provider club whatever the sport.
-  const incoming = augmentFollowKeys(withPeople, await loadTeamAliases(db));
+  const joins = await loadDirectoryJoins(db);
+  const keyed = augmentFollowKeys(withPeople, joins.aliases);
+  // Both sides' crests, by exact key join against the directory (Stage
+  // 4B) — AFTER augmentFollowKeys, which is what puts every provider's
+  // team key on the fixture for the join to check against. The imagery
+  // kill-switch gates the stamp itself; a failed catalogue read stamps
+  // nothing rather than stamping against an unknown policy.
+  const imageryOff = await loadPriorityData()
+    .then((d) => new Set(d.imageryOff))
+    .catch(() => null);
+  const incoming =
+    imageryOff === null
+      ? keyed
+      : stampCrests(keyed, joins.crests, imageryOff, normaliseName);
   const existingSnap = await db
     .collection('fixtures')
     .where('followKeys', 'array-contains', followKey)

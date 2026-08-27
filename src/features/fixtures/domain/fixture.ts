@@ -34,6 +34,11 @@ export interface Fixture {
   // Absent means unknown — it used to be the literal 'UTC' on 10,395 of
   // 10,483 documents, which is a claim, not a default.
   venueTz?: string;
+  // The two clubs' crests, stamped server-side at ingest by exact key
+  // join (Stage 4B) — the hero composite's identity layer. Display data
+  // only; absent means the join could not prove a single crest.
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
   status: FixtureStatus;
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali

@@ -224,6 +224,12 @@ export default function HomeScreen({ navigation }: Props) {
             horizontal
             data={carousel}
             keyExtractor={(f) => f.id}
+            // Near-viewport cards only at first paint (Stage 4B): the
+            // default of ten mounted every hero at once and their photo
+            // lookups fired together — the burst that rate-limited the
+            // whole batch. Three keeps the visible card and its
+            // neighbours instant; the rest mount as you swipe.
+            initialNumToRender={3}
             showsHorizontalScrollIndicator={false}
             snapToInterval={snap}
             decelerationRate="fast"

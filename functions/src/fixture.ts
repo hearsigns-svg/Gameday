@@ -55,6 +55,14 @@ export interface Fixture {
   // Absent means unknown — it used to be the literal 'UTC' on 10,395 of
   // 10,483 documents, which is a claim, not a default.
   venueTz?: string;
+  // The two clubs' crests, stamped at ingest from the teamDirectory by
+  // EXACT key join (Stage 4B) — the hero composite's identity layer.
+  // Display data only: never matched on, never part of identity, and
+  // stripped by the imagery kill-switch / Olympic exclusions at stamp
+  // time. Absent means the join could not prove a single crest for that
+  // side — a wrong crest is worse than none.
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
   // WHO PUTS THE CARD ON. Combat sports only, and ONLY where a human has
   // said so — today that means the review queue, which is the one path
   // where a person types it in.

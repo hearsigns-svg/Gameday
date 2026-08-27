@@ -3014,3 +3014,23 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   (house no-chevron rule) and removed-only days keep a dimmed dot —
   the list rows' shown/removed distinction, on the calendar (the grid
   previously had NO removed indicator; the brief assumed one).
+- 2026-08-27 (Stage 4B, owner-approved fix + rider + ruling): hero
+  imagery. Crests are stamped ON the fixture at ingest (homeCrestUrl/
+  awayCrestUrl) by exact key join against the teamDirectory — the join
+  requires the candidate's key to be on the fixture itself, so a
+  colliding name can never stamp; ambiguity stamps nothing; the imagery
+  kill-switch and Olympic exclusions gate the STAMP (a baked crest
+  bypasses serve-time strips). One-off backfill script
+  (scripts/backfill-crests.mjs) reuses the compiled ingest join.
+  Venue-photo resolution: ONE serialized Wikidata client (~1 req/s,
+  429 pauses the queue) — the Home mount used to fire 30–80 requests in
+  a second and the API bans after ~10; failed resolves now retry with
+  backoff WITHOUT remount; photoCache gained a none-verdict schema
+  epoch (mirror of DIRECTORY_SCHEMA_EPOCH) so historic "nothing found"
+  verdicts re-resolve under current rules. RULING (owner): hotel/
+  resort/casino descriptions are venues everywhere, with purpose-built
+  grounds preferred over a parent hotel; feed city breaks ties. Team
+  path prefers first teams over reserve/youth sides (Osasuna resolved
+  to its reserve team's ground). Appearances inherit parent venue +
+  venueCity. Generated layers are suppressed only once a photo has
+  PAINTED (onLoad) — a hanging URL can no longer bare the card.

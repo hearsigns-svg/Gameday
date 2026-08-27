@@ -266,14 +266,39 @@ export function PosterSurface(props: {
   // always a pair. Photography still wins where it exists; flags beat
   // the bare generated treatment.
   participantCountries?: string[];
+  // The composite's identity layer (Stage 4B): both sides' crests,
+  // stamped on the fixture itself — rendered over the venue photo AND
+  // over the generated treatment, whichever is underneath. Partial is
+  // fine: whichever crest resolves renders; a broken one drops out.
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
   radius?: number;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }) {
   const th = props.theme;
   const [photoFailed, setPhotoFailed] = useState(false);
+  // PAINT-GATED SUPPRESSION (Stage 4B): the generated layers yield to a
+  // photo only once one has actually PAINTED. A URL that is still
+  // loading — or hangs forever without erroring — used to suppress the
+  // sport geometry and the flags anyway, which is the one path that
+  // could put a bare gradient on screen.
+  const [photoPainted, setPhotoPainted] = useState(false);
+  // A surface can be repointed at a different fixture (the expanded
+  // pager) — paint state belongs to the URL, not the instance.
+  const paintedFor = useRef(props.photoUrl);
+  useEffect(() => {
+    if (paintedFor.current === props.photoUrl) return;
+    paintedFor.current = props.photoUrl;
+    setPhotoFailed(false);
+    setPhotoPainted(false);
+  }, [props.photoUrl]);
   const photo = photoFailed ? undefined : props.photoUrl;
+  const photoShown = photo !== undefined && photoPainted;
   const radius = props.radius ?? radiusTokens.hero;
+  const crestPair = [props.homeCrestUrl, props.awayCrestUrl]
+    .map(usableImage)
+    .filter((u): u is string => u !== undefined);
   return (
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, props.style]}>
       {photo ? (
@@ -281,6 +306,7 @@ export function PosterSurface(props: {
           source={{ uri: photo }}
           resizeMode="cover"
           onError={() => setPhotoFailed(true)}
+          onLoad={() => setPhotoPainted(true)}
           style={[styles.heroPhoto, { borderRadius: radius }]}
           accessible={false}
         />
@@ -291,15 +317,15 @@ export function PosterSurface(props: {
         end={{ x: 0.9, y: 1 }}
         // Scrim is a SIBLING layer: opacity on a parent would dim the
         // type as well. Full-strength poster when there is no photo.
-        style={[styles.heroFill, { borderRadius: radius }, photo ? styles.heroScrim : null]}
+        style={[styles.heroFill, { borderRadius: radius }, photoShown ? styles.heroScrim : null]}
       />
       {/* Generated identity layer: sport geometry + type. Suppressed
-          over a photo — a photo needs no texture, and the pattern over
-          photography reads as damage. */}
-      {!photo && props.sportKey ? (
+          over a PAINTED photo — a photo needs no texture, and the
+          pattern over photography reads as damage. */}
+      {!photoShown && props.sportKey ? (
         <SportPattern sportKey={props.sportKey} color={th.onGradient} />
       ) : null}
-      {!photo && props.participantCountries?.length ? (
+      {!photoShown && props.participantCountries?.length ? (
         // Two big flags, meeting at the centre the way the names do in
         // the title. Emoji flags: freely usable, sharp at any size, and
         // they render in every locale the app ships in.
@@ -311,8 +337,31 @@ export function PosterSurface(props: {
           ))}
         </View>
       ) : null}
+      {crestPair.length > 0 ? (
+        <View style={styles.heroCrestPair} accessible={false}>
+          {crestPair.map((url, i) => (
+            <PairCrest key={`${url}-${i}`} url={url} />
+          ))}
+        </View>
+      ) : null}
       {props.children}
     </View>
+  );
+}
+
+// One crest of the pair, dropping itself on a broken image so a failed
+// side degrades the composite to partial instead of leaving a hole.
+function PairCrest(props: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <Image
+      source={{ uri: props.url }}
+      resizeMode="contain"
+      onError={() => setFailed(true)}
+      style={styles.heroCrest}
+      accessible={false}
+    />
   );
 }
 
@@ -334,6 +383,9 @@ export function PosterFace(props: {
   monogram?: string;
   crestUrl?: string;
   hasPhoto?: boolean;
+  // The surface is already carrying both sides' crests (Stage 4B) —
+  // a third mark under them is clutter, so the watermark stands down.
+  hasCrestPair?: boolean;
   // One line answering "why does this say Time TBC" — on the card,
   // where the question is asked (Prompt 16b).
   timingNote?: string | null;
@@ -342,7 +394,8 @@ export function PosterFace(props: {
   const th = props.theme;
   const dateOnly = isDateOnly(props.status, props.timePrecision);
   const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
-  const mark = props.hasPhoto ? null : usableImage(props.crestUrl);
+  const mark =
+    props.hasPhoto || props.hasCrestPair ? null : usableImage(props.crestUrl);
   return (
     <View style={[styles.hero, props.minHeight ? { minHeight: props.minHeight } : null]}>
       {mark ? (
@@ -353,7 +406,7 @@ export function PosterFace(props: {
           resizeMode="contain"
         />
       ) : null}
-      {!props.hasPhoto && !mark && props.monogram ? (
+      {!props.hasPhoto && !props.hasCrestPair && !mark && props.monogram ? (
         <Text style={styles.heroWatermark} accessible={false}>
           {props.monogram}
         </Text>
@@ -417,6 +470,8 @@ export function HeroCard(props: {
   photoUrl?: string;
   photoCredit?: string;
   participantCountries?: string[];
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
   timingNote?: string | null;
   onPress?: () => void;
   standalone?: boolean;
@@ -433,6 +488,9 @@ export function HeroCard(props: {
   const label = props.standalone
     ? `${props.title}, ${when}`
     : `Next up: ${props.title}, ${when}`;
+  const hasCrestPair =
+    usableImage(props.homeCrestUrl) !== undefined ||
+    usableImage(props.awayCrestUrl) !== undefined;
   const Container = (props.onPress ? Pressable : View) as typeof Pressable;
   return (
     <Container
@@ -460,6 +518,8 @@ export function HeroCard(props: {
         {...(props.participantCountries
           ? { participantCountries: props.participantCountries }
           : {})}
+        {...(props.homeCrestUrl ? { homeCrestUrl: props.homeCrestUrl } : {})}
+        {...(props.awayCrestUrl ? { awayCrestUrl: props.awayCrestUrl } : {})}
       >
         <PosterFace
           title={props.title}
@@ -470,6 +530,7 @@ export function HeroCard(props: {
           theme={th}
           {...(props.monogram ? { monogram: props.monogram } : {})}
           {...(props.crestUrl ? { crestUrl: props.crestUrl } : {})}
+          {...(hasCrestPair ? { hasCrestPair: true } : {})}
           {...(props.photoUrl ? { hasPhoto: true } : {})}
           {...(props.photoUrl && props.photoCredit
             ? { photoCredit: props.photoCredit }
@@ -1442,6 +1503,22 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   heroFlag: { fontSize: 72 },
+  // The composite's crest pair: centred like the flags, sized to read
+  // as identity rather than decoration, quiet enough that the type
+  // block stays the loudest thing on the card.
+  heroCrestPair: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    opacity: 0.92,
+  },
+  heroCrest: { width: 72, height: 72 },
   heroPhoto: {
     position: 'absolute',
     top: 0,
