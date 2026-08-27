@@ -24,20 +24,23 @@ const TOURNAMENT_PREFIX = 'tournament:';
 export const tournamentPhotoKey = (name: string): string =>
   `${TOURNAMENT_PREFIX}${name}`;
 
-type Entry = { art: VenueArt | null; at: string };
+type Entry = { art: VenueArt | null; at: string; v?: number };
 type Cache = Record<string, Entry>;
 
-// SCHEMA EPOCH for "none" verdicts — the client mirror of the server
-// directory's DIRECTORY_SCHEMA_EPOCH (Stage 4B). A null entry is a
-// verdict of the RESOLVER THAT WROTE IT, and this cache never expires:
-// verdicts recorded before the hotel/casino venue shapes, the
-// first-team ordering and the serialized client existed would deny
-// those fixes forever on any long-lived install. Entries older than
-// the epoch read as absent, so they re-resolve once under the current
-// rules. FOUND entries are untouched — they were licence-verified at
-// fetch and their credit is recorded. Bump when the resolution rules
-// widen.
-const NONE_STALE_BEFORE = Date.parse('2026-08-27T00:00:00.000Z');
+// RULES VERSION for "none" verdicts — the client mirror of the server
+// directory's schema epoch (Stage 4B), keyed on the RULES not the
+// CLOCK. A null entry is a verdict of the resolver that wrote it, and
+// this cache never expires: verdicts recorded before the hotel/casino
+// venue shapes, the first-team ordering and the serialized client
+// existed would deny those fixes forever on any long-lived install.
+// A timestamp epoch cannot express that — a device that ran the OLD
+// rules five minutes before installing the new build writes verdicts
+// on the wrong side of any fixed instant — so the verdict carries the
+// version of the rules that produced it, and a null under any OTHER
+// version reads as absent and re-resolves once. FOUND entries are
+// untouched: they were licence-verified at fetch and their credit is
+// recorded. Bump when the resolution rules widen.
+const NONE_RULES_VERSION = 2;
 
 const inflight = new Set<string>();
 
@@ -48,16 +51,17 @@ function load(): Cache {
 export function cachedPhoto(name: string): VenueArt | null | undefined {
   const entry = load()[name];
   if (!entry) return undefined;
-  if (entry.art === null) {
-    const at = Date.parse(entry.at);
-    if (Number.isNaN(at) || at < NONE_STALE_BEFORE) return undefined;
-  }
+  if (entry.art === null && entry.v !== NONE_RULES_VERSION) return undefined;
   return entry.art;
 }
 
 export function putPhoto(name: string, art: VenueArt | null): void {
   const all = load();
-  all[name] = { art, at: new Date().toISOString() };
+  all[name] = {
+    art,
+    at: new Date().toISOString(),
+    ...(art === null ? { v: NONE_RULES_VERSION } : {}),
+  };
   writeJson(KEY, all);
 }
 
