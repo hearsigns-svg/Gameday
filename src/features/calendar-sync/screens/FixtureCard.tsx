@@ -98,6 +98,8 @@ interface Displayed {
   awayTeam?: string;
   venue?: string;
   venueCity?: string;
+  homeCrestUrl?: string;
+  awayCrestUrl?: string;
 }
 
 // Durations only. "Use my default" is not a fifth duration — it is a
@@ -171,7 +173,7 @@ export function FixtureCardBody(props: {
 
   // Photography: the same resolution the collapsed card ran, so the
   // surface it flew from and the surface it becomes carry one image.
-  const placeArt = useVenuePlacePhoto(fixture?.venue);
+  const placeArt = useVenuePlacePhoto(fixture?.venue, fixture?.venueCity);
   const isTennisParent =
     fixture?.sport === 'tennis' &&
     !fixture.venue &&
@@ -341,6 +343,8 @@ export function FixtureCardBody(props: {
       {...(fixture.participantCountries?.length
         ? { participantCountries: fixture.participantCountries }
         : {})}
+      {...(fixture.homeCrestUrl ? { homeCrestUrl: fixture.homeCrestUrl } : {})}
+      {...(fixture.awayCrestUrl ? { awayCrestUrl: fixture.awayCrestUrl } : {})}
     >
       <ScrollView
         contentContainerStyle={{ paddingBottom: spacing.l }}
@@ -367,6 +371,9 @@ export function FixtureCardBody(props: {
             owner?.label ?? fixture.homeTeam ?? fixture.competition,
           )}
           {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
+          {...(usableImage(fixture.homeCrestUrl) || usableImage(fixture.awayCrestUrl)
+            ? { hasCrestPair: true }
+            : {})}
           {...(art?.url ? { hasPhoto: true } : {})}
           {...(art
             ? {
