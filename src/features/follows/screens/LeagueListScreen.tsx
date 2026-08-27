@@ -1,9 +1,11 @@
-// Competition browse level (Stage 6): every competition is ONE CARD in
-// the ORIGINAL card language — the same tile-plus-Follow row a player
-// or team gets, indistinguishable at rest. A competition with
-// sub-levels (teams, tournaments) expands in place to offer them; one
-// without navigates straight to its page. One search field at the top
-// covers this sport's competitions and teams.
+// Competition browse level (Stage 6 + the owner's Fixtures ruling):
+// every competition is ONE CARD in the ORIGINAL card language — the
+// same tile-plus-Follow row a player or team gets, indistinguishable
+// at rest. TEAMS decide the tap: a team league expands in place to
+// [Fixtures-word | Teams]; a competition without teams opens its
+// content directly (a tennis tour its tournament list, everything else
+// its fixtures page). One search field at the top covers this sport's
+// competitions and teams.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -47,7 +49,7 @@ import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
-import { sportLabelFor } from '../domain/sportTerms';
+import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
@@ -354,10 +356,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     );
   }
 
-  // ONE CARD PER COMPETITION (Stage 6), in the original card language.
-  // Sub-levels decide the tap: a tennis tour expands to Tournaments, a
-  // team league expands to Teams, and a competition with neither opens
-  // its own page directly, exactly as a team card does.
+  // ONE CARD PER COMPETITION (Stage 6, plus the owner's Fixtures
+  // ruling). Teams decide the tap: a team league expands to
+  // [Fixtures-word | Teams]; a competition without teams opens its
+  // content directly — a tennis tour its tournament list, everything
+  // else its fixtures page — exactly as a team card does.
   const tourOf = (key: string): 'atp' | 'wta' | null =>
     route.params.sportKey !== 'tennis'
       ? null
@@ -377,17 +380,17 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         monogram={monogramOf(item.name)}
         {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
         glyph={sport?.glyph ?? '🏟️'}
-        onOpen={() => openEntity(item.key, item.name, item.crestUrl, item.pollPath)}
-        {...(tour
-          ? {
-              onTournaments: () =>
+        fixturesWord={fixturesWordFor(route.params.sportKey)}
+        onOpen={
+          tour
+            ? () =>
                 navigation.navigate('TournamentList', {
                   tour,
                   kind: 'all',
                   title: `${tour.toUpperCase()} tournaments`,
-                }),
-            }
-          : {})}
+                })
+            : () => openEntity(item.key, item.name, item.crestUrl, item.pollPath)
+        }
         {...(!item.followOnly
           ? {
               onTeams: () =>

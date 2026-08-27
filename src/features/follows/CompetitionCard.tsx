@@ -9,12 +9,14 @@
 // on the whole competition, reads Follow/Following as text, and never
 // expands or navigates anything.
 //
-// Interaction: a competition with NO sub-levels navigates on tap like
-// any team card. One WITH sub-levels (tournaments and/or teams) expands
-// IN PLACE instead, revealing only the destinations that apply, and
-// collapses on a second tap. The expansion grows out of the card and
-// carries its style (house standard) — the buttons live inside the
-// card's own border.
+// Interaction (owner ruling on the flagged Fixtures gap): a competition
+// with NO teams navigates straight to its content on tap — the ATP Tour
+// opens its tournament list, a tournament its matches — like any team
+// card. One WITH teams expands IN PLACE to exactly TWO destinations,
+// [Fixtures-word | Teams], and collapses on a second tap; that pairing
+// is what keeps the fixtures page reachable for team leagues. The
+// expansion grows out of the card and carries its style (house
+// standard) — the buttons live inside the card's own border.
 
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -29,11 +31,14 @@ export interface CompetitionCardProps {
   monogram: string;
   crestUrl?: string;
   glyph: string;
-  // No sub-levels → tap navigates here, exactly as a team card does.
+  // The competition's own content: its fixtures page, or for a tennis
+  // tour its tournament list. No teams → tap lands here directly;
+  // teams → this is the expansion's first button.
   onOpen: () => void;
-  // Sub-level destinations. Presence is what makes the card EXPAND on
-  // tap instead of navigating; only the ones passed are offered.
-  onTournaments?: (() => void) | undefined;
+  // The first button's word, per-sport (Fixtures/Fights/Matches/
+  // Tournaments) — the same display vocabulary the segmented card used.
+  fixturesWord?: string;
+  // Teams list. Presence is what makes the card EXPAND on tap.
   onTeams?: (() => void) | undefined;
   // undefined → not followable (NHL/MLB are served team-by-team): the
   // card simply renders without a control, the way a Players row does —
@@ -47,13 +52,13 @@ export interface CompetitionCardProps {
 export function CompetitionCard(props: CompetitionCardProps) {
   const t = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const destinations = [
-    ...(props.onTournaments
-      ? [{ label: 'Tournaments', onPress: props.onTournaments }]
-      : []),
-    ...(props.onTeams ? [{ label: 'Teams', onPress: props.onTeams }] : []),
-  ];
-  const expandable = destinations.length > 0;
+  const expandable = props.onTeams !== undefined;
+  const destinations = props.onTeams
+    ? [
+        { label: props.fixturesWord ?? 'Fixtures', onPress: props.onOpen },
+        { label: 'Teams', onPress: props.onTeams },
+      ]
+    : [];
   return (
     <TileRow
       right={

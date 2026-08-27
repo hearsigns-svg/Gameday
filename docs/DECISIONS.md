@@ -3065,3 +3065,11 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   sub-levels lost its browse entry (the old Fixtures segment); the
   brief forbids a third button — where that destination lives is an
   open ruling.
+- 2026-08-27 (Stage 6 rider, owner ruling on the flagged Fixtures gap):
+  TEAMS decide the tap. A competition WITH teams expands to exactly two
+  buttons, [Fixtures-word | Teams] — which is what keeps the fixtures
+  page reachable for team leagues; a competition WITHOUT teams
+  navigates directly to its content (a tennis tour straight to its
+  full tournament list, everything else to its fixtures page). No
+  Tournaments button exists any more — the tour card's tap IS the
+  tournament list.
