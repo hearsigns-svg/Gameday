@@ -20,7 +20,12 @@ import {
   isPast,
   timePrecisionOf,
 } from '../../fixtures/domain/horizon';
-import { allDayReminderFor, EventSettingsMap, reminderMinutesFor } from './eventSettings';
+import {
+  allDayReminderFor,
+  EventSettingsMap,
+  extraRemindersFor,
+  reminderMinutesFor,
+} from './eventSettings';
 import { CalendarPrefs } from './prefs';
 
 // Re-exported so existing consumers keep their import site; the one
@@ -45,6 +50,13 @@ export interface LedgerEntry {
   // with what was assumed applied (data/ledger.ts::stampMissingReminders)
   // precisely so "unknown" is rare rather than universal.
   reminderMinutes?: number | null;
+  // The ADDITIONAL alarms last written (slots 2/3, Stage 5). ABSENT
+  // MEANS EMPTY, the allDayReminder rule below rather than the
+  // reminderMinutes rule above: before this field existed the engine
+  // wrote exactly one alarm, so an unstamped entry testifies to
+  // no-extras — treating it as unknown would rewrite every event in
+  // every calendar on the first sync after this ships.
+  extraReminders?: number[];
   // The day-shaped reminder last written to an ALL-DAY entry (Prompt 24
   // A1). ABSENT MEANS NULL, not unknown — the deliberate opposite of the
   // reminderMinutes rule above, because before this field existed the
@@ -75,6 +87,10 @@ export interface DesiredEvent {
   // that (a) a delete-and-recreate re-applies it by construction and
   // (b) the planner can compare it with what the ledger last wrote.
   reminderMinutes: number | null;
+  // Slots 2/3 (Stage 5), already resolved by extraRemindersFor: empty
+  // on all-day entries and on events with a per-event override. Same
+  // desired-state reasoning as reminderMinutes above.
+  extraReminders: number[];
   // Goes in the event's description, below the tag line. Used to say a
   // time is not settled yet WITHOUT putting it in the title, where it
   // would shout on every glance at the calendar.
@@ -163,6 +179,7 @@ export function desiredEventFor(
       // day-SHAPED reminder is the all-day channel (Prompt 24 A1); the
       // minutes override is kept and lands when a real time arrives.
       reminderMinutes: reminderMinutesFor(f.id, settings, prefs, true),
+      extraReminders: extraRemindersFor(f.id, settings, prefs, true),
       allDayReminder: allDayReminderFor(f.id, settings, prefs, true),
     };
   };
@@ -212,12 +229,19 @@ export function desiredEventFor(
     endUtc: eventEndUtc(f.startUtc, f.durationHours),
     allDay: false,
     reminderMinutes: reminderMinutesFor(f.id, settings, prefs, false),
+    extraReminders: extraRemindersFor(f.id, settings, prefs, false),
     allDayReminder: null,
     // Nominal: a real instant, but not the settled one. Said in the
     // description rather than the title — the title is read at a glance
     // fifty times, the description once when it matters.
     ...(precision === 'nominal' ? { note: NOMINAL_TIME_NOTE } : {}),
   };
+}
+
+function sameReminderSet(a: readonly number[], b: readonly number[]): boolean {
+  if (a.length !== b.length) return false;
+  const sb = [...b].sort((x, y) => x - y);
+  return [...a].sort((x, y) => x - y).every((v, i) => v === sb[i]);
 }
 
 function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
@@ -228,6 +252,10 @@ function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
     // must not be read as "matches" — that is the read-failure-as-empty
     // shape the standing invariant forbids, applied to the ledger.
     entry.reminderMinutes === desired.reminderMinutes &&
+    // Absent-means-empty, per the LedgerEntry comment: one alarm was
+    // all the old engine ever wrote. Order-insensitive — two alarm
+    // sets are the same alarms whatever order they were recorded in.
+    sameReminderSet(entry.extraReminders ?? [], desired.extraReminders) &&
     // Absent-means-null, per the LedgerEntry comment: the old engine
     // never wrote an all-day alarm, so an unstamped entry testifies to
     // exactly that.

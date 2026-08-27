@@ -9,6 +9,7 @@ import { upcomingSnapshot } from '../syncPlan';
 
 const PREFS: CalendarPrefs = {
   reminderMinutes: null,
+  extraReminders: [null, null],
   allDayReminder: null,
   eventStyle: 'timed',
   seriesSessions: 'all',

@@ -51,6 +51,7 @@ function toRestInput(input: EventInput): RestEventInput {
     endUtc: input.endUtc,
     allDay: input.allDay,
     reminderMinutesBefore: input.reminderMinutesBefore,
+    extraRemindersBefore: input.extraRemindersBefore,
     ...(input.allDayReminder !== undefined
       ? { allDayReminder: input.allDayReminder }
       : {}),

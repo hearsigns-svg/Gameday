@@ -12,6 +12,16 @@ export type AllDayReminder = 'day-before' | 'morning-of' | null;
 
 export interface CalendarPrefs {
   reminderMinutes: number | null; // null = no reminder
+  // Reminder slots 2 and 3 (Stage 5). Slot 1 IS `reminderMinutes` — the
+  // field every stored pref, per-event override and ledger compare
+  // already understands — and these two ride beside it, POSITIONAL and
+  // nullable (fixed length 2) so "Reminder 2 off, Reminder 3 at 2h"
+  // survives edits without the slots shifting under their labels.
+  // Values are minutes before the start; they apply to TIMED events
+  // only (day sentinels keep the day-shaped channel below) and stand
+  // down entirely when an event carries a per-event override — the
+  // override is the whole answer for that event, not slot 1 of one.
+  extraReminders: Array<number | null>;
   // For all-day entries. Defaults to NONE: turning it on adds an alarm
   // to every date-only fixture in the calendar, which is a choice, not
   // an upgrade side-effect — a default of 'day-before' would have
@@ -27,6 +37,10 @@ export interface CalendarPrefs {
 
 export const DEFAULT_PREFS: CalendarPrefs = {
   reminderMinutes: 60,
+  // Slots 2/3 OFF by default: the pre-Stage-5 engine wrote ONE alarm,
+  // and defaults that quietly add two more to every synced event are a
+  // flood, not an upgrade (the same argument as allDayReminder below).
+  extraReminders: [null, null],
   allDayReminder: null,
   eventStyle: 'timed',
   // Conservative default (ten-rules brief): a full race weekend is 5+
@@ -69,3 +83,53 @@ export const ALL_DAY_REMINDER_OPTIONS: Array<{
   { label: 'Evening before, 6pm', short: 'Eve before', value: 'day-before' },
   { label: 'Morning of, 9am', short: 'Morning', value: 'morning-of' },
 ];
+
+// ─── Offset vocabulary (Stage 5 wheel pickers) ────────────────────────
+//
+// The whole allowed range, as the brief rules it: minutes 1–59 in
+// 1-minute steps, hours 1–24 in 1-hour steps, then 12-hour steps to 72.
+// Everything is STORED as minutes; the wheels are a view of this grid.
+
+export const OFFSET_MINUTE_VALUES: readonly number[] = Array.from(
+  { length: 59 },
+  (_, i) => i + 1,
+);
+
+export const OFFSET_HOUR_VALUES: readonly number[] = [
+  ...Array.from({ length: 24 }, (_, i) => i + 1),
+  36,
+  48,
+  60,
+  72,
+];
+
+// "45 min before" / "2 hours before" / "1 day before" / "36 hours
+// before". Days only where the offset IS whole days — 36h said as
+// "1.5 days" reads like arithmetic, not a reminder.
+export function offsetLabel(minutes: number | null): string {
+  if (minutes === null) return 'Off';
+  if (minutes < 60) return `${minutes} min before`;
+  if (minutes % 1440 === 0) {
+    const d = minutes / 1440;
+    return `${d} day${d === 1 ? '' : 's'} before`;
+  }
+  const h = minutes / 60;
+  return `${h} hour${h === 1 ? '' : 's'} before`;
+}
+
+// The chip form: "45m", "2h", "1d", "36h".
+export function offsetShortLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes % 1440 === 0) return `${minutes / 1440}d`;
+  return `${minutes / 60}h`;
+}
+
+// Every configured offset, deduped in slot order — what a hero card's
+// reminder chips display and what an unoverridden timed event carries.
+export function reminderSlotValues(prefs: CalendarPrefs): number[] {
+  const out: number[] = [];
+  for (const m of [prefs.reminderMinutes, ...prefs.extraReminders]) {
+    if (m !== null && !out.includes(m)) out.push(m);
+  }
+  return out;
+}

@@ -79,6 +79,7 @@ describe('desiredEventFor', () => {
       allDay: false,
       allDayReminder: null,
       reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+      extraReminders: [],
     });
   });
 
@@ -91,6 +92,7 @@ describe('desiredEventFor', () => {
       allDay: true,
       allDayReminder: null,
       reminderMinutes: null,
+      extraReminders: [],
     });
   });
 
@@ -159,8 +161,9 @@ describe('planSync', () => {
         startUtc: '2023-12-20T20:00:00.000Z',
         endUtc: '2023-12-20T22:00:00.000Z',
         allDay: false,
-      allDayReminder: null,
+        allDayReminder: null,
         reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+        extraReminders: [],
       });
     }
   });
@@ -256,6 +259,7 @@ describe('planSync', () => {
       allDay: true,
       allDayReminder: null,
       reminderMinutes: null,
+      extraReminders: [],
     });
   });
 
@@ -276,6 +280,7 @@ describe('planSync', () => {
       allDay: true,
       allDayReminder: null,
       reminderMinutes: null,
+      extraReminders: [],
     });
   });
 
@@ -388,6 +393,7 @@ const createOp = (id: string): SyncOp => ({
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
     reminderMinutes: 60,
+    extraReminders: [],
     allDayReminder: null,
   },
 });
@@ -411,6 +417,7 @@ const updateOp = (id: string): SyncOp => ({
     endUtc: '2026-12-25T17:00:00.000Z',
     allDay: false,
     reminderMinutes: 60,
+    extraReminders: [],
     allDayReminder: null,
   },
   entry: {

@@ -64,7 +64,14 @@ import { isExcluded, setExcluded } from '../data/exclusionStore';
 import { isPinned, setPinned } from '../data/pinStore';
 import { loadPrefs } from '../data/prefsStore';
 import { hasAllDayReminderOverride, hasReminderOverride } from '../domain/eventSettings';
-import { ALL_DAY_REMINDER_OPTIONS, AllDayReminder, REMINDER_OPTIONS } from '../domain/prefs';
+import {
+  ALL_DAY_REMINDER_OPTIONS,
+  AllDayReminder,
+  CalendarPrefs,
+  offsetLabel,
+  offsetShortLabel,
+  reminderSlotValues,
+} from '../domain/prefs';
 import { runSync, subscribeSync, upcomingFixtures } from '../syncEngine';
 
 // What a caller hands the host to fly a card.
@@ -102,10 +109,27 @@ interface Displayed {
   awayCrestUrl?: string;
 }
 
-// Durations only. "Use my default" is not a fifth duration — it is a
-// different KIND of answer, so it is a separate affordance (the reset
-// below), never a sibling chip.
-const DURATIONS = REMINDER_OPTIONS;
+// The chip set is the USER'S OWN offsets now (Stage 5): the configured
+// slots, plus Off, plus — so a selection can never be invisible — any
+// per-event override that is no longer among them. "Use my default" is
+// not another chip — it is a different KIND of answer, so it stays a
+// separate affordance (the reset).
+function reminderChipOptions(
+  prefs: CalendarPrefs,
+  chosen: number | null,
+): Array<{ label: string; short: string; value: number | null }> {
+  const values = reminderSlotValues(prefs);
+  if (chosen !== null && !values.includes(chosen)) values.push(chosen);
+  values.sort((a, b) => a - b);
+  return [
+    { label: 'None', short: 'Off', value: null },
+    ...values.map((v) => ({
+      label: offsetLabel(v),
+      short: offsetShortLabel(v),
+      value: v,
+    })),
+  ];
+}
 
 export function FixtureCardBody(props: {
   payload: FixtureCardPayload;
@@ -419,6 +443,7 @@ export function FixtureCardBody(props: {
                   <Rule theme={theme} />
                   <ReminderRow
                     theme={theme}
+                    prefs={prefs}
                     chosen={chosen}
                     overridden={overridden}
                     onPick={applyReminder}
@@ -536,11 +561,19 @@ function SegmentedReminderRow<T>(props: {
   theme: TeamTheme;
   options: ReadonlyArray<{ label: string; short: string; value: T }>;
   chosen: T;
+  // Every value currently ACTIVE on this event (Stage 5): an
+  // unoverridden event carries all three configured slots, and the
+  // chips show all of them lit rather than pretending one applies.
+  // Tapping any chip still narrows the event to that single choice —
+  // an override is one value, which is what makes it an override.
+  chosenMany?: readonly T[];
   overridden: boolean;
   onPick: (v: T) => void;
   onReset: () => void;
 }) {
   const { theme } = props;
+  const isSelected = (v: T) =>
+    props.chosenMany ? props.chosenMany.includes(v) : props.chosen === v;
   return (
     <View style={styles.row}>
       <Text style={[type.body, { color: theme.onGradient, flex: 1 }]}>
@@ -557,7 +590,7 @@ function SegmentedReminderRow<T>(props: {
         style={{ flexGrow: 0 }}
       >
         {props.options.map((o) => {
-          const selected = props.chosen === o.value;
+          const selected = isSelected(o.value);
           return (
             <Pressable
               key={o.label}
@@ -616,16 +649,27 @@ function SegmentedReminderRow<T>(props: {
 
 function ReminderRow(props: {
   theme: TeamTheme;
+  prefs: CalendarPrefs;
   chosen: number | null;
   overridden: boolean;
   onPick: (m: number | null) => void;
   onReset: () => void;
 }) {
+  // What this event actually carries: the single override when one
+  // exists, the configured slots otherwise — Off lit only when nothing
+  // is active at all.
+  const active: Array<number | null> = props.overridden
+    ? [props.chosen]
+    : (() => {
+        const v = reminderSlotValues(props.prefs);
+        return v.length > 0 ? v : [null];
+      })();
   return (
     <SegmentedReminderRow
       theme={props.theme}
-      options={DURATIONS}
+      options={reminderChipOptions(props.prefs, props.overridden ? props.chosen : null)}
       chosen={props.chosen}
+      chosenMany={active}
       overridden={props.overridden}
       onPick={props.onPick}
       onReset={props.onReset}

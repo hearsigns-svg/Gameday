@@ -52,6 +52,9 @@ export function movedEntry(
   // Same rule for the all-day channel: the move re-applies the CURRENT
   // day-shaped choice, so the ledger must record what was written.
   allDayReminder?: import('./prefs').AllDayReminder,
+  // And for slots 2/3 (Stage 5) — recorded so the planner sees what the
+  // rebuilt event actually carries.
+  extraReminders?: number[],
 ): LedgerEntry {
   return {
     ...entry,
@@ -60,6 +63,7 @@ export function movedEntry(
     strayEventId: entry.eventId,
     ...(reminderMinutes !== undefined ? { reminderMinutes } : {}),
     ...(allDayReminder !== undefined ? { allDayReminder } : {}),
+    ...(extraReminders !== undefined ? { extraReminders } : {}),
   };
 }
 

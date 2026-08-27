@@ -20,6 +20,7 @@ import { loadPrefs } from './data/prefsStore';
 import {
   assumedAppliedReminder,
   EventSettingsMap,
+  extraRemindersFor,
   reminderMinutesFor,
   allDayReminderFor,
 } from './domain/eventSettings';
@@ -395,6 +396,7 @@ function inputFor(
       prefs,
       allDay,
     ),
+    extraRemindersBefore: extraRemindersFor(fixtureId, settings, prefs, allDay),
     allDayReminder: allDayReminderFor(fixtureId, settings, prefs, allDay),
   };
 }
@@ -448,6 +450,7 @@ async function migrateToTarget(
         targetCalendarId,
         input.reminderMinutesBefore,
         input.allDayReminder,
+        input.extraRemindersBefore,
       ),
     );
     const del = await deleteFixtureEvent(step.entry.eventId);
@@ -707,6 +710,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           // placeholder. Deciding it HERE was what made a reminder
           // invisible to the planner and lost it on every recreate.
           reminderMinutesBefore: d.reminderMinutes,
+          extraRemindersBefore: d.extraReminders,
           allDayReminder: d.allDayReminder,
           ...(d.note ? { note: d.note } : {}),
         };
@@ -743,6 +747,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           // is what makes "we own reminders, so we restore them" true
           // rather than aspirational.
           reminderMinutes: input.reminderMinutesBefore,
+          extraReminders: input.extraRemindersBefore,
           allDayReminder: d.allDayReminder,
         });
         if (op.op === 'create') outcome.created++;

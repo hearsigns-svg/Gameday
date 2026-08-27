@@ -3034,3 +3034,19 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   to its reserve team's ground). Appearances inherit parent venue +
   venueCity. Generated layers are suppressed only once a photo has
   PAINTED (onLoad) — a hanging URL can no longer bare the card.
+- 2026-08-27 (Stage 5, owner brief): THREE REMINDER SLOTS. Slot 1 stays
+  `reminderMinutes` (every stored pref, per-event override and ledger
+  compare already understands it); slots 2/3 are `extraReminders`,
+  positional and nullable. Ledger records extras with ABSENT-MEANS-EMPTY
+  (the allDayReminder argument: one alarm was all the old engine ever
+  wrote — no mass rewrite on upgrade), so a slot edit reaches every
+  materialised reminder as ordinary update ops. A per-event override is
+  that event's WHOLE answer — extras stand down, or "Off, just this
+  one" would mean two reminders. Defaults [null, null]: the card's
+  "three reminders" were three CHOICES of one reminder, and defaults
+  that add two alarms to every synced event are a flood, not an
+  upgrade. Wheels: OWN snapping lists (value + unit Off/Minutes/Hours),
+  not @react-native-picker — Android's native picker is a dropdown and
+  a new native module costs a CNG prebuild; grid 1–59 min / 1–24 h /
+  36–72 h per the brief. Card chips now show the USER'S offsets, all
+  active ones lit; tapping one still narrows to a single override.

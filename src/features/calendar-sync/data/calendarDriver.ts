@@ -601,6 +601,9 @@ export interface EventInput {
   endUtc: string;
   allDay: boolean;
   reminderMinutesBefore: number | null;
+  // Slots 2/3 (Stage 5) — already resolved by the plan (empty on
+  // all-day entries and overridden events), so the driver just writes.
+  extraRemindersBefore: number[];
   // Day-shaped reminder for ALL-DAY entries (Prompt 24 A1) — the civil
   // choice, translated to a platform offset below at write time.
   allDayReminder?: AllDayReminder;
@@ -670,7 +673,13 @@ function toEventDetails(input: EventInput) {
             Platform.OS === 'ios' ? 'local-midnight' : 'utc-midnight',
           )
         : input.reminderMinutesBefore;
-      return minutes === null ? [] : [{ relativeOffset: -minutes }];
+      // Slots 2/3 ride only on timed events; the plan already sends []
+      // for all-day entries, and this guard keeps the invariant even if
+      // a caller forgets.
+      const extras = input.allDay ? [] : input.extraRemindersBefore;
+      return [...(minutes === null ? [] : [minutes]), ...extras].map((m) => ({
+        relativeOffset: -m,
+      }));
     })(),
     ...(input.colour && calendarCapabilities().perEventColour
       ? { color: input.colour }

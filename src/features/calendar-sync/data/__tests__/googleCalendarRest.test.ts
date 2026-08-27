@@ -48,6 +48,7 @@ const timed: RestEventInput = {
   endUtc: '2027-03-06T17:00:00.000Z',
   allDay: false,
   reminderMinutesBefore: 60,
+  extraRemindersBefore: [],
 };
 
 test('calendar create pins UTC timezone and returns the id', async () => {
@@ -71,6 +72,26 @@ test('timed insert carries UTC dateTimes, popup reminder, and both private tags'
   });
   expect(body.extendedProperties.private[MARKER_KEY]).toBe(MARKER_VALUE);
   expect(body.extendedProperties.private[FIXTURE_KEY]).toBe('tsdb-777');
+});
+
+test('reminder slots 2/3 land as additional popup overrides (Stage 5)', async () => {
+  const { fetchFn, calls } = fakeFetch([{ status: 200, json: { id: 'ev-2' } }]);
+  const r = await insertRestEvent(
+    'cal-9',
+    { ...timed, extraRemindersBefore: [360, 1440] },
+    token,
+    { fetchFn, sleep: noSleep },
+  );
+  expect(r).toEqual(ok('ev-2'));
+  const body = JSON.parse(String(calls[0]!.init.body));
+  expect(body.reminders).toEqual({
+    useDefault: false,
+    overrides: [
+      { method: 'popup', minutes: 60 },
+      { method: 'popup', minutes: 360 },
+      { method: 'popup', minutes: 1440 },
+    ],
+  });
 });
 
 test('all-day dates pass through with NO ±1 arithmetic — planner end is already exclusive', () => {

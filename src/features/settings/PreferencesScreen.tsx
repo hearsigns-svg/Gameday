@@ -23,7 +23,8 @@ import { RootScreenProps } from '../../core/navigation';
 import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
-import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
+import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs } from '../calendar-sync/domain/prefs';
+import { ReminderSlotRow } from './ReminderSlots';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import {
   calendarColour,
@@ -272,6 +273,9 @@ export default function PreferencesScreen({
   const [openSection, setOpenSection] = useState<SectionKey | null>(null);
   const toggleSection = (key: SectionKey) =>
     setOpenSection((current) => (current === key ? null : key));
+  // Which reminder slot's wheels are out — one at a time, same rule as
+  // the sections themselves.
+  const [openReminderSlot, setOpenReminderSlot] = useState<number | null>(null);
   const [region, setRegion] = useState<RegionKey | null>(regionOverride());
   const [appearance, setAppearance] = useState<AppearanceChoice>(appearanceChoice);
   const t = useTheme();
@@ -452,17 +456,38 @@ export default function PreferencesScreen({
         title="Reminders"
         open={openSection === 'reminders'}
         onToggle={() => toggleSection('reminders')}
-        footnote="Reminder changes apply to fixtures as they are added or updated."
+        footnote="Reminder changes apply to every synced fixture on the next sync."
       >
-        {REMINDER_OPTIONS.map((opt, i) => (
-          <OptionRow
-            key={String(opt.value)}
-            label={opt.label}
-            selected={prefs.reminderMinutes === opt.value}
-            onPress={() => apply({ ...prefs, reminderMinutes: opt.value })}
-            last={i === REMINDER_OPTIONS.length - 1 && ALL_DAY_REMINDER_OPTIONS.length === 0}
-          />
-        ))}
+        {/* The three slots (Stage 5): each expands in place into its
+            wheel pair. Values persist through apply() like every other
+            preference, and the immediate runSync reschedules every
+            materialised reminder through the existing channels. */}
+        {(['Reminder 1', 'Reminder 2', 'Reminder 3'] as const).map(
+          (label, slot) => (
+            <ReminderSlotRow
+              key={label}
+              label={label}
+              minutes={
+                slot === 0
+                  ? prefs.reminderMinutes
+                  : (prefs.extraReminders[slot - 1] ?? null)
+              }
+              expanded={openReminderSlot === slot}
+              onToggle={() =>
+                setOpenReminderSlot((s) => (s === slot ? null : slot))
+              }
+              onChange={(m) => {
+                if (slot === 0) apply({ ...prefs, reminderMinutes: m });
+                else {
+                  const extras = [...prefs.extraReminders];
+                  while (extras.length < 2) extras.push(null);
+                  extras[slot - 1] = m;
+                  apply({ ...prefs, extraReminders: extras });
+                }
+              }}
+            />
+          ),
+        )}
         <SegmentedRow
           label="Days without a time yet"
           last

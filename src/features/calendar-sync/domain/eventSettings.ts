@@ -120,6 +120,31 @@ export function reminderMinutesFor(
   return override === undefined ? prefs.reminderMinutes : override;
 }
 
+// The ADDITIONAL minutes-before reminders (slots 2/3, Stage 5) a timed
+// event should carry beside the primary one above. Empty on all-day
+// entries (the day-shaped channel is theirs), and empty the moment an
+// event carries a per-event override — the override is that event's
+// WHOLE answer, chosen on its card, and stacking global extras onto it
+// would make "Off, just this one" mean "two reminders". Deduped against
+// the primary and each other so no event ever carries the same alarm
+// twice.
+export function extraRemindersFor(
+  fixtureId: string,
+  map: EventSettingsMap,
+  prefs: CalendarPrefs,
+  allDay: boolean,
+): number[] {
+  if (allDay) return [];
+  if (hasReminderOverride(fixtureId, map)) return [];
+  const primary = prefs.reminderMinutes;
+  const out: number[] = [];
+  for (const m of prefs.extraReminders) {
+    if (m === null || m === primary || out.includes(m)) continue;
+    out.push(m);
+  }
+  return out;
+}
+
 // What a legacy ledger entry — one written before reminders were
 // recorded — is ASSUMED to be carrying. It is exactly what the engine
 // would have applied for that entry: nothing on an all-day placeholder,

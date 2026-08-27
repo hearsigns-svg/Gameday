@@ -48,6 +48,8 @@ export interface RestEventInput {
   endUtc: string; // all-day: EXCLUSIVE next-midnight, planner convention
   allDay: boolean;
   reminderMinutesBefore: number | null;
+  // Slots 2/3 (Stage 5) — resolved by the plan; timed events only.
+  extraRemindersBefore: number[];
   allDayReminder?: AllDayReminder;
   // Google's event palette is an enum ('1'..'11'), not arbitrary hex —
   // the driver maps the product colour to the nearest swatch.
@@ -97,8 +99,12 @@ function toRestBody(input: RestEventInput): Record<string, unknown> {
       : { dateTime: input.endUtc, timeZone: 'UTC' },
     reminders: {
       useDefault: false,
-      overrides:
-        minutes === null ? [] : [{ method: 'popup', minutes }],
+      // Same invariant as the native driver: slots 2/3 ride only on
+      // timed events (Google caps overrides at 5; three slots fit).
+      overrides: [
+        ...(minutes === null ? [] : [minutes]),
+        ...(input.allDay ? [] : input.extraRemindersBefore),
+      ].map((m) => ({ method: 'popup', minutes: m })),
     },
     ...(input.colorId ? { colorId: input.colorId } : {}),
     ...(input.note ? { description: input.note } : {}),
