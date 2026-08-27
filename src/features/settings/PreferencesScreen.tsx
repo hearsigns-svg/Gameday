@@ -8,11 +8,20 @@
 // and only genuinely long lists (reminders' four, Region's many) stay
 // as rows. The destructive choice sits alone at the end, past a rule.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
-import { radius, spacing, type, useTheme } from '../../core/tokens';
+import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
 import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
@@ -55,25 +64,98 @@ const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
   { name: 'Graphite', hex: '#52525B' },
 ];
 
-// One intent-group: a heading and its card. The card is the section —
-// rhythm and containment instead of a wall of rows (rule 12).
-function Section(props: { title?: string; children: React.ReactNode }) {
+function useReduceMotion(): boolean {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
+      if (live) setReduceMotion(on);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion,
+    );
+    return () => {
+      live = false;
+      sub.remove();
+    };
+  }, []);
+  return reduceMotion;
+}
+
+// One intent-group: a heading and its card. The heading is now a
+// DISCLOSURE (consolidation brief, Stage 2): the whole row toggles the
+// card beneath it, so the screen's first paint is its map — five
+// titles — rather than every control at once. State lives in the
+// screen and dies with it: a fresh entry is always all-collapsed.
+function Section(props: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  // The section's explanatory caption, folded INTO the disclosure —
+  // a collapsed section must not leave its explanation orphaned on
+  // the screen.
+  footnote?: string;
+  children: React.ReactNode;
+}) {
   const t = useTheme();
+  const reduceMotion = useReduceMotion();
+  const caret = useRef(new Animated.Value(props.open ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(caret, {
+      toValue: props.open ? 1 : 0,
+      duration: reduceMotion ? 0 : motion.standard,
+      useNativeDriver: true,
+    }).start();
+  }, [props.open, caret, reduceMotion]);
   return (
     <View style={{ marginTop: spacing.xl }}>
-      {props.title ? (
-        <Text style={[type.heading, { color: t.textPrimary, marginBottom: spacing.m }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: props.open }}
+        accessibilityLabel={`${props.title} settings`}
+        onPress={props.onToggle}
+        style={styles.sectionHeader}
+      >
+        <Text style={[type.heading, { color: t.textPrimary, flex: 1 }]}>
           {props.title}
         </Text>
+        {/* A rotating caret, not a navigation chevron: it points at
+            where the content goes, and turns to face it. */}
+        <Animated.View
+          style={{
+            transform: [
+              {
+                rotate: caret.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '180deg'],
+                }),
+              },
+            ],
+          }}
+        >
+          <Ionicons name="chevron-down" size={18} color={t.textSecondary} />
+        </Animated.View>
+      </Pressable>
+      {props.open ? (
+        <>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: t.surface, borderColor: t.border },
+            ]}
+          >
+            {props.children}
+          </View>
+          {props.footnote ? (
+            <Text
+              style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}
+            >
+              {props.footnote}
+            </Text>
+          ) : null}
+        </>
       ) : null}
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: t.surface, borderColor: t.border },
-        ]}
-      >
-        {props.children}
-      </View>
     </View>
   );
 }
@@ -197,9 +279,22 @@ function ValueRow(props: {
   );
 }
 
+type SectionKey = 'calendar' | 'events' | 'reminders' | 'app' | 'past';
+
 export default function PreferencesScreen({
   navigation,
 }: RootScreenProps<'Preferences'>) {
+  // All collapsed on entry — the accordion's default state is the list
+  // of section titles. Several may be open at once; nothing persists.
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
+    calendar: false,
+    events: false,
+    reminders: false,
+    app: false,
+    past: false,
+  });
+  const toggleSection = (key: SectionKey) =>
+    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
   const [region, setRegion] = useState<RegionKey | null>(regionOverride());
   const [appearance, setAppearance] = useState<AppearanceChoice>(appearanceChoice);
   const t = useTheme();
@@ -247,7 +342,11 @@ export default function PreferencesScreen({
       style={{ backgroundColor: t.bg }}
       contentContainerStyle={{ padding: spacing.l, paddingTop: 0 }}
     >
-      <Section title="Calendar">
+      <Section
+        title="Calendar"
+        open={openSections.calendar}
+        onToggle={() => toggleSection('calendar')}
+      >
         {activeBackend() === 'rest' ? (
           // Google-connected: one calendar, ours by construction —
           // nothing to pick. The row is the reconnect surface, which is
@@ -333,7 +432,12 @@ export default function PreferencesScreen({
         )}
       </Section>
 
-      <Section title="Events">
+      <Section
+        title="Events"
+        open={openSections.events}
+        onToggle={() => toggleSection('events')}
+        footnote="Timed events run kick-off to full time. Changes apply to every synced fixture on the next sync."
+      >
         <SegmentedRow
           label="Event style"
           options={[
@@ -366,12 +470,13 @@ export default function PreferencesScreen({
           ]}
         />
       </Section>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Timed events run kick-off to full time. Changes apply to every synced
-        fixture on the next sync.
-      </Text>
 
-      <Section title="Reminders">
+      <Section
+        title="Reminders"
+        open={openSections.reminders}
+        onToggle={() => toggleSection('reminders')}
+        footnote="Reminder changes apply to fixtures as they are added or updated."
+      >
         {REMINDER_OPTIONS.map((opt, i) => (
           <OptionRow
             key={String(opt.value)}
@@ -393,11 +498,12 @@ export default function PreferencesScreen({
           }))}
         />
       </Section>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Reminder changes apply to fixtures as they are added or updated.
-      </Text>
 
-      <Section title="App">
+      <Section
+        title="App"
+        open={openSections.app}
+        onToggle={() => toggleSection('app')}
+      >
         <SegmentedRow
           label="Appearance"
           options={[
@@ -463,7 +569,12 @@ export default function PreferencesScreen({
           record of something that happened, and this is the only way
           to opt out of keeping that record. */}
       <View style={[styles.rule, { borderColor: t.border }]} />
-      <Section title="Past games">
+      <Section
+        title="Past games"
+        open={openSections.past}
+        onToggle={() => toggleSection('past')}
+        footnote="Only games KickOffCal added are ever removed, and only ones it still has a record of. Switching back stops further removals — it does not bring back anything already deleted."
+      >
         <OptionRow
           label="Keep past games in my calendar"
           selected={!prefs.autoDeletePast}
@@ -476,11 +587,6 @@ export default function PreferencesScreen({
           last
         />
       </Section>
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-        Only games KickOffCal added are ever removed, and only ones it still
-        has a record of. Switching back stops further removals — it does not
-        bring back anything already deleted.
-      </Text>
 
       {__DEV__ ? (
         <Pressable
@@ -499,6 +605,15 @@ export default function PreferencesScreen({
 }
 
 const styles = StyleSheet.create({
+  // The disclosure row: the WHOLE row is the tap target, and it clears
+  // 44pt on its own. The card follows it when open.
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
+    minHeight: 44,
+    marginBottom: spacing.s,
+  },
   card: {
     borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth,
