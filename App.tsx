@@ -27,7 +27,7 @@ import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
 import { useColorSchemeMode } from './src/core/useColorSchemeMode';
-import { Wordmark } from './src/core/components';
+import { BrandTitle, Wordmark } from './src/core/components';
 import SearchScreen from './src/features/follows/screens/SearchScreen';
 import WelcomeScreen from './src/features/onboarding/WelcomeScreen';
 import CalendarPrimingScreen from './src/features/calendar-sync/screens/CalendarPrimingScreen';
@@ -112,8 +112,16 @@ function Tabs() {
           headerRight: () => <SettingsButton />,
         }}
       />
-      <Tab.Screen name="Following" component={FollowingScreen} />
-      <Tab.Screen name="Schedule" component={ScheduleScreen} />
+      <Tab.Screen
+        name="Following"
+        component={FollowingScreen}
+        options={{ headerTitle: () => <BrandTitle>Following</BrandTitle> }}
+      />
+      <Tab.Screen
+        name="Schedule"
+        component={ScheduleScreen}
+        options={{ headerTitle: () => <BrandTitle>Schedule</BrandTitle> }}
+      />
     </Tab.Navigator>
   );
 }
@@ -255,7 +263,10 @@ export default function App() {
         <Stack.Screen
           name="Preferences"
           component={PreferencesScreen}
-          options={{ title: 'Preferences' }}
+          options={{
+            title: 'Preferences',
+            headerTitle: () => <BrandTitle>Preferences</BrandTitle>,
+          }}
         />
         <Stack.Screen
           name="Region"

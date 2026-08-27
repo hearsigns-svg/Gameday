@@ -915,6 +915,28 @@ export function Wordmark(props: { size?: number }) {
   );
 }
 
+// A section screen's title in the same voice as the wordmark: brand
+// blue, heavy weight, tightened tracking. One weight throughout — the
+// two-weight rhythm belongs to the word "KickOffCal" itself, not to
+// ordinary titles.
+export function BrandTitle(props: { children: string }) {
+  const t = useTheme();
+  return (
+    <Text
+      accessibilityRole="header"
+      numberOfLines={1}
+      style={{
+        fontSize: 20,
+        letterSpacing: -0.5,
+        color: t.primary,
+        fontWeight: '800',
+      }}
+    >
+      {props.children}
+    </Text>
+  );
+}
+
 // Sport entry card (2-per-row grid on Home). Every card NAVIGATES —
 // following always happens on a visible Follow button inside, never as
 // a hidden tap side-effect (owner ruling: no invisible affordances).
