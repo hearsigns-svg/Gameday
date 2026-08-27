@@ -427,15 +427,26 @@ export default function ScheduleScreen({ navigation }: Props) {
                   : openness.interpolate({
                       inputRange: [0, 1],
                       outputRange: [0, gridH],
+                      extrapolate: 'clamp',
                     }),
               overflow: 'hidden',
             }}
           >
+            {/* Measured ABSOLUTE once the height is known, so the
+                grid's own layout can never be constrained by the
+                clipping window: a measurement taken mid-collapse (or at
+                height 0) would otherwise overwrite gridH and pin the
+                restore's output range at zero — the calendar would
+                never come back. The h > 0 guard is the same defence for
+                any layout pass that still reports a clipped frame. */}
             <View
+              style={gridH === null ? undefined : styles.gridInner}
               onLayout={(e) => {
                 const h = e.nativeEvent.layout.height;
-                gridHRef.current = h;
-                if (h !== gridH) setGridH(h);
+                if (h > 0 && h !== gridH) {
+                  gridHRef.current = h;
+                  setGridH(h);
+                }
               }}
             >
               <MonthGrid
@@ -563,6 +574,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.m,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // The grid, detached from the clipping window's constraints (see the
+  // note at the measurement site). Width still comes from the window.
+  gridInner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   // The partition: a grab-handle on the seam between grid and list.
   // Tap toggles; a flick or drag on it does the same by gesture.
