@@ -3000,3 +3000,17 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   at directory.ts builders. Fixture rows: the "+" pin control became
   Add/Added, and competition/series pages drop the redundant competition
   name from row captions (date stays).
+- 2026-08-27 (UI consolidation Stage 3, owner brief): Schedule's
+  List/Month toggle is GONE — one screen, month grid over the full
+  day-sectioned list, split by a grab-handle partition with exactly two
+  states (split / full-screen list; no enlarged-calendar third state).
+  Two-way sync is guarded by OWNERSHIP not timers: only a user drag
+  (onScrollBeginDrag) may let the list drive the grid, and a day tap
+  disables that before its own programmatic scroll — so a snap to the
+  nearest following section can never steal the tapped day's highlight,
+  and neither pane can re-fire the other. The grid became controlled
+  (screen owns shown month) so restoring the split lands on whatever
+  month the list sits in; its ‹ › text glyphs became icon buttons
+  (house no-chevron rule) and removed-only days keep a dimmed dot —
+  the list rows' shown/removed distinction, on the calendar (the grid
+  previously had NO removed indicator; the brief assumed one).

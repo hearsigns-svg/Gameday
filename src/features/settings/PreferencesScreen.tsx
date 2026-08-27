@@ -11,7 +11,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  AccessibilityInfo,
   Animated,
   Pressable,
   ScrollView,
@@ -22,6 +21,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
 import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
+import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
 import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs, REMINDER_OPTIONS } from '../calendar-sync/domain/prefs';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
@@ -63,25 +63,6 @@ const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
   { name: 'Pink', hex: '#DB2777' },
   { name: 'Graphite', hex: '#52525B' },
 ];
-
-function useReduceMotion(): boolean {
-  const [reduceMotion, setReduceMotion] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((on) => {
-      if (live) setReduceMotion(on);
-    });
-    const sub = AccessibilityInfo.addEventListener(
-      'reduceMotionChanged',
-      setReduceMotion,
-    );
-    return () => {
-      live = false;
-      sub.remove();
-    };
-  }, []);
-  return reduceMotion;
-}
 
 // One intent-group: a heading and its card. The heading is now a
 // DISCLOSURE (consolidation brief, Stage 2): the whole row toggles the

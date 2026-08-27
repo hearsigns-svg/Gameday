@@ -1,10 +1,29 @@
 // Schedule: what Gameday manages — not an imitation of the user's
-// calendar. Two views of the same snapshot: a day-grouped list and a
-// month grid. Rows carry the per-event opt-out: removed fixtures stay
-// visible, greyed, with a restore affordance.
+// calendar. ONE surface (consolidation brief, Stage 3): the month grid
+// above a partition, the full day-grouped list beneath it, in lockstep
+// both ways — tapping a day jumps the list, scrolling the list drives
+// the grid's highlight and month. The old List/Month toggle is gone.
+// Rows carry the per-event opt-out: removed fixtures stay visible,
+// greyed, with a restore affordance.
+//
+// THE LOOP IS GUARDED BY OWNERSHIP, NOT TIMERS. Only a USER scroll may
+// drive the grid: a day tap disables scroll-sync before its
+// programmatic scroll (so the snap to a following section cannot steal
+// the tapped day's highlight), and the next onScrollBeginDrag — which
+// only a finger fires — hands the list back. Grid updates never scroll
+// the list, so there is no path around the circle in either direction.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, SectionList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+  ViewToken,
+} from 'react-native';
 import { useCardExpansion } from '../../../core/cardExpansion';
 import { fixtureCardRequest } from '../openFixtureCard';
 import { monogramOf,
@@ -17,8 +36,9 @@ import { calendarChoice } from '../data/calendarChoice';
 import { loadExclusions, setExcluded } from '../data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
+import { useReduceMotion } from '../../../core/useReduceMotion';
 import { teamTheme } from '../../../core/teamTheme';
-import { radius, spacing, type, useTheme } from '../../../core/tokens';
+import { motion, spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
 import {
@@ -38,11 +58,19 @@ import {
   UpcomingFixture,
   upcomingFixtures,
 } from '../syncEngine';
+import {
+  dayMarks,
+  monthOfDay,
+  sectionIndexForDay,
+} from '../domain/scheduleSync';
 import { MonthGrid } from './MonthGrid';
 
 type Props = TabScreenProps<'Schedule'>;
 
 interface DaySection {
+  // The day's grouping key — the same string the grid's cells carry,
+  // which is what makes the two-way sync a string comparison.
+  key: string;
   title: string;
   data: UpcomingFixture[];
 }
@@ -57,24 +85,61 @@ function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
   }
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, data]) => ({
+    .map(([key, data]) => ({
+      key,
       title: dayHeading(data[0].startUtc, isDateOnly(data[0].status, data[0].timePrecision)),
       data,
     }));
 }
 
+const todayKey = () => dayKey(new Date().toISOString());
+
 export default function ScheduleScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
+  const reduceMotion = useReduceMotion();
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
-  const [view, setView] = useState<'list' | 'month'>('list');
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Entry state: today highlighted, current month shown. The list opens
+  // at its top, which IS the nearest upcoming section.
+  const [selectedDay, setSelectedDay] = useState<string>(todayKey);
+  const [shownMonth, setShownMonth] = useState(() => monthOfDay(todayKey()));
+  // The partition's two states. `openness` is the animated truth the
+  // grid's height rides on (1 split, 0 full-screen list); `split` is
+  // the settled state the handle's semantics read.
+  const [split, setSplit] = useState(true);
+  const [gridH, setGridH] = useState<number | null>(null);
+  const openness = useRef(new Animated.Value(1)).current;
+  const opennessValue = useRef(1);
+  const gridHRef = useRef(0);
   const [running, setRunning] = useState(false);
   const [last, setLast] = useState(lastSync);
   const [syncError, setSyncError] = useState<string | null>(lastSyncError);
   const [dataStaleHours, setDataStaleHours] = useState<number | null>(null);
+
+  const listRef = useRef<SectionList<UpcomingFixture, DaySection>>(null);
+  // Scroll-sync ownership (see the header note): false until the user
+  // actually drags the list.
+  const syncFromScroll = useRef(false);
+  // A far jump can overshoot the render window; keep the target so the
+  // failure handler can close in on it, boundedly.
+  const pendingJump = useRef<{ sectionIndex: number; tries: number } | null>(null);
+  const sectionsRef = useRef<DaySection[]>([]);
+  const selectedDayRef = useRef(selectedDay);
+  const shownMonthRef = useRef(shownMonth);
+  useEffect(() => {
+    selectedDayRef.current = selectedDay;
+  }, [selectedDay]);
+  useEffect(() => {
+    shownMonthRef.current = shownMonth;
+  }, [shownMonth]);
+  useEffect(() => {
+    const id = openness.addListener(({ value }) => {
+      opennessValue.current = value;
+    });
+    return () => openness.removeListener(id);
+  }, [openness]);
 
   // Data age is the SOURCE's, not the device's: refresh the freshness
   // summary the sweep maintains, then judge the followed sources by it.
@@ -115,6 +180,9 @@ export default function ScheduleScreen({ navigation }: Props) {
     [fixtures],
   );
   const sections = useMemo(() => sectionsFrom(ahead), [ahead]);
+  useEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
   // Display order across every day heading — what the expanded card
   // pages through, so a swipe follows the list exactly.
   const listIds = useMemo(
@@ -132,17 +200,153 @@ export default function ScheduleScreen({ navigation }: Props) {
     return map;
   }, [ahead, excludedIds]);
 
-  const dayFixtures = useMemo(
-    () =>
-      selectedDay
-        ? ahead.filter(
-            (f) =>
-              dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision)) ===
-              selectedDay,
-          )
-        : [],
-    [ahead, selectedDay],
-  );
+  // Days where everything has been opted out keep a dimmed mark — the
+  // list rows' shown/removed distinction, on the grid.
+  const removedOnlyDays = useMemo(() => {
+    const marks = dayMarks(
+      ahead.map((f) => ({
+        id: f.id,
+        day: dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision)),
+      })),
+      excludedIds,
+    );
+    const days = new Set<string>();
+    for (const [day, mark] of marks) if (mark === 'removed') days.add(day);
+    return days;
+  }, [ahead, excludedIds]);
+
+  // ---- calendar → list -----------------------------------------------
+
+  const jumpToDay = (day: string) => {
+    setSelectedDay(day);
+    selectedDayRef.current = day;
+    const m = monthOfDay(day);
+    if (
+      m.year !== shownMonthRef.current.year ||
+      m.month !== shownMonthRef.current.month
+    ) {
+      shownMonthRef.current = m;
+      setShownMonth(m);
+    }
+    // This scroll is OURS: it must not re-drive the grid, and the snap
+    // to a following section must not steal the tapped day's highlight.
+    syncFromScroll.current = false;
+    const idx = sectionIndexForDay(
+      sectionsRef.current.map((s) => s.key),
+      day,
+    );
+    if (idx === null) return;
+    pendingJump.current = { sectionIndex: idx, tries: 0 };
+    listRef.current?.scrollToLocation({
+      sectionIndex: idx,
+      itemIndex: 0, // the section HEADER — the day lands with its heading
+      viewPosition: 0,
+      animated: !reduceMotion,
+    });
+  };
+
+  // A jump outside the render window: get close by offset, then land
+  // precisely once the window has caught up. Bounded — four tries, then
+  // wherever the offset scroll got us is where we honestly are.
+  const onScrollToIndexFailed = (info: {
+    index: number;
+    averageItemLength: number;
+  }) => {
+    const pending = pendingJump.current;
+    listRef.current
+      ?.getScrollResponder()
+      ?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+    if (!pending || pending.tries >= 4) return;
+    pendingJump.current = { ...pending, tries: pending.tries + 1 };
+    setTimeout(() => {
+      const again = pendingJump.current;
+      if (!again) return;
+      listRef.current?.scrollToLocation({
+        sectionIndex: again.sectionIndex,
+        itemIndex: 0,
+        viewPosition: 0,
+        animated: false,
+      });
+    }, 120);
+  };
+
+  // ---- list → calendar -----------------------------------------------
+
+  // Stable pair: RN forbids swapping onViewableItemsChanged mid-life,
+  // so the handler reads everything through refs.
+  const viewability = useRef([
+    {
+      viewabilityConfig: { itemVisiblePercentThreshold: 5 },
+      onViewableItemsChanged: ({
+        viewableItems,
+      }: {
+        viewableItems: ViewToken[];
+      }) => {
+        if (!syncFromScroll.current) return;
+        const top = viewableItems.find((v) => v.isViewable) ?? viewableItems[0];
+        if (!top) return;
+        const sec = (top.section ?? top.item) as Partial<DaySection> | undefined;
+        const day =
+          sec && typeof sec.key === 'string' && Array.isArray(sec.data)
+            ? sec.key
+            : undefined;
+        if (!day) return;
+        if (day !== selectedDayRef.current) {
+          selectedDayRef.current = day;
+          setSelectedDay(day);
+        }
+        const m = monthOfDay(day);
+        if (
+          m.year !== shownMonthRef.current.year ||
+          m.month !== shownMonthRef.current.month
+        ) {
+          shownMonthRef.current = m;
+          setShownMonth(m);
+        }
+      },
+    },
+  ]).current;
+
+  // ---- the partition ---------------------------------------------------
+
+  // The settle lives in a ref because the PanResponder is created once
+  // and must not capture a stale reduceMotion or setSplit.
+  const settleRef = useRef((toSplit: boolean) => {
+    void toSplit;
+  });
+  settleRef.current = (toSplit: boolean) => {
+    setSplit(toSplit);
+    Animated.timing(openness, {
+      toValue: toSplit ? 1 : 0,
+      duration: reduceMotion ? 0 : motion.standard,
+      useNativeDriver: false, // height cannot ride the native driver
+    }).start();
+  };
+  const dragStart = useRef(1);
+  const pan = useRef(
+    PanResponder.create({
+      // Claim only real vertical movement, so plain taps fall through
+      // to the Pressable underneath.
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
+      onPanResponderGrant: () => {
+        dragStart.current = opennessValue.current;
+      },
+      onPanResponderMove: (_e, g) => {
+        const h = Math.max(gridHRef.current, 1);
+        openness.setValue(
+          Math.min(1, Math.max(0, dragStart.current + g.dy / h)),
+        );
+      },
+      onPanResponderRelease: (_e, g) => {
+        // A flick decides by direction; a slow drag by where it let go.
+        const toSplit =
+          Math.abs(g.vy) > 0.3 ? g.vy > 0 : opennessValue.current > 0.5;
+        settleRef.current(toSplit);
+      },
+      onPanResponderTerminate: () =>
+        settleRef.current(opennessValue.current > 0.5),
+    }),
+  ).current;
 
   const toggleExclude = (f: UpcomingFixture) => {
     const was = excludedIds.has(f.id);
@@ -184,48 +388,17 @@ export default function ScheduleScreen({ navigation }: Props) {
   const changed = last ? last.created + last.updated + last.deleted : 0;
   const calendarOff = calendarChoice() !== 'enabled';
 
-  const segment = (label: string, value: 'list' | 'month') => (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: view === value }}
-      accessibilityLabel={`${label} view`}
-      onPress={() => setView(value)}
-      style={[
-        styles.segment,
-        view === value && { backgroundColor: t.surfaceRaised },
-      ]}
-    >
-      <Text
-        style={[
-          type.secondary,
-          {
-            color: view === value ? t.textPrimary : t.textSecondary,
-            fontWeight: view === value ? '600' : '400',
-          },
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <SyncStatusChip
-            running={running}
-            lastAt={last?.at ?? null}
-            changed={changed}
-            error={syncError}
-            calendarOff={calendarOff}
-            dataStaleHours={dataStaleHours}
-          />
-        </View>
-        <View style={[styles.segments, { backgroundColor: t.surface }]}>
-          {segment('List', 'list')}
-          {segment('Month', 'month')}
-        </View>
+        <SyncStatusChip
+          running={running}
+          lastAt={last?.at ?? null}
+          changed={changed}
+          error={syncError}
+          calendarOff={calendarOff}
+          dataStaleHours={dataStaleHours}
+        />
       </View>
       {calendarOff && fixtures.length > 0 ? (
         <CalendarOffBanner
@@ -242,71 +415,98 @@ export default function ScheduleScreen({ navigation }: Props) {
               : 'Fixtures appear here as soon as schedules are announced.'
           }
         />
-      ) : view === 'month' ? (
-        <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl }}>
-          <MonthGrid
-            countsByDay={countsByDay}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-          />
-          {selectedDay ? (
-            dayFixtures.length > 0 ? (
-              dayFixtures.map((f) => (
-                <Row key={f.id} item={f} pagerIds={dayFixtures.map((d) => d.id)} />
-              ))
-            ) : (
+      ) : (
+        <>
+          <Animated.View
+            accessibilityElementsHidden={!split}
+            importantForAccessibility={split ? 'auto' : 'no-hide-descendants'}
+            style={{
+              height:
+                gridH === null
+                  ? undefined
+                  : openness.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, gridH],
+                    }),
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              onLayout={(e) => {
+                const h = e.nativeEvent.layout.height;
+                gridHRef.current = h;
+                if (h !== gridH) setGridH(h);
+              }}
+            >
+              <MonthGrid
+                year={shownMonth.year}
+                month={shownMonth.month}
+                onChangeMonth={(delta) =>
+                  setShownMonth((m) => {
+                    const d = new Date(m.year, m.month + delta, 1);
+                    return { year: d.getFullYear(), month: d.getMonth() };
+                  })
+                }
+                countsByDay={countsByDay}
+                removedOnlyDays={removedOnlyDays}
+                selectedDay={selectedDay}
+                onSelectDay={jumpToDay}
+              />
+            </View>
+          </Animated.View>
+          <View {...pan.panHandlers}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={split ? 'Hide the calendar' : 'Show the calendar'}
+              accessibilityState={{ expanded: split }}
+              onPress={() => settleRef.current(!split)}
+              hitSlop={8}
+              style={styles.handleRow}
+            >
+              <View style={[styles.handleBar, { backgroundColor: t.border }]} />
+            </Pressable>
+          </View>
+          <SectionList
+            ref={listRef}
+            style={{ flex: 1 }}
+            sections={sections}
+            keyExtractor={(f) => f.id}
+            stickySectionHeadersEnabled={false}
+            onScrollBeginDrag={() => {
+              // Only a finger fires this: the list is the user's again.
+              syncFromScroll.current = true;
+              pendingJump.current = null;
+            }}
+            viewabilityConfigCallbackPairs={viewability}
+            onScrollToIndexFailed={onScrollToIndexFailed}
+            renderSectionHeader={({ section }) => (
               <Text
+                accessibilityRole="header"
                 style={[
-                  type.secondary,
-                  { color: t.textSecondary, padding: spacing.l, textAlign: 'center' },
+                  type.label,
+                  styles.dayHeading,
+                  { color: t.textSecondary },
                 ]}
               >
-                Nothing on this day.
+                {section.title}
               </Text>
-            )
-          ) : (
-            <Text
-              style={[
-                type.caption,
-                { color: t.textSecondary, padding: spacing.l, textAlign: 'center' },
-              ]}
-            >
-              Tap a day to see its fixtures.
-            </Text>
-          )}
-        </ScrollView>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(f) => f.id}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section }) => (
-            <Text
-              accessibilityRole="header"
-              style={[
-                type.label,
-                styles.dayHeading,
-                { color: t.textSecondary },
-              ]}
-            >
-              {section.title}
-            </Text>
-          )}
-          renderItem={({ item }) => <Row item={item} pagerIds={listIds} />}
-          ListFooterComponent={
-            <Text
-              style={[
-                type.caption,
-                styles.footer,
-                { color: t.textSecondary },
-              ]}
-            >
-              {calendarOff
-                ? 'These fixtures will be added to your phone calendar once you connect it.'
-                : 'Everything here is in your phone calendar and updates on its own — times firm up, postponements move, cancellations disappear.'}
-            </Text>
-          }
-        />
+            )}
+            renderItem={({ item }) => <Row item={item} pagerIds={listIds} />}
+            ListFooterComponent={
+              <Text
+                style={[
+                  type.caption,
+                  styles.footer,
+                  { color: t.textSecondary },
+                ]}
+              >
+                {calendarOff
+                  ? 'These fixtures will be added to your phone calendar once you connect it.'
+                  : 'Everything here is in your phone calendar and updates on its own — times firm up, postponements move, cancellations disappear.'}
+              </Text>
+            }
+          />
+        </>
       )}
     </View>
   );
@@ -363,19 +563,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.m,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.s,
   },
-  segments: {
-    flexDirection: 'row',
-    borderRadius: radius.button,
-    padding: 2,
-  },
-  segment: {
-    paddingHorizontal: spacing.m,
-    minHeight: 36,
+  // The partition: a grab-handle on the seam between grid and list.
+  // Tap toggles; a flick or drag on it does the same by gesture.
+  handleRow: {
+    minHeight: 28,
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.button - 2,
+  },
+  handleBar: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
   },
   dayHeading: {
     paddingHorizontal: spacing.l,

@@ -1,9 +1,15 @@
 // Month view of Gameday's schedule — OUR events on a calendar-shaped
 // grid, not an imitation of the user's whole calendar (Schedule shows
 // only what Gameday manages, by decision). Monday-start weeks.
+//
+// CONTROLLED since the unified Schedule (Stage 3): the screen owns the
+// shown month, because the list drives it too — scrolling the list
+// pages this grid, and restoring the split state must land on whatever
+// month the list is sitting in. The grid only reports taps.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -29,20 +35,23 @@ function monthCells(year: number, month: number): (Cell | null)[] {
 }
 
 export function MonthGrid(props: {
-  // dayKey → number of active fixtures (excluded ones not counted).
+  year: number;
+  month: number; // 0-based, like Date
+  onChangeMonth: (delta: 1 | -1) => void;
+  // dayKey → number of fixtures still in the calendar that day.
   countsByDay: ReadonlyMap<string, number>;
+  // Days where EVERYTHING has been opted out: they keep a mark — dimmed,
+  // the same distinction the list rows carry — rather than going blank.
+  removedOnlyDays: ReadonlySet<string>;
   selectedDay: string | null;
   onSelectDay: (dayKey: string) => void;
 }) {
   const t = useTheme();
   const now = new Date();
-  const [offset, setOffset] = useState(0);
-  const shown = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const year = shown.getFullYear();
-  const month = shown.getMonth();
+  const { year, month } = props;
   const todayKey = keyOf(now.getFullYear(), now.getMonth(), now.getDate());
   const cells = useMemo(() => monthCells(year, month), [year, month]);
-  const title = shown.toLocaleDateString(undefined, {
+  const title = new Date(year, month, 1).toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
   });
@@ -53,10 +62,10 @@ export function MonthGrid(props: {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Previous month"
-          onPress={() => setOffset((o) => o - 1)}
+          onPress={() => props.onChangeMonth(-1)}
           style={styles.nav}
         >
-          <Text style={[type.heading, { color: t.primary }]}>‹</Text>
+          <Ionicons name="chevron-back" size={20} color={t.primary} />
         </Pressable>
         <Text
           accessibilityRole="header"
@@ -67,10 +76,10 @@ export function MonthGrid(props: {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Next month"
-          onPress={() => setOffset((o) => o + 1)}
+          onPress={() => props.onChangeMonth(1)}
           style={styles.nav}
         >
-          <Text style={[type.heading, { color: t.primary }]}>›</Text>
+          <Ionicons name="chevron-forward" size={20} color={t.primary} />
         </Pressable>
       </View>
       <View style={styles.week}>
@@ -89,6 +98,7 @@ export function MonthGrid(props: {
           {cells.slice(row * 7, row * 7 + 7).map((cell, i) => {
             if (!cell) return <View key={i} style={styles.cell} />;
             const count = props.countsByDay.get(cell.key) ?? 0;
+            const removedOnly = count === 0 && props.removedOnlyDays.has(cell.key);
             const selected = props.selectedDay === cell.key;
             const isToday = cell.key === todayKey;
             return (
@@ -96,7 +106,11 @@ export function MonthGrid(props: {
                 key={i}
                 accessibilityRole="button"
                 accessibilityLabel={`${cell.day} ${title}${
-                  count > 0 ? `, ${count} fixture${count === 1 ? '' : 's'}` : ''
+                  count > 0
+                    ? `, ${count} fixture${count === 1 ? '' : 's'}`
+                    : removedOnly
+                      ? ', removed fixtures only'
+                      : ''
                 }`}
                 onPress={() => props.onSelectDay(cell.key)}
                 style={[
@@ -124,13 +138,18 @@ export function MonthGrid(props: {
                 <View
                   style={[
                     styles.dot,
+                    removedOnly && { opacity: 0.4 },
                     {
                       backgroundColor:
                         count > 0
                           ? selected
                             ? t.onPrimary
                             : t.primary
-                          : 'transparent',
+                          : removedOnly
+                            ? selected
+                              ? t.onPrimary
+                              : t.textSecondary
+                            : 'transparent',
                     },
                   ]}
                 />
