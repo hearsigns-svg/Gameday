@@ -285,16 +285,12 @@ export default function PreferencesScreen({
   navigation,
 }: RootScreenProps<'Preferences'>) {
   // All collapsed on entry — the accordion's default state is the list
-  // of section titles. Several may be open at once; nothing persists.
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    calendar: false,
-    events: false,
-    reminders: false,
-    app: false,
-    past: false,
-  });
+  // of section titles. EXCLUSIVE (owner amendment): opening a section
+  // closes whichever was open, so at most one is expanded at a time.
+  // Nothing persists.
+  const [openSection, setOpenSection] = useState<SectionKey | null>(null);
   const toggleSection = (key: SectionKey) =>
-    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+    setOpenSection((current) => (current === key ? null : key));
   const [region, setRegion] = useState<RegionKey | null>(regionOverride());
   const [appearance, setAppearance] = useState<AppearanceChoice>(appearanceChoice);
   const t = useTheme();
@@ -344,7 +340,7 @@ export default function PreferencesScreen({
     >
       <Section
         title="Calendar"
-        open={openSections.calendar}
+        open={openSection === 'calendar'}
         onToggle={() => toggleSection('calendar')}
       >
         {activeBackend() === 'rest' ? (
@@ -434,7 +430,7 @@ export default function PreferencesScreen({
 
       <Section
         title="Events"
-        open={openSections.events}
+        open={openSection === 'events'}
         onToggle={() => toggleSection('events')}
         footnote="Timed events run kick-off to full time. Changes apply to every synced fixture on the next sync."
       >
@@ -473,7 +469,7 @@ export default function PreferencesScreen({
 
       <Section
         title="Reminders"
-        open={openSections.reminders}
+        open={openSection === 'reminders'}
         onToggle={() => toggleSection('reminders')}
         footnote="Reminder changes apply to fixtures as they are added or updated."
       >
@@ -501,7 +497,7 @@ export default function PreferencesScreen({
 
       <Section
         title="App"
-        open={openSections.app}
+        open={openSection === 'app'}
         onToggle={() => toggleSection('app')}
       >
         <SegmentedRow
@@ -554,24 +550,13 @@ export default function PreferencesScreen({
           {lastRegistryError()}
         </Text>
       ) : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Photo credits"
-        onPress={() => navigation.navigate('Credits')}
-        style={{ marginTop: spacing.m, minHeight: 44, justifyContent: 'center' }}
-      >
-        <Text style={[type.secondary, { color: t.textSecondary }]}>
-          Photo credits
-        </Text>
-      </Pressable>
-
       {/* Destructive, last, and past a rule — finished games are a
           record of something that happened, and this is the only way
           to opt out of keeping that record. */}
       <View style={[styles.rule, { borderColor: t.border }]} />
       <Section
         title="Past games"
-        open={openSections.past}
+        open={openSection === 'past'}
         onToggle={() => toggleSection('past')}
         footnote="Only games KickOffCal added are ever removed, and only ones it still has a record of. Switching back stops further removals — it does not bring back anything already deleted."
       >
@@ -587,6 +572,18 @@ export default function PreferencesScreen({
           last
         />
       </Section>
+
+      {/* The very bottom of the screen (owner amendment). */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Photo credits"
+        onPress={() => navigation.navigate('Credits')}
+        style={{ marginTop: spacing.xl, minHeight: 44, justifyContent: 'center' }}
+      >
+        <Text style={[type.secondary, { color: t.textSecondary }]}>
+          Photo credits
+        </Text>
+      </Pressable>
 
       {__DEV__ ? (
         <Pressable
