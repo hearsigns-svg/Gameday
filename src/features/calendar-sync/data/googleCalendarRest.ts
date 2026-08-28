@@ -200,6 +200,28 @@ export async function createOwnedCalendar(
   return ok(id);
 }
 
+// Deleting an app-created calendar removes every event in it — the
+// user-invoked erase (Stage 7B). calendar.app.created scope can only
+// delete calendars this app created, which is the API enforcing the
+// only-ever-our-calendar rule for us.
+export async function deleteOwnedCalendar(
+  calendarId: string,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<void>> {
+  const r = await request(
+    { method: 'DELETE', path: `/calendars/${encodeURIComponent(calendarId)}` },
+    token,
+    deps,
+  );
+  if (!r.ok) {
+    // Already gone is the outcome the caller wanted.
+    if (r.error.kind === 'not-found') return ok(undefined);
+    return r;
+  }
+  return ok(undefined);
+}
+
 export async function insertRestEvent(
   calendarId: string,
   input: RestEventInput,

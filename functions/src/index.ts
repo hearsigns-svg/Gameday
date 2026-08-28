@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -3047,3 +3048,39 @@ export const pollSheetAtp = onRequest(
     res.status(out.status).json(out.body);
   },
 );
+
+// ─── Account data deletion (Stage 7B) ─────────────────────────────────
+//
+// Removes everything the caller's uid owns server-side: the device
+// registration and the entitlements doc. The caller proves the uid with
+// a Firebase ID token — this is the canonical wipe path (the client's
+// direct devices/{uid} delete is only its cold-function fallback), and
+// it is deliberately shaped to become the core of the hosted web
+// deletion endpoint that real account linking will require. Idempotent:
+// deleting absent docs succeeds, so a retry after a half-applied run
+// converges.
+export const deleteAccountData = onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+  const m = /^Bearer (.+)$/.exec(String(req.headers.authorization ?? ''));
+  if (!m) {
+    res.status(401).json({ error: 'unauthenticated' });
+    return;
+  }
+  let uid: string;
+  try {
+    uid = (await getAdminAuth().verifyIdToken(m[1])).uid;
+  } catch {
+    res.status(401).json({ error: 'invalid_token' });
+    return;
+  }
+  try {
+    await db.collection('devices').doc(uid).delete();
+    await db.collection('entitlements').doc(uid).delete();
+    res.json({ ok: true, deleted: ['devices', 'entitlements'] });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});

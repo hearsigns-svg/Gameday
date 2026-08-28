@@ -12,6 +12,13 @@ export function loadLedger(): Ledger {
   return readJson<Ledger>(KEY, {});
 }
 
+// After a user-invoked calendar erase (Stage 7B): the events are gone,
+// and a ledger still claiming them would make the engine "update"
+// ghosts. Cleared ONLY when the calendar was actually deleted.
+export function clearLedger(): void {
+  writeJson(KEY, {});
+}
+
 export function upsertLedgerEntry(fixtureId: string, entry: LedgerEntry): void {
   const ledger = loadLedger();
   ledger[fixtureId] = entry;

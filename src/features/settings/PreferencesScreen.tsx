@@ -36,7 +36,11 @@ import { dataStaleness } from '../fixtures/data/freshnessRepo';
 import { loadFollowables } from '../follows/data/followStore';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { activeBackend } from '../calendar-sync/data/calendarBackend';
-import { connectGoogleCalendar } from '../calendar-sync/data/googleCalendarAuth';
+import {
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+} from '../calendar-sync/data/googleCalendarAuth';
+import { DataPrivacyRows } from './DataPrivacy';
 import { nativeSyncRoute } from '../calendar-sync/data/driver';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
 import { runSync } from '../calendar-sync/syncEngine';
@@ -261,7 +265,13 @@ function ValueRow(props: {
   );
 }
 
-type SectionKey = 'calendar' | 'events' | 'reminders' | 'app' | 'past';
+type SectionKey =
+  | 'calendar'
+  | 'events'
+  | 'reminders'
+  | 'app'
+  | 'past'
+  | 'privacy';
 
 export default function PreferencesScreen({
   navigation,
@@ -276,6 +286,9 @@ export default function PreferencesScreen({
   // Which reminder slot's wheels are out — one at a time, same rule as
   // the sections themselves.
   const [openReminderSlot, setOpenReminderSlot] = useState<number | null>(null);
+  // Backend flips (connect/disconnect) change what the Calendar card
+  // shows without any state of this screen changing — repaint by hand.
+  const [, forceRepaint] = useState(0);
   const [region, setRegion] = useState<RegionKey | null>(regionOverride());
   const [appearance, setAppearance] = useState<AppearanceChoice>(appearanceChoice);
   const t = useTheme();
@@ -330,21 +343,39 @@ export default function PreferencesScreen({
       >
         {activeBackend() === 'rest' ? (
           // Google-connected: one calendar, ours by construction —
-          // nothing to pick. The row is the reconnect surface, which is
-          // also how a weekly-expired Testing grant heals.
-          <ValueRow
-            label="KickOffCal"
-            caption="In your Google Calendar — tap to reconnect the sign-in"
-            accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
-            onPress={() =>
-              void connectGoogleCalendar().then((r) => {
-                if (r.ok) {
-                  showToast({ message: 'Google Calendar reconnected' });
-                  void runSync();
-                }
-              })
-            }
-          />
+          // nothing to pick. The first row is the reconnect surface
+          // (how a weekly-expired Testing grant heals); the second is
+          // its other half (Stage 7B): Connect ⇄ Disconnect as a
+          // proper state pair. Disconnect ends the grant and halts
+          // calendar writes — the calendar and its events are left
+          // exactly as they are.
+          <>
+            <ValueRow
+              label="KickOffCal"
+              caption="In your Google Calendar — tap to reconnect the sign-in"
+              accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
+              onPress={() =>
+                void connectGoogleCalendar().then((r) => {
+                  if (r.ok) {
+                    showToast({ message: 'Google Calendar reconnected' });
+                    void runSync();
+                  }
+                })
+              }
+            />
+            <ValueRow
+              label="Disconnect Google Calendar"
+              caption="Your calendar and its events are untouched"
+              accessibilityLabel="Disconnect Google Calendar"
+              onPress={() =>
+                void disconnectGoogleCalendar().then(() => {
+                  showToast({ message: 'Google Calendar disconnected' });
+                  setTarget(storedTarget());
+                  forceRepaint((n) => n + 1);
+                })
+              }
+            />
+          </>
         ) : nativeSyncRoute() === 'google-connect' ? (
           // Android, not yet connected: settings is the later door into
           // the same priming flow onboarding offers.
@@ -576,6 +607,18 @@ export default function PreferencesScreen({
           selected={prefs.autoDeletePast}
           onPress={() => apply({ ...prefs, autoDeletePast: true })}
           last
+        />
+      </Section>
+
+      <Section
+        title="Data & privacy"
+        open={openSection === 'privacy'}
+        onToggle={() => toggleSection('privacy')}
+      >
+        <DataPrivacyRows
+          onReset={() =>
+            navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] })
+          }
         />
       </Section>
 

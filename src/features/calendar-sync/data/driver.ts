@@ -20,6 +20,7 @@ import { activeBackend } from './calendarBackend';
 import * as provider from './calendarDriver';
 import {
   ensureRestTarget,
+  eraseRestCalendar,
   restCreateFixtureEvent,
   restDeleteFixtureEvent,
   restListTaggedEvents,
@@ -39,6 +40,17 @@ export {
 export type CalendarHandle =
   | { kind: 'provider'; cal: provider.ProviderCalendar }
   | { kind: 'rest'; calendarId: string };
+
+// User-invoked erase of the app-created calendar (Stage 7B), whichever
+// backend holds it. `true` means a calendar of ours was deleted;
+// `false` means there was nothing of ours to erase. REST erase needs a
+// live grant — the UI greys the row when Android is disconnected, and
+// an expired token surfaces as the typed auth error either way.
+export async function eraseAppCalendar(): Promise<Result<boolean>> {
+  return activeBackend() === 'rest'
+    ? eraseRestCalendar()
+    : provider.eraseOurNativeCalendar();
+}
 
 export async function getCalendarObject(
   calendarId: string,

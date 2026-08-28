@@ -17,12 +17,14 @@
 import { err, ok, Result } from '../../../core/result';
 import { RecoveredEvent } from '../domain/recovery';
 import {
+  clearRestCalendarId,
   restCalendarId,
   setRestCalendarId,
 } from './calendarBackend';
 import type { EventInput, ResolvedTarget } from './calendarDriver';
 import {
   createOwnedCalendar,
+  deleteOwnedCalendar,
   deleteRestEvent,
   insertRestEvent,
   listRestTaggedEvents,
@@ -74,6 +76,21 @@ export async function ensureRestTarget(): Promise<Result<ResolvedTarget>> {
   if (!created.ok) return created;
   setRestCalendarId(created.value);
   return ok(restTarget(created.value));
+}
+
+// User-invoked erase (Stage 7B): delete the KickoffCal calendar we
+// created — and with it every event in it, past ones included; that is
+// the feature's entire purpose. `false` means there was nothing of
+// ours to erase. The scope makes over-reach structurally impossible:
+// calendar.app.created cannot delete any calendar this app did not
+// create.
+export async function eraseRestCalendar(): Promise<Result<boolean>> {
+  const calendarId = restCalendarId();
+  if (!calendarId) return ok(false);
+  const r = await deleteOwnedCalendar(calendarId, token());
+  if (!r.ok) return r;
+  clearRestCalendarId();
+  return ok(true);
 }
 
 function restTarget(calendarId: string): ResolvedTarget {

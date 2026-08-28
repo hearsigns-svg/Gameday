@@ -22,3 +22,12 @@ export function writeJson(key: string, value: unknown): void {
 export function removeKey(key: string): void {
   mmkv.remove(key);
 }
+
+// The full local wipe (Stage 7B "Delete my data & reset"): every
+// persisted key at once — follows, prefs, exclusions, pins, ledger,
+// photo cache, calendar choice, welcome flag, all of it. Enumerated
+// nowhere on purpose: a hand-kept key list is exactly the thing that
+// silently misses the next store someone adds.
+export function wipeAllLocalData(): void {
+  mmkv.clearAll();
+}

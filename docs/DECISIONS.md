@@ -3073,3 +3073,21 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   full tournament list, everything else to its fixtures page). No
   Tournaments button exists any more — the tour card's tap IS the
   tournament list.
+- 2026-08-28 (Stage 7B, owner-reframed): NO Sign out / Delete account
+  vocabulary while auth is anonymous — the controls are honest ones:
+  Connect ⇄ Disconnect Google Calendar (grant only; calendar and events
+  untouched), "Erase synced events" (deletes the app-created KickoffCal
+  calendar and EVERYTHING in it — the sanctioned, explicit exception to
+  the future-only horizon rule, which protects history from automated
+  sync churn, not from the owner's own request; ledger cleared only
+  when a calendar was actually deleted; only-provably-ours enforced by
+  scope on REST and by provablyOurs natively), and "Delete my data &
+  reset" (red, double-confirmed, optional erase toggle; order is
+  load-bearing: erase-while-grant-lives → server wipe via the
+  deleteAccountData callable [devices/{uid} + entitlements/{uid};
+  client direct-delete of devices as cold-function fallback] →
+  disconnect → deleteUser-or-signOut → full local wipe → fresh uid on
+  relaunch). DEPENDENCY GATE: real account linking cannot ship to the
+  stores without the hosted web deletion page + endpoint (the
+  deleteAccountData callable is its core) + Play data-safety
+  declarations.

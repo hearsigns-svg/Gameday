@@ -592,6 +592,31 @@ export async function deleteVacatedCalendarIfOurs(
   }
 }
 
+// User-invoked erase (Stage 7B): delete OUR calendar and everything in
+// it, past events included — the sanctioned, explicit exception to the
+// future-only horizon rule, whose job is protecting history from
+// automated sync churn, not from the owner's own request. Only a
+// calendar that passes provablyOurs can be deleted — resolveOurCalendar
+// runs the same proof every sync runs — so a user's own calendar,
+// including one they named "KickOffCal", is untouchable here; when the
+// sync target is a USER calendar there is no app calendar and this
+// erases nothing (`false`). The stored target and cached id are cleared
+// with the calendar, so the next connected sync recreates cleanly.
+export async function eraseOurNativeCalendar(): Promise<Result<boolean>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    const ours = await resolveOurCalendar(calendars);
+    if (!ours) return ok(false);
+    await ours.delete();
+    removeKey(CAL_KEY);
+    const stored = storedTarget();
+    if (stored?.calendarId === ours.id) clearTarget();
+    return ok(true);
+  } catch (e) {
+    return err({ kind: 'unknown', message: `calendar erase failed: ${e}` });
+  }
+}
+
 // ─── Events ───────────────────────────────────────────────────────────
 
 export interface EventInput {
