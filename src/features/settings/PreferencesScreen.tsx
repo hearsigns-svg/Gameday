@@ -24,7 +24,7 @@ import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
 import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs } from '../calendar-sync/domain/prefs';
-import { ReminderSlotRow } from './ReminderSlots';
+import { ReminderSlotsRow } from './ReminderSlots';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import {
   calendarColour,
@@ -125,10 +125,13 @@ function Section(props: {
       </Pressable>
       {props.open ? (
         <>
+          {/* White card, thin gray border (Stage 5 redesign — the
+              filled gray panel is gone; surfaceRaised is white in
+              light mode and the elevated tone in dark). */}
           <View
             style={[
               styles.card,
-              { backgroundColor: t.surface, borderColor: t.border },
+              { backgroundColor: t.surfaceRaised, borderColor: t.border },
             ]}
           >
             {props.children}
@@ -162,11 +165,15 @@ function SegmentedRow(props: {
         { borderColor: t.border },
       ]}
     >
-      <Text style={[type.body, { color: t.textPrimary, flex: 1 }]} numberOfLines={1}>
+      <Text style={[type.body, { color: t.textPrimary, flexShrink: 1 }]}>
         {props.label}
       </Text>
-      <View style={[styles.segments, { backgroundColor: t.bg }]}>
-        {props.options.map((o) => (
+      <View style={{ flex: 1 }} />
+      {/* Bordered segments (Stage 5 restyle): joined by hairlines,
+          selected = a light tint of the brand blue with blue text —
+          the tint is the brand token at 10% alpha, not a new colour. */}
+      <View style={[styles.segments, { borderColor: t.border }]}>
+        {props.options.map((o, i) => (
           <Pressable
             key={o.label}
             accessibilityRole="button"
@@ -175,16 +182,19 @@ function SegmentedRow(props: {
             onPress={o.onPress}
             style={[
               styles.segment,
-              o.selected && { backgroundColor: t.surfaceRaised },
+              i > 0 && { borderLeftWidth: StyleSheet.hairlineWidth },
+              { borderColor: t.border },
+              o.selected
+                ? { backgroundColor: `${t.primary}1A` }
+                : { backgroundColor: t.surfaceRaised },
             ]}
           >
             <Text
               style={[
                 type.secondary,
-                {
-                  color: o.selected ? t.textPrimary : t.textSecondary,
-                  fontWeight: o.selected ? '600' : '400',
-                },
+                o.selected
+                  ? { color: t.primary, fontWeight: '600' }
+                  : { color: t.textPrimary },
               ]}
               maxFontSizeMultiplier={1.4}
             >
@@ -489,38 +499,42 @@ export default function PreferencesScreen({
         onToggle={() => toggleSection('reminders')}
         footnote="Reminder changes apply to every synced fixture on the next sync."
       >
-        {/* The three slots (Stage 5): each expands in place into its
-            wheel pair. Values persist through apply() like every other
-            preference, and the immediate runSync reschedules every
-            materialised reminder through the existing channels. */}
-        {(['Reminder 1', 'Reminder 2', 'Reminder 3'] as const).map(
-          (label, slot) => (
-            <ReminderSlotRow
-              key={label}
-              label={label}
-              minutes={
-                slot === 0
-                  ? prefs.reminderMinutes
-                  : (prefs.extraReminders[slot - 1] ?? null)
+        {/* The three slots (Stage 5, redesigned to the mock): one row,
+            three compact dropdowns under their digits; the wheel pair
+            grows beneath the row for whichever dropdown is open. Values
+            persist through apply() like every other preference, and the
+            immediate runSync reschedules every materialised reminder
+            through the existing channels. The card's ONE internal
+            hairline sits between this row and the segmented row. */}
+        <View
+          style={{
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderColor: t.border,
+          }}
+        >
+          <ReminderSlotsRow
+            slots={[
+              prefs.reminderMinutes,
+              prefs.extraReminders[0] ?? null,
+              prefs.extraReminders[1] ?? null,
+            ]}
+            openSlot={openReminderSlot}
+            onToggleSlot={(slot) =>
+              setOpenReminderSlot((s) => (s === slot ? null : slot))
+            }
+            onChange={(slot, m) => {
+              if (slot === 0) apply({ ...prefs, reminderMinutes: m });
+              else {
+                const extras = [...prefs.extraReminders];
+                while (extras.length < 2) extras.push(null);
+                extras[slot - 1] = m;
+                apply({ ...prefs, extraReminders: extras });
               }
-              expanded={openReminderSlot === slot}
-              onToggle={() =>
-                setOpenReminderSlot((s) => (s === slot ? null : slot))
-              }
-              onChange={(m) => {
-                if (slot === 0) apply({ ...prefs, reminderMinutes: m });
-                else {
-                  const extras = [...prefs.extraReminders];
-                  while (extras.length < 2) extras.push(null);
-                  extras[slot - 1] = m;
-                  apply({ ...prefs, extraReminders: extras });
-                }
-              }}
-            />
-          ),
-        )}
+            }}
+          />
+        </View>
         <SegmentedRow
-          label="Days without a time yet"
+          label="Days without dates"
           last
           options={ALL_DAY_REMINDER_OPTIONS.map((opt) => ({
             // The short form is what fits a segment; the full wording
@@ -676,12 +690,13 @@ const styles = StyleSheet.create({
   segments: {
     flexDirection: 'row',
     borderRadius: radius.button,
-    padding: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    flexShrink: 0,
   },
   segment: {
     paddingHorizontal: spacing.m,
-    minHeight: 36,
-    borderRadius: radius.button - 2,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

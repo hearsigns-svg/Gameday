@@ -1,12 +1,18 @@
-// The three reminder slots (Stage 5): each row shows its offset and
-// expands IN PLACE into a wheel pair — a value wheel and a unit wheel
-// (Off / Minutes / Hours), the brief's suggested shape. The wheels are
-// our own snapping lists rather than a native picker dependency:
-// Expo CNG means a new native module costs a prebuild on both
-// platforms, and @react-native-picker/picker renders a dropdown on
-// Android — a snapping list with momentum is the same wheel feel on
-// both. Values are stored as minutes; the grid is the brief's ruling
+// The three reminder slots (Stage 5, redesigned to the owner's mock):
+// ONE row — "Reminders" on the left, three compact dropdown buttons on
+// the right under small gray digits 1 2 3. Tapping a dropdown
+// highlights it and grows the two-column wheel (value | Off/Minutes/
+// Hours) beneath the row, inside the card; the same tap collapses it
+// and tapping another dropdown switches the wheel to that slot. The
+// wheel internals are unchanged from the first cut — only its housing
+// moved. Values are stored as minutes; the grid is the brief's ruling
 // (1–59 min, 1–24 h, then 36/48/60/72).
+//
+// The wheels are our own snapping lists rather than a native picker
+// dependency: Expo CNG means a new native module costs a prebuild on
+// both platforms, and @react-native-picker/picker renders a dropdown
+// on Android — a snapping list with momentum is the same wheel feel on
+// both.
 
 import { useRef } from 'react';
 import {
@@ -16,11 +22,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { spacing, type, useTheme } from '../../core/tokens';
+import { Ionicons } from '@expo/vector-icons';
+import { radius, spacing, type, useTheme } from '../../core/tokens';
 import {
   OFFSET_HOUR_VALUES,
   OFFSET_MINUTE_VALUES,
   offsetLabel,
+  offsetPickerLabel,
 } from '../calendar-sync/domain/prefs';
 
 const ITEM_H = 36;
@@ -143,90 +151,115 @@ function nearestIndex(grid: readonly number[], value: number): number {
   return best;
 }
 
-export function ReminderSlotRow(props: {
-  label: string;
-  minutes: number | null;
-  onChange: (minutes: number | null) => void;
-  expanded: boolean;
-  onToggle: () => void;
-  last?: boolean;
+export function ReminderSlotsRow(props: {
+  slots: ReadonlyArray<number | null>; // length 3, minutes
+  openSlot: number | null;
+  onToggleSlot: (slot: number) => void;
+  onChange: (slot: number, minutes: number | null) => void;
 }) {
   const t = useTheme();
-  const unit = unitOf(props.minutes);
+  const open = props.openSlot;
+  const minutes = open === null ? null : (props.slots[open] ?? null);
+  const unit = unitOf(minutes);
   const grid = unit === 'minutes' ? OFFSET_MINUTE_VALUES : OFFSET_HOUR_VALUES;
   const valueIndex =
-    props.minutes === null
+    minutes === null
       ? 0
       : unit === 'minutes'
-        ? nearestIndex(OFFSET_MINUTE_VALUES, props.minutes)
-        : nearestIndex(OFFSET_HOUR_VALUES, props.minutes / 60);
+        ? nearestIndex(OFFSET_MINUTE_VALUES, minutes)
+        : nearestIndex(OFFSET_HOUR_VALUES, minutes / 60);
   return (
-    <View
-      style={[
-        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
-        { borderColor: t.border },
-      ]}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: props.expanded }}
-        accessibilityLabel={`${props.label}, ${offsetLabel(props.minutes)}`}
-        onPress={props.onToggle}
-        style={styles.row}
-      >
+    <View>
+      <View style={styles.row}>
         <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
-          {props.label}
+          Reminders
         </Text>
-        <Text
-          style={[
-            type.body,
-            {
-              color: props.minutes === null ? t.textSecondary : t.textPrimary,
-            },
-          ]}
-        >
-          {offsetLabel(props.minutes)}
-        </Text>
-      </Pressable>
-      {props.expanded ? (
+        <View style={styles.slots}>
+          {props.slots.map((m, slot) => (
+            <View key={slot} style={styles.slotColumn}>
+              {/* The slot's digit — the whole of its labelling. */}
+              <Text
+                style={[type.caption, { color: t.textSecondary }]}
+                accessible={false}
+              >
+                {slot + 1}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Reminder ${slot + 1}, ${offsetLabel(m ?? null)}`}
+                accessibilityState={{ expanded: open === slot }}
+                onPress={() => props.onToggleSlot(slot)}
+                style={({ pressed }) => [
+                  styles.dropdown,
+                  {
+                    backgroundColor: t.surfaceRaised,
+                    borderColor: open === slot ? t.primary : t.border,
+                  },
+                  open === slot && { borderWidth: 1 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text
+                  style={[
+                    type.secondary,
+                    { color: t.textPrimary, fontWeight: '600' },
+                  ]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.4}
+                >
+                  {offsetPickerLabel(m ?? null)}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={t.textSecondary} />
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      </View>
+      {open !== null ? (
         <View style={styles.wheels}>
           {unit === 'off' ? (
             // Keeps the pair's geometry while there is no value to pick.
             <View style={{ flex: 1 }} />
           ) : (
             <WheelColumn
-              // Keyed by unit: a Minutes↔Hours flip swaps the item set,
-              // and the list must remount to land on the new index
+              // Keyed by slot AND unit: switching either swaps the item
+              // set, and the list must remount to land on the new index
               // rather than keeping the old offset over new rows.
-              key={unit}
+              key={`${open}-${unit}`}
               items={grid.map(String)}
               index={valueIndex}
-              accessibilityLabel={`${props.label} value`}
+              accessibilityLabel={`Reminder ${open + 1} value`}
               onSettle={(i) =>
                 props.onChange(
-                  unit === 'minutes' ? OFFSET_MINUTE_VALUES[i] : OFFSET_HOUR_VALUES[i] * 60,
+                  open,
+                  unit === 'minutes'
+                    ? OFFSET_MINUTE_VALUES[i]
+                    : OFFSET_HOUR_VALUES[i] * 60,
                 )
               }
             />
           )}
           <WheelColumn
+            key={`unit-${open}`}
             items={UNIT_ITEMS}
             index={UNITS.indexOf(unit)}
-            accessibilityLabel={`${props.label} unit`}
+            accessibilityLabel={`Reminder ${open + 1} unit`}
             onSettle={(i) => {
               const next = UNITS[i];
               if (next === unit) return;
-              if (next === 'off') props.onChange(null);
+              if (next === 'off') props.onChange(open, null);
               else if (next === 'minutes') {
                 props.onChange(
-                  props.minutes !== null && props.minutes < 60 ? props.minutes : 30,
+                  open,
+                  minutes !== null && minutes < 60 ? minutes : 30,
                 );
               } else {
                 props.onChange(
-                  props.minutes !== null &&
-                    props.minutes >= 60 &&
-                    OFFSET_HOUR_VALUES.includes(props.minutes / 60)
-                    ? props.minutes
+                  open,
+                  minutes !== null &&
+                    minutes >= 60 &&
+                    OFFSET_HOUR_VALUES.includes(minutes / 60)
+                    ? minutes
                     : 60,
                 );
               }
@@ -242,10 +275,27 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 52,
+    minHeight: 64,
     paddingHorizontal: spacing.l,
-    paddingVertical: spacing.s,
+    paddingVertical: spacing.m,
+    gap: spacing.m,
+  },
+  slots: {
+    flexDirection: 'row',
     gap: spacing.s,
+  },
+  slotColumn: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.m,
+    borderRadius: radius.button,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   wheels: {
     flexDirection: 'row',

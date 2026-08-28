@@ -124,6 +124,20 @@ export function offsetShortLabel(minutes: number): string {
   return `${minutes / 60}h`;
 }
 
+// The dropdown form (Stage 5 redesign, mock-canonical): "15 m",
+// "5 hrs", "1 day" — whole-day multiples say days (24/48/72h), 36 and
+// 60 stay in hrs, and an off slot reads "Off".
+export function offsetPickerLabel(minutes: number | null): string {
+  if (minutes === null) return 'Off';
+  if (minutes < 60) return `${minutes} m`;
+  if (minutes % 1440 === 0) {
+    const d = minutes / 1440;
+    return `${d} day${d === 1 ? '' : 's'}`;
+  }
+  const h = minutes / 60;
+  return `${h} hr${h === 1 ? '' : 's'}`;
+}
+
 // Every configured offset, deduped in slot order — what a hero card's
 // reminder chips display and what an unoverridden timed event carries.
 export function reminderSlotValues(prefs: CalendarPrefs): number[] {

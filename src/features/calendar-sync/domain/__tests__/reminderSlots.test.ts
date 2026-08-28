@@ -158,3 +158,21 @@ describe('planner propagation (the brief’s reschedule guarantee)', () => {
     expect(ops[0].op).toBe('update');
   });
 });
+
+describe('offsetPickerLabel (Stage 5 redesign, mock-canonical)', () => {
+  const { offsetPickerLabel } = jest.requireActual<
+    typeof import('../prefs')
+  >('../prefs');
+  it('reads like the mock: compact, no "before"', () => {
+    expect(offsetPickerLabel(null)).toBe('Off');
+    expect(offsetPickerLabel(15)).toBe('15 m');
+    expect(offsetPickerLabel(60)).toBe('1 hr');
+    expect(offsetPickerLabel(300)).toBe('5 hrs');
+    // Whole-day multiples say days; 36 and 60 stay in hrs.
+    expect(offsetPickerLabel(1440)).toBe('1 day');
+    expect(offsetPickerLabel(2880)).toBe('2 days');
+    expect(offsetPickerLabel(4320)).toBe('3 days');
+    expect(offsetPickerLabel(2160)).toBe('36 hrs');
+    expect(offsetPickerLabel(3600)).toBe('60 hrs');
+  });
+});
