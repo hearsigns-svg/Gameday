@@ -35,6 +35,8 @@ export interface DirectoryTeam {
 // and relegated clubs never appeared or disappeared, and the alias table
 // built from these documents could never improve.
 import { enrichBurstColours } from './crestColours';
+import { deriveTeamsFromFixtures } from './fixtureTeams';
+import { Fixture } from './fixture';
 
 export const DIRECTORY_TTL_MS = 24 * 3_600_000;
 
@@ -49,6 +51,10 @@ export const fdTeamsDocId = (code: string, season: number): string =>
 export const mlbTeamsDocId = (season: number): string =>
   `baseball-mlb-${season}`;
 export const NHL_TEAMS_DOC_ID = 'ice-hockey-nhl';
+// Fixture-derived directories (owner ruling 2026-08-28): the doc id a
+// derived league's team list caches under.
+export const derivedTeamsDocId = (competitionKey: string): string =>
+  `derived-${competitionKey}`;
 
 // SCHEMA EPOCH — a cache entry written before the shape changed is
 // STALE regardless of its age (Prompt 13). Crests came back in the
@@ -110,6 +116,27 @@ async function cachedTeams(
   }
   await ref.set({ teams, cachedAt: new Date().toISOString() });
   return teams;
+}
+
+// Teams proven by FIXTURES where the provider directory is empty
+// (owner ruling 2026-08-28): display name + team key derived from the
+// cached fixture slice, riding the same 24h cache — so counts,
+// subtitles, the Teams expansion and burst-colour enrichment all work
+// unchanged. Partial early-season lists are accepted behaviour; the
+// list grows as fixtures land.
+export async function derivedLeagueTeams(
+  competitionKey: string,
+): Promise<DirectoryTeam[]> {
+  return cachedTeams(derivedTeamsDocId(competitionKey), async () => {
+    const snap = await getFirestore()
+      .collection('fixtures')
+      .where('followKeys', 'array-contains', competitionKey)
+      .limit(800)
+      .get();
+    return deriveTeamsFromFixtures(
+      snap.docs.map((d) => d.data() as Fixture),
+    ).map((t) => ({ id: t.id, name: t.name, key: t.key }));
+  });
 }
 
 // Soccer browse: football-data.org free competitions (current seasons)

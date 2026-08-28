@@ -3203,3 +3203,28 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   burstColours WITH the crest). PER-ENTRY interim exactly as
   sanctioned: SVG/absent/achromatic crests fall back client-side to
   the treatment colour pushed to the same flat vocabulary + white.
+- 2026-08-28 (fixture-derived team directories, owner ruling):
+  followOnly STOPS BEING CONFIG-TRUTH where fixtures prove teams —
+  directory emptiness is now MEASURED (provider ∪ fixture-derived),
+  not hardcoded. Sweep of all 91 followOnly rows: 7 gain a real Teams
+  list from cached fixtures (Copa Libertadores 47, T20 World Cup 20,
+  County Championship 10, FIBA WC qualifiers 81, Nations Championship
+  12, Rugby League World Cup 10, Rugby Championship 16 — probed: TSDB's
+  own team endpoint for 5479 returns null while every fixture carries
+  team follow keys); the rest are correctly not team-shaped (tennis =
+  players, athletics/golf = fields, combat = people — the TEAM-prefix
+  guard refuses bout parents — motorsport = sessions, Olympics empty).
+  Derivation (fixtureTeams.ts): followKeys[0/1] pair with
+  homeTeam/awayTeam (adapter order, alias-append safe), majority
+  spelling, appearances skipped; invitational/one-off sides STAY IN by
+  ruling (Barbarians beside the member nations), partial early-season
+  lists accepted, fixture-form names, no manual renames, treatments
+  cover missing marks (no badge join exists for derived rows — an
+  exact TSDB id-lookup is a cheap follow-up if wanted). Served via the
+  SAME cachedTeams pipeline (doc id derived-<competitionKey>, 24h TTL,
+  burst-colour enrichment, imagery policy) so counts, subtitles, the
+  Teams expansion and follows ride unchanged; the DERIVED branch sits
+  BEFORE the legacy per-sport listTeams fallbacks, which would have
+  served the IPL for the T20 World Cup and the NBA for FIBA. An
+  explicitly-tabled provider league that returns EMPTY now also falls
+  through to derivation.

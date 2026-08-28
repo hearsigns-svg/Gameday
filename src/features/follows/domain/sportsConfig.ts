@@ -83,7 +83,8 @@ export const SPORTS: SportConfig[] = [
         name: 'Copa Libertadores',
         country: 'South America',
         key: 'tsdb-league-4501',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=4501&season=2026&sport=soccer&durationHours=2',
       },
@@ -135,7 +136,8 @@ export const SPORTS: SportConfig[] = [
         name: 'T20 World Cup',
         country: 'International',
         key: 'tsdb-league-5103',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4',
       },
@@ -144,7 +146,8 @@ export const SPORTS: SportConfig[] = [
         name: 'County Championship',
         country: 'England',
         key: 'tsdb-league-4458',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96',
       },
@@ -422,7 +425,8 @@ export const SPORTS: SportConfig[] = [
         name: 'FIBA World Cup qualifiers',
         country: 'International',
         key: 'tsdb-league-4549',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=4549&season=2027&sport=basketball&durationHours=2',
       },
@@ -573,7 +577,8 @@ export const SPORTS: SportConfig[] = [
         name: 'Nations Championship',
         country: 'International',
         key: 'tsdb-league-5852',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=5852&season=2026&sport=rugby&durationHours=2',
       },
@@ -582,7 +587,8 @@ export const SPORTS: SportConfig[] = [
         name: 'Rugby League World Cup',
         country: 'International',
         key: 'tsdb-league-5806',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=5806&season=2026&sport=rugby&durationHours=2',
       },
@@ -591,7 +597,8 @@ export const SPORTS: SportConfig[] = [
         name: 'Rugby Championship',
         country: 'International',
         key: 'tsdb-league-5479',
-        followOnly: true,
+        // followOnly REMOVED (2026-08-28 sweep): fixtures prove teams;
+        // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=5479&season=2026&sport=rugby&durationHours=2',
       },

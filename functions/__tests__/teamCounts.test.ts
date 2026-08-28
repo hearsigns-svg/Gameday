@@ -41,8 +41,12 @@ describe('staticCountRows ↔ client sportsConfig', () => {
   // Every static competition the client renders a Teams segment for
   // (team drill-down = not followOnly, on a sport that browses teams)
   // must have a count source; a greyed Teams segment needs none.
-  const clientDrillable = SPORTS.filter(
-    (s) => s.key !== 'soccer' && s.browse.includes('team'),
+  // Soccer's DIRECTORY rows count via listLeagues, but its STATICS are
+  // client-merged and can only count through this map — Copa
+  // Libertadores became the first drillable one (2026-08-28 sweep), so
+  // the old soccer exclusion no longer models reality.
+  const clientDrillable = SPORTS.filter((s) =>
+    s.browse.includes('team'),
   ).flatMap((s) =>
     (s.staticCompetitions ?? []).filter((c) => !c.followOnly).map((c) => c.key),
   );

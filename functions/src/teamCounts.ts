@@ -15,7 +15,9 @@
 // to "no count", never to an error that costs the browse screen.
 
 import { Firestore } from 'firebase-admin/firestore';
-import { fdTeamsDocId, mlbTeamsDocId, NHL_TEAMS_DOC_ID } from './directory';
+import { DERIVED_TEAM_LEAGUE_IDS } from './fixtureTeams';
+import {
+  derivedTeamsDocId, fdTeamsDocId, mlbTeamsDocId, NHL_TEAMS_DOC_ID } from './directory';
 import { TSDB_TEAM_LEAGUES } from './tsdbTeamLeagues';
 
 const COUNT_CACHE_MS = 60_000;
@@ -116,6 +118,14 @@ export function staticCountRows(): Array<{ docId: string; rowKey: string }> {
       .map(([id, l]) => ({ docId: l.cacheKey, rowKey: `tsdb-league-${id}` })),
     { docId: NHL_TEAMS_DOC_ID, rowKey: 'nhl-league-1' },
     { docId: mlbTeamsDocId(new Date().getFullYear()), rowKey: 'mlb-league-1' },
+    // Fixture-derived leagues (owner ruling 2026-08-28): their counts
+    // ride the derived directory docs — now that Teams is BACKED, the
+    // count says what's behind it, which is the 27C rule for showing
+    // one.
+    ...[...DERIVED_TEAM_LEAGUE_IDS].map((id) => ({
+      docId: derivedTeamsDocId(`tsdb-league-${id}`),
+      rowKey: `tsdb-league-${id}`,
+    })),
   ].filter((r) => !NATION_LIST_ROW_KEYS.has(r.rowKey));
 }
 

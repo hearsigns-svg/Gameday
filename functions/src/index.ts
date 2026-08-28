@@ -22,6 +22,7 @@ const gz = (handler: Handler): Handler => (req, res) =>
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
 import { extractCrestColours } from './crestColours';
+import { DERIVED_TEAM_LEAGUE_IDS } from './fixtureTeams';
 import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
@@ -157,6 +158,7 @@ import { fetchIbfRatings } from './providers/ibfRatings';
 import { fetchJolpicaDrivers } from './providers/jolpicaDrivers';
 import { applyRoster } from './rosterStore';
 import {
+  derivedLeagueTeams,
   listFdSoccerTeams,
   listMlbTeams,
   listNhlTeams,
@@ -1229,13 +1231,29 @@ export const listTeams = onRequest(gz(async (req, res) => {
       teams.map((t) => withImageryPolicy(t, leagueKey, off));
     const tsdbLeague = TSDB_TEAM_LEAGUES[leagueKey];
     if (tsdbLeague) {
+      const provided = await listTsdbTeams(
+        requireTsdbKey(),
+        tsdbLeague.tsdbName,
+        tsdbLeague.cacheKey,
+      );
+      // Directory emptiness is MEASURED, not hardcoded (owner ruling
+      // 2026-08-28): a provider list that comes back empty falls
+      // through to what the fixtures prove.
+      const teams =
+        provided.length > 0
+          ? provided
+          : await derivedLeagueTeams(`tsdb-league-${leagueKey}`);
+      res.json({ teams: policed(teams) });
+      return;
+    }
+    // Fixture-derived leagues (owner ruling 2026-08-28) — checked
+    // BEFORE the legacy per-sport branches, which would otherwise
+    // swallow these ids and serve the wrong league entirely (cricket's
+    // fallback is the IPL list, basketball's the NBA).
+    if (DERIVED_TEAM_LEAGUE_IDS.has(leagueKey)) {
       res.json({
         teams: policed(
-          await listTsdbTeams(
-            requireTsdbKey(),
-            tsdbLeague.tsdbName,
-            tsdbLeague.cacheKey,
-          ),
+          await derivedLeagueTeams(`tsdb-league-${leagueKey}`),
         ),
       });
       return;
