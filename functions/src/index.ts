@@ -114,8 +114,8 @@ import {
   FD_FREE_COMPETITIONS,
 } from './providers/fdorg';
 import { fetchTsdbLeagueSeasonFixtures, fetchTsdbLeagueTeams } from './providers/tsdb';
-import { fetchMlbTeamSeasonFixtures } from './providers/mlb';
-import { fetchNhlTeamSeasonFixtures } from './providers/nhl';
+import { fetchMlbLeagueSeasonFixtures, fetchMlbTeamSeasonFixtures } from './providers/mlb';
+import { fetchNhlLeagueSeasonFixtures, fetchNhlTeamSeasonFixtures } from './providers/nhl';
 import { fetchF1SeasonFixtures } from './providers/f1';
 import {
   fetchBoxingData,
@@ -1516,6 +1516,60 @@ export const pollNhlTeam = onRequest(async (req, res) => {
     async (trace) => {
       trace.seasonsTried.push(season);
       const r = await fetchNhlTeamSeasonFixtures(abbrev, season);
+      return { ...r, followKey, seasonResolved: season, sliceComplete: true };
+    },
+  );
+  res.status(out.status).json(out.body);
+});
+
+// League-wide freshness routes (Stage 6 addendum ruling): NHL/MLB
+// league follows are real, and a league-only follower must not depend
+// on some team follower's poll paths for fresh data. Same slice key as
+// the league followKey every fixture already carries.
+export const pollMlbLeague = onRequest(async (req, res) => {
+  const season = Number(req.query.season);
+  if (!Number.isInteger(season)) {
+    res.status(400).json({ error: 'season is required' });
+    return;
+  }
+  const followKey = 'mlb-league-1';
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'mlb',
+      sport: 'baseball',
+      competitionId: followKey,
+      pollPath: `pollMlbLeague?season=${season}`,
+      seasonRequested: String(season),
+    },
+    async (trace) => {
+      trace.seasonsTried.push(String(season));
+      const r = await fetchMlbLeagueSeasonFixtures(season);
+      return { ...r, followKey, seasonResolved: String(season), sliceComplete: true };
+    },
+  );
+  res.status(out.status).json(out.body);
+});
+
+export const pollNhlLeague = onRequest(async (req, res) => {
+  const season = String(req.query.season ?? '');
+  if (!/^\d{8}$/.test(season)) {
+    res.status(400).json({ error: 'season (YYYYYYYY) required' });
+    return;
+  }
+  const followKey = 'nhl-league-1';
+  const out = await servePoll(
+    triggerOf(req.get(TRIGGER_HEADER)),
+    {
+      source: 'nhl',
+      sport: 'ice-hockey',
+      competitionId: followKey,
+      pollPath: `pollNhlLeague?season=${season}`,
+      seasonRequested: season,
+    },
+    async (trace) => {
+      trace.seasonsTried.push(season);
+      const r = await fetchNhlLeagueSeasonFixtures(season);
       return { ...r, followKey, seasonResolved: season, sliceComplete: true };
     },
   );

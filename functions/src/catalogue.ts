@@ -117,8 +117,16 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T1('fdorg-comp-CL', 'Champions League', 'soccer', 'pollFdCompetition?code=CL&season=2026', 92),
   T1('tsdb-league-4387', 'NBA', 'basketball', 'pollTsdbLeague?leagueId=4387&season=2025-2026&sport=basketball&durationHours=2.5', 82),
   T1('tsdb-league-4391', 'NFL', 'nfl', 'pollTsdbLeague?leagueId=4391&season=2026&sport=nfl&durationHours=3', 86),
-  T1('tsdb-league-4920', 'NHL', 'ice-hockey', 'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5', 68),
-  T1('tsdb-league-4591', 'MLB', 'baseball', 'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3', 70),
+  // MISLABEL CORRECTED (2026-08-28): these two rows were seeded as
+  // 'NHL' and 'MLB', but TSDB 4920 is the KHL (22-team directory) and
+  // 4591 is NPB (12 teams) — the client config always said so, and the
+  // T1 priorities 68/70 intended for the North American majors were
+  // boosting the wrong leagues' browse rank. The real NHL/MLB rows are
+  // the league-route T2 entries below, which now carry those weights.
+  // Seed is ADD-only, so the LIVE 4920/4591 docs still hold the wrong
+  // labels/priorities — correcting them is an ops edit (owner).
+  T1('tsdb-league-4920', 'KHL', 'ice-hockey', 'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5', 28),
+  T1('tsdb-league-4591', 'NPB', 'baseball', 'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3', 28),
   T1('f1-series-1', 'Formula 1', 'f1', 'pollF1?season=2026', 85),
   T1('tsdb-league-4443', 'UFC', 'ufc', 'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4', 76),
   T1('tsdb-league-4445', 'Boxing cards', 'boxing', 'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3', 64),
@@ -169,6 +177,14 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('tsdb-league-4481', 'Europa League', 'soccer', 'pollTsdbLeague?leagueId=4481&season=2026-2027&sport=soccer&durationHours=2', 44),
   T2('tsdb-league-4931', 'Liiga', 'ice-hockey', 'pollTsdbLeague?leagueId=4931&season=2026-2027&sport=ice-hockey&durationHours=2.5', 25),
   T2('tsdb-league-4419', 'SHL', 'ice-hockey', 'pollTsdbLeague?leagueId=4419&season=2026-2027&sport=ice-hockey&durationHours=2.5', 26),
+  // League-only freshness for the NA majors (Stage 6 addendum ruling):
+  // their fixtures came only from team followers' device poll paths.
+  // Tier 2 (daily): league schedules move slowly, and the NHL route
+  // fans out to 33 upstream calls per poll (per-club is all api-web
+  // offers); MLB is one call. These rows carry the majors' intended
+  // browse weights (see the mislabel note on the T1 rows above).
+  T2('nhl-league-1', 'NHL', 'ice-hockey', 'pollNhlLeague?season=20262027', 68),
+  T2('mlb-league-1', 'MLB', 'baseball', 'pollMlbLeague?season=2026', 70),
   T2('tsdb-league-4801', 'ODI Internationals', 'cricket', 'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8', 39),
   T2('tsdb-league-4979', 'T20 Internationals', 'cricket', 'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4', 41),
   T2('tsdb-league-5103', 'T20 World Cup', 'cricket', 'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4', 55),

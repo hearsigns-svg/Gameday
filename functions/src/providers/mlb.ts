@@ -83,6 +83,28 @@ export async function fetchMlbTeamSeasonFixtures(
   };
 }
 
+// The WHOLE league in one call — teamId is only a filter on this
+// endpoint. The league-only freshness route (Stage 6 addendum ruling):
+// one request covers every club, so a league-only follower's fixtures
+// refresh without any team follower existing.
+export async function fetchMlbLeagueSeasonFixtures(
+  season: number,
+): Promise<ProviderFetch> {
+  const res = await fetch(
+    `${BASE}/schedule?sportId=1&startDate=${season}-02-01&endDate=${season}-11-30`,
+  );
+  if (!res.ok) throw new Error(`mlb statsapi http ${res.status}`);
+  const body = (await res.json()) as ScheduleResponse;
+  const now = new Date().toISOString();
+  const games = requireArray(body.dates, 'mlb statsapi', 'dates').flatMap((d) =>
+    requireArray(d.games, 'mlb statsapi', 'dates[].games'),
+  );
+  return {
+    rawCount: games.length,
+    fixtures: games.map((g) => normaliseMlbGame(g, now)),
+  };
+}
+
 export interface MlbTeamRow {
   id: number;
   name: string;

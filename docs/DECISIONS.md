@@ -3118,3 +3118,28 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   for the NHL/MLB routes, so a league-only follower's freshness rides
   the device-first union of team followers' poll paths — a catalogue
   seed decision for the owner.
+- 2026-08-28 (owner approvals + corrections): own-calendar erase
+  APPROVED as built — correcting the rider entry above to match the
+  code: an unresolvable id CLEARS AS GONE (the driver reports
+  already-gone as success and its entry is removed), not "skipped";
+  and a PARTIAL erase ABORTS the delete flow — the kept entries are
+  the failed events' protection and the wipe would destroy it. The
+  local wipe now also clears AsyncStorage (its only writer is the
+  Firebase auth persistence entry; sign-out normally removes it, but
+  the delete flow's fallback chain can swallow a double failure and
+  the old uid must not stay resumable). Stage 6 addendum APPROVED:
+  followable:false was deleted DELIBERATELY — NHL/MLB league follows
+  are real (pollPath-less follows skip polling; league keys verified
+  on future fixtures). DO NOT RESURRECT THE FLAG.
+- 2026-08-28 (league-only freshness, owner ruling: fix before launch):
+  two league-wide routes — pollMlbLeague (statsapi whole-league
+  schedule, ONE upstream call) and pollNhlLeague (api-web per-club
+  schedules unioned + deduped by game id; 33 upstream calls — all the
+  API offers). Seeded as tier-2 catalogue rows nhl-league-1 /
+  mlb-league-1 carrying the majors' intended browse weights (68/70).
+  Standing volume added: ~34 upstream requests/day, 2 sweep slots
+  (seed headroom gate adjusted 190→188, deliberately). MISLABEL FOUND:
+  the T1 rows labelled 'NHL'/'MLB' are actually KHL (tsdb 4920) and
+  NPB (4591) — seed constants corrected (labels + priorities 28), but
+  the LIVE docs still carry the wrong labels and the majors' 68/70
+  priorities; correcting live docs is an ops edit (owner).

@@ -43,6 +43,9 @@ const POLL_ROUTES: Record<string, Record<string, RegExp>> = {
   pollFdCompetition: { code: /^[A-Z0-9]{2,4}$/, season: /^\d{4}$/ },
   pollMlbTeam: { teamId: /^\d{1,7}$/, season: /^\d{4}$/ },
   pollNhlTeam: { abbrev: /^[A-Z]{2,3}$/, season: /^\d{8}$/ },
+  // League-wide freshness (Stage 6 addendum): one slice per league.
+  pollMlbLeague: { season: /^\d{4}$/ },
+  pollNhlLeague: { season: /^\d{8}$/ },
   pollF1: { season: /^\d{4}$/ },
   // Parameterless: each has exactly one feed, and the window is computed
   // server-side from the clock rather than baked into a stored follow.
@@ -191,6 +194,10 @@ export function sliceOfPollPath(
         sport: 'ice-hockey',
         competitionId: `nhl-team-${p.abbrev}`,
       };
+    case 'pollMlbLeague':
+      return { source: 'mlb', sport: 'baseball', competitionId: 'mlb-league-1' };
+    case 'pollNhlLeague':
+      return { source: 'nhl', sport: 'ice-hockey', competitionId: 'nhl-league-1' };
     case 'pollF1':
       return { source: 'f1', sport: 'f1', competitionId: 'f1-series-1' };
     case 'pollBoxingData':

@@ -101,6 +101,28 @@ export async function fetchNhlTeamSeasonFixtures(
   };
 }
 
+// The whole league, via the per-club schedule api-web actually offers
+// (there is no full-season league endpoint): one standings call for the
+// abbrevs, then one schedule call per club — 33 upstream requests.
+// Every game appears on BOTH clubs' schedules, so the union dedupes by
+// fixture id. The league-only freshness route (Stage 6 addendum
+// ruling): a league-only follower's fixtures refresh without any team
+// follower existing.
+export async function fetchNhlLeagueSeasonFixtures(
+  seasonId: string, // e.g. '20262027'
+): Promise<ProviderFetch> {
+  const teams = await fetchNhlTeams();
+  if (teams.length === 0) throw new Error('nhl api-web returned zero teams');
+  const byId = new Map<string, Fixture>();
+  let rawCount = 0;
+  for (const team of teams) {
+    const r = await fetchNhlTeamSeasonFixtures(team.abbrev, seasonId);
+    rawCount += r.rawCount;
+    for (const f of r.fixtures) byId.set(f.id, f);
+  }
+  return { rawCount, fixtures: [...byId.values()] };
+}
+
 export interface NhlTeamRow {
   abbrev: string;
   name: string;

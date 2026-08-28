@@ -8,6 +8,7 @@
 // disconnect → identity deletion → full local wipe; a fresh anonymous
 // uid is minted on next launch and sees a clean slate.
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteUser, signOut } from 'firebase/auth';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { auth, db, functionsBaseUrl } from '../../../core/firebase';
@@ -156,8 +157,19 @@ export async function deleteAllDataAndReset(opts: {
       }
     }
   }
-  // 5. Everything local. Next launch mints a fresh uid and sees the
-  // first-run experience.
+  // 5. Everything local. MMKV holds every app store (clearAll, so a
+  // future store cannot be missed); AsyncStorage holds exactly one
+  // thing — the Firebase auth persistence entry — and is cleared too:
+  // sign-out normally removes it, but the fallback chain above can
+  // swallow a double failure, and the wipe must not leave the old uid
+  // resumable behind a clean-looking slate. Next launch mints a fresh
+  // uid and sees the first-run experience.
   wipeAllLocalData();
+  try {
+    await AsyncStorage.clear();
+  } catch {
+    // Auth state was already ended above; a failed storage clear must
+    // not fail the reset the user just confirmed.
+  }
   return ok(undefined);
 }
