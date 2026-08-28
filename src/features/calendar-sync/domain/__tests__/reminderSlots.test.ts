@@ -36,9 +36,9 @@ describe('the offset grid (the brief’s ruling)', () => {
     expect(OFFSET_MINUTE_VALUES[58]).toBe(59);
   });
 
-  it('hours run 1–24 then 12-hour steps to 72', () => {
-    expect(OFFSET_HOUR_VALUES).toHaveLength(28);
-    expect(OFFSET_HOUR_VALUES.slice(24)).toEqual([36, 48, 60, 72]);
+  it('hours run 1–72 in single steps — free range (owner directive)', () => {
+    expect(OFFSET_HOUR_VALUES).toHaveLength(72);
+    expect(OFFSET_HOUR_VALUES[71]).toBe(72);
   });
 
   it('labels say what a reminder is, days only for whole days', () => {

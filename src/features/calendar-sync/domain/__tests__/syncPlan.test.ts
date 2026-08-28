@@ -46,6 +46,7 @@ function entryFor(f: Fixture): LedgerEntry {
     // The engine records the reminder it applied; a ledger entry that
     // does not is UNKNOWN and replans as a mismatch (syncPlan.ts).
     reminderMinutes: desired.reminderMinutes,
+    extraReminders: desired.extraReminders,
   };
 }
 
@@ -61,6 +62,7 @@ function applied(ledger: Ledger, ops: SyncOp[]): Ledger {
         title: op.desired.title,
         allDay: op.desired.allDay,
         reminderMinutes: op.desired.reminderMinutes,
+        extraReminders: op.desired.extraReminders,
       };
     } else {
       delete next[op.fixtureId];
@@ -79,7 +81,7 @@ describe('desiredEventFor', () => {
       allDay: false,
       allDayReminder: null,
       reminderMinutes: DEFAULT_PREFS.reminderMinutes,
-      extraReminders: [],
+      extraReminders: [360, 1440],
     });
   });
 
@@ -163,7 +165,7 @@ describe('planSync', () => {
         allDay: false,
         allDayReminder: null,
         reminderMinutes: DEFAULT_PREFS.reminderMinutes,
-        extraReminders: [],
+        extraReminders: [360, 1440],
       });
     }
   });
@@ -298,8 +300,13 @@ describe('planSync', () => {
       // the planner without one is the reinstall case below, not this.)
       reminderMinutes: DEFAULT_PREFS.reminderMinutes,
     };
+    // Slots 2/3 pinned OFF: this test's subject is the absent allDay
+    // field. Under the three-slot DEFAULT a legacy entry legitimately
+    // converges once to gain the extra alarms — reminderSlots.test
+    // pins that; here it would only obscure the allDay behaviour.
+    const singleReminder = { ...DEFAULT_PREFS, extraReminders: [null, null] };
     expect(
-      planSync([f], { [f.id]: legacy }, [LIV], DEFAULT_PREFS, PAST_HORIZON),
+      planSync([f], { [f.id]: legacy }, [LIV], singleReminder, PAST_HORIZON),
     ).toHaveLength(0);
   });
 

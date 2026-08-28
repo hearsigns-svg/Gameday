@@ -58,6 +58,7 @@ function applied(ledger: Ledger, ops: SyncOp[]): Ledger {
         title: op.desired.title,
         allDay: op.desired.allDay,
         reminderMinutes: op.desired.reminderMinutes,
+        extraReminders: op.desired.extraReminders,
       };
     } else {
       delete next[op.fixtureId];

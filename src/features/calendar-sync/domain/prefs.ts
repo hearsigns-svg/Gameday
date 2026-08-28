@@ -37,10 +37,12 @@ export interface CalendarPrefs {
 
 export const DEFAULT_PREFS: CalendarPrefs = {
   reminderMinutes: 60,
-  // Slots 2/3 OFF by default: the pre-Stage-5 engine wrote ONE alarm,
-  // and defaults that quietly add two more to every synced event are a
-  // flood, not an upgrade (the same argument as allDayReminder below).
-  extraReminders: [null, null],
+  // The ORIGINAL THREE TIMES as the default set (owner directive
+  // 2026-08-28, reversing the slots-off default): 1 hour, 6 hours, a
+  // day — the intervals the app always offered. Deliberate consequence,
+  // owner-accepted: an upgrading install's synced events gain the two
+  // extra alarms on their next sync.
+  extraReminders: [360, 1440],
   allDayReminder: null,
   eventStyle: 'timed',
   // Conservative default (ten-rules brief): a full race weekend is 5+
@@ -86,22 +88,20 @@ export const ALL_DAY_REMINDER_OPTIONS: Array<{
 
 // ─── Offset vocabulary (Stage 5 wheel pickers) ────────────────────────
 //
-// The whole allowed range, as the brief rules it: minutes 1–59 in
-// 1-minute steps, hours 1–24 in 1-hour steps, then 12-hour steps to 72.
-// Everything is STORED as minutes; the wheels are a view of this grid.
+// FREE RANGE (owner directive 2026-08-28, superseding the brief's
+// 12-hour stepping beyond 24): minutes 1–59 and hours 1–72, both in
+// single steps — the stepped grid read as the wheel "not allowing free
+// choice". Everything is STORED as minutes; the wheels are a view.
 
 export const OFFSET_MINUTE_VALUES: readonly number[] = Array.from(
   { length: 59 },
   (_, i) => i + 1,
 );
 
-export const OFFSET_HOUR_VALUES: readonly number[] = [
-  ...Array.from({ length: 24 }, (_, i) => i + 1),
-  36,
-  48,
-  60,
-  72,
-];
+export const OFFSET_HOUR_VALUES: readonly number[] = Array.from(
+  { length: 72 },
+  (_, i) => i + 1,
+);
 
 // "45 min before" / "2 hours before" / "1 day before" / "36 hours
 // before". Days only where the offset IS whole days — 36h said as

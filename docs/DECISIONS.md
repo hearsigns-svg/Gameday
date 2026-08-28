@@ -3143,3 +3143,14 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   NPB (4591) — seed constants corrected (labels + priorities 28), but
   the LIVE docs still carry the wrong labels and the majors' 68/70
   priorities; correcting live docs is an ops edit (owner).
+- 2026-08-28 (Stage 5 rider, owner directive): FREE RANGE on the
+  wheels — hours run 1–72 in single steps, superseding the brief's
+  12-hour stepping beyond 24 (the stepped grid read as the wheel "not
+  allowing free choice"); and the slot DEFAULTS are the ORIGINAL THREE
+  TIMES (1h / 6h / 1 day), reversing the slots-off default — the owner
+  accepts that an upgrading install's synced events gain the two extra
+  alarms on their next sync. Wheel jump FIXED: drag-end and momentum-
+  end both committed a settle, so the pre-snap value applied and then
+  the snap landed elsewhere; momentum-end is now the authority, with
+  drag-end committing only when no momentum follows (timer cancelled
+  by momentum-begin).

@@ -48,6 +48,7 @@ const ledger: Ledger = Object.fromEntries(
       title: f.title,
       allDay: false,
       reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+    extraReminders: [360, 1440],
     },
   ]),
 );

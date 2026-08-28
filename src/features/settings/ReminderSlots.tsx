@@ -45,6 +45,20 @@ function WheelColumn(props: {
 }) {
   const t = useTheme();
   const listRef = useRef<FlatList<string>>(null);
+  // ONE settle per gesture. Drag-end and momentum-end both fire on a
+  // real fling, and committing on BOTH made the wheel fight itself —
+  // the drag-release offset (pre-snap) applied a value, the parent
+  // re-rendered, then the snap landed somewhere else: the "jumping"
+  // the owner saw. Momentum-end is the authority; drag-end only
+  // commits when no momentum follows it (a slow release), via a short
+  // timer that momentum-begin cancels.
+  const pendingSettle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPending = () => {
+    if (pendingSettle.current !== null) {
+      clearTimeout(pendingSettle.current);
+      pendingSettle.current = null;
+    }
+  };
   const settle = (offsetY: number) => {
     const i = Math.min(
       props.items.length - 1,
@@ -92,8 +106,16 @@ function WheelColumn(props: {
             animated: false,
           })
         }
-        onMomentumScrollEnd={(e) => settle(e.nativeEvent.contentOffset.y)}
-        onScrollEndDrag={(e) => settle(e.nativeEvent.contentOffset.y)}
+        onMomentumScrollBegin={cancelPending}
+        onMomentumScrollEnd={(e) => {
+          cancelPending();
+          settle(e.nativeEvent.contentOffset.y);
+        }}
+        onScrollEndDrag={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          cancelPending();
+          pendingSettle.current = setTimeout(() => settle(y), 150);
+        }}
         ListHeaderComponent={<View style={{ height: BAND_TOP }} />}
         ListFooterComponent={<View style={{ height: BAND_TOP }} />}
         renderItem={({ item, index: i }) => (

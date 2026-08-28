@@ -260,6 +260,7 @@ describe('freezing lives in the LEDGER, not the query', () => {
     title: 'A v B',
     allDay: false,
     reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+    extraReminders: [360, 1440],
   });
   const HORIZON = '2026-01-01T00:00:00.000Z';
 
@@ -320,6 +321,7 @@ describe('opt-in removal of past events', () => {
     title: 'A v B',
     allDay: false,
     reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+    extraReminders: [360, 1440],
   });
   const HORIZON = '2026-01-01T00:00:00.000Z';
   const ledger: Ledger = { f1: entryFor('2026-08-01T17:00:00.000Z') };
@@ -360,6 +362,7 @@ describe('opt-in removal of past events', () => {
         title: 'A v B',
         allDay: false,
         reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+    extraReminders: [360, 1440],
       },
     };
     const ops = planSync([f], live, ['fdorg-comp-PL'], on, HORIZON, new Set(), new Set(), AT('2026-08-01T10:00:00.000Z'));
@@ -421,6 +424,7 @@ describe('a postponement must cross the horizon', () => {
     title: 'A v B',
     allDay: false,
     reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+    extraReminders: [360, 1440],
   };
   // Five days later: the original date is long past.
   const NOW = AT('2026-08-06T12:00:00.000Z');
