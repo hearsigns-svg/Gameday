@@ -497,6 +497,10 @@ export default function SearchScreen({ navigation }: Props) {
                   (!isRetired(item.followable) ||
                     isFollowed(item.followable.key)) ? (
                     <FollowButton
+                      theme={teamTheme(
+                        item.followable?.brandColour ?? sport?.accent ?? null,
+                        mode,
+                      )}
                       following={isFollowed(item.followable.key)}
                       subject={item.title}
                       busy={busyKey === item.key}

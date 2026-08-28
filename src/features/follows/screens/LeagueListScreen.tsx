@@ -486,6 +486,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       key={hit.key}
       right={
         <FollowButton
+          theme={teamTheme(
+            colourFromKitText(hit.colours) ?? sport?.accent ?? null,
+            mode,
+          )}
           following={isFollowed(hit.key)}
           subject={hit.name}
           busy={busyKey === hit.key}
@@ -713,6 +717,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             right={
               isSlams ? (
                 <FollowButton
+                  theme={teamTheme(sport?.accent ?? null, mode)}
                   following={slamKeys.every((k) => isFollowed(k))}
                   subject="all four majors"
                   busy={busyKey === 'slams'}

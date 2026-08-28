@@ -24,6 +24,7 @@ import { activeBackend } from './src/features/calendar-sync/data/calendarBackend
 import { resumeGoogleCalendarAuth } from './src/features/calendar-sync/data/googleCalendarAuth';
 import { loadFollowables } from './src/features/follows/data/followStore';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
+import { CelebrationHost } from './src/core/celebration';
 import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
 import { useColorSchemeMode } from './src/core/useColorSchemeMode';
@@ -311,6 +312,7 @@ export default function App() {
         <StatusBar style="auto" />
       </NavigationContainer>
       <ToastHost />
+      <CelebrationHost />
     </View>
     </CardExpansionHost>
   );

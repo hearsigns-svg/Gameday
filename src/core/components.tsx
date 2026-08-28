@@ -17,6 +17,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { burstPalette, celebrateGrand, FollowBurst } from './celebration';
 import { flagEmojiOf } from './nationality';
 import { SportPattern } from './sportPattern';
 import { useReduceMotion } from './useReduceMotion';
@@ -165,7 +166,7 @@ export interface FollowRailItem {
 // first touch stops the movement. Both behaviours stand down when the
 // content fits the viewport and under reduced motion — a strip that
 // cannot scroll must not creep, and reduced motion means exactly that.
-const RAIL_DRIFT_PX_PER_S = 10;
+const RAIL_DRIFT_PX_PER_S = 30; // x3 (owner: 10 was barely noticeable)
 const RAIL_DRIFT_TICK_MS = 50;
 const RAIL_IDLE_RESUME_MS = 3000;
 
@@ -1291,11 +1292,19 @@ export function SportPill(props: {
   );
 }
 
+// The device's one first-follow, celebrated at screen scale exactly
+// once (Round 3 item 4). The control owns the flag; the host renders it.
+const FIRST_FOLLOW_FLAG = 'firstFollowCelebrated.v1';
+
 export function FollowButton(props: {
   following: boolean;
   subject: string;
   onPress: () => void;
   busy?: boolean;
+  // The entity's generated-treatment palette, for the follow burst
+  // (Round 3): team-specific by construction, no new assets. Absent →
+  // the shell's brand pair, so markless followables still celebrate.
+  theme?: TeamTheme;
   // NO `label` AND NO `iconOnly` (22b). Both existed to solve width and
   // both cost meaning. "Follow all" said nothing "Follow" did not — the
   // action is identical whether it covers one competition or four
@@ -1307,6 +1316,46 @@ export function FollowButton(props: {
   // Two words, always, everywhere: Follow, or Following.
 }) {
   const t = useTheme();
+  const reduceMotion = useReduceMotion();
+  // ── The follow celebration (Round 3), on the SHARED control so every
+  // site gets it identically. Fire-and-forget on the false→true flip:
+  // the state change, the sync and any navigation happened upstream and
+  // are never delayed. Unfollow is silent. Transform/opacity on the
+  // native driver only; under reduced motion the flip and the haptic
+  // are the whole celebration.
+  const pop = useRef(new Animated.Value(1)).current;
+  const prevFollowing = useRef(props.following);
+  const [burstNonce, setBurstNonce] = useState(0);
+  useEffect(() => {
+    const was = prevFollowing.current;
+    prevFollowing.current = props.following;
+    if (was || !props.following) return; // only the follow moment
+    // Required LAZILY: native bindings at module scope drag MMKV and
+    // haptics into every jest suite that imports a shared component —
+    // the exact failure the appearance store already taught this
+    // codebase (and googleCalendarAuth repeats the pattern).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Haptics = require('expo-haptics') as typeof import('expo-haptics');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const storage = require('./storage') as typeof import('./storage');
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+      () => undefined,
+    );
+    if (reduceMotion) return;
+    pop.setValue(1);
+    Animated.sequence([
+      Animated.timing(pop, { toValue: 1.12, duration: 90, useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }),
+    ]).start();
+    if (!storage.readJson<boolean>(FIRST_FOLLOW_FLAG, false)) {
+      // The very first follow this device has ever made: the grand,
+      // screen-scale version, once per lifetime.
+      storage.writeJson(FIRST_FOLLOW_FLAG, true);
+      celebrateGrand(burstPalette(props.theme, t));
+    } else {
+      setBurstNonce((n) => n + 1); // re-taps RESTART the burst, never stack
+    }
+  }, [props.following, reduceMotion, pop, props.theme, t]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -1315,40 +1364,48 @@ export function FollowButton(props: {
       }
       onPress={props.onPress}
       disabled={props.busy}
-      style={[
-        styles.followButton,
-        props.following
-          ? { backgroundColor: 'transparent', borderColor: t.border }
-          : { backgroundColor: t.primary, borderColor: t.primary },
-      ]}
+      style={styles.followButtonHit}
     >
-      {props.busy ? (
-        <ActivityIndicator
-          size="small"
-          color={props.following ? t.textPrimary : t.onPrimary}
-        />
-      ) : (
-        <Text
-          style={[
-            type.secondary,
-            {
-              color: props.following ? t.textPrimary : t.onPrimary,
-              fontWeight: '600',
-            },
-          ]}
-          numberOfLines={1}
-          // A BOUND ON THE CONTROL SO THE TILE KEEPS ROOM. The button
-          // no longer shrinks (`flexShrink: 0`, so "Following" cannot
-          // be clipped), which means at large system text sizes it
-          // would grow without limit and squeeze the tile — the tile
-          // being the only way to OPEN anything now. 1.8x is still a
-          // 25pt label; past that the word stops growing rather than
-          // taking the row with it.
-          maxFontSizeMultiplier={1.8}
-        >
-          {props.following ? 'Following' : 'Follow'}
-        </Text>
-      )}
+      {/* The visual box is what pops — the hit target above never
+          moves, so a rapid second tap lands where the first did. */}
+      <Animated.View
+        style={[
+          styles.followButton,
+          props.following
+            ? { backgroundColor: 'transparent', borderColor: t.border }
+            : { backgroundColor: t.primary, borderColor: t.primary },
+          { transform: [{ scale: pop }] },
+        ]}
+      >
+        {props.busy ? (
+          <ActivityIndicator
+            size="small"
+            color={props.following ? t.textPrimary : t.onPrimary}
+          />
+        ) : (
+          <Text
+            style={[
+              type.secondary,
+              {
+                color: props.following ? t.textPrimary : t.onPrimary,
+                fontWeight: '600',
+              },
+            ]}
+            numberOfLines={1}
+            // A BOUND ON THE CONTROL SO THE TILE KEEPS ROOM. The button
+            // no longer shrinks (`flexShrink: 0`, so "Following" cannot
+            // be clipped), which means at large system text sizes it
+            // would grow without limit and squeeze the tile — the tile
+            // being the only way to OPEN anything now. 1.8x is still a
+            // 25pt label; past that the word stops growing rather than
+            // taking the row with it.
+            maxFontSizeMultiplier={1.8}
+          >
+            {props.following ? 'Following' : 'Follow'}
+          </Text>
+        )}
+      </Animated.View>
+      <FollowBurst nonce={burstNonce} palette={burstPalette(props.theme, t)} />
     </Pressable>
   );
 }
@@ -1704,6 +1761,15 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.pill,
     borderWidth: 1,
+  },
+  // The Follow control's HIT target: fixed geometry that never moves,
+  // even while the visual box inside it pops (Round 3).
+  followButtonHit: {
+    minWidth: 90,
+    minHeight: 44,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   followButton: {
     paddingHorizontal: spacing.m,

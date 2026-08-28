@@ -394,7 +394,26 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               </Pressable>
             );
           }}
-          renderItem={({ item: a }) => (
+          renderItem={({ item: a }) => {
+            // Hoisted so the tile AND the Follow control share one
+            // theme — the burst is the athlete's own palette (Round 3).
+            const rowTheme = teamTheme(
+              (() => {
+                const identity = athleteIdentity({
+                  sportKey: a.sportKey,
+                  ...(a.countryCode ? { countryCode: a.countryCode } : {}),
+                  ...(a.grouping ? { groupingKey: a.grouping } : {}),
+                  ...(a.accentHue !== undefined
+                    ? { accentHue: a.accentHue }
+                    : {}),
+                });
+                return identity.hue !== null
+                  ? hueToHex(identity.hue)
+                  : (sport?.accent ?? null);
+              })(),
+              mode,
+            );
+            return (
             <TileRow
               compact
               // DENSITY IS THE RISK HERE, not on any other surface: the
@@ -405,6 +424,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               right={
                 followControlFor(a) ? (
                   <FollowButton
+                    theme={rowTheme}
                     following={isFollowed(a.key)}
                     subject={a.name}
                     busy={busyKey === a.key}
@@ -423,30 +443,10 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               {...(flagEmojiOf(a.countryCode)
                 ? { tileBadge: flagEmojiOf(a.countryCode) as string }
                 : {})}
-              theme={teamTheme(
-                (() => {
-                  // Division colour where the grouping IS a category
-                  // (a boxer's weight class); the per-athlete hue
-                  // otherwise. Never a raw hex from here — teamTheme
-                  // tone-maps it and guarantees the contrast.
-                  const identity = athleteIdentity({
-                    sportKey: a.sportKey,
-                    ...(a.countryCode ? { countryCode: a.countryCode } : {}),
-                    // The card carries the division's DISPLAY name
-                    // ('Heavyweight'), which is the category itself —
-                    // no need for the server to start sending the slug
-                    // as well, and no deploy skew to handle.
-                    ...(a.grouping ? { groupingKey: a.grouping } : {}),
-                    ...(a.accentHue !== undefined
-                      ? { accentHue: a.accentHue }
-                      : {}),
-                  });
-                  return identity.hue !== null
-                    ? hueToHex(identity.hue)
-                    : (sport?.accent ?? null);
-                })(),
-                mode,
-              )}
+              // Division colour where the grouping IS a category (a
+              // boxer's weight class); the per-athlete hue otherwise —
+              // hoisted above so the Follow burst shares it.
+              theme={rowTheme}
               accessibilityLabel={`${a.name}, open athlete page`}
               onPress={() =>
                 navigation.navigate('Team', {
@@ -471,7 +471,8 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               }
             />
             </TileRow>
-          )}
+            );
+          }}
         />
       )}
     </View>

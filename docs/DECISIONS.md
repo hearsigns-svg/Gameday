@@ -3169,3 +3169,18 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   first months after launch (the first-impression window), then
   reassess against cost — the first-ever cold open stays slow by
   choice until then.
+- 2026-08-28 (Round 3): FOLLOW CELEBRATION on the shared control, once
+  for every site. Follow (never unfollow) = light impact haptic + the
+  visual box spring-pops inside a FIXED hit target + a ~600ms one-shot
+  burst of 16 particles coloured from the entity's generated-treatment
+  palette (burstPalette; shell brand pair when no theme is in hand) —
+  ONE Animated.Value drives all particles via interpolation, native
+  driver only, zero JS ticking (item-7 sensitivity), deterministic
+  golden-angle spread, mounted only mid-flight. Re-taps RESTART the
+  burst. Reduced motion = flip + haptic only. The device's very FIRST
+  follow gets the screen-scale version once per lifetime
+  (firstFollowCelebrated.v1; CelebrationHost at app root). Native
+  bindings (haptics, MMKV flag) are lazy-required inside the effect —
+  module-scope imports in shared components kill jest suites (the
+  MMKV/Nitro lesson, re-learnt and re-pinned). Following-strip drift
+  tripled to 30 px/s (owner: 10 was barely noticeable).

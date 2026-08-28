@@ -367,6 +367,7 @@ export default function TeamScreen({ navigation, route }: Props) {
             it can still be removed. */}
         {!isRetired(career) || following ? (
           <FollowButton
+            theme={theme}
             following={following}
             subject={name}
             busy={busy}

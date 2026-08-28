@@ -64,6 +64,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
     <TileRow
       right={
         <FollowButton
+          theme={props.theme}
           following={props.following}
           subject={props.name}
           busy={props.busy === true}

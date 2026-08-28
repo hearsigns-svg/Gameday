@@ -145,6 +145,10 @@ export default function FollowingScreen({ navigation }: Props) {
               <TileRow
                 right={
                   <FollowButton
+                    theme={teamTheme(
+                      item.brandColour ?? sport?.accent ?? null,
+                      mode,
+                    )}
                     following
                     subject={item.label}
                     busy={busyKey === item.key}

@@ -163,6 +163,10 @@ export default function TeamListScreen({ navigation, route }: Props) {
           <TileRow
             right={
               <FollowButton
+                theme={teamTheme(
+                  colourFromKitText(item.colours) ?? sport?.accent ?? null,
+                  mode,
+                )}
                 following={isFollowed(item.key)}
                 subject={item.name}
                 busy={busyKey === item.key}
