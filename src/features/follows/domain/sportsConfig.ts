@@ -11,12 +11,16 @@ export interface StaticCompetition {
   country: string;
   key: string;
   followOnly?: boolean; // no team drill-down
-  // False when the competition itself cannot be followed — only its teams
-  // can. NHL and MLB are served by TEAM pollers with no league-level
-  // route, so "Follow all" on those rows built pollNhlTeam?abbrev=1 and
-  // pollMlbTeam?teamId=1: a 400 and an empty 200 respectively. A missing
-  // button beats a broken one.
-  followable?: boolean;
+  // There is no unfollowable competition any more (Stage 6 addendum,
+  // owner ruling: every card carries Follow ⇄ Following, no exceptions).
+  // The `followable: false` flag NHL/MLB carried was stale twice over:
+  // its poll-path breakage (pollNhlTeam?abbrev=1) cannot occur — these
+  // rows carry no pollPath, and a pollPath-less follow skips the poll,
+  // the athlete-follow pattern — and delivery is real: every NHL/MLB
+  // fixture carries its league followKey (nhl-league-1 / mlb-league-1),
+  // measured in prod 2026-08-28. Freshness caveat: no catalogue rows
+  // exist for the NHL/MLB routes, so a league-only follower rides the
+  // device-first union of team followers' poll paths.
   pollPath?: string; // functions path polled when this follow syncs
   teamPollPath?: string; // path attached to team-follows made inside it
   // CROSS-LINK (Prompt 13): the existing sport this competition also
@@ -160,7 +164,6 @@ export const SPORTS: SportConfig[] = [
         name: 'NHL',
         country: 'North America',
         key: 'nhl-league-1',
-        followable: false, // team-level only; see StaticCompetition
       },
       {
         id: '4920',
@@ -452,7 +455,6 @@ export const SPORTS: SportConfig[] = [
         name: 'MLB',
         country: 'North America',
         key: 'mlb-league-1',
-        followable: false, // team-level only; see StaticCompetition
       },
       {
         id: '4591',

@@ -3105,3 +3105,16 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   target, rule 16's sync-adapter gate applies first. The delete-flow
   toggle gains this mode; a PARTIAL erase aborts the delete flow, or
   the local wipe would destroy the failed events' protection.
+- 2026-08-28 (Stage 6 addendum, owner ruling from device pass): EVERY
+  competition card carries Follow ⇄ Following, present and operable at
+  rest and expanded — no exceptions, so CompetitionCard's follow props
+  are REQUIRED (buttonless full-width is impossible by construction)
+  and the followable:false flag is DELETED. Its stated reason was stale
+  twice over: the broken Follow-all poll (pollNhlTeam?abbrev=1 → 400)
+  cannot occur because these rows carry no pollPath and pollPath-less
+  follows skip the poll (the athlete pattern), and delivery is real —
+  every NHL/MLB fixture carries nhl-league-1 / mlb-league-1 followKeys
+  (measured in prod). FLAGGED, not actioned: no catalogue rows exist
+  for the NHL/MLB routes, so a league-only follower's freshness rides
+  the device-first union of team followers' poll paths — a catalogue
+  seed decision for the owner.

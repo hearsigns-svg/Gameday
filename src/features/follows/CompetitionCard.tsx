@@ -40,12 +40,13 @@ export interface CompetitionCardProps {
   fixturesWord?: string;
   // Teams list. Presence is what makes the card EXPAND on tap.
   onTeams?: (() => void) | undefined;
-  // undefined → not followable (NHL/MLB are served team-by-team): the
-  // card simply renders without a control, the way a Players row does —
-  // the greyed placeholder was the segmented design's shape rule, and
-  // this language never needed it.
-  following?: boolean;
-  onFollow?: (() => void) | undefined;
+  // REQUIRED, deliberately (Stage 6 addendum, owner ruling): every
+  // competition card carries the Follow control as its text state pair,
+  // present and operable in both rest and expanded states. Making these
+  // optional is how MLB and NHL shipped buttonless — the full-width
+  // no-affordance layout is now impossible by construction.
+  following: boolean;
+  onFollow: () => void;
   busy?: boolean;
 }
 
@@ -62,14 +63,12 @@ export function CompetitionCard(props: CompetitionCardProps) {
   return (
     <TileRow
       right={
-        props.onFollow ? (
-          <FollowButton
-            following={props.following === true}
-            subject={props.name}
-            busy={props.busy === true}
-            onPress={props.onFollow}
-          />
-        ) : undefined
+        <FollowButton
+          following={props.following}
+          subject={props.name}
+          busy={props.busy === true}
+          onPress={props.onFollow}
+        />
       }
     >
       <SportCard

@@ -13,9 +13,6 @@ export interface DirectoryLeague {
   // it at any time without a client change.
   crestUrl?: string;
   followOnly?: boolean;
-  // Explicit false = browse its teams, but the competition itself has no
-  // poller and must not offer "Follow all".
-  followable?: boolean;
   season?: number;
   pollPath?: string;
   // May contain the literal {teamId}, substituted when a team inside this

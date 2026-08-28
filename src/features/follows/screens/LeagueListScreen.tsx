@@ -402,12 +402,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 }),
             }
           : {})}
-        {...(item.followable !== false
-          ? {
-              following: isFollowed(item.key),
-              onFollow: () => void toggle(item),
-            }
-          : {})}
+        following={isFollowed(item.key)}
+        onFollow={() => void toggle(item)}
         busy={busyKey === item.key}
       />
     );
