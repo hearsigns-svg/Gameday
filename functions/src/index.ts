@@ -19,6 +19,7 @@ import { athleteNames, normaliseName, toSearchName } from './identity';
 import { imageryAllowed, withImageryPolicy } from './imagery';
 import {
   artIsFresh,
+  COMPETITION_ART_ALIASES,
   narrowToServed,
   TSDB_ART_SPORTS,
   tsdbLeagueIdsFrom,
@@ -1052,6 +1053,12 @@ async function competitionArt(): Promise<Record<string, string>> {
     }
   }
   const art = narrowToServed(byId, served);
+  // Alias marks (Round 2 item 4): competitions served by non-TSDB
+  // routes, keyed by FOLLOW KEY so the client's row-key lookup lands.
+  for (const [key, id] of Object.entries(COMPETITION_ART_ALIASES)) {
+    const url = byId.get(id);
+    if (url) art[key] = url;
+  }
   // Never overwrite a populated cache with nothing: a bad TSDB day
   // would otherwise strip every logo for the next 24 hours.
   if (Object.keys(art).length === 0) return data?.art ?? {};
@@ -1079,7 +1086,10 @@ export const listPriorities = onRequest(async (req, res) => {
     const raw = await competitionArt().catch(() => ({}) as Record<string, string>);
     const competitionArtOut: Record<string, string> = {};
     for (const [id, url] of Object.entries(raw)) {
-      if (imageryAllowed(`tsdb-league-${id}`, off)) competitionArtOut[id] = url;
+      // Numeric keys are TSDB league ids; alias keys ARE the
+      // competition key, and the kill-switch must see the real one.
+      const compKey = /^\d+$/.test(id) ? `tsdb-league-${id}` : id;
+      if (imageryAllowed(compKey, off)) competitionArtOut[id] = url;
     }
     res.json({
       priorities: regionalMap,

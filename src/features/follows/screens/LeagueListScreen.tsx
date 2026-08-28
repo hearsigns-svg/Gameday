@@ -24,7 +24,13 @@ import {
   SportCard,
   TileRow,
 } from '../../../core/components';
-import { BrowseRow, SLAM_KEYS, tennisBrowseRows, tournamentDateRange } from '../domain/tennisBrowse';
+import {
+  BrowseRow,
+  SLAM_KEYS,
+  tennisBrowseRows,
+  tournamentDateRange,
+  tournamentsFor,
+} from '../domain/tennisBrowse';
 import { anyFoldedIncludes } from '../../../core/nameFold';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
@@ -107,16 +113,24 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     // never a hidden tap side-effect on the sport itself.
     if (sport?.seriesFollowable && !sport.staticCompetitions) {
       const series = sport.seriesFollowable;
-      setLeagues([
-        {
-          id: sport.key,
-          name: series.label,
-          country: 'All events',
-          key: series.key,
-          followOnly: true,
-          ...(series.pollPath ? { pollPath: series.pollPath } : {}),
-        },
-      ]);
+      // The series mark rides the same served art map the static rows
+      // use, keyed by the FOLLOW key (Round 2 item 4 — F1 was the
+      // known Following-strip monogram).
+      void refreshPriorities();
+      const art = cachedPriorities().competitionArt[series.key];
+      const row: DirectoryLeague = {
+        id: sport.key,
+        name: series.label,
+        country: 'All events',
+        key: series.key,
+        followOnly: true,
+        ...(series.pollPath ? { pollPath: series.pollPath } : {}),
+        ...(art ? { crestUrl: art } : {}),
+      };
+      setLeagues([row]);
+      // A stored series follow captured before the mark existed heals
+      // here, the same way static-row follows already do.
+      hydrateFollowArt([row]);
       return;
     }
     if (sport?.staticCompetitions && route.params.sportKey !== 'soccer') {
@@ -135,7 +149,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         // squad size by row KEY (27C) — both server maps riding
         // listPriorities, joined onto CONFIG rows that no directory
         // route ever serves.
-        const art = pr.competitionArt[String(c.id)];
+        // By TSDB id where the row IS a TSDB league; by FOLLOW KEY for
+        // the aliased marks (NHL/MLB/the tennis tours — Round 2 item 4).
+        const art = pr.competitionArt[String(c.id)] ?? pr.competitionArt[c.key];
         const count = pr.teamCounts[c.key];
         return {
           ...c,
@@ -370,12 +386,30 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           ? 'wta'
           : null;
 
+  // THE SUBTITLE ADVERTISES THE TAP (Round 2 ruling) — on cards whose
+  // tap does something beyond opening a page: team leagues say what
+  // expansion offers ("England · Tap to follow teams (20) · fixtures",
+  // the trailing word per-sport), tournament-bearing tours say theirs.
+  // Non-expandable rows keep their plain facts.
+  const captionFor = (item: DirectoryLeague, tour: 'atp' | 'wta' | null): string => {
+    if (tour) {
+      const n = tournamentsFor(tournaments, tour, 'all').length;
+      return `Tap to follow tournaments${n > 0 ? ` (${n})` : ''}`;
+    }
+    if (!item.followOnly) {
+      const count = item.teamCount !== undefined ? ` (${item.teamCount})` : '';
+      const word = fixturesWordFor(route.params.sportKey).toLowerCase();
+      return `${item.country} · Tap to follow teams${count} · ${word}`;
+    }
+    return subtitleOf(item);
+  };
+
   const leagueCard = (item: DirectoryLeague) => {
     const tour = tourOf(item.key);
     return (
       <CompetitionCard
         name={item.name}
-        caption={subtitleOf(item)}
+        caption={captionFor(item, tour)}
         theme={teamTheme(sport?.accent ?? null, mode)}
         monogram={monogramOf(item.name)}
         {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}

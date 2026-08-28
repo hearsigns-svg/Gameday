@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { flagEmojiOf } from './nationality';
 import { SportPattern } from './sportPattern';
+import { useReduceMotion } from './useReduceMotion';
 import { motion, radius as radiusTokens, spacing, type, useTheme } from './tokens';
 const radius = radiusTokens;
 import { TeamTheme } from './teamTheme';
@@ -155,25 +156,95 @@ export interface FollowRailItem {
   badge?: string;
 }
 
+// LOOPING DRIFT (Round 2 items 5/6). When the strip overflows its
+// viewport it renders the items TWICE and keeps its scroll offset
+// inside the first copy's width, so scrolling — the user's or the
+// drift's — wraps instead of dead-ending. The drift is a slow
+// continuous advance (~10 px/s) that pauses the moment a finger lands
+// and resumes after a few idle seconds; taps still land because the
+// first touch stops the movement. Both behaviours stand down when the
+// content fits the viewport and under reduced motion — a strip that
+// cannot scroll must not creep, and reduced motion means exactly that.
+const RAIL_DRIFT_PX_PER_S = 10;
+const RAIL_DRIFT_TICK_MS = 50;
+const RAIL_IDLE_RESUME_MS = 3000;
+
 export function FollowRail(props: {
   items: FollowRailItem[];
   onPress: (key: string) => void;
 }) {
   const t = useTheme();
+  const reduceMotion = useReduceMotion();
+  const scrollRef = useRef<ScrollView>(null);
+  const [viewportW, setViewportW] = useState(0);
+  // The width of ONE copy — measured from the undoubled render, which
+  // is why doubling waits for the measurement.
+  const [singleW, setSingleW] = useState(0);
+  const itemsKey = props.items.map((i) => i.key).join('|');
+  useEffect(() => {
+    setSingleW(0); // strip changed: re-measure before looping again
+  }, [itemsKey]);
+  const looping =
+    !reduceMotion && singleW > 0 && viewportW > 0 && singleW > viewportW;
+  const xRef = useRef(0);
+  const pausedUntil = useRef(0);
+  useEffect(() => {
+    if (!looping) return;
+    const id = setInterval(() => {
+      if (Date.now() < pausedUntil.current) return;
+      let x = xRef.current + (RAIL_DRIFT_PX_PER_S * RAIL_DRIFT_TICK_MS) / 1000;
+      if (x >= singleW) x -= singleW; // invisible: copy two is identical
+      xRef.current = x;
+      scrollRef.current?.scrollTo({ x, animated: false });
+    }, RAIL_DRIFT_TICK_MS);
+    return () => clearInterval(id);
+  }, [looping, singleW]);
+  const rendered = looping ? [...props.items, ...props.items] : props.items;
   return (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       // Under four it already fits: bouncing a strip that cannot scroll
-      // reads as broken rather than playful.
-      bounces={props.items.length > 3}
+      // reads as broken rather than playful. A looping strip never
+      // bounces — there is no edge to bounce off.
+      bounces={!looping && props.items.length > 3}
+      onLayout={(e) => setViewportW(e.nativeEvent.layout.width)}
+      onContentSizeChange={(w) => {
+        if (!looping) setSingleW(w);
+      }}
+      scrollEventThrottle={16}
+      onScroll={(e) => {
+        // The drift resumes from wherever the user left the strip.
+        xRef.current = e.nativeEvent.contentOffset.x;
+      }}
+      onTouchStart={() => {
+        pausedUntil.current = Number.MAX_SAFE_INTEGER;
+      }}
+      onTouchEnd={() => {
+        pausedUntil.current = Date.now() + RAIL_IDLE_RESUME_MS;
+      }}
+      onMomentumScrollEnd={(e) => {
+        pausedUntil.current = Date.now() + RAIL_IDLE_RESUME_MS;
+        if (!looping) return;
+        // Keep the offset inside copy one so the user can fling
+        // forever in either direction.
+        let x = e.nativeEvent.contentOffset.x;
+        if (x >= singleW) x -= singleW;
+        else if (x < 0) x += singleW;
+        else return;
+        xRef.current = x;
+        scrollRef.current?.scrollTo({ x, animated: false });
+      }}
       contentContainerStyle={styles.rail}
     >
-      {props.items.map((item) => (
+      {rendered.map((item, i) => (
         <Pressable
-          key={item.key}
+          key={`${item.key}-${i >= props.items.length ? 'b' : 'a'}`}
           accessibilityRole="button"
           accessibilityLabel={`${item.label}, ${item.caption}. See their fixtures`}
+          // The second copy is a visual continuation, not more content.
+          accessibilityElementsHidden={i >= props.items.length}
           onPress={() => props.onPress(item.key)}
           style={({ pressed }) => [styles.railItem, pressed && { opacity: 0.6 }]}
         >

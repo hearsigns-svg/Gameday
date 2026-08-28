@@ -575,36 +575,10 @@ export default function PreferencesScreen({
         />
       </Section>
 
-      {/* Status, not settings — the quiet tail. */}
-      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.xl }]}>
-        {(() => {
-          const device = syncStalenessHours();
-          const data = dataStaleness(loadFollowables());
-          const fmt = (h: number) =>
-            h < 1 ? 'under an hour ago' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`;
-          const deviceLine =
-            device === null ? 'This device: not synced yet' : `This device last synced ${fmt(device)}`;
-          const followCount = loadFollowables().length;
-          const dataLine =
-            followCount === 0
-              ? 'Fixture sources: nothing followed yet'
-              : data === null || data.worstHours === null
-                ? 'Fixture sources: freshness unknown'
-                : `Fixture sources last confirmed ${fmt(data.worstHours)}`;
-          return `${deviceLine} · ${dataLine}`;
-        })()}
-      </Text>
-      {/* A device over the 200-key rule limit is REJECTED wholesale by
-          Firestore, so it silently stops being swept. Say so. */}
-      {lastRegistryError() ? (
-        <Text style={[type.secondary, { color: t.danger, marginTop: spacing.m }]}>
-          {lastRegistryError()}
-        </Text>
-      ) : null}
-      {/* Destructive, last, and past a rule — finished games are a
-          record of something that happened, and this is the only way
-          to opt out of keeping that record. */}
-      <View style={[styles.rule, { borderColor: t.border }]} />
+      {/* Destructive — finished games are a record of something that
+          happened, and this is the only way to opt out of keeping that
+          record. (The rule that used to sit above this moved below Data
+          & privacy — Round 2 layout ruling.) */}
       <Section
         title="Past games"
         open={openSection === 'past'}
@@ -636,17 +610,46 @@ export default function PreferencesScreen({
         />
       </Section>
 
-      {/* The very bottom of the screen (owner amendment). */}
+      {/* The screen's tail (Round 2 layout ruling): divider, Photo
+          credits, then the sync-status caption at the very bottom. */}
+      <View style={[styles.rule, { borderColor: t.border }]} />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Photo credits"
         onPress={() => navigation.navigate('Credits')}
-        style={{ marginTop: spacing.xl, minHeight: 44, justifyContent: 'center' }}
+        style={{ marginTop: spacing.m, minHeight: 44, justifyContent: 'center' }}
       >
         <Text style={[type.secondary, { color: t.textSecondary }]}>
           Photo credits
         </Text>
       </Pressable>
+
+      {/* Status, not settings — the quiet tail. */}
+      <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.m }]}>
+        {(() => {
+          const device = syncStalenessHours();
+          const data = dataStaleness(loadFollowables());
+          const fmt = (h: number) =>
+            h < 1 ? 'under an hour ago' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`;
+          const deviceLine =
+            device === null ? 'This device: not synced yet' : `This device last synced ${fmt(device)}`;
+          const followCount = loadFollowables().length;
+          const dataLine =
+            followCount === 0
+              ? 'Fixture sources: nothing followed yet'
+              : data === null || data.worstHours === null
+                ? 'Fixture sources: freshness unknown'
+                : `Fixture sources last confirmed ${fmt(data.worstHours)}`;
+          return `${deviceLine} · ${dataLine}`;
+        })()}
+      </Text>
+      {/* A device over the 200-key rule limit is REJECTED wholesale by
+          Firestore, so it silently stops being swept. Say so. */}
+      {lastRegistryError() ? (
+        <Text style={[type.secondary, { color: t.danger, marginTop: spacing.m }]}>
+          {lastRegistryError()}
+        </Text>
+      ) : null}
 
       {__DEV__ ? (
         <Pressable

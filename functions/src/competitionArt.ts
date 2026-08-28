@@ -36,7 +36,28 @@ export const TSDB_ART_SPORTS: readonly string[] = [
   'Golf',
   'Fighting',
   'Motorsport',
+  // ART ONLY — no tennis fixtures come from TSDB; the sport is fetched
+  // for the tour badges the aliases below serve (Round 2 item 4).
+  'Tennis',
 ];
+
+// Competitions served by NON-TSDB routes whose marks TSDB nevertheless
+// holds (Round 2 item 4 — the Following-strip monogram audit). Keyed by
+// the competition FOLLOW KEY, valued by the TSDB league id whose badge
+// is that competition's real mark; the art map serves these under the
+// follow key so the client's row-key lookup finds them. Every id was
+// probed live with a badge present (2026-08-28). Deliberately absent:
+// the boxing promotions (PBC/boxingdata — TSDB has no per-promotion
+// badge, and a generic boxing mark on a PBC follow is a wrong mark),
+// athletics (no TSDB athletics art), and every olympics-* key (excluded
+// in code by statute — imagery.ts).
+export const COMPETITION_ART_ALIASES: Readonly<Record<string, string>> = {
+  'f1-series-1': '4370', // Formula 1 (Motorsport)
+  'nhl-league-1': '4380', // NHL (Ice Hockey)
+  'mlb-league-1': '4424', // MLB (Baseball)
+  'tennis-atp': '4464', // ATP World Tour (Tennis)
+  'tennis-wta': '4517', // WTA Tour (Tennis)
+};
 
 const TSDB_LEAGUE_KEY = /^tsdb-league-(\d+)$/;
 

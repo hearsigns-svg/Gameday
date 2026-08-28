@@ -216,8 +216,16 @@ export default function App() {
           component={CalendarPrimingScreen}
           options={({ route }) =>
             route.params?.onboarding
-              ? { title: 'Your calendar', gestureEnabled: false }
-              : { presentation: 'modal', title: 'Your calendar' }
+              ? {
+                  title: 'Your calendar',
+                  headerTitle: () => <BrandTitle>Your calendar</BrandTitle>,
+                  gestureEnabled: false,
+                }
+              : {
+                  presentation: 'modal' as const,
+                  title: 'Your calendar',
+                  headerTitle: () => <BrandTitle>Your calendar</BrandTitle>,
+                }
           }
         />
         <Stack.Screen
@@ -228,37 +236,46 @@ export default function App() {
         <Stack.Screen
           name="Search"
           component={SearchScreen}
-          options={{ title: 'Search' }}
+          options={{ title: 'Search', headerTitle: () => <BrandTitle>Search</BrandTitle> }}
         />
         <Stack.Screen
           name="SportPicker"
           component={SportPickerScreen}
-          options={{ title: 'Sports' }}
+          options={{ title: 'Sports', headerTitle: () => <BrandTitle>Sports</BrandTitle> }}
         />
         <Stack.Screen
           name="LeagueList"
           component={LeagueListScreen}
-          options={{ title: 'Competitions' }}
+          options={{ title: 'Competitions', headerTitle: () => <BrandTitle>Competitions</BrandTitle> }}
         />
         <Stack.Screen
           name="AthleteList"
           component={AthleteListScreen}
-          options={{ title: 'Athletes' }}
+          options={{ title: 'Athletes', headerTitle: () => <BrandTitle>Athletes</BrandTitle> }}
         />
         <Stack.Screen
           name="TournamentList"
           component={TournamentListScreen}
-          options={({ route }) => ({ title: route.params.title })}
+          options={({ route }) => ({
+            title: route.params.title,
+            headerTitle: () => <BrandTitle>{route.params.title}</BrandTitle>,
+          })}
         />
         <Stack.Screen
           name="TeamList"
           component={TeamListScreen}
-          options={({ route }) => ({ title: route.params.leagueName })}
+          options={({ route }) => ({
+            title: route.params.leagueName,
+            headerTitle: () => <BrandTitle>{route.params.leagueName}</BrandTitle>,
+          })}
         />
         <Stack.Screen
           name="Team"
           component={TeamScreen}
-          options={({ route }) => ({ title: route.params.name })}
+          options={({ route }) => ({
+            title: route.params.name,
+            headerTitle: () => <BrandTitle>{route.params.name}</BrandTitle>,
+          })}
         />
         <Stack.Screen
           name="Preferences"
@@ -271,23 +288,23 @@ export default function App() {
         <Stack.Screen
           name="Region"
           component={RegionScreen}
-          options={{ title: 'Region' }}
+          options={{ title: 'Region', headerTitle: () => <BrandTitle>Region</BrandTitle> }}
         />
         <Stack.Screen
           name="CalendarTarget"
           component={CalendarTargetScreen}
-          options={{ title: 'Calendar' }}
+          options={{ title: 'Calendar', headerTitle: () => <BrandTitle>Calendar</BrandTitle> }}
         />
         <Stack.Screen
           name="Credits"
           component={CreditsScreen}
-          options={{ title: 'Photo credits' }}
+          options={{ title: 'Photo credits', headerTitle: () => <BrandTitle>Photo credits</BrandTitle> }}
         />
         {__DEV__ ? (
           <Stack.Screen
             name="ThemeGallery"
             component={ThemeGalleryScreen}
-            options={{ title: 'Theme gallery (dev)' }}
+            options={{ title: 'Theme gallery (dev)', headerTitle: () => <BrandTitle>Theme gallery (dev)</BrandTitle> }}
           />
         ) : null}
         </Stack.Navigator>

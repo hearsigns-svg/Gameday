@@ -9,7 +9,7 @@
 // Home never follows anything directly — every card navigates, and
 // Follow buttons are always visible where they act (owner ruling).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -19,6 +19,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useCardExpansion } from '../../../core/cardExpansion';
+import { useReduceMotion } from '../../../core/useReduceMotion';
 import {
   CalendarOffBanner,
   CarouselDots,
@@ -57,6 +59,12 @@ type Props = TabScreenProps<'Home'>;
 // The carousel is now the ONLY "what's next" surface on Home, so it
 // carries the whole run rather than a teaser of it.
 const CAROUSEL_MAX = 10;
+
+// Auto-advance (Round 2 item 5): one tunable interval. The carousel
+// snaps to the next card on this cadence — pausing under a finger and
+// while any card is expanded, resetting after a manual swipe, and off
+// entirely under reduced motion or with a single card.
+const HERO_ADVANCE_MS = 25_000;
 
 export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
@@ -186,6 +194,65 @@ export default function HomeScreen({ navigation }: Props) {
   const cardWidth = windowWidth - spacing.l * 2;
   const snap = cardWidth + spacing.m;
 
+  // ── Looping + auto-advance (Round 2 items 5/6) ──────────────────────
+  //
+  // LOOP: with looping on, the data renders three times and the list
+  // starts in the middle copy; whenever a settle lands outside it, the
+  // offset is silently re-centred by one copy's width — so a swipe past
+  // either end simply continues, and there is no dead end to hit. Dots
+  // and the expanded card's pager keep using the REAL index (idx % n).
+  // Both behaviours stand down with a single card and under reduced
+  // motion.
+  const reduceMotion = useReduceMotion();
+  const expansion = useCardExpansion();
+  const n = carousel.length;
+  const looping = n >= 2 && !reduceMotion;
+  const heroRef = useRef<FlatList<UpcomingFixture>>(null);
+  const loopIndexRef = useRef(looping ? n : 0);
+  const touchingRef = useRef(false);
+  const autoAdvancingRef = useRef(false);
+  const lastUserSwipeAt = useRef(0);
+  const heroData = useMemo(
+    () => (looping ? [...carousel, ...carousel, ...carousel] : carousel),
+    [carousel, looping],
+  );
+  const recentre = (idx: number): number => {
+    if (!looping) return idx;
+    if (idx >= n && idx < 2 * n) return idx;
+    const centred = n + ((idx % n) + n) % n;
+    heroRef.current?.scrollToOffset({ offset: centred * snap, animated: false });
+    return centred;
+  };
+  const onHeroSettle = (offsetX: number) => {
+    const idx = Math.max(0, Math.round(offsetX / snap));
+    loopIndexRef.current = recentre(idx);
+    if (!autoAdvancingRef.current) lastUserSwipeAt.current = Date.now();
+    autoAdvancingRef.current = false;
+    setPage(Math.min(n - 1, Math.max(0, loopIndexRef.current % n)));
+  };
+  // The 25s cadence: one interval, condition-checked per tick so a
+  // pause never needs teardown. A manual swipe "resets the timer" by
+  // stamping lastUserSwipeAt — ticks inside the window are skipped.
+  useEffect(() => {
+    // Start (and restart on a size change) at the middle copy.
+    if (!looping) return;
+    loopIndexRef.current = n;
+  }, [looping, n]);
+  useEffect(() => {
+    if (!looping) return;
+    const id = setInterval(() => {
+      if (touchingRef.current) return;
+      if (expansion.liftedKey !== null) return; // never under an expanded card
+      if (Date.now() - lastUserSwipeAt.current < HERO_ADVANCE_MS) return;
+      autoAdvancingRef.current = true;
+      heroRef.current?.scrollToOffset({
+        offset: (loopIndexRef.current + 1) * snap,
+        animated: true,
+      });
+    }, HERO_ADVANCE_MS);
+    return () => clearInterval(id);
+  }, [looping, n, snap, expansion.liftedKey === null]);
+
   // The poster itself lives in follows/FixtureHero.tsx, and tapping it
   // does not navigate anywhere: the card measures where it is and grows
   // into the expanded state from exactly there (core/cardExpansion).
@@ -221,29 +288,35 @@ export default function HomeScreen({ navigation }: Props) {
       {carousel.length > 0 ? (
         <View style={{ marginTop: spacing.l }}>
           <FlatList
+            ref={heroRef}
             horizontal
-            data={carousel}
-            keyExtractor={(f) => f.id}
+            data={heroData}
+            keyExtractor={(f, i) =>
+              looping ? `${f.id}-${Math.floor(i / Math.max(n, 1))}` : f.id
+            }
             // Near-viewport cards only at first paint (Stage 4B): the
             // default of ten mounted every hero at once and their photo
             // lookups fired together — the burst that rate-limited the
             // whole batch. Three keeps the visible card and its
             // neighbours instant; the rest mount as you swipe.
             initialNumToRender={3}
+            // Fixed geometry, declared: what lets the loop start in the
+            // MIDDLE copy without a visible post-mount jump.
+            getItemLayout={(_d, i) => ({ length: snap, offset: i * snap, index: i })}
+            initialScrollIndex={looping ? n : 0}
             showsHorizontalScrollIndicator={false}
             snapToInterval={snap}
             decelerationRate="fast"
             disableIntervalMomentum
             contentContainerStyle={{ paddingHorizontal: spacing.l }}
             ItemSeparatorComponent={() => <View style={{ width: spacing.m }} />}
-            onMomentumScrollEnd={(e) =>
-              setPage(
-                Math.min(
-                  carousel.length - 1,
-                  Math.max(0, Math.round(e.nativeEvent.contentOffset.x / snap)),
-                ),
-              )
-            }
+            onTouchStart={() => {
+              touchingRef.current = true;
+            }}
+            onTouchEnd={() => {
+              touchingRef.current = false;
+            }}
+            onMomentumScrollEnd={(e) => onHeroSettle(e.nativeEvent.contentOffset.x)}
             renderItem={({ item }) => (
               <ExpandingHero
                 item={item}
