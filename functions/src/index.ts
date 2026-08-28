@@ -1,3 +1,9 @@
+// DEPLOY STAMP 2026-08-28: bump the codebase hash. Two overlapping
+// deploys left prod running a pre-fixtureTeams source zip while the
+// CLI's skip-unchanged hash matched the NEW source, so a plain
+// redeploy skipped all 36 functions. Any edit to this file un-skips
+// the fleet; the stamp is inert and can be removed on the next
+// substantive change.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
