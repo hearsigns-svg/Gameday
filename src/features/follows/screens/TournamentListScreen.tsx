@@ -22,7 +22,7 @@ import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { CompetitionCard } from '../CompetitionCard';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
-import { fetchTournaments, TournamentRow } from '../data/directoryRepo';
+import { cachedTournaments, fetchTournaments, TournamentRow } from '../data/directoryRepo';
 import { isFollowed } from '../data/followStore';
 import { tournamentDateRange, tournamentsFor } from '../domain/tennisBrowse';
 import { sportByKey } from '../domain/sportsConfig';
@@ -45,12 +45,16 @@ export default function TournamentListScreen({ navigation, route }: Props) {
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
+    // Cached-first (Round 2 perf ruling): the last served list paints
+    // immediately; the fetch refreshes it behind. A refresh failure
+    // over a painted cache stays quiet — an empty list and a failed
+    // read are still different things when there is nothing cached.
+    const cached = cachedTournaments();
+    if (cached) setRows(tournamentsFor(cached, tour, kind) as TournamentRow[]);
     void (async () => {
       const r = await fetchTournaments();
       if (r.ok) setRows(tournamentsFor(r.value, tour, kind) as TournamentRow[]);
-      // An empty list and a failed read are different things, and the
-      // difference has to reach the screen.
-      else setError(messageOf(r.error));
+      else if (!cached) setError(messageOf(r.error));
     })();
   }, [tour, kind]);
 

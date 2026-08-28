@@ -43,6 +43,8 @@ import { CompetitionCard } from '../CompetitionCard';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import {
+  cachedLeagues,
+  cachedTournaments,
   DirectoryLeague,
   fetchLeagues,
   fetchTournaments,
@@ -167,25 +169,34 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       hydrateFollowArt(rows);
       return;
     }
+    // Soccer is the one directory-served sport, and its statics
+    // (Copa Libertadores) are competitions the directory does not
+    // carry — MERGED as ordinary rows, never a replacement. The
+    // statics-only early return above swallowing the directory is
+    // exactly how 19 leagues once vanished behind one row
+    // (2026-08-17, owner-caught).
+    const withStatics = (rows: DirectoryLeague[]): DirectoryLeague[] => {
+      const statics = (sport?.staticCompetitions ?? []).filter(
+        (c) => !rows.some((l) => l.key === c.key),
+      );
+      return [...rows, ...statics];
+    };
+    // Cached-first (Round 2 perf ruling): the last served directory
+    // paints immediately; the fetch refreshes it behind. A refresh
+    // failure over a painted cache stays quiet — the rows on screen
+    // are real; the error surfaces only when there is nothing to show.
+    const cached = cachedLeagues();
+    if (cached) setLeagues(withStatics(cached));
     void (async () => {
       const r = await fetchLeagues();
       if (r.ok) {
-        // Soccer is the one directory-served sport, and its statics
-        // (Copa Libertadores) are competitions the directory does not
-        // carry — MERGED as ordinary rows, never a replacement. The
-        // statics-only early return above swallowing the directory is
-        // exactly how 19 leagues once vanished behind one row
-        // (2026-08-17, owner-caught).
-        const statics = (sport?.staticCompetitions ?? []).filter(
-          (c) => !r.value.some((l) => l.key === c.key),
-        );
-        const merged = [...r.value, ...statics];
+        const merged = withStatics(r.value);
         setLeagues(merged);
         // Fresh directory rows are also the only chance to repair a
         // stored follow's artwork: the follow store captures a crest
         // once and never revisits it (domain/followArt.ts).
         hydrateFollowArt(merged);
-      } else setError(messageOf(r.error));
+      } else if (!cached) setError(messageOf(r.error));
     })();
   }, [sport]);
 
@@ -194,10 +205,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   // one key; a fetch failure keeps the tour rows working and says so.
   useEffect(() => {
     if (!sport?.tournamentBrowse) return;
+    const cached = cachedTournaments();
+    if (cached) setTournaments(cached);
     void (async () => {
       const r = await fetchTournaments();
       if (r.ok) setTournaments(r.value);
-      else setError(messageOf(r.error));
+      else if (!cached) setError(messageOf(r.error));
     })();
   }, [sport]);
 

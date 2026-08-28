@@ -3154,3 +3154,18 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   the snap landed elsewhere; momentum-end is now the authority, with
   drag-end committing only when no momentum follows (timer cancelled
   by momentum-begin).
+- 2026-08-28 (Round 2 perf ruling — the free tier is BUILT, keep-warm
+  is RECORDED): client stale-while-revalidate for listLeagues /
+  listTournaments (MMKV; listPriorities already had it) — repeat
+  Search/Competitions entries paint the last answer instantly with the
+  refresh behind; a refresh failure over a painted cache stays quiet,
+  an uncached failure is still an error (never fake-empty). Search's
+  two serial fetches parallelised; search autoFocus deferred until the
+  push transition settles. COMPRESSION ENABLED (closes the decision
+  parked at Prompt 12b): gzip middleware on the six client-facing read
+  routes (listLeagues/listPriorities/listTournaments/listAthletes/
+  listTeams/searchEntities) — pollers/ops stay raw. LAUNCH ITEM, not
+  built: minInstances: 1 on the three browse-critical functions for the
+  first months after launch (the first-impression window), then
+  reassess against cost — the first-ever cold open stays slow by
+  choice until then.

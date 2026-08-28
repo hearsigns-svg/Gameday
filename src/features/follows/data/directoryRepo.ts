@@ -2,6 +2,7 @@
 
 import { functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
+import { readJson, writeJson } from '../../../core/storage';
 
 export interface DirectoryLeague {
   id: number | string;
@@ -115,8 +116,25 @@ async function getJson<T>(path: string): Promise<Result<T>> {
   }
 }
 
+// STALE-WHILE-REVALIDATE (Round 2 perf ruling, free tier): the browse
+// payloads persist, so a repeat entry paints the last answer instantly
+// while the fetch lands behind it. The cache never substitutes for a
+// FAILED first fetch — with nothing cached a failure is still an error
+// on screen, because "we could not ask" must never render as "empty".
+const LEAGUES_CACHE_KEY = 'browseLeagues.v1';
+const TOURNAMENTS_CACHE_KEY = 'browseTournaments.v1';
+
+export function cachedLeagues(): DirectoryLeague[] | null {
+  return readJson<DirectoryLeague[] | null>(LEAGUES_CACHE_KEY, null);
+}
+
+export function cachedTournaments(): TournamentRow[] | null {
+  return readJson<TournamentRow[] | null>(TOURNAMENTS_CACHE_KEY, null);
+}
+
 export async function fetchLeagues(): Promise<Result<DirectoryLeague[]>> {
   const r = await getJson<{ leagues: DirectoryLeague[] }>('listLeagues');
+  if (r.ok) writeJson(LEAGUES_CACHE_KEY, r.value.leagues);
   return r.ok ? ok(r.value.leagues) : r;
 }
 
@@ -156,6 +174,7 @@ export async function fetchTournaments(): Promise<Result<TournamentRow[]>> {
   if (!r.ok && r.error.kind === 'provider' && r.error.status === 404) {
     return ok([]);
   }
+  if (r.ok) writeJson(TOURNAMENTS_CACHE_KEY, r.value.tournaments);
   return r.ok ? ok(r.value.tournaments) : r;
 }
 

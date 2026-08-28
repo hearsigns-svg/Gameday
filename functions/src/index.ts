@@ -5,6 +5,20 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { sweepAll } from './sweep';
+import compressionMiddleware from 'compression';
+
+// Gzip on the client-facing serving routes (Round 2 perf ruling,
+// closing the compression decision parked since Prompt 12b). Cloud
+// Functions v2 does NOT compress dynamic responses on its own; this
+// wraps only the read APIs the app fetches — the tennis-athletes
+// payload is ~185KB raw and is the reason this exists. Pollers and ops
+// routes stay unwrapped: their responses are small and machine-read.
+const gzipMw = compressionMiddleware();
+type Handler = (req: Parameters<Parameters<typeof onRequest>[0]>[0], res: Parameters<Parameters<typeof onRequest>[0]>[1]) => void | Promise<void>;
+const gz = (handler: Handler): Handler => (req, res) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gzipMw(req as any, res as any, () => void handler(req, res));
+
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
 import { stampCrests } from './crestStamp';
@@ -755,7 +769,7 @@ async function soccerLeagueBadges(): Promise<TsdbLeagueArt> {
   return art;
 }
 
-export const listLeagues = onRequest(async (_req, res) => {
+export const listLeagues = onRequest(gz(async (_req, res) => {
   try {
     const seasons = await loadFdSeasons(db, requireFdKey());
     const leagues = listSoccerLeagues(seasons);
@@ -809,12 +823,12 @@ export const listLeagues = onRequest(async (_req, res) => {
     // Fail loudly instead so the client shows an error it can retry.
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
 // Federated search across everything followable (cached directories +
 // live TSDB filtered to served leagues, plus the athlete directory the
 // appearance ingest maintains).
-export const searchEntities = onRequest(async (req, res) => {
+export const searchEntities = onRequest(gz(async (req, res) => {
   try {
     const q = String(req.query.q ?? '').trim();
     if (q.length < 2) {
@@ -829,7 +843,7 @@ export const searchEntities = onRequest(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
 // Tennis tournaments as followable competitions (Prompt 9): one row
 // per canonical tournament — a joint ATP+WTA event is ONE row carrying
@@ -1066,7 +1080,7 @@ async function competitionArt(): Promise<Record<string, string>> {
   return art;
 }
 
-export const listPriorities = onRequest(async (req, res) => {
+export const listPriorities = onRequest(gz(async (req, res) => {
   try {
     const { map, sportWeights, dormant, byRegion } = await loadPriorityData();
     // REGIONAL OVERLAY (Prompt 15). A sparse per-region layer over the
@@ -1116,9 +1130,9 @@ export const listPriorities = onRequest(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
-export const listTournaments = onRequest(async (_req, res) => {
+export const listTournaments = onRequest(gz(async (_req, res) => {
   try {
     if (tournamentCache && Date.now() - tournamentCache.at < TOURNAMENT_CACHE_MS) {
       res.json(tournamentCache.body);
@@ -1153,13 +1167,13 @@ export const listTournaments = onRequest(async (_req, res) => {
     // An empty tournament list would read as "tennis has no events".
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
 // Individual-sport browse: curated entry points from the canonical
 // directory — champions and rated fighters by weight class, tennis by
 // ranking, the F1 grid — plus the "competing soon" row. Search-first is
 // the client's job; this is what keeps the screen from ever being empty.
-export const listAthletes = onRequest(async (req, res) => {
+export const listAthletes = onRequest(gz(async (req, res) => {
   try {
     const sport = String(req.query.sport ?? '');
     if (!sport) {
@@ -1173,9 +1187,9 @@ export const listAthletes = onRequest(async (req, res) => {
     // Fail loudly instead so the client shows an error it can retry.
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
-export const listTeams = onRequest(async (req, res) => {
+export const listTeams = onRequest(gz(async (req, res) => {
   try {
     const sport = String(req.query.sport ?? 'soccer');
     // Generic TSDB team-league branch: any league in the shared table
@@ -1267,7 +1281,7 @@ export const listTeams = onRequest(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-});
+}));
 
 // Badge enrichment is best-effort — a missing TSDB key must not take
 // the official-team directory down with it.

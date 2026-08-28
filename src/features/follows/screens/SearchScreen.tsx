@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  InteractionManager,
   SectionList,
   StyleSheet,
   Text,
@@ -29,6 +30,8 @@ import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
+  cachedLeagues,
+  cachedTournaments,
   fetchLeagues,
   fetchTournaments,
   searchEntities,
@@ -145,8 +148,14 @@ export default function SearchScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
   const [query, setQuery] = useState('');
-  const [soccerLeagues, setSoccerLeagues] = useState<DirectoryLeague[]>([]);
-  const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
+  // Cached-first (Round 2 perf ruling): the last served answer paints
+  // immediately; the fetch below refreshes it behind.
+  const [soccerLeagues, setSoccerLeagues] = useState<DirectoryLeague[]>(
+    () => cachedLeagues() ?? [],
+  );
+  const [tournaments, setTournaments] = useState<TournamentRow[]>(
+    () => cachedTournaments() ?? [],
+  );
   const [teams, setTeams] = useState<SearchTeamHit[]>([]);
   const [athletes, setAthletes] = useState<SearchAthleteHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -157,6 +166,16 @@ export default function SearchScreen({ navigation }: Props) {
 
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
   useEffect(() => void refreshPriorities(), []);
+  // The keyboard rises AFTER the push transition settles (Round 2 perf
+  // ruling): autoFocus raised it mid-animation, and the two competing
+  // was most of the entry "clunk".
+  const inputRef = useRef<TextInput>(null);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      inputRef.current?.focus();
+    });
+    return () => task.cancel();
+  }, []);
 
   // Soccer competitions live in the directory, not config — one cached
   // fetch makes them searchable alongside everything else. Tournaments
@@ -166,9 +185,10 @@ export default function SearchScreen({ navigation }: Props) {
   // typing its name — so every followable population search reads.
   useEffect(() => {
     void (async () => {
-      const r = await fetchLeagues();
+      // In PARALLEL (Round 2 perf audit: these ran serially, and on a
+      // cold backend the second waited out the first's whole start-up).
+      const [r, t] = await Promise.all([fetchLeagues(), fetchTournaments()]);
       if (r.ok) setSoccerLeagues(r.value);
-      const t = await fetchTournaments();
       if (t.ok) setTournaments(t.value);
     })();
   }, []);
@@ -376,12 +396,12 @@ export default function SearchScreen({ navigation }: Props) {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <TextInput
+        ref={inputRef}
         accessibilityLabel="Search teams, athletes, competitions and sports"
         placeholder="Team, athlete, competition or sport"
         placeholderTextColor={t.textSecondary}
         value={query}
         onChangeText={setQuery}
-        autoFocus
         autoCorrect={false}
         style={[
           styles.input,
