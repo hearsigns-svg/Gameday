@@ -64,7 +64,7 @@ const CAROUSEL_MAX = 10;
 // snaps to the next card on this cadence — pausing under a finger and
 // while any card is expanded, resetting after a manual swipe, and off
 // entirely under reduced motion or with a single card.
-const HERO_ADVANCE_MS = 25_000;
+const HERO_ADVANCE_MS = 8_000;
 
 export default function HomeScreen({ navigation }: Props) {
   const t = useTheme();
