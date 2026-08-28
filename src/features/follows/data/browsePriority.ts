@@ -39,6 +39,9 @@ export interface BrowsePriorities {
   // absent for anything the imagery policy suppresses — both fall back
   // to the generated treatment, which is why an empty map is safe.
   competitionArt: Record<string, string>;
+  // key → the badge's dominant colour pair (Round 3): the follow
+  // burst's discrete palette, same keying as competitionArt above.
+  competitionArtColours: Record<string, string[]>;
   // Row KEY → squad size for the static competitions' card subtitles
   // (27C). Keyed by key, not id — the NHL and MLB statics both carry
   // id 1. Absent on an old server; a missing entry means the subtitle
@@ -57,6 +60,7 @@ export function cachedPriorities(): BrowsePriorities {
     sportWeights: c?.sportWeights ?? {},
     dormant: c?.dormant ?? [],
     competitionArt: c?.competitionArt ?? {},
+    competitionArtColours: c?.competitionArtColours ?? {},
     teamCounts: c?.teamCounts ?? {},
   };
 }
@@ -93,6 +97,11 @@ export async function refreshPriorities(): Promise<void> {
       competitionArt:
         typeof body.competitionArt === 'object' && body.competitionArt !== null
           ? body.competitionArt
+          : {},
+      competitionArtColours:
+        typeof body.competitionArtColours === 'object' &&
+        body.competitionArtColours !== null
+          ? body.competitionArtColours
           : {},
       teamCounts:
         typeof body.teamCounts === 'object' && body.teamCounts !== null

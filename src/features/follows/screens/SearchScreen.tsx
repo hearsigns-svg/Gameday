@@ -65,6 +65,8 @@ interface Row {
   imageUrl?: string;
   // Athlete nationality (Prompt 16 B), carried to the athlete page.
   countryCode?: string;
+  // The crest's extracted pair (Round 3) — the follow burst's palette.
+  burstColours?: string[];
   tileBadge?: string; // the flag, on the tile
   followable?: Followable; // absent → row navigates instead
 }
@@ -267,6 +269,7 @@ export default function SearchScreen({ navigation }: Props) {
       caption: `${hit.league} · ${sportNameOf(hit.sportKey)}`,
       sportKey: hit.sportKey,
       ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
+      ...(hit.burstColours ? { burstColours: hit.burstColours } : {}),
       followable: {
         key: hit.key,
         label: hit.name,
@@ -501,6 +504,7 @@ export default function SearchScreen({ navigation }: Props) {
                         item.followable?.brandColour ?? sport?.accent ?? null,
                         mode,
                       )}
+                      {...(item.burstColours ? { burstColours: item.burstColours } : {})}
                       following={isFollowed(item.followable.key)}
                       subject={item.title}
                       busy={busyKey === item.key}

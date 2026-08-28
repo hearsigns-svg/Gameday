@@ -48,6 +48,9 @@ export interface CompetitionCardProps {
   following: boolean;
   onFollow: () => void;
   busy?: boolean;
+  // The competition badge's extracted colour pair (Round 3) — the
+  // follow burst's discrete palette.
+  burstColours?: readonly string[];
 }
 
 export function CompetitionCard(props: CompetitionCardProps) {
@@ -65,6 +68,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
       right={
         <FollowButton
           theme={props.theme}
+          {...(props.burstColours ? { burstColours: props.burstColours } : {})}
           following={props.following}
           subject={props.name}
           busy={props.busy === true}

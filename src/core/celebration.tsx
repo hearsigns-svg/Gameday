@@ -13,14 +13,56 @@ import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-n
 import type { TeamTheme } from './teamTheme';
 import { Theme } from './palette';
 
-// The burst's colour set: the entity's own tones, the shell's brand
-// pair when a site has no entity theme in hand.
-export function burstPalette(theme: TeamTheme | undefined, shell: Theme): string[] {
-  if (theme) {
-    return [theme.accent, theme.gradient[0], theme.gradient[1], theme.onAccent];
-  }
-  return [shell.primary, shell.accent];
+// DISCRETE team colours, not tonal ramps (Round 3 colour ruling): a
+// burst uses at most two flat, full-saturation colours plus the white
+// sparkle pieces mixed in below. The pair comes from server-side crest
+// extraction where one exists; an entity without one uses its
+// treatment colour pushed to full saturation. The client never decodes
+// an image.
+export function burstPalette(
+  opts: { colours?: readonly string[]; theme?: TeamTheme },
+  shell: Theme,
+): string[] {
+  if (opts.colours && opts.colours.length > 0) return [...opts.colours];
+  return [saturateHex(opts.theme?.accent ?? shell.primary)];
 }
+
+// hex → the flat vocabulary the extracted pairs live in (s 0.9, l 0.5),
+// so fallback bursts sit beside extracted ones without reading muddier.
+export function saturateHex(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return hex; // no hue to push
+  const d = max - min;
+  let h: number;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (max === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  const c = (1 - Math.abs(2 * 0.5 - 1)) * 0.9;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const mm = 0.5 - c / 2;
+  const [rr, gg, bb] =
+    h < 60 ? [c, x, 0]
+    : h < 120 ? [x, c, 0]
+    : h < 180 ? [0, c, x]
+    : h < 240 ? [0, x, c]
+    : h < 300 ? [x, 0, c]
+    : [c, 0, x];
+  const to = (v: number) =>
+    Math.round((v + mm) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${to(rr)}${to(gg)}${to(bb)}`.toUpperCase();
+}
+
+// Neutral sparkle — every third piece, whatever the team colours.
+const SPARKLE = '#FFFFFF';
 
 interface ParticleSpec {
   dx: number;
@@ -37,6 +79,7 @@ function particles(
   count: number,
   radius: number,
   palette: string[],
+  sizeScale = 1,
 ): ParticleSpec[] {
   return Array.from({ length: count }, (_, i) => {
     const angle = (i * 137.508 * Math.PI) / 180;
@@ -45,9 +88,9 @@ function particles(
       dx: Math.cos(angle) * dist,
       dy: Math.sin(angle) * dist,
       spin: `${(i % 2 === 0 ? 1 : -1) * (180 + ((i * 53) % 180))}deg`,
-      color: palette[i % palette.length],
-      w: i % 3 === 0 ? 5 : 7,
-      h: i % 3 === 0 ? 5 : 4,
+      color: i % 3 === 2 ? SPARKLE : palette[i % palette.length],
+      w: (i % 3 === 0 ? 5 : 7) * sizeScale,
+      h: (i % 3 === 0 ? 5 : 4) * sizeScale,
     };
   });
 }
@@ -159,7 +202,9 @@ export function CelebrationHost(): ReactNode {
   useEffect(() => {
     grandListener = (palette) => {
       const radius = Math.hypot(width, height) / 2;
-      setSpecs(particles(48, radius, palette));
+      // ~5x the local burst's count at ~3x the piece size (Round 3):
+      // once per lifetime, so the extra particles are cheap.
+      setSpecs(particles(80, radius, palette, 3));
       progress.setValue(0);
       Animated.timing(progress, {
         toValue: 1,

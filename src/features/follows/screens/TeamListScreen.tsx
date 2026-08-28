@@ -167,6 +167,7 @@ export default function TeamListScreen({ navigation, route }: Props) {
                   colourFromKitText(item.colours) ?? sport?.accent ?? null,
                   mode,
                 )}
+                {...(item.burstColours ? { burstColours: item.burstColours } : {})}
                 following={isFollowed(item.key)}
                 subject={item.name}
                 busy={busyKey === item.key}

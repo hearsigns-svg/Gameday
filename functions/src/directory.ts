@@ -22,6 +22,10 @@ export interface DirectoryTeam {
   aliases?: string[];
   crestUrl?: string; // provider artwork (client filters SVG)
   colours?: string; // free-text kit colours, e.g. "Red / White"
+  // The crest's two dominant colours, extracted server-side at cache
+  // build (Round 3) — the follow burst's discrete palette. Absent when
+  // the crest is missing, non-PNG, or nothing chromatic survived.
+  burstColours?: string[];
 }
 
 // Generic 24h write-through cache for team directories.
@@ -30,6 +34,8 @@ export interface DirectoryTeam {
 // never read, so a directory fetched once was served forever — promoted
 // and relegated clubs never appeared or disappeared, and the alias table
 // built from these documents could never improve.
+import { enrichBurstColours } from './crestColours';
+
 export const DIRECTORY_TTL_MS = 24 * 3_600_000;
 
 // teamDirectory doc ids, SINGLE-SOURCED at the writer. search.ts and
@@ -58,7 +64,7 @@ export const NHL_TEAMS_DOC_ID = 'ice-hockey-nhl';
 // before it, so the next request repopulates from the provider —
 // SELF-HEALING, and no production document has to be deleted by hand.
 // Bump it whenever a field is added to DirectoryTeam or its providers.
-export const DIRECTORY_SCHEMA_EPOCH = Date.parse('2026-08-04T15:00:00.000Z');
+export const DIRECTORY_SCHEMA_EPOCH = Date.parse('2026-08-28T15:00:00.000Z'); // burstColours joined the shape (Round 3)
 
 export function isDirectoryFresh(
   cachedAt: string | undefined,
@@ -89,6 +95,9 @@ async function cachedTeams(
   let teams: DirectoryTeam[];
   try {
     teams = (await load()).sort((a, b) => a.name.localeCompare(b.name));
+    // Crest colours ride the same refresh the crests do (Round 3): the
+    // client never decodes an image.
+    teams = await enrichBurstColours(teams);
   } catch (e) {
     // A refresh failure must not empty a directory the user can already
     // browse. Serve the stale copy and say so; only fail when there is

@@ -419,10 +419,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
   const leagueCard = (item: DirectoryLeague) => {
     const tour = tourOf(item.key);
+    // The badge's extracted pair — by TSDB id for TSDB rows, by FOLLOW
+    // key for the aliased marks (Round 3 burst ruling).
+    const artColours = cachedPriorities().competitionArtColours;
+    const burstColours = artColours[String(item.id)] ?? artColours[item.key];
     return (
       <CompetitionCard
         name={item.name}
         caption={captionFor(item, tour)}
+        {...(burstColours ? { burstColours } : {})}
         theme={teamTheme(sport?.accent ?? null, mode)}
         monogram={monogramOf(item.name)}
         {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
@@ -490,6 +495,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             colourFromKitText(hit.colours) ?? sport?.accent ?? null,
             mode,
           )}
+          {...(hit.burstColours ? { burstColours: hit.burstColours } : {})}
           following={isFollowed(hit.key)}
           subject={hit.name}
           busy={busyKey === hit.key}

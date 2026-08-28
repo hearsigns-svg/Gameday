@@ -58,13 +58,14 @@ export function imageryAllowed(
 // field alone. Returning a NEW object rather than mutating: these rows
 // come out of a shared 60s cache, and mutating one would poison it for
 // every later request in the instance.
-export function withImageryPolicy<T extends { crestUrl?: string }>(
-  row: T,
-  key: string | undefined,
-  imageryOff: ReadonlySet<string>,
-): T {
+export function withImageryPolicy<
+  T extends { crestUrl?: string; burstColours?: string[] },
+>(row: T, key: string | undefined, imageryOff: ReadonlySet<string>): T {
   if (imageryAllowed(key, imageryOff)) return row;
-  if (row.crestUrl === undefined) return row;
-  const { crestUrl: _dropped, ...rest } = row;
+  if (row.crestUrl === undefined && row.burstColours === undefined) return row;
+  // burstColours are DERIVED from the crest (Round 3), so a takedown
+  // strips them with it — suppressed artwork must not live on as its
+  // own colour pair.
+  const { crestUrl: _dropped, burstColours: _dropped2, ...rest } = row;
   return rest as T;
 }

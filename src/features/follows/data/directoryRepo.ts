@@ -32,6 +32,9 @@ export interface DirectoryTeam {
   key: string;
   crestUrl?: string; // club crest (Prompt 13)
   colours?: string; // free-text kit colours ("Red / White")
+  // The crest's extracted dominant pair (Round 3) — the follow burst's
+  // discrete palette. Server-derived; absent falls back to treatment.
+  burstColours?: string[];
   // THE SERVER HAS ALWAYS SENT THESE (functions/src/directory.ts:201) and
   // this type did not declare them, so they were parsed away and the
   // in-league filter matched the display name alone. Providers publish
@@ -48,6 +51,7 @@ export interface SearchTeamHit {
   league: string;
   crestUrl?: string;
   colours?: string;
+  burstColours?: string[];
   pollPath?: string;
 }
 

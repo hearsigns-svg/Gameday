@@ -21,6 +21,7 @@ const gz = (handler: Handler): Handler => (req, res) =>
 
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
+import { extractCrestColours } from './crestColours';
 import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
@@ -1042,16 +1043,28 @@ function sportWeightsOf2(
 // the generated treatment and a broken browse screen does not.
 const ART_DOC = 'directoryArt/competitions';
 
-async function competitionArt(): Promise<Record<string, string>> {
+interface CompetitionArtDoc {
+  art: Record<string, string>;
+  // key → the badge's dominant colour pair (Round 3): the follow
+  // burst's discrete palette, extracted once per rebuild so the client
+  // never decodes an image.
+  colours: Record<string, string[]>;
+}
+
+async function competitionArt(): Promise<CompetitionArtDoc> {
   const ref = db.doc(ART_DOC);
   const snap = await ref.get();
   const data = snap.exists
-    ? (snap.data() as { art?: Record<string, string>; cachedAt?: string })
+    ? (snap.data() as Partial<CompetitionArtDoc> & { cachedAt?: string })
     : undefined;
-  if (data?.art && artIsFresh(data.cachedAt, Date.now())) return data.art;
+  const cached: CompetitionArtDoc = {
+    art: data?.art ?? {},
+    colours: data?.colours ?? {},
+  };
+  if (data?.art && artIsFresh(data.cachedAt, Date.now())) return cached;
 
   const key = optionalTsdbKey();
-  if (!key) return data?.art ?? {};
+  if (!key) return cached;
   const catalogue = await db.collection('catalogue').get();
   const served = tsdbLeagueIdsFrom(
     catalogue.docs.map((d) => (d.data() as CatalogueEntry).competitionId),
@@ -1075,9 +1088,15 @@ async function competitionArt(): Promise<Record<string, string>> {
   }
   // Never overwrite a populated cache with nothing: a bad TSDB day
   // would otherwise strip every logo for the next 24 hours.
-  if (Object.keys(art).length === 0) return data?.art ?? {};
-  await ref.set({ art, cachedAt: new Date().toISOString() });
-  return art;
+  if (Object.keys(art).length === 0) return cached;
+  // Dominant colour pairs per badge (Round 3) — once per rebuild.
+  const colours: Record<string, string[]> = {};
+  for (const [artKey, url] of Object.entries(art)) {
+    const pair = await extractCrestColours(url);
+    if (pair) colours[artKey] = pair;
+  }
+  await ref.set({ art, colours, cachedAt: new Date().toISOString() });
+  return { art, colours };
 }
 
 export const listPriorities = onRequest(gz(async (req, res) => {
@@ -1097,13 +1116,20 @@ export const listPriorities = onRequest(gz(async (req, res) => {
     // and the Olympic exclusion both apply here exactly as they do to
     // the served league rows.
     const off = await loadImageryOff();
-    const raw = await competitionArt().catch(() => ({}) as Record<string, string>);
+    const raw = await competitionArt().catch(
+      () => ({ art: {}, colours: {} }) as CompetitionArtDoc,
+    );
     const competitionArtOut: Record<string, string> = {};
-    for (const [id, url] of Object.entries(raw)) {
+    const competitionArtColours: Record<string, string[]> = {};
+    for (const [id, url] of Object.entries(raw.art)) {
       // Numeric keys are TSDB league ids; alias keys ARE the
       // competition key, and the kill-switch must see the real one.
       const compKey = /^\d+$/.test(id) ? `tsdb-league-${id}` : id;
-      if (imageryAllowed(compKey, off)) competitionArtOut[id] = url;
+      if (!imageryAllowed(compKey, off)) continue;
+      competitionArtOut[id] = url;
+      // Derived from the badge, so the same policy governs it.
+      const pair = raw.colours[id];
+      if (pair) competitionArtColours[id] = pair;
     }
     res.json({
       priorities: regionalMap,
@@ -1114,6 +1140,7 @@ export const listPriorities = onRequest(gz(async (req, res) => {
       sportWeights: sportWeightsOf2(regionalMap, sportWeights),
       dormant,
       competitionArt: competitionArtOut,
+      competitionArtColours,
       // Squad sizes for the STATIC competition rows' card subtitles
       // (27C), keyed by row key — those rows never touch listLeagues,
       // and this is already the browse-metadata payload (see

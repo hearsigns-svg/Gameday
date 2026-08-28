@@ -3184,3 +3184,22 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   module-scope imports in shared components kill jest suites (the
   MMKV/Nitro lesson, re-learnt and re-pinned). Following-strip drift
   tripled to 30 px/s (owner: 10 was barely noticeable).
+- 2026-08-28 (Round 3 follow-up): DRIFT REBUILT NATIVE — one continuous
+  native-driver translateX across tripled strip content, duration from
+  px/s (60 default, judged on device), zero per-frame JS (the 50ms
+  scrollTo tick was ~20fps stepping and the audit's transition-jank
+  risk — retired). Touch stops the animation exactly in place natively;
+  resume after idle continues the leg; wrap = value reset at an
+  identical frame; user flings re-centre into the middle copy on
+  settle. GRAND BURST ~5x count / ~3x piece size. BURST COLOURS ARE
+  DISCRETE (owner ruling): at most two flat full-saturation team
+  colours + white sparkle every third piece — never tonal ramps.
+  Source of truth: dominant-pair extraction SERVER-SIDE at cache build
+  (crestColours.ts: chromatic-pixel hue buckets, outline/background
+  filtered, <40° apart collapses to one; pngjs decode, PNG magic-byte
+  gated) — riding the teamDirectory refresh (schema epoch bumped) and
+  the competition-art rebuild (doc gains colours; served as
+  competitionArtColours, imagery-policy filtered, takedown strips
+  burstColours WITH the crest). PER-ENTRY interim exactly as
+  sanctioned: SVG/absent/achromatic crests fall back client-side to
+  the treatment colour pushed to the same flat vocabulary + white.

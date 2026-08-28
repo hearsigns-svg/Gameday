@@ -8,6 +8,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Animated,
+  Easing,
   Image,
   Pressable,
   ScrollView,
@@ -157,17 +158,21 @@ export interface FollowRailItem {
   badge?: string;
 }
 
-// LOOPING DRIFT (Round 2 items 5/6). When the strip overflows its
-// viewport it renders the items TWICE and keeps its scroll offset
-// inside the first copy's width, so scrolling — the user's or the
-// drift's — wraps instead of dead-ending. The drift is a slow
-// continuous advance (~10 px/s) that pauses the moment a finger lands
-// and resumes after a few idle seconds; taps still land because the
-// first touch stops the movement. Both behaviours stand down when the
-// content fits the viewport and under reduced motion — a strip that
-// cannot scroll must not creep, and reduced motion means exactly that.
-const RAIL_DRIFT_PX_PER_S = 30; // x3 (owner: 10 was barely noticeable)
-const RAIL_DRIFT_TICK_MS = 50;
+// LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3). When
+// the strip overflows its viewport it renders the items THREE times and
+// the drift is ONE continuous native-driver translateX across the
+// middle copy's width — duration derived from px/s, zero per-frame JS
+// (the 50ms scrollTo tick this replaces was ~20fps stepping and the
+// audit's transition-jank risk). Each traversal of one copy resets the
+// value to an identical frame, so the wrap is invisible; the only JS is
+// one callback per traversal and the touch events. A finger stops the
+// animation exactly where it is (position preserved natively); it
+// resumes after a few idle seconds from the same spot. User flings ride
+// the ScrollView as ever, re-centred into the middle copy on settle —
+// with the finger down the drift is frozen, which is what keeps the
+// composed offset inside the tripled content. Everything stands down
+// when the content fits the viewport and under reduced motion.
+const RAIL_DRIFT_PX_PER_S = 60; // one tunable; judged on device
 const RAIL_IDLE_RESUME_MS = 3000;
 
 export function FollowRail(props: {
@@ -178,8 +183,8 @@ export function FollowRail(props: {
   const reduceMotion = useReduceMotion();
   const scrollRef = useRef<ScrollView>(null);
   const [viewportW, setViewportW] = useState(0);
-  // The width of ONE copy — measured from the undoubled render, which
-  // is why doubling waits for the measurement.
+  // The width of ONE copy — measured from the untripled render, which
+  // is why tripling waits for the measurement.
   const [singleW, setSingleW] = useState(0);
   const itemsKey = props.items.map((i) => i.key).join('|');
   useEffect(() => {
@@ -187,20 +192,54 @@ export function FollowRail(props: {
   }, [itemsKey]);
   const looping =
     !reduceMotion && singleW > 0 && viewportW > 0 && singleW > viewportW;
-  const xRef = useRef(0);
-  const pausedUntil = useRef(0);
+  const drift = useRef(new Animated.Value(0)).current;
+  const driftAt = useRef(0); // last KNOWN value — updated at events only
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runLeg = (from: number) => {
+    // One leg = the rest of the current copy; completion snaps to the
+    // identical frame at 0 and starts the next full leg. One JS
+    // callback every singleW/speed seconds — not per frame.
+    const remaining = singleW - Math.abs(from);
+    Animated.timing(drift, {
+      toValue: -singleW,
+      duration: Math.max(1, (remaining / RAIL_DRIFT_PX_PER_S) * 1000),
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      drift.setValue(0);
+      driftAt.current = 0;
+      runLeg(0);
+    });
+  };
+  const pause = () => {
+    if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
+    resumeTimer.current = null;
+    drift.stopAnimation((v) => {
+      driftAt.current = v; // preserved exactly where the finger landed
+    });
+  };
+  const scheduleResume = () => {
+    if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => runLeg(driftAt.current), RAIL_IDLE_RESUME_MS);
+  };
   useEffect(() => {
     if (!looping) return;
-    const id = setInterval(() => {
-      if (Date.now() < pausedUntil.current) return;
-      let x = xRef.current + (RAIL_DRIFT_PX_PER_S * RAIL_DRIFT_TICK_MS) / 1000;
-      if (x >= singleW) x -= singleW; // invisible: copy two is identical
-      xRef.current = x;
-      scrollRef.current?.scrollTo({ x, animated: false });
-    }, RAIL_DRIFT_TICK_MS);
-    return () => clearInterval(id);
+    // Start in the MIDDLE copy so user flings have room both ways.
+    scrollRef.current?.scrollTo({ x: singleW, animated: false });
+    drift.setValue(0);
+    driftAt.current = 0;
+    runLeg(0);
+    return () => {
+      if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
+      drift.stopAnimation();
+      drift.setValue(0);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [looping, singleW]);
-  const rendered = looping ? [...props.items, ...props.items] : props.items;
+  const rendered = looping
+    ? [...props.items, ...props.items, ...props.items]
+    : props.items;
   return (
     <ScrollView
       ref={scrollRef}
@@ -214,34 +253,39 @@ export function FollowRail(props: {
       onContentSizeChange={(w) => {
         if (!looping) setSingleW(w);
       }}
-      scrollEventThrottle={16}
-      onScroll={(e) => {
-        // The drift resumes from wherever the user left the strip.
-        xRef.current = e.nativeEvent.contentOffset.x;
-      }}
-      onTouchStart={() => {
-        pausedUntil.current = Number.MAX_SAFE_INTEGER;
-      }}
-      onTouchEnd={() => {
-        pausedUntil.current = Date.now() + RAIL_IDLE_RESUME_MS;
+      onTouchStart={pause}
+      onTouchEnd={scheduleResume}
+      onScrollEndDrag={(e) => {
+        scheduleResume();
+        if (!looping) return;
+        const x = e.nativeEvent.contentOffset.x;
+        const centred = singleW + (((x % singleW) + singleW) % singleW);
+        if (Math.abs(centred - x) > 0.5) {
+          scrollRef.current?.scrollTo({ x: centred, animated: false });
+        }
       }}
       onMomentumScrollEnd={(e) => {
-        pausedUntil.current = Date.now() + RAIL_IDLE_RESUME_MS;
+        scheduleResume();
         if (!looping) return;
-        // Keep the offset inside copy one so the user can fling
-        // forever in either direction.
-        let x = e.nativeEvent.contentOffset.x;
-        if (x >= singleW) x -= singleW;
-        else if (x < 0) x += singleW;
-        else return;
-        xRef.current = x;
-        scrollRef.current?.scrollTo({ x, animated: false });
+        // Re-centre into the middle copy so the user can fling forever
+        // in either direction — identical frame, invisible jump.
+        const x = e.nativeEvent.contentOffset.x;
+        const centred = singleW + (((x % singleW) + singleW) % singleW);
+        if (Math.abs(centred - x) > 0.5) {
+          scrollRef.current?.scrollTo({ x: centred, animated: false });
+        }
       }}
       contentContainerStyle={styles.rail}
     >
+     <Animated.View
+        style={[
+          styles.railInner,
+          looping ? { transform: [{ translateX: drift }] } : null,
+        ]}
+      >
       {rendered.map((item, i) => (
         <Pressable
-          key={`${item.key}-${i >= props.items.length ? 'b' : 'a'}`}
+          key={`${item.key}-${Math.floor(i / props.items.length)}`}
           accessibilityRole="button"
           accessibilityLabel={`${item.label}, ${item.caption}. See their fixtures`}
           // The second copy is a visual continuation, not more content.
@@ -278,6 +322,7 @@ export function FollowRail(props: {
           </Text>
         </Pressable>
       ))}
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -1303,8 +1348,12 @@ export function FollowButton(props: {
   busy?: boolean;
   // The entity's generated-treatment palette, for the follow burst
   // (Round 3): team-specific by construction, no new assets. Absent →
-  // the shell's brand pair, so markless followables still celebrate.
+  // the shell's brand colour, so markless followables still celebrate.
   theme?: TeamTheme;
+  // The crest's extracted dominant pair (Round 3 colour ruling), where
+  // the directory carries one — at most two flat full-saturation
+  // colours; the sparkle white is mixed in by the burst itself.
+  burstColours?: readonly string[];
   // NO `label` AND NO `iconOnly` (22b). Both existed to solve width and
   // both cost meaning. "Follow all" said nothing "Follow" did not — the
   // action is identical whether it covers one competition or four
@@ -1351,11 +1400,11 @@ export function FollowButton(props: {
       // The very first follow this device has ever made: the grand,
       // screen-scale version, once per lifetime.
       storage.writeJson(FIRST_FOLLOW_FLAG, true);
-      celebrateGrand(burstPalette(props.theme, t));
+      celebrateGrand(burstPalette({ colours: props.burstColours, theme: props.theme }, t));
     } else {
       setBurstNonce((n) => n + 1); // re-taps RESTART the burst, never stack
     }
-  }, [props.following, reduceMotion, pop, props.theme, t]);
+  }, [props.following, reduceMotion, pop, props.theme, props.burstColours, t]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -1405,7 +1454,7 @@ export function FollowButton(props: {
           </Text>
         )}
       </Animated.View>
-      <FollowBurst nonce={burstNonce} palette={burstPalette(props.theme, t)} />
+      <FollowBurst nonce={burstNonce} palette={burstPalette({ colours: props.burstColours, theme: props.theme }, t)} />
     </Pressable>
   );
 }
@@ -1830,8 +1879,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.l,
     paddingTop: spacing.s,
     paddingBottom: spacing.m,
-    gap: spacing.l,
   },
+  // The translated surface the drift rides — the gap lives here so the
+  // whole strip, spacing included, moves as one piece.
+  railInner: { flexDirection: 'row', gap: spacing.l },
   railItem: { width: 76, alignItems: 'center', gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   tileRow: {

@@ -19,6 +19,7 @@ export interface SearchTeamHit {
   crestUrl?: string;
   colours?: string;
   pollPath?: string; // only where the client can't derive it (tsdb)
+  burstColours?: string[];
 }
 
 // Single-sourced TSDB team-league table — shared with the listTeams
@@ -51,6 +52,7 @@ interface DirectoryDocTeam {
   aliases?: string[];
   crestUrl?: string;
   colours?: string;
+  burstColours?: string[];
 }
 
 interface LoadedDoc {
@@ -130,6 +132,7 @@ export async function searchTeams(
         league: doc.league,
         ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
         ...(t.colours ? { colours: t.colours } : {}),
+        ...(t.burstColours ? { burstColours: t.burstColours } : {}),
         ...(doc.tsdbPollPath ? { pollPath: doc.tsdbPollPath } : {}),
       });
     }
