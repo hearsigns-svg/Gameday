@@ -10,6 +10,7 @@ import { monogramOf,
   TileRow,
 } from '../../../core/components';
 import { TabScreenProps } from '../../../core/navigation';
+import { competitionMarkFor } from '../data/browsePriority';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -166,7 +167,9 @@ export default function FollowingScreen({ navigation }: Props) {
                     mode,
                   )}
                   monogram={monogramOf(item.label)}
-                  {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+                  {...((item.crestUrl ?? competitionMarkFor(item.key))
+                    ? { imageUrl: (item.crestUrl ?? competitionMarkFor(item.key)) as string }
+                    : {})}
                   {...(flagEmojiOf(item.countryCode)
                     ? { tileBadge: flagEmojiOf(item.countryCode) as string }
                     : {})}

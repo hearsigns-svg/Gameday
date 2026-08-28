@@ -113,3 +113,16 @@ export async function refreshPriorities(): Promise<void> {
     // Offline: keep whatever we had.
   }
 }
+
+// The served mark for a COMPETITION follow key, from the cached art
+// map — direct for the aliased marks (f1-series-1, the tours, NHL/MLB)
+// and by TSDB id for tsdb-league keys. The display fallback for
+// follows stored before their mark existed: the strip should not wait
+// for a browse-screen visit to heal the record before showing what the
+// server already serves.
+export function competitionMarkFor(key: string): string | undefined {
+  const art = cachedPriorities().competitionArt;
+  if (art[key]) return art[key];
+  const m = /^tsdb-league-(\d+)$/.exec(key);
+  return m ? art[m[1]] : undefined;
+}

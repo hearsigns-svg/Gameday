@@ -48,7 +48,7 @@ import {
   loadFollowables,
 } from '../data/followStore';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
-import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { byPriority, cachedPriorities, competitionMarkFor, refreshPriorities } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
@@ -171,11 +171,13 @@ export default function HomeScreen({ navigation }: Props) {
             ? whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
             : 'Nothing scheduled',
           glyph: sport?.glyph ?? '🏟️',
-          // The crest the follow already carries. Its absence here was
-          // the whole of the reported bug: the rail had no field for an
-          // image, so an NBA team showed a monogram on Home and its
-          // crest one tap later (Prompt 16 C).
-          ...(item.crestUrl ? { imageUrl: item.crestUrl } : {}),
+          // The crest the follow already carries — or the served
+          // competition mark as a DISPLAY fallback (Round 3 follow-up:
+          // the F1 follow predated its mark and the heal only ran on a
+          // browse visit; the strip shows what the server serves).
+          ...((item.crestUrl ?? competitionMarkFor(item.key))
+            ? { imageUrl: (item.crestUrl ?? competitionMarkFor(item.key)) as string }
+            : {}),
           // An athlete's flag, where the follow captured one.
           ...(flagEmojiOf(item.countryCode)
             ? { badge: flagEmojiOf(item.countryCode) as string }

@@ -172,7 +172,7 @@ export interface FollowRailItem {
 // with the finger down the drift is frozen, which is what keeps the
 // composed offset inside the tripled content. Everything stands down
 // when the content fits the viewport and under reduced motion.
-const RAIL_DRIFT_PX_PER_S = 60; // one tunable; judged on device
+const RAIL_DRIFT_PX_PER_S = 40; // one tunable; 60 was a third too fast (owner)
 const RAIL_IDLE_RESUME_MS = 3000;
 
 export function FollowRail(props: {
