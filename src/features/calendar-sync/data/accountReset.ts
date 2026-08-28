@@ -13,20 +13,78 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { auth, db, functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 import { wipeAllLocalData } from '../../../core/storage';
-import { eraseAppCalendar } from './driver';
-import { clearLedger } from './ledger';
+import { activeBackend } from './calendarBackend';
+import { storedTarget } from './calendarTargetStore';
+import { deleteFixtureEvent, eraseAppCalendar } from './driver';
+import { clearLedger, loadLedger, removeLedgerEntry } from './ledger';
 import { disconnectGoogleCalendar } from './googleCalendarAuth';
 
-// Erase the KickoffCal calendar and everything in it. The ledger is
-// cleared ONLY when a calendar was actually deleted: when the sync
-// target is the user's own calendar there is nothing of ours to erase,
-// and the ledger (plus notes-tag recovery) is what keeps those events
-// managed. Returns whether anything was erased.
-export async function eraseSyncedEvents(): Promise<Result<boolean>> {
+export interface EraseOutcome {
+  // container — the app-created calendar was deleted whole.
+  // events    — ledger-scoped removal from the user's OWN calendar.
+  // nothing   — no calendar of ours and no ledgered events.
+  mode: 'container' | 'events' | 'nothing';
+  removed: number;
+  failed: number;
+}
+
+// Whether erase runs in own-calendar mode: the sync target is the
+// user's calendar, so there is no container of ours to delete — the
+// erase is the LEDGERED EVENTS, exactly (owner ruling 2026-08-28).
+export function ownCalendarEraseMode(): boolean {
+  return activeBackend() !== 'rest' && storedTarget()?.kind === 'user';
+}
+
+// Erase what KickOffCal put in the calendar, past events included — the
+// sanctioned user-invoked exception to the future-only horizon rule,
+// in both modes identically.
+//
+// Own-calendar mode is STRICTLY LEDGER-SCOPED: walk the ledger's stored
+// event ids and delete exact matches only — never a title, time or
+// pattern match, never an enumeration of the calendar hunting for
+// ours-looking events. deleteFixtureEvent is already that contract: it
+// resolves the exact id, REFUSES an event whose readable notes lack our
+// tag, and reports already-gone as success. An id that no longer
+// resolves is confirmed gone; under-deleting is acceptable,
+// over-deleting never is. Each entry clears as its delete succeeds (or
+// the event is confirmed gone); a FAILED delete keeps its entry, so
+// protection and retry survive, and the caller is told. The calendar
+// container itself is never touched in this mode.
+//
+// No delete pacing, deliberately: this mode is reachable only through
+// EventKit (Android's native path greys the control while disconnected,
+// and the REST backend's target is ours-by-construction → container
+// mode), and EventKit has no mass-deletion gate. If own-calendar
+// targets ever become reachable on the Android provider path, AGENTS
+// rule 16's sync-adapter gate applies — pace before shipping that.
+export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
+  if (ownCalendarEraseMode()) {
+    const entries = Object.entries(loadLedger());
+    if (entries.length === 0) {
+      return ok({ mode: 'nothing', removed: 0, failed: 0 });
+    }
+    let removed = 0;
+    let failed = 0;
+    for (const [fixtureId, entry] of entries) {
+      const r = await deleteFixtureEvent(entry.eventId);
+      if (!r.ok) {
+        failed++;
+        continue;
+      }
+      // A mid-migration leftover in the OLD calendar is ours too —
+      // best-effort (Result ignored): its calendar may already be gone.
+      if (entry.strayEventId) {
+        await deleteFixtureEvent(entry.strayEventId);
+      }
+      removeLedgerEntry(fixtureId);
+      removed++;
+    }
+    return ok({ mode: 'events', removed, failed });
+  }
   const r = await eraseAppCalendar();
   if (!r.ok) return r;
   if (r.value) clearLedger();
-  return r;
+  return ok({ mode: r.value ? 'container' : 'nothing', removed: 0, failed: 0 });
 }
 
 // The server-side wipe: the deleteAccountData callable removes
@@ -64,10 +122,18 @@ export async function deleteAllDataAndReset(opts: {
   eraseCalendar: boolean;
 }): Promise<Result<void>> {
   // 1. The calendar, while the grant still lives — after the disconnect
-  // below there is no token to erase with.
+  // below there is no token to erase with. A PARTIAL failure aborts
+  // too: the local wipe below would destroy the ledger entries that
+  // are the failed events' protection and retry path.
   if (opts.eraseCalendar) {
     const erased = await eraseSyncedEvents();
     if (!erased.ok) return erased;
+    if (erased.value.failed > 0) {
+      return err({
+        kind: 'unknown',
+        message: `${erased.value.failed} synced ${erased.value.failed === 1 ? 'event' : 'events'} couldn’t be removed — nothing was deleted. Try again.`,
+      });
+    }
   }
   // 2. Server wipe, while the uid can still prove itself.
   const server = await wipeServerData();

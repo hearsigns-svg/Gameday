@@ -23,8 +23,10 @@ import { showToast } from '../../core/toast';
 import {
   deleteAllDataAndReset,
   eraseSyncedEvents,
+  ownCalendarEraseMode,
 } from '../calendar-sync/data/accountReset';
 import { activeBackend } from '../calendar-sync/data/calendarBackend';
+import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { nativeSyncRoute } from '../calendar-sync/data/driver';
 import { messageOf } from '../../core/result';
 import { runSync } from '../calendar-sync/syncEngine';
@@ -56,12 +58,22 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
       showToast({ message: messageOf(r.error) });
       return;
     }
+    const { mode, failed } = r.value;
+    if (failed > 0) {
+      // Failed deletes kept their ledger entries: protection and retry
+      // survive, and the user hears it rather than assuming done.
+      showToast({
+        message: `${failed} ${failed === 1 ? 'event' : 'events'} couldn’t be removed — try again`,
+      });
+      return;
+    }
     setOpen(null);
     showToast({
-      message: r.value ? 'Synced events erased' : 'No synced calendar to erase',
+      message:
+        mode === 'nothing' ? 'Nothing synced to erase' : 'Synced events erased',
     });
-    // Still connected → the next sync recreates the calendar with
-    // future events only; run it now rather than leaving a gap.
+    // Still connected → the next sync re-adds future events; run it now
+    // rather than leaving a gap.
     void runSync();
   };
 
@@ -140,8 +152,10 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
         {open === 'erase' ? (
           <View style={styles.confirm}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
-              Removes the KickOffCal calendar and every event in it — past
-              ones included. Nothing else in your calendar is touched.
+              {ownCalendarEraseMode()
+                ? `Removes the events KickOffCal added to ${storedTarget()?.label ?? 'your calendar'}, including past ones. Nothing else in it is touched.`
+                : 'Removes the KickOffCal calendar and every event in it — past ones included. Nothing else in your calendar is touched.'}
+              {' '}If sync stays connected, future events are added again.
             </Text>
             <View style={styles.actions}>
               {actionButton('Cancel', () => setOpen(null), false, false)}

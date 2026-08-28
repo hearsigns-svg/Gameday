@@ -3091,3 +3091,17 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   stores without the hosted web deletion page + endpoint (the
   deleteAccountData callable is its core) + Play data-safety
   declarations.
+- 2026-08-28 (7B rider, owner ruling): erase works in OWN-CALENDAR mode
+  too — STRICTLY LEDGER-SCOPED: exact stored event ids only, never
+  title/time/pattern matching, never enumerating the calendar for
+  ours-looking events; unresolvable ids are skipped (under-delete
+  acceptable, over-delete never); the container is never deleted in
+  this mode; entries clear per successful-or-confirmed-gone delete,
+  failures KEEP their entries (protection + retry) and the user is
+  told; past events included identically. No delete pacing needed BY
+  CONSTRUCTION: the mode is reachable only via EventKit (Android
+  native is greyed while disconnected; REST targets are ours →
+  container mode) — if Android provider ever reaches a user-calendar
+  target, rule 16's sync-adapter gate applies first. The delete-flow
+  toggle gains this mode; a PARTIAL erase aborts the delete flow, or
+  the local wipe would destroy the failed events' protection.
