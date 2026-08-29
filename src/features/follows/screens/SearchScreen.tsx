@@ -21,6 +21,9 @@ import { monogramOf,
   TileRow,
 } from '../../../core/components';
 import { RootScreenProps } from '../../../core/navigation';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
+import { competitionDisplayName } from '../../../core/i18n/exonyms';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { hueToHex, teamTheme } from '../../../core/teamTheme';
@@ -105,7 +108,7 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
     kind: 'sport',
     key: `sport-${s.key}`,
     title: sportLabelFor(s.key, s.label, activeRegion()),
-    caption: 'Sport',
+    caption: i18n.t('follows.search.sport'),
     sportKey: s.key,
     ...(s.seriesFollowable
       ? {
@@ -126,12 +129,27 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
       // Folded, like the server's athlete and team search in the same
       // result list — an unfolded competition filter meant one screen
       // answered to "Brasileirao" for a player and not for the league.
-      .filter((c) => s.enabled && needles.some((n) => foldedIncludes(c.name, n)))
+      // The EXONYM matches too (Phase C): a Spanish phone typing "liga
+      // de campeones" arrives with the word the row itself shows.
+      .filter(
+        (c) =>
+          s.enabled &&
+          needles.some(
+            (n) =>
+              foldedIncludes(c.name, n) ||
+              foldedIncludes(competitionDisplayName(c.name, c.key), n),
+          ),
+      )
       .map((c) => ({
         kind: 'competition' as const,
         key: c.key,
-        title: c.name,
-        caption: `${c.country} · ${sportLabelFor(s.key, s.label, activeRegion())}`,
+        // Exonym display (Phase C) — matching above stays on the
+        // provider/config name plus aliases, so both words find it.
+        title: competitionDisplayName(c.name, c.key),
+        caption: i18n.t('follows.search.captionCompetition', {
+          country: c.country,
+          sport: sportLabelFor(s.key, s.label, activeRegion()),
+        }),
         sportKey: s.key,
         // By TSDB id, then by FOLLOW KEY — the same fallback browse
         // uses. Search alone lacked it, so the alias-keyed statics
@@ -258,7 +276,10 @@ export default function SearchScreen({ navigation }: Props) {
               // caption here now says what the user's region calls it;
               // this literal would have gone on saying "Soccer" under a
               // row on a screen that says Football everywhere else.
-              caption: `${l.country} · ${sportNameOf('soccer')}`,
+              caption: i18n.t('follows.search.captionCompetition', {
+                country: l.country,
+                sport: sportNameOf('soccer'),
+              }),
               sportKey: 'soccer',
               // The mirror image of the static rows: this one had the
               // logo on the FOLLOW and nothing on the row.
@@ -277,7 +298,10 @@ export default function SearchScreen({ navigation }: Props) {
       kind: 'team',
       key: hit.key,
       title: hit.name,
-      caption: `${hit.league} · ${sportNameOf(hit.sportKey)}`,
+      caption: i18n.t('follows.search.captionTeam', {
+        league: hit.league,
+        sport: sportNameOf(hit.sportKey),
+      }),
       sportKey: hit.sportKey,
       ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
       ...(hit.burstColours ? { burstColours: hit.burstColours } : {}),
@@ -302,7 +326,7 @@ export default function SearchScreen({ navigation }: Props) {
       // beats both, because search is the ONLY route to the 1,484 ATP
       // men who carry no browse group at all (Prompt 12).
       caption: [
-        retiredCaption(hit) ?? hit.grouping ?? 'Athlete',
+        retiredCaption(hit) ?? hit.grouping ?? i18n.t('follows.search.athlete'),
         sportNameOf(hit.sportKey),
         // Nationality (Prompt 16 B): the athlete's identity mark.
         nationCaption(hit.countryCode),
@@ -352,7 +376,9 @@ export default function SearchScreen({ navigation }: Props) {
             kind: 'competition' as const,
             key: tr.key,
             title: tr.name,
-            caption: `Tournament · ${sportNameOf('tennis')}`,
+            caption: i18n.t('follows.search.captionTournament', {
+              sport: sportNameOf('tennis'),
+            }),
             sportKey: 'tennis',
             // Tournament keys the art map carries (the aliased cups —
             // Round 3 mark audit v2); the majors have no provider mark.
@@ -381,11 +407,11 @@ export default function SearchScreen({ navigation }: Props) {
       new Set(pr.dormant),
     );
     return [
-      { title: 'Teams', data: teamRows },
-      { title: 'Athletes', data: athleteRows },
-      { title: 'Competitions', data: compRows },
+      { title: i18n.t('core.teams'), data: teamRows },
+      { title: i18n.t('follows.athletes.athletes'), data: athleteRows },
+      { title: i18n.t('follows.search.competitions'), data: compRows },
       {
-        title: 'Sports',
+        title: i18n.t('follows.browse.sports'),
         data: byPriority(sports, (r) => r.sportKey ?? r.key, pr.sportWeights),
       },
     ].filter((s) => s.data.length > 0);
@@ -419,8 +445,8 @@ export default function SearchScreen({ navigation }: Props) {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <TextInput
         ref={inputRef}
-        accessibilityLabel="Search teams, athletes, competitions and sports"
-        placeholder="Team, athlete, competition or sport"
+        accessibilityLabel={i18n.t('follows.search.a11y')}
+        placeholder={i18n.t('follows.search.placeholder')}
         placeholderTextColor={t.textSecondary}
         value={query}
         onChangeText={setQuery}
@@ -442,8 +468,7 @@ export default function SearchScreen({ navigation }: Props) {
       {q.length >= 2 && sections.length === 0 && !searching && !error ? (
         <View style={styles.empty}>
           <Text style={[type.body, { color: t.textSecondary, textAlign: 'center' }]}>
-            Nothing followable matches “{q}” — search covers the sports
-            and leagues KickOffCal serves today.
+            {i18n.t('follows.search.noMatches', { query: q })}
           </Text>
         </View>
       ) : (
@@ -456,7 +481,7 @@ export default function SearchScreen({ navigation }: Props) {
             <SectionHeader
               title={section.title}
               right={
-                section.title === 'Teams' && searching ? (
+                section.title === i18n.t('core.teams') && searching ? (
                   <ActivityIndicator size="small" color={t.primary} />
                 ) : undefined
               }
@@ -555,7 +580,10 @@ export default function SearchScreen({ navigation }: Props) {
                     : { monogram: monogramOf(item.title) })}
                   {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
                   {...(item.tileBadge ? { tileBadge: item.tileBadge } : {})}
-                  accessibilityLabel={`${item.title}, ${item.caption}`}
+                  accessibilityLabel={i18n.t('follows.card.a11ySummary', {
+                    name: item.title,
+                    caption: item.caption,
+                  })}
                   onPress={open}
                 />
               </TileRow>

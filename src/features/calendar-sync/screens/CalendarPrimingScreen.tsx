@@ -12,6 +12,9 @@ import {
   Text,
   View,
 } from 'react-native';
+// Aliased: `t` is this screen's theme handle (useTheme), so the
+// catalog functions travel as `tr`/`tn` here.
+import { t as tr, tn } from '../../../core/i18n';
 import { RootScreenProps } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { spacing, type, useTheme } from '../../../core/tokens';
@@ -36,9 +39,9 @@ type Props = RootScreenProps<'CalendarPriming'>;
 // calendar of the user's own could be the target. What IS always true is
 // the guarantee underneath it: we only ever touch events we added.
 const EXPLAINS = [
-  ['🗓️', 'Fixtures go into a calendar you choose — we only ever touch events we added'],
-  ['🔄', 'Events update themselves when times change or games move'],
-  ['🧹', 'Unfollow and its fixtures disappear again'],
+  ['🗓️', tr('calendar.priming.explainTarget')],
+  ['🔄', tr('calendar.priming.explainUpdates')],
+  ['🧹', tr('calendar.priming.explainUnfollow')],
 ] as const;
 
 const RETRY_MS = 750;
@@ -108,7 +111,11 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
           connected.error.kind === 'unknown' &&
           !connected.error.message.includes('cancelled')
         ) {
-          setFailure(`${messageOf(connected.error)} Try again in a moment.`);
+          setFailure(
+            tr('calendar.priming.tryAgain', {
+              message: messageOf(connected.error),
+            }),
+          );
         }
         return;
       }
@@ -136,8 +143,8 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
       showToast({
         message:
           r.value.created > 0
-            ? `Added ${r.value.created} fixture${r.value.created === 1 ? '' : 's'} to your calendar`
-            : 'Calendar connected',
+            ? tn('calendar.priming.addedFixtures', r.value.created)
+            : tr('calendar.priming.connected'),
       });
       return;
     }
@@ -147,7 +154,9 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
     if (r.error.kind === 'permission-denied') {
       setDenied(true);
     } else {
-      setFailure(`${messageOf(r.error)} Try again in a moment.`);
+      setFailure(
+        tr('calendar.priming.tryAgain', { message: messageOf(r.error) }),
+      );
     }
   };
 
@@ -158,7 +167,7 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
     return (
       <View style={[styles.screen, { backgroundColor: t.bg }]}>
         <Text style={[type.title, { color: t.textPrimary }]}>
-          Your calendar is connected
+          {tr('calendar.priming.connectedTitle')}
         </Text>
         <Text
           style={[type.body, { color: t.textPrimary, marginTop: spacing.xl }]}
@@ -173,29 +182,27 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         <Text
           style={[type.secondary, { color: t.textSecondary, marginTop: spacing.l }]}
         >
-          Follow a team and its fixtures appear there on their own — times
-          firm up, postponements move, cancellations disappear. Nothing else
-          to set up.
+          {tr('calendar.priming.connectedBody')}
         </Text>
         <View style={{ flex: 1 }} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Choose your sports"
+          accessibilityLabel={tr('calendar.priming.chooseSports')}
           onPress={onwards}
           style={[styles.cta, { backgroundColor: t.primary }]}
         >
           <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
-            Choose your sports
+            {tr('calendar.priming.chooseSports')}
           </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Use a different calendar"
+          accessibilityLabel={tr('calendar.priming.differentCalendar')}
           onPress={() => navigation.navigate('CalendarTarget')}
           style={styles.skip}
         >
           <Text style={[type.body, { color: t.textSecondary }]}>
-            Use a different calendar
+            {tr('calendar.priming.differentCalendar')}
           </Text>
         </Pressable>
       </View>
@@ -205,14 +212,20 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
   return (
     <View style={[styles.screen, { backgroundColor: t.bg }]}>
       <Text style={[type.title, { color: t.textPrimary }]}>
-        Put your games in your calendar
+        {tr('calendar.priming.title')}
       </Text>
       {total > 0 ? (
         <Text
           style={[type.body, { color: t.textSecondary, marginTop: spacing.s }]}
         >
-          {capped ? '60+' : total} fixture{total === 1 ? '' : 's'} ready to add
-          {nextMonth > 0 ? ` — about ${nextMonth} in the next month` : ''}.
+          {nextMonth > 0
+            ? tn('calendar.priming.readyMonth', total, {
+                count: capped ? '60+' : total,
+                month: nextMonth,
+              })
+            : tn('calendar.priming.ready', total, {
+                count: capped ? '60+' : total,
+              })}
         </Text>
       ) : null}
       <View style={{ marginTop: spacing.xl, gap: spacing.l }}>
@@ -229,8 +242,7 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
       </View>
       {denied ? (
         <Text style={[type.secondary, { color: t.danger, marginTop: spacing.xl }]}>
-          Calendar access is turned off for KickOffCal. Allow it in Settings,
-          then come back — your fixtures are waiting.
+          {tr('calendar.priming.denied')}
         </Text>
       ) : failure ? (
         <Text style={[type.secondary, { color: t.danger, marginTop: spacing.xl }]}>
@@ -243,25 +255,24 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         <Text
           style={[type.caption, { color: t.textSecondary, marginBottom: spacing.m }]}
         >
-          Calendar sync needs a Google sign-in on Android. Without it, your
-          fixtures live in the app.
+          {tr('calendar.priming.googleNote')}
         </Text>
       ) : null}
       {denied ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Open Settings"
+          accessibilityLabel={tr('calendar.priming.openSettings')}
           onPress={() => void Linking.openSettings()}
           style={[styles.cta, { backgroundColor: t.primary }]}
         >
           <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
-            Open Settings
+            {tr('calendar.priming.openSettings')}
           </Text>
         </Pressable>
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add to my calendar"
+          accessibilityLabel={tr('calendar.priming.addToMyCalendar')}
           disabled={busy}
           onPress={() => void enable()}
           style={[
@@ -271,18 +282,18 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         >
           <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
             {busy
-              ? 'Connecting…'
+              ? tr('calendar.priming.connecting')
               : nativeSyncRoute() === 'google-connect' && activeBackend() !== 'rest'
-                ? 'Connect Google Calendar'
+                ? tr('calendar.priming.connectGoogle')
                 : total > 0
-                  ? 'Add to my calendar'
-                  : 'Connect my calendar'}
+                  ? tr('calendar.priming.addToMyCalendar')
+                  : tr('calendar.priming.connectMyCalendar')}
           </Text>
         </Pressable>
       )}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Not now"
+        accessibilityLabel={tr('calendar.priming.notNow')}
         onPress={() => {
           setCalendarChoice('deferred');
           // Skipping is allowed to cost nothing: onboarding continues to
@@ -292,7 +303,9 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         }}
         style={styles.skip}
       >
-        <Text style={[type.body, { color: t.textSecondary }]}>Not now</Text>
+        <Text style={[type.body, { color: t.textSecondary }]}>
+          {tr('calendar.priming.notNow')}
+        </Text>
       </Pressable>
     </View>
   );

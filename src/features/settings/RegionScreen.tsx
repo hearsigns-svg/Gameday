@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { Pressable, ScrollView, Text } from 'react-native';
+import { t as tr } from '../../core/i18n';
 import { RootScreenProps } from '../../core/navigation';
 import { spacing, type, useTheme } from '../../core/tokens';
 import { REGIONS, RegionKey, regionLabel } from '../../core/region';
@@ -58,7 +59,9 @@ export default function RegionScreen({ navigation }: RootScreenProps<'Region'>) 
       contentContainerStyle={{ padding: spacing.l }}
     >
       <Row
-        label={`Match my device (${regionLabel(detectedRegion())})`}
+        label={tr('settings.region.matchDevice', {
+          region: regionLabel(detectedRegion()),
+        })}
         selected={region === null}
         onPress={() => choose(null)}
       />
@@ -71,14 +74,12 @@ export default function RegionScreen({ navigation }: RootScreenProps<'Region'>) 
         />
       ))}
       <Row
-        label="Default"
+        label={tr('settings.region.default')}
         selected={region === 'default'}
         onPress={() => choose('default')}
       />
       <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.l }]}>
-        Region changes the order sports and competitions appear in, and what
-        a few of them are called — never what you can follow. No location is
-        used.
+        {tr('settings.region.note')}
       </Text>
     </ScrollView>
   );

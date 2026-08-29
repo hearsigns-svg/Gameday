@@ -4,6 +4,7 @@
 // drifts between screens.
 
 import * as Haptics from 'expo-haptics';
+import { t, tn } from '../../core/i18n';
 import { Result } from '../../core/result';
 import { showToast } from '../../core/toast';
 import { calendarChoice } from '../calendar-sync/data/calendarChoice';
@@ -27,8 +28,8 @@ export function followFeedback(
       } else {
         showToast({
           message: wasFollow
-            ? `Following ${item.label} — updating…`
-            : `Unfollowed ${item.label} — updating…`,
+            ? t('follows.feedback.followingUpdating', { name: item.label })
+            : t('follows.feedback.unfollowedUpdating', { name: item.label }),
         });
       }
     }
@@ -37,8 +38,8 @@ export function followFeedback(
 
   if (!wasFollow) {
     showToast({
-      message: `Unfollowed ${item.label}`,
-      action: { label: 'Undo', onPress: () => void refollow(item) },
+      message: t('follows.feedback.unfollowed', { name: item.label }),
+      action: { label: t('follows.undo'), onPress: () => void refollow(item) },
     });
     return;
   }
@@ -50,8 +51,8 @@ export function followFeedback(
       openCalendarPriming();
     } else {
       showToast({
-        message: `Following ${item.label} — calendar is off`,
-        action: { label: 'Enable', onPress: openCalendarPriming },
+        message: t('follows.feedback.calendarOff', { name: item.label }),
+        action: { label: t('follows.feedback.enable'), onPress: openCalendarPriming },
       });
     }
     return;
@@ -63,13 +64,15 @@ export function followFeedback(
       () => undefined,
     );
     showToast({
-      message: `Added ${r.value.created} fixture${r.value.created === 1 ? '' : 's'} to your calendar`,
-      action: { label: 'Undo', onPress: () => void unfollow(item) },
+      message: tn('follows.feedback.added', r.value.created),
+      action: { label: t('follows.undo'), onPress: () => void unfollow(item) },
     });
   } else {
     // Off-season honesty: followed, nothing to add yet. There is no
     // retired variant of this — a retired athlete has no follow control
     // to reach it (owner ruling 2026-08-04, careerStatus.ts).
-    showToast({ message: `Following ${item.label} — no upcoming fixtures yet` });
+    showToast({
+      message: t('follows.feedback.noUpcoming', { name: item.label }),
+    });
   }
 }

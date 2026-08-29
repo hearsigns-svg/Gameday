@@ -19,6 +19,8 @@ import {
   View,
 } from 'react-native';
 import { monogramOf, FollowButton, SportCard, TileRow } from '../../../core/components';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
 import { anyFoldedIncludes } from '../../../core/nameFold';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
@@ -135,8 +137,10 @@ export default function TeamListScreen({ navigation, route }: Props) {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <TextInput
-        accessibilityLabel={`Search teams in ${route.params.leagueName}`}
-        placeholder="Search teams"
+        accessibilityLabel={i18n.t('follows.teams.a11ySearchIn', {
+          league: route.params.leagueName,
+        })}
+        placeholder={i18n.t('follows.teams.searchPlaceholder')}
         placeholderTextColor={t.textSecondary}
         value={queryText}
         onChangeText={setQueryText}
@@ -190,7 +194,9 @@ export default function TeamListScreen({ navigation, route }: Props) {
               )}
               monogram={monogramOf(item.name)}
               {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
-              accessibilityLabel={`${item.name}, view fixtures`}
+              accessibilityLabel={i18n.t('follows.card.a11yViewFixtures', {
+                name: item.name,
+              })}
               onPress={() =>
                 navigation.navigate('Team', {
                   teamKey: item.key,

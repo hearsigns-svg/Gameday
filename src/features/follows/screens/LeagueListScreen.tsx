@@ -32,6 +32,9 @@ import {
   tournamentsFor,
 } from '../domain/tennisBrowse';
 import { anyFoldedIncludes } from '../../../core/nameFold';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
+import { competitionDisplayName } from '../../../core/i18n/exonyms';
 import { RootStackParamList } from '../../../core/navigation';
 import { messageOf } from '../../../core/result';
 import { activeRegion } from '../../../core/regionStore';
@@ -60,6 +63,7 @@ import {
   olympicSeasonOf,
   olympicsSubset,
 } from '../domain/olympicsBrowse';
+import { coverageNoteFor } from '../domain/coverageNotes';
 import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
 import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
@@ -75,14 +79,14 @@ function athleteRowTitle(sportKey: string): string {
   switch (sportKey) {
     case 'boxing':
     case 'ufc':
-      return 'Fighters';
+      return i18n.t('follows.athletes.fighters');
     case 'tennis':
-      return 'Players';
+      return i18n.t('follows.athletes.players');
     case 'f1':
     case 'motorsport':
-      return 'Drivers';
+      return i18n.t('follows.athletes.drivers');
     default:
-      return 'Athletes';
+      return i18n.t('follows.athletes.athletes');
   }
 }
 
@@ -91,7 +95,9 @@ function athleteRowTitle(sportKey: string): string {
 // omit, never explain).
 function subtitleOf(item: DirectoryLeague): string {
   return item.teamCount !== undefined
-    ? `${item.country} · ${item.teamCount} ${item.teamCount === 1 ? 'team' : 'teams'}`
+    ? i18n.tn('follows.league.teamCount', item.teamCount, {
+        country: item.country,
+      })
     : item.country;
 }
 
@@ -129,7 +135,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       const row: DirectoryLeague = {
         id: sport.key,
         name: series.label,
-        country: 'All events',
+        country: i18n.t('follows.league.allEvents'),
         key: series.key,
         followOnly: true,
         ...(series.pollPath ? { pollPath: series.pollPath } : {}),
@@ -415,12 +421,22 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const captionFor = (item: DirectoryLeague, tour: 'atp' | 'wta' | null): string => {
     if (tour) {
       const n = tournamentsFor(tournaments, tour, 'all').length;
-      return `Tap to follow tournaments${n > 0 ? ` (${n})` : ''}`;
+      return n > 0
+        ? i18n.t('follows.league.tapTournamentsCount', { count: n })
+        : i18n.t('follows.league.tapTournaments');
     }
     if (!item.followOnly) {
-      const count = item.teamCount !== undefined ? ` (${item.teamCount})` : '';
       const word = fixturesWordFor(route.params.sportKey).toLowerCase();
-      return `${item.country} · Tap to follow teams${count} · ${word}`;
+      return item.teamCount !== undefined
+        ? i18n.t('follows.league.tapTeamsCount', {
+            country: item.country,
+            count: item.teamCount,
+            fixtures: word,
+          })
+        : i18n.t('follows.league.tapTeams', {
+            country: item.country,
+            fixtures: word,
+          });
     }
     return subtitleOf(item);
   };
@@ -433,7 +449,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     const burstColours = artColours[String(item.id)] ?? artColours[item.key];
     return (
       <CompetitionCard
-        name={item.name}
+        // Exonym where the active language genuinely has one (Phase C)
+        // — browse rows only; follows, search matching and fixtures
+        // keep the provider/config name.
+        name={competitionDisplayName(item.name, item.key)}
         caption={captionFor(item, tour)}
         {...(burstColours ? { burstColours } : {})}
         theme={teamTheme(sport?.accent ?? null, mode)}
@@ -447,7 +466,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 navigation.navigate('TournamentList', {
                   tour,
                   kind: 'all',
-                  title: `${tour.toUpperCase()} tournaments`,
+                  title: i18n.t('follows.tournaments.navTitle', {
+                    tour: tour.toUpperCase(),
+                  }),
                 })
             : () => openEntity(item.key, item.name, item.crestUrl, item.pollPath)
         }
@@ -528,7 +549,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         )}
         monogram={monogramOf(hit.name)}
         {...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {})}
-        accessibilityLabel={`${hit.name}, view fixtures`}
+        accessibilityLabel={i18n.t('follows.card.a11yViewFixtures', {
+          name: hit.name,
+        })}
         onPress={() =>
           navigation.navigate('Team', {
             teamKey: hit.key,
@@ -547,11 +570,13 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     <TextInput
       accessibilityLabel={
         hasTeamSearch
-          ? 'Search competitions and teams'
-          : 'Search competitions'
+          ? i18n.t('follows.league.searchCompsTeams')
+          : i18n.t('follows.league.searchComps')
       }
       placeholder={
-        hasTeamSearch ? 'Search competitions and teams' : 'Search competitions'
+        hasTeamSearch
+          ? i18n.t('follows.league.searchCompsTeams')
+          : i18n.t('follows.league.searchComps')
       }
       placeholderTextColor={t.textSecondary}
       value={queryText}
@@ -584,6 +609,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     </Text>
   ) : null;
 
+  // The sport's coverage note, read from the string catalog
+  // (domain/coverageNotes.ts) — the config field itself is no longer
+  // read by this screen.
+  const coverageNote = sport ? coverageNoteFor(sport.key) : undefined;
+
   const banners = (
     <>
       {error ? (
@@ -613,7 +643,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       // subtitle says what the tour IS rather than "World".
       const tourCards = visibleLeagues.map((l) => ({
         ...l,
-        country: 'Every event on the tour',
+        country: i18n.t('follows.league.everyEventOnTour'),
       }));
       const tournamentCards = tournaments.filter((row) =>
         needles.some((n) => anyFoldedIncludes([row.name], n)),
@@ -636,7 +666,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             }
             ListEmptyComponent={
               <Text style={[type.secondary, styles.noMatches, { color: t.textSecondary }]}>
-                Nothing here matches “{q}”.
+                {i18n.t('follows.league.noMatches', { query: q })}
               </Text>
             }
           />
@@ -689,10 +719,13 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             <SportCard
               fullWidth
               label={r.title}
-              caption="Rankings, champions, who's competing"
+              caption={i18n.t('follows.athletes.caption')}
               glyph={sport?.glyph ?? '🎾'}
               theme={teamTheme(sport?.accent ?? null, mode)}
-              accessibilityLabel={`Browse ${r.tour.toUpperCase()} players`}
+              accessibilityLabel={i18n.t(
+                'follows.athletes.a11yBrowseTourPlayers',
+                { tour: r.tour.toUpperCase() },
+              )}
               onPress={() =>
                 navigation.navigate('AthleteList', {
                   sportKey: route.params.sportKey,
@@ -713,7 +746,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         const tourRow: DirectoryLeague = {
           id: r.key,
           name: r.name,
-          country: 'Every event on the tour',
+          country: i18n.t('follows.league.everyEventOnTour'),
           key: r.key,
           followOnly: true,
           ...(full?.pollPath ? { pollPath: full.pollPath } : {}),
@@ -724,7 +757,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       case 'slams':
       case 'others': {
         const isSlams = r.kind === 'slams';
-        const title = isSlams ? 'All four majors' : 'Other tournaments';
+        const title = isSlams
+          ? i18n.t('follows.tennis.allFourMajors')
+          : i18n.t('follows.tennis.otherTournaments');
         // ICON SWEEP (Prompt 20): inside a tennis section, Players, the
         // tour row and Other tournaments ALL fell back to the sport
         // glyph, so three different things carried one tennis ball and
@@ -739,7 +774,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 <FollowButton
                   theme={teamTheme(sport?.accent ?? null, mode)}
                   following={slamKeys.every((k) => isFollowed(k))}
-                  subject="all four majors"
+                  subject={i18n.t('follows.tennis.allFourMajorsSubject')}
                   busy={busyKey === 'slams'}
                   onPress={() => void followAll(slamKeys, 'slams')}
                 />
@@ -749,10 +784,13 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             <SportCard
               fullWidth
               label={title}
-              caption={`${r.count} ${r.count === 1 ? 'tournament' : 'tournaments'}`}
+              caption={i18n.tn('follows.tennis.tournamentCount', r.count)}
               glyph={isSlams ? '\u{1F3C6}' : '\u{1F3C5}'}
               theme={teamTheme(sport?.accent ?? null, mode)}
-              accessibilityLabel={`${title}, ${r.tour.toUpperCase()}`}
+              accessibilityLabel={i18n.t('follows.card.a11ySummary', {
+                name: title,
+                caption: r.tour.toUpperCase(),
+              })}
               onPress={() =>
                 navigation.navigate('TournamentList', {
                   tour: r.tour,
@@ -788,8 +826,18 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           season,
       );
       if (!next) return [];
-      const word = season === 'summer' ? 'Summer' : 'Winter';
-      return [{ season, word, next, name: `${word} Olympics` }];
+      const word =
+        season === 'summer'
+          ? i18n.t('follows.olympics.summer')
+          : i18n.t('follows.olympics.winter');
+      return [
+        {
+          season,
+          word,
+          next,
+          name: i18n.t('follows.olympics.seasonOlympics', { season: word }),
+        },
+      ];
     });
     return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -802,15 +850,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           ListHeaderComponent={
             <>
               {sportHeader}
-              {sport?.coverageNote ? (
-                <CoverageNote note={sport.coverageNote} />
-              ) : null}
+              {coverageNote ? <CoverageNote note={coverageNote} /> : null}
             </>
           }
           renderItem={({ item }) => (
             <CompetitionCard
               name={item.name}
-              caption={`${item.next.name} · Tap for sports · games`}
+              caption={i18n.t('follows.olympics.tapForSports', {
+                edition: item.next.name,
+              })}
               theme={teamTheme(sport?.accent ?? null, mode)}
               monogram={monogramOf(item.name)}
               glyph={sport?.glyph ?? '🏅'}
@@ -818,26 +866,32 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 navigation.push('LeagueList', {
                   sportKey: 'olympics',
                   olympics: { season: item.season, view: 'sports' },
-                  title: `${item.word} sports`,
+                  title: i18n.t('follows.olympics.seasonSports', {
+                    season: item.word,
+                  }),
                 })
               }
               destinations={[
                 {
-                  label: 'Sports',
+                  label: i18n.t('follows.browse.sports'),
                   onPress: () =>
                     navigation.push('LeagueList', {
                       sportKey: 'olympics',
                       olympics: { season: item.season, view: 'sports' },
-                      title: `${item.word} sports`,
+                      title: i18n.t('follows.olympics.seasonSports', {
+                        season: item.word,
+                      }),
                     }),
                 },
                 {
-                  label: 'Games',
+                  label: i18n.t('follows.olympics.games'),
                   onPress: () =>
                     navigation.push('LeagueList', {
                       sportKey: 'olympics',
                       olympics: { season: item.season, view: 'games' },
-                      title: `${item.word} Games`,
+                      title: i18n.t('follows.olympics.seasonGames', {
+                        season: item.word,
+                      }),
                     }),
                 },
               ]}
@@ -871,16 +925,18 @@ export default function LeagueListScreen({ navigation, route }: Props) {
               {sportHeader}
               {/* What this sport's data honestly is — one line, opened
                   on demand. */}
-              {sport?.coverageNote ? <CoverageNote note={sport.coverageNote} /> : null}
+              {coverageNote ? <CoverageNote note={coverageNote} /> : null}
               {sport?.browse.includes('athlete') ? (
                 <TileRow>
                   <SportCard
                     fullWidth
                     label={athleteRowTitle(route.params.sportKey)}
-                    caption="Rankings, champions, who's competing"
+                    caption={i18n.t('follows.athletes.caption')}
                     glyph={sport?.glyph ?? '🏟️'}
                     theme={teamTheme(sport?.accent ?? null, mode)}
-                    accessibilityLabel={`Browse ${athleteRowTitle(route.params.sportKey).toLowerCase()}`}
+                    accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {
+                      athletes: athleteRowTitle(route.params.sportKey).toLowerCase(),
+                    })}
                     onPress={() =>
                       navigation.navigate('AthleteList', {
                         sportKey: route.params.sportKey,
@@ -909,7 +965,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
               visibleLeagues.length === 0 &&
               teamHits.length === 0 ? (
                 <Text style={[type.secondary, styles.noMatches, { color: t.textSecondary }]}>
-                  Nothing here matches “{q}”.
+                  {i18n.t('follows.league.noMatches', { query: q })}
                 </Text>
               ) : null}
             </>

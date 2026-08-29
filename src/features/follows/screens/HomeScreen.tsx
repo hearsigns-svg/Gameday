@@ -30,6 +30,9 @@ import {
   SportCard,
 } from '../../../core/components';
 import { ExpandingHero } from '../ExpandingHero';
+// Namespace import: `t` is this component's theme binding, so the
+// catalog rides `i18n.t` here (and in every screen with a theme).
+import * as i18n from '../../../core/i18n';
 import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
 import { isExcluded, loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
@@ -169,7 +172,7 @@ export default function HomeScreen({ navigation }: Props) {
           label: item.label,
           caption: fixture
             ? whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
-            : 'Nothing scheduled',
+            : i18n.t('follows.home.nothingScheduled'),
           glyph: sport?.glyph ?? '🏟️',
           // The crest the follow already carries — or the served
           // competition mark as a DISPLAY fallback (Round 3 follow-up:
@@ -267,7 +270,7 @@ export default function HomeScreen({ navigation }: Props) {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Search teams, athletes, competitions and sports"
+        accessibilityLabel={i18n.t('follows.search.a11y')}
         onPress={() => navigation.navigate('Search')}
         style={({ pressed }) => [
           styles.searchBar,
@@ -276,7 +279,7 @@ export default function HomeScreen({ navigation }: Props) {
         ]}
       >
         <Text style={[type.body, { color: t.textSecondary }]} accessible={false}>
-          🔍  Team, athlete, competition or sport
+          {`🔍  ${i18n.t('follows.search.placeholder')}`}
         </Text>
       </Pressable>
 
@@ -336,19 +339,19 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       ) : followCount > 0 ? (
         <EmptyState
-          headline="Nothing scheduled yet"
-          body="Fixtures land here — and in your calendar — as soon as schedules are announced."
+          headline={i18n.t('follows.home.emptyHeadline')}
+          body={i18n.t('follows.home.emptyBody')}
         />
       ) : (
         <EmptyState
-          headline="Never miss a game"
-          body="Follow teams, competitions and series. Their fixtures appear in your calendar and stay correct on their own."
+          headline={i18n.t('follows.home.welcomeHeadline')}
+          body={i18n.t('follows.home.welcomeBody')}
         />
       )}
 
       {railItems.length > 0 ? (
         <>
-          <SectionHeader title="Following" />
+          <SectionHeader title={i18n.t('follows.following')} />
           <FollowRail
             items={railItems}
             onPress={(key) => {
@@ -368,25 +371,40 @@ export default function HomeScreen({ navigation }: Props) {
         </>
       ) : null}
 
-      <SectionHeader title={followCount > 0 ? 'Add sports' : 'Choose a sport'} />
+      <SectionHeader
+        title={
+          followCount > 0
+            ? i18n.t('follows.home.addSports')
+            : i18n.t('follows.home.chooseSport')
+        }
+      />
       <View style={styles.grid}>
         {orderedSports.map((s) => {
           const series = s.seriesFollowable;
           const following = series ? isFollowed(series.key) : false;
+          const label = sportLabelFor(s.key, s.label, activeRegion());
           return (
             <SportCard
               key={s.key}
-              label={sportLabelFor(s.key, s.label, activeRegion())}
+              label={label}
               glyph={s.glyph}
               theme={teamTheme(s.accent, mode)}
               caption={
-                series ? (following ? 'Following' : 'One follow') : 'Browse'
+                series
+                  ? following
+                    ? i18n.t('follows.following')
+                    : i18n.t('follows.home.oneFollow')
+                  : i18n.t('follows.home.browse')
               }
               captionAccent={following}
               onPress={() =>
                 navigation.navigate('LeagueList', { sportKey: s.key })
               }
-              accessibilityLabel={`${sportLabelFor(s.key, s.label, activeRegion())}${following ? ', following' : ''}`}
+              accessibilityLabel={
+                following
+                  ? i18n.t('follows.sports.a11yFollowing', { name: label })
+                  : label
+              }
             />
           );
         })}

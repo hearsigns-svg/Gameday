@@ -28,6 +28,7 @@ import {
   PosterSurface,
   usableImage,
 } from '../../../core/components';
+import { t } from '../../../core/i18n';
 import { teamTheme, TeamTheme } from '../../../core/teamTheme';
 import { showToast } from '../../../core/toast';
 import { radius, spacing, type } from '../../../core/tokens';
@@ -129,7 +130,11 @@ function reminderChipOptions(
   if (chosen !== null && !values.includes(chosen)) values.push(chosen);
   values.sort((a, b) => a - b);
   return [
-    { label: 'None', short: 'Off', value: null },
+    {
+      label: t('calendar.reminder.none'),
+      short: t('calendar.offset.off'),
+      value: null,
+    },
     ...values.map((v) => ({
       label: offsetLabel(v),
       short: offsetShortLabel(v),
@@ -341,7 +346,7 @@ export function FixtureCardBody(props: {
         <View style={styles.centre}>
           {failed ? (
             <Text style={[type.body, { color: theme.onGradient, opacity: 0.8 }]}>
-              Couldn’t load this event
+              {t('calendar.card.loadFailed')}
             </Text>
           ) : (
             <ActivityIndicator color={theme.onGradient} />
@@ -412,9 +417,9 @@ export function FixtureCardBody(props: {
         );
       }
       showToast({
-        message: 'Removed from your calendar',
+        message: t('calendar.toast.removed'),
         action: {
-          label: 'Undo',
+          label: t('calendar.toast.undo'),
           onPress: () => {
             setExcluded(fixture.id, false);
             repaint();
@@ -435,7 +440,7 @@ export function FixtureCardBody(props: {
           true,
         );
       }
-      showToast({ message: 'Added to your calendar' });
+      showToast({ message: t('calendar.toast.added') });
     }
     repaint();
     void runSync();
@@ -532,7 +537,9 @@ export function FixtureCardBody(props: {
             it is the thing you expect to tap to shut it. */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${fixture.title}. Close`}
+          accessibilityLabel={t('calendar.card.titleClose', {
+            title: fixture.title,
+          })}
           onPress={props.close}
         >
         <PosterFace
@@ -631,8 +638,12 @@ export function FixtureCardBody(props: {
                   accessibilityRole="button"
                   accessibilityLabel={
                     inCalendar
-                      ? `Remove ${fixture.title} from your calendar`
-                      : `Add ${fixture.title} to your calendar`
+                      ? t('calendar.card.removeTitleA11y', {
+                          title: fixture.title,
+                        })
+                      : t('calendar.card.addTitleA11y', {
+                          title: fixture.title,
+                        })
                   }
                   onPress={toggleCalendar}
                   style={({ pressed }) => [
@@ -651,7 +662,9 @@ export function FixtureCardBody(props: {
                       },
                     ]}
                   >
-                    {inCalendar ? 'Remove from calendar' : 'Add to calendar'}
+                    {inCalendar
+                      ? t('calendar.card.removeFromCalendar')
+                      : t('calendar.card.addToCalendar')}
                   </Text>
                 </Pressable>
               </View>
@@ -666,13 +679,13 @@ export function FixtureCardBody(props: {
               {mixedCard ? (
                 <View style={styles.row}>
                   <SexChip
-                    label="Men’s"
+                    label={t('calendar.card.mens')}
                     on={sexOn.m}
                     theme={theme}
                     onPress={() => toggleSex('m')}
                   />
                   <SexChip
-                    label="Women’s"
+                    label={t('calendar.card.womens')}
                     on={sexOn.w}
                     theme={theme}
                     onPress={() => toggleSex('w')}
@@ -688,8 +701,8 @@ export function FixtureCardBody(props: {
                   accessibilityRole="button"
                   accessibilityLabel={
                     allOn
-                      ? 'Remove all listed matches from your calendar'
-                      : 'Add all listed matches to your calendar'
+                      ? t('calendar.card.removeAllA11y')
+                      : t('calendar.card.addAllA11y')
                   }
                   onPress={toggleAll}
                   hitSlop={8}
@@ -712,7 +725,9 @@ export function FixtureCardBody(props: {
                     numberOfLines={1}
                     maxFontSizeMultiplier={1.4}
                   >
-                    {allOn ? 'Remove all' : 'Add all'}
+                    {allOn
+                      ? t('calendar.card.removeAll')
+                      : t('calendar.card.addAll')}
                   </Text>
                 </Pressable>
               </View>
@@ -734,7 +749,7 @@ export function FixtureCardBody(props: {
           sit on top of the countdown the poster already puts there. */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Close"
+        accessibilityLabel={t('calendar.card.close')}
         onPress={props.close}
         hitSlop={16}
         style={styles.handleHit}
@@ -762,7 +777,11 @@ function SexChip(props: {
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: props.on }}
-      accessibilityLabel={`${props.label} matches, ${props.on ? 'shown' : 'hidden'}`}
+      accessibilityLabel={
+        props.on
+          ? t('calendar.card.sexChipShown', { label: props.label })
+          : t('calendar.card.sexChipHidden', { label: props.label })
+      }
       onPress={props.onPress}
       style={({ pressed }) => [
         styles.calendarToggle,
@@ -826,7 +845,7 @@ function SegmentedReminderRow<T>(props: {
   return (
     <View style={styles.row}>
       <Text style={[type.body, { color: theme.onGradient, flex: 1 }]}>
-        Reminder
+        {t('calendar.card.reminder')}
       </Text>
       {/* Horizontal scroll, not wrap: the set has to stay one row (a
           list whose rows change height as you scroll is worse), and a
@@ -845,7 +864,11 @@ function SegmentedReminderRow<T>(props: {
               key={o.label}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${o.label}${selected ? ', selected' : ''}`}
+              accessibilityLabel={
+                selected
+                  ? t('calendar.card.optionSelected', { label: o.label })
+                  : o.label
+              }
               onPress={() => props.onPick(o.value)}
               hitSlop={6}
               style={[
@@ -882,7 +905,7 @@ function SegmentedReminderRow<T>(props: {
       {props.overridden ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Use my default reminder"
+          accessibilityLabel={t('calendar.card.useDefaultReminder')}
           onPress={props.onReset}
           hitSlop={10}
           style={styles.reset}
@@ -965,7 +988,7 @@ function ColourRow(props: {
   return (
     <View style={styles.row}>
       <Text style={[type.body, { color: props.theme.onGradient, flex: 1 }]}>
-        Colour
+        {t('calendar.card.colour')}
       </Text>
       <View style={styles.segments}>
         {EVENT_COLOURS.map((hex) => {
@@ -975,7 +998,13 @@ function ColourRow(props: {
               key={hex}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`Colour ${hex}${selected ? ', selected' : ''}`}
+              accessibilityLabel={
+                selected
+                  ? t('calendar.card.optionSelected', {
+                      label: t('calendar.card.colourValue', { value: hex }),
+                    })
+                  : t('calendar.card.colourValue', { value: hex })
+              }
               onPress={() => props.onPick(selected ? undefined : hex)}
               style={[
                 styles.swatch,
@@ -1019,7 +1048,7 @@ function BoutRow(props: {
           numberOfLines={1}
         >
           {[
-            entry.isMain ? 'Main event' : null,
+            entry.isMain ? t('calendar.card.mainEvent') : null,
             timeLabel(entry.startUtc, entry.status, entry.timePrecision),
           ]
             .filter(Boolean)
@@ -1031,10 +1060,10 @@ function BoutRow(props: {
         accessibilityState={{ selected: on, disabled: covered }}
         accessibilityLabel={
           covered
-            ? `${entry.title} is already in your calendar`
+            ? t('calendar.card.alreadyInCalendar', { title: entry.title })
             : on
-              ? `Remove ${entry.title} from your calendar`
-              : `Add ${entry.title} to your calendar`
+              ? t('calendar.card.removeTitleA11y', { title: entry.title })
+              : t('calendar.card.addTitleA11y', { title: entry.title })
         }
         disabled={covered}
         onPress={props.onToggle}
@@ -1061,7 +1090,7 @@ function BoutRow(props: {
         >
           {/* The word, not the glyph (27C follow-up): same ruling as
               the fixture-row pin. */}
-          {on ? 'Added' : 'Add'}
+          {on ? t('calendar.card.added') : t('calendar.card.add')}
         </Text>
       </Pressable>
     </View>

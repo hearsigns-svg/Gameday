@@ -19,6 +19,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { burstPalette, celebrateGrand, FollowBurst } from './celebration';
+import { t as tr, tn } from './i18n';
 import { flagEmojiOf } from './nationality';
 import { SportPattern } from './sportPattern';
 import { useReduceMotion } from './useReduceMotion';
@@ -363,7 +364,10 @@ export function FollowRail(props: {
         <Pressable
           key={`${item.key}-${Math.floor(i / props.items.length)}`}
           accessibilityRole="button"
-          accessibilityLabel={`${item.label}, ${item.caption}. See their fixtures`}
+          accessibilityLabel={tr('core.rail.openA11y', {
+            label: item.label,
+            caption: item.caption,
+          })}
           // The second copy is a visual continuation, not more content.
           accessibilityElementsHidden={i >= props.items.length}
           onPress={() => props.onPress(item.key)}
@@ -697,7 +701,7 @@ export function HeroCard(props: {
   const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
   const label = props.standalone
     ? `${props.title}, ${when}`
-    : `Next up: ${props.title}, ${when}`;
+    : tr('core.hero.nextUpA11y', { title: props.title, when });
   const hasCrestPair =
     usableImage(props.homeCrestUrl) !== undefined ||
     usableImage(props.awayCrestUrl) !== undefined;
@@ -709,7 +713,7 @@ export function HeroCard(props: {
       {...(props.onPress
         ? {
             accessibilityRole: 'button' as const,
-            accessibilityLabel: `${label}. Open event`,
+            accessibilityLabel: tr('core.a11y.openEvent', { label }),
             onPress: props.onPress,
           }
         : { accessibilityLabel: label })}
@@ -812,9 +816,12 @@ export function EventRow(props: {
     },
     dimmed ? { opacity: 0.4 } : null,
   ];
-  const label = `${props.title}, ${props.caption}, ${
-    dimmed ? 'removed from calendar' : props.timeText
-  }${props.onPress ? '. Open event' : ''}`;
+  const bareLabel = `${props.title}, ${props.caption}, ${
+    dimmed ? tr('core.row.removedFromCalendar') : props.timeText
+  }`;
+  const label = props.onPress
+    ? tr('core.a11y.openEvent', { label: bareLabel })
+    : bareLabel;
   const content = (
     <>
       <GlyphTile
@@ -865,7 +872,7 @@ export function EventRow(props: {
           style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}
           numberOfLines={1}
         >
-          {dimmed ? 'Removed — not in your calendar' : props.caption}
+          {dimmed ? tr('core.row.removedCaption') : props.caption}
         </Text>
       </View>
       <Text
@@ -913,8 +920,8 @@ export function EventRow(props: {
           accessibilityState={{ selected: props.pinned === true }}
           accessibilityLabel={
             props.pinned
-              ? `Remove ${props.title} from your calendar`
-              : `Add ${props.title} to your calendar`
+              ? tr('core.row.removeFromCalendarA11y', { title: props.title })
+              : tr('core.row.addToCalendarA11y', { title: props.title })
           }
           onPress={props.onTogglePinned}
           hitSlop={8}
@@ -934,7 +941,7 @@ export function EventRow(props: {
             numberOfLines={1}
             maxFontSizeMultiplier={1.8}
           >
-            {props.pinned ? 'Added' : 'Add'}
+            {props.pinned ? tr('core.actions.added') : tr('core.actions.add')}
           </Text>
         </Pressable>
       ) : null}
@@ -943,8 +950,8 @@ export function EventRow(props: {
           accessibilityRole="button"
           accessibilityLabel={
             dimmed
-              ? `Restore ${props.title} to your calendar`
-              : `Remove ${props.title} from your calendar`
+              ? tr('core.row.restoreToCalendarA11y', { title: props.title })
+              : tr('core.row.removeFromCalendarA11y', { title: props.title })
           }
           onPress={props.onToggleExcluded}
           hitSlop={8}
@@ -963,7 +970,7 @@ export function EventRow(props: {
             numberOfLines={1}
             maxFontSizeMultiplier={1.8}
           >
-            {dimmed ? 'Removed' : 'Remove'}
+            {dimmed ? tr('core.actions.removed') : tr('core.actions.remove')}
           </Text>
         </Pressable>
       ) : null}
@@ -1507,7 +1514,9 @@ export function FollowButton(props: {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={
-        props.following ? `Unfollow ${props.subject}` : `Follow ${props.subject}`
+        props.following
+          ? tr('core.follow.unfollowA11y', { subject: props.subject })
+          : tr('core.follow.followA11y', { subject: props.subject })
       }
       onPress={props.onPress}
       disabled={props.busy}
@@ -1548,7 +1557,9 @@ export function FollowButton(props: {
             // taking the row with it.
             maxFontSizeMultiplier={1.8}
           >
-            {props.following ? 'Following' : 'Follow'}
+            {props.following
+              ? tr('core.follow.following')
+              : tr('core.follow.follow')}
           </Text>
         )}
       </Animated.View>
@@ -1562,12 +1573,12 @@ export function FollowButton(props: {
 
 function relative(atIso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(atIso).getTime()) / 60_000));
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return tr('core.status.justNow');
+  if (mins < 60) return tr('core.status.minsAgo', { n: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  if (hours < 24) return tn('core.status.hoursAgo', hours);
   const days = Math.round(hours / 24);
-  return days === 1 ? 'yesterday' : `${days} days ago`;
+  return tn('core.status.daysAgo', days);
 }
 
 // Past this, "your calendar synced" stops being the whole truth — the
@@ -1590,19 +1601,26 @@ export function SyncStatusChip(props: {
     props.dataStaleHours != null && props.dataStaleHours > DATA_STALE_HOURS;
   let text: string;
   if (props.running)
-    text = props.calendarOff ? 'Checking for fixtures…' : 'Updating your calendar…';
+    text = props.calendarOff
+      ? tr('core.status.checking')
+      : tr('core.status.updating');
   else if (props.error) text = props.error;
   else if (dataStale)
-    text = `Fixture sources quiet for ${Math.round(props.dataStaleHours! / 24)}d — data may be behind`;
+    text = tr('core.status.sourcesQuiet', {
+      n: Math.round(props.dataStaleHours! / 24),
+    });
   else if (props.calendarOff)
     text =
       props.lastAt === null
-        ? 'Calendar sync is off'
-        : 'Fixtures up to date · calendar off';
-  else if (props.lastAt === null) text = 'Not synced yet';
+        ? tr('core.status.calendarOff')
+        : tr('core.status.upToDateCalendarOff');
+  else if (props.lastAt === null) text = tr('core.status.notSynced');
   else if (props.changed > 0)
-    text = `Calendar updated · ${props.changed} ${props.changed === 1 ? 'change' : 'changes'} · ${relative(props.lastAt)}`;
-  else text = `Calendar up to date · checked ${relative(props.lastAt)}`;
+    text = tr('core.status.updated', {
+      changes: tn('core.status.changes', props.changed),
+      when: relative(props.lastAt),
+    });
+  else text = tr('core.status.upToDate', { when: relative(props.lastAt) });
   return (
     <View
       accessibilityLiveRegion="polite"
@@ -1653,22 +1671,22 @@ export function CalendarOffBanner(props: {
         {/* "Sync is off" is true in every reachable state — after a
             reinstall, events may in fact still BE in the calendar. */}
         <Text style={[type.body, { color: t.textPrimary, fontWeight: '600' }]}>
-          Calendar sync is off
+          {tr('core.status.calendarOff')}
         </Text>
         <Text style={[type.caption, { color: t.textSecondary, marginTop: 2 }]}>
           {props.fixtureCount > 0
-            ? `${props.fixtureCount} fixture${props.fixtureCount === 1 ? '' : 's'} ready to add`
-            : 'Fixtures will be added once you connect your calendar'}
+            ? tn('core.banner.fixturesReady', props.fixtureCount)
+            : tr('core.banner.fixturesWhenConnected')}
         </Text>
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Add fixtures to my calendar"
+        accessibilityLabel={tr('core.banner.addA11y')}
         onPress={props.onEnable}
         style={[styles.bannerCta, { backgroundColor: t.primary }]}
       >
         <Text style={[type.secondary, { color: t.onPrimary, fontWeight: '600' }]}>
-          Add
+          {tr('core.actions.add')}
         </Text>
       </Pressable>
     </View>
@@ -1691,14 +1709,16 @@ export function CoverageNote(props: { note: string }) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={
-          open ? 'Hide what this covers' : 'What this covers'
+          open ? tr('core.coverage.hideA11y') : tr('core.coverage.showA11y')
         }
         onPress={() => setOpen((v) => !v)}
         hitSlop={8}
         style={styles.coverageToggle}
       >
         <Text style={[type.caption, { color: t.textSecondary }]}>
-          {open ? 'ⓘ  What this covers ▲' : 'ⓘ  What this covers'}
+          {open
+            ? tr('core.coverage.openLabel')
+            : tr('core.coverage.closedLabel')}
         </Text>
       </Pressable>
       {open ? (

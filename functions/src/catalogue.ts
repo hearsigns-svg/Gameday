@@ -237,12 +237,12 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // number IS the row's cost on every sweep that polls it.
   //
   // NCAA football is THE EXPENSIVE ROW — 1,439 events for 2026, NBA
-  // scale (the NBA runs ~1,380) — and ships DISABLED. The owner flips
-  // it (enabled:true in the console) after weighing that volume; the
-  // team table already stages its directory entry (tsdbTeamLeagues.ts),
-  // so the flip is the console edit plus the client browse row + search
-  // alias in the same change, per the tournament-cycle convention below.
-  { ...T2('tsdb-league-4479', 'NCAA Division 1 Football', 'nfl', 'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3', 44), enabled: false },
+  // scale (the NBA runs ~1,380). It shipped seeded-disabled behind the
+  // volume flag; the owner weighed that number and ENABLED it
+  // (2026-08-29 ruling), so the seed now creates it live directly —
+  // table entry unstaged and client row landed in the same commit,
+  // exactly the trio the searchRoutes pin forces.
+  T2('tsdb-league-4479', 'NCAA Division 1 Football', 'nfl', 'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3', 44),
   // MLS: 510 events 2026 — in season (196 still future at seeding).
   T2('tsdb-league-4346', 'MLS', 'soccer', 'pollTsdbLeague?leagueId=4346&season=2026&sport=soccer&durationHours=2', 45),
   // NWSL: 240 events 2026 — in season.

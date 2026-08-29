@@ -15,6 +15,7 @@
 // start-list connector) a meeting's events are the same shape. Nothing
 // here is combat-specific except the vocabulary.
 
+import { t } from '../../../core/i18n';
 import { foldName, pairKey } from '../../../core/nameFold';
 import { Fixture } from './fixture';
 import { isPast } from './horizon';
@@ -212,13 +213,13 @@ export function cardSectionTitle(sportKey: string): string {
   switch (sportKey) {
     case 'boxing':
     case 'ufc':
-      return 'Full card';
+      return t('calendar.cardList.fullCard');
     case 'tennis':
-      return 'Matches';
+      return t('calendar.cardList.matches');
     case 'athletics':
-      return 'Events';
+      return t('calendar.cardList.events');
     default:
-      return 'Also on';
+      return t('calendar.cardList.alsoOn');
   }
 }
 
@@ -231,5 +232,5 @@ export function boutTimingCaption(
   entry: CardEntry,
 ): string | null {
   if (entry.startUtc !== parent.startUtc) return null;
-  return 'Time within the event not published';
+  return t('calendar.cardList.timeWithinEvent');
 }

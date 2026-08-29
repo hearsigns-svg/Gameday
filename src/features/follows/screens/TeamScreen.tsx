@@ -20,6 +20,8 @@ import { monogramOf,
   SectionHeader,
 } from '../../../core/components';
 import { RootScreenProps } from '../../../core/navigation';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -304,8 +306,8 @@ export default function TeamScreen({ navigation, route }: Props) {
     setPinIds(pinnedIds());
     showToast({
       message: was
-        ? 'Removed from your calendar'
-        : `Added ${f.title} to your calendar`,
+        ? i18n.t('follows.team.removed')
+        : i18n.t('follows.team.added', { title: f.title }),
     });
     void runSync();
   };
@@ -316,11 +318,11 @@ export default function TeamScreen({ navigation, route }: Props) {
     setExcludedIds(loadExclusions());
     showToast(
       was
-        ? { message: 'Restored to your calendar' }
+        ? { message: i18n.t('follows.team.restored') }
         : {
-            message: 'Removed from your calendar',
+            message: i18n.t('follows.team.removed'),
             action: {
-              label: 'Undo',
+              label: i18n.t('follows.undo'),
               onPress: () => {
                 setExcluded(f.id, false);
                 setExcludedIds(loadExclusions());
@@ -355,7 +357,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               sport
                 ? sportLabelFor(sport.key, sport.label, activeRegion())
                 : sportKey,
-              fixtures ? `${fixtures.length} upcoming` : null,
+              fixtures ? i18n.tn('follows.team.upcoming', fixtures.length) : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -383,7 +385,7 @@ export default function TeamScreen({ navigation, route }: Props) {
       {scopeOptions.length > 0 ? (
         <View style={[styles.scopeBlock, { borderColor: t.border }]}>
           <Text style={[type.caption, { color: t.textSecondary, fontWeight: '600' }]}>
-            CALENDAR EVENTS
+            {i18n.t('follows.team.calendarEvents')}
           </Text>
           <View style={styles.scopeRow}>
             {scopeOptions.map((o) => {
@@ -393,7 +395,11 @@ export default function TeamScreen({ navigation, route }: Props) {
                   key={o.label}
                   onPress={() => void selectScope(o.scope)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${o.label}${active ? ', selected' : ''}`}
+                  accessibilityLabel={
+                    active
+                      ? i18n.t('follows.team.a11ySelected', { label: o.label })
+                      : o.label
+                  }
                   style={[
                     type.body,
                     styles.scopeChoice,
@@ -435,15 +441,17 @@ export default function TeamScreen({ navigation, route }: Props) {
                 // empty (domain/athleteDelivery.ts).
                 (retiredEmptyState(career) ??
                 deliveryGap(sportKey, grouping) ??
-                "No scheduled events. We'll add them when announced — follow now and they'll reach your calendar.")
-              : 'No upcoming fixtures yet — schedules land here as soon as they are announced.'}
+                i18n.t('follows.team.athleteEmpty'))
+              : i18n.t('follows.team.teamEmpty')}
           </Text>
         </View>
       ) : (
         <FlatList
           data={fixtures}
           keyExtractor={(f) => f.id}
-          ListHeaderComponent={<SectionHeader title="Upcoming" />}
+          ListHeaderComponent={
+            <SectionHeader title={i18n.t('follows.team.upcomingHeader')} />
+          }
           renderItem={({ item: f }) => (
             <TeamFixtureRow
               fixture={f}
@@ -473,8 +481,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               <Text
                 style={[type.caption, styles.footer, { color: t.textSecondary }]}
               >
-                Tap Add for a single match, or Follow for all of them —
-                you can remove individual matches afterwards.
+                {i18n.t('follows.team.footer')}
               </Text>
             ) : null
           }
@@ -509,7 +516,12 @@ function TeamFixtureRow(props: {
       hidden={expansion.liftedKey === f.id}
       title={f.title}
       caption={
-        props.competitionInCaption ? `${when} · ${f.competition}` : when
+        props.competitionInCaption
+          ? i18n.t('follows.team.whenCompetition', {
+              when,
+              competition: f.competition,
+            })
+          : when
       }
       timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
       tbc={isDateOnly(f.status, f.timePrecision)}

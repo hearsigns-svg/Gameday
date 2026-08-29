@@ -18,6 +18,8 @@
 // horizon. Falling back to coverage puts them where the evidence
 // points, rather than dropping them out of browse entirely.
 
+import { t } from '../../../core/i18n';
+
 export interface TournamentLike {
   key: string;
   name: string;
@@ -56,22 +58,22 @@ export const SLAM_KEYS = [
 // Per-section, because the tours no longer share a coverage story and a
 // combined note could only be vague about both. Kept to one line each —
 // the disclosure opens them on demand.
+//
+// The ATP/WTA text lives in the string catalog now (Round 3 Phase C;
+// the 2026-08-07 "top 50, not top 100" correction rode along verbatim
+// — GROUP_CAP history in the catalog's git blame if needed). Getters,
+// so the language is read when a row is built, not at import time.
 export const SECTION_NOTES = {
-  atp:
-    'Tournament dates from the tour calendar, and match times once a ' +
-    'draw is published — assembled from a ranked feed and reviewed by ' +
-    'hand, so an occasional match arrives late rather than wrong. The ' +
-    // CORRECTED 2026-08-07: this said "the top 100 are browsable",
-    // which the server contradicts — GROUP_CAP is 50 (search.ts), so
-    // the ranked section serves 50 and the A-Z directory carries the
-    // rest uncapped. The ranking cut and the browse cut are two
-    // different numbers and the copy had merged them.
-    'top 50 are listed by rank, the rest A-Z; 500 are searchable.',
-  wta:
-    'The fullest coverage we have: tournaments, draws and order of ' +
-    'play from the WTA’s own feed, so a match appears with her ' +
-    'opponent as soon as the draw is made and sharpens to an exact ' +
-    'time when the schedule is published.',
+  get atp(): string {
+    return t('follows.tennis.noteAtp');
+  },
+  get wta(): string {
+    return t('follows.tennis.noteWta');
+  },
+  // NOT in the catalog, deliberately: no surface renders this note —
+  // the slams row is an entry into a list, not a header with a
+  // disclosure — and the catalog convention forbids orphan keys. It
+  // moves there in the change that first renders it.
   slams:
     'All four majors run both draws. Follow one and you get the ' +
     'fortnight; follow a player and you get their matches within it.',
@@ -98,7 +100,10 @@ export function tournamentDateRange(startUtc: string, endUtc: string): string {
       month: 'short',
       timeZone: 'UTC',
     });
-  return `${fmt(Date.parse(startUtc))} – ${fmt(Date.parse(endUtc) - 86_400_000)}`;
+  return t('follows.tennis.dateRange', {
+    start: fmt(Date.parse(startUtc)),
+    end: fmt(Date.parse(endUtc) - 86_400_000),
+  });
 }
 
 export function isSlam(key: string): boolean {
@@ -169,7 +174,7 @@ export function tennisBrowseRows(
     }
   };
 
-  section('atp', 'ATP — Men’s', 'Players', 'tennis-atp');
-  section('wta', 'WTA — Women’s', 'Players', 'tennis-wta');
+  section('atp', t('follows.tennis.atpTitle'), t('follows.athletes.players'), 'tennis-atp');
+  section('wta', t('follows.tennis.wtaTitle'), t('follows.athletes.players'), 'tennis-wta');
   return rows;
 }

@@ -6,19 +6,22 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native';
 import { markWelcomeSeen } from '../calendar-sync/data/calendarChoice';
+// Aliased: `t` is this screen's theme handle (useTheme), so the
+// catalog function travels as `tr` here.
+import { t as tr } from '../../core/i18n';
 import { RootScreenProps } from '../../core/navigation';
 import { spacing, type, useTheme } from '../../core/tokens';
 
 type Props = RootScreenProps<'Welcome'>;
 
 const PROMISES = [
-  ['📅', 'Fixtures land in your phone calendar, automatically'],
-  ['🔄', 'Times change, games move — your calendar stays correct'],
+  ['📅', tr('calendar.welcome.promiseCalendar')],
+  ['🔄', tr('calendar.welcome.promiseCorrect')],
   // Owner-ruled wording (Prompt 25 §6). The old line promised "no
   // notifications" — false today (calendar alarms ARE notifications by
   // any reading a user cares about) and falser after the trial, when
   // push becomes the free tier's delivery channel.
-  ['🤫', 'No account needed — just follow and go.'],
+  ['🤫', tr('calendar.welcome.promiseNoAccount')],
 ] as const;
 
 export default function WelcomeScreen({ navigation }: Props) {
@@ -33,7 +36,7 @@ export default function WelcomeScreen({ navigation }: Props) {
           { color: t.textSecondary, marginTop: spacing.s },
         ]}
       >
-        Never miss a game.
+        {tr('calendar.welcome.tagline')}
       </Text>
       <View style={{ marginTop: spacing.xl, gap: spacing.l }}>
         {PROMISES.map(([glyph, line]) => (
@@ -52,7 +55,7 @@ export default function WelcomeScreen({ navigation }: Props) {
       <View style={{ flex: 1 }} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Get started"
+        accessibilityLabel={tr('calendar.welcome.getStarted')}
         onPress={() => {
           markWelcomeSeen();
           navigation.replace('CalendarPriming', { onboarding: true });
@@ -60,7 +63,7 @@ export default function WelcomeScreen({ navigation }: Props) {
         style={[styles.cta, { backgroundColor: t.primary }]}
       >
         <Text style={[type.body, { color: t.onPrimary, fontWeight: '600' }]}>
-          Get started
+          {tr('calendar.welcome.getStarted')}
         </Text>
       </Pressable>
     </View>

@@ -2,7 +2,9 @@
 // pure plan → apply. The ledger is persisted after EVERY operation, so a
 // sync killed mid-run converges on the next run. One run at a time.
 
+import { currentLanguage, LANGUAGE_NAMES, t } from '../../core/i18n';
 import { err, messageOf, ok, Result } from '../../core/result';
+import { showToast } from '../../core/toast';
 import { readJson, writeJson } from '../../core/storage';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
@@ -76,6 +78,10 @@ import {
 const LAST_SYNC_KEY = 'lastSync.v1';
 const UPCOMING_KEY = 'upcomingByFollow.v1';
 const UPCOMING_FIXTURES_KEY = 'upcomingFixtures.v1';
+// The language the calendar's events were last written in (Phase C) —
+// compared against the device language at each pass so the deliberate
+// language-switch rewrite can announce itself exactly once.
+const CALENDAR_LANGUAGE_KEY = 'calendarLanguage.v1';
 const UPCOMING_FIXTURES_CAP = 60;
 
 // Upcoming-fixture count per followed key, refreshed every sync.
@@ -600,6 +606,25 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     if (!fixtures.ok) return fixtures;
 
     const ledger = loadLedger();
+
+    // LANGUAGE-SWITCH REWRITE NOTICE (Phase C, owner ruling): the
+    // catalog-backed event titles and notes make this very pass
+    // rewrite every synced event when the device language changed —
+    // deliberate, and it announces itself once. Stamp-first so an
+    // interrupted pass never repeats the toast; the rewrite itself is
+    // just the ordinary title diff in the planner.
+    const lang = currentLanguage();
+    const stampedLang = readJson<string>(CALENDAR_LANGUAGE_KEY, '');
+    if (stampedLang !== lang) {
+      writeJson(CALENDAR_LANGUAGE_KEY, lang);
+      if (stampedLang !== '' && Object.keys(ledger).length > 0) {
+        showToast({
+          message: t('calendar.language.rewrite', {
+            language: LANGUAGE_NAMES[lang],
+          }),
+        });
+      }
+    }
 
     // SCAN ANOMALY. A calendar scan that returns zero tagged events while
     // the ledger holds entries is impossible under correct operation — it

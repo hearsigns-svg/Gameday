@@ -34,6 +34,9 @@ import { monogramOf,
 } from '../../../core/components';
 import { calendarChoice } from '../data/calendarChoice';
 import { loadExclusions, setExcluded } from '../data/exclusionStore';
+// Aliased: `t` is this screen's theme handle (useTheme), so the
+// catalog function travels as `tr` here.
+import { t as tr } from '../../../core/i18n';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { useReduceMotion } from '../../../core/useReduceMotion';
@@ -354,11 +357,11 @@ export default function ScheduleScreen({ navigation }: Props) {
     setExcludedIds(loadExclusions());
     showToast(
       was
-        ? { message: `Restored to your calendar` }
+        ? { message: tr('calendar.toast.restored') }
         : {
-            message: `Removed from your calendar`,
+            message: tr('calendar.toast.removed'),
             action: {
-              label: 'Undo',
+              label: tr('calendar.toast.undo'),
               onPress: () => {
                 setExcluded(f.id, false);
                 setExcludedIds(loadExclusions());
@@ -408,11 +411,11 @@ export default function ScheduleScreen({ navigation }: Props) {
       ) : null}
       {sections.length === 0 ? (
         <EmptyState
-          headline="Nothing on the schedule"
+          headline={tr('calendar.schedule.emptyHeadline')}
           body={
             follows.length === 0
-              ? 'Follow a team or competition and its fixtures appear here — and in your calendar.'
-              : 'Fixtures appear here as soon as schedules are announced.'
+              ? tr('calendar.schedule.emptyNoFollows')
+              : tr('calendar.schedule.emptyWaiting')
           }
         />
       ) : (
@@ -468,7 +471,11 @@ export default function ScheduleScreen({ navigation }: Props) {
           <View {...pan.panHandlers}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={split ? 'Hide the calendar' : 'Show the calendar'}
+              accessibilityLabel={
+                split
+                  ? tr('calendar.schedule.hideCalendar')
+                  : tr('calendar.schedule.showCalendar')
+              }
               accessibilityState={{ expanded: split }}
               onPress={() => settleRef.current(!split)}
               hitSlop={8}
@@ -512,8 +519,8 @@ export default function ScheduleScreen({ navigation }: Props) {
                 ]}
               >
                 {calendarOff
-                  ? 'These fixtures will be added to your phone calendar once you connect it.'
-                  : 'Everything here is in your phone calendar and updates on its own — times firm up, postponements move, cancellations disappear.'}
+                  ? tr('calendar.schedule.footerOff')
+                  : tr('calendar.schedule.footerOn')}
               </Text>
             }
           />

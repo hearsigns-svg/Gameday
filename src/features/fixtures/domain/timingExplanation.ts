@@ -17,6 +17,7 @@
 //      it, so any "expected by Friday" would be invented. What we can
 //      promise is the correction, which we already do.
 
+import { t, tn } from '../../../core/i18n';
 import { TimePrecision } from './fixture';
 import { dateOnlySpanDays, timePrecisionOf } from './horizon';
 import { FixtureSource, sourceOf } from './sources';
@@ -49,12 +50,14 @@ function agoLabel(fromIso: string, nowMs: number): string | null {
   const ms = nowMs - Date.parse(fromIso);
   if (!Number.isFinite(ms) || ms < 0) return null;
   const mins = Math.round(ms / 60_000);
-  if (mins < 2) return 'moments ago';
-  if (mins < 60) return `${mins} minutes ago`;
+  if (mins < 2) return t('calendar.timing.momentsAgo');
+  // Always ≥ 2 here (the moments branch above owns 0–1), so this is a
+  // plain template rather than a plural pair with an unreachable form.
+  if (mins < 60) return t('calendar.timing.minutesAgo', { n: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  if (hours < 24) return tn('calendar.timing.hoursAgo', hours);
   const days = Math.round(hours / 24);
-  return days === 1 ? 'yesterday' : `${days} days ago`;
+  return tn('calendar.timing.daysAgo', days);
 }
 
 // WHO, and only where naming them is both accurate and useful.
@@ -70,14 +73,19 @@ function attributionFor(
 ): string | null {
   if (subject === 'confirmation') {
     return source?.kind === 'organiser'
-      ? `${source.name} has not confirmed the final time yet.`
-      : 'The final time has not been confirmed yet.';
+      ? t('calendar.timing.confirmOrganiser', { source: source.name })
+      : t('calendar.timing.confirmGeneric');
   }
-  const what = subject === 'slot' ? 'The order of play has' : 'A start time has';
+  // Whole sentences per subject, not stitched fragments — a translator
+  // has to be able to reorder the clause around the organiser's name.
   if (source?.kind === 'organiser') {
-    return `${what} not been announced by ${source.name} yet.`;
+    return subject === 'slot'
+      ? t('calendar.timing.slotNotAnnounced', { source: source.name })
+      : t('calendar.timing.timeNotAnnounced', { source: source.name });
   }
-  return `${what} not been published yet.`;
+  return subject === 'slot'
+    ? t('calendar.timing.slotNotPublished')
+    : t('calendar.timing.timeNotPublished');
 }
 
 export function explainTiming(
@@ -102,7 +110,7 @@ export function explainTiming(
     opts.sliceCheckedAt != null
       ? (() => {
           const ago = agoLabel(opts.sliceCheckedAt as string, nowMs);
-          return ago ? `Checked ${ago}` : null;
+          return ago ? t('calendar.timing.checked', { ago }) : null;
         })()
       : null;
 
@@ -113,28 +121,27 @@ export function explainTiming(
   if (f.status === 'cancelled') {
     // A cancelled fixture must never read as an event still to come —
     // and it must not promise an order of play for something that is off.
-    headline = 'Cancelled — this is no longer taking place.';
+    headline = t('calendar.timing.cancelled');
     willUpdate = false;
   } else if (f.status === 'postponed') {
     // Nobody is silent here: the source DID announce a time, and then
     // said the fixture had moved. Attributing a non-announcement would
     // be wrong twice over.
-    headline = 'Postponed — no new date has been published.';
+    headline = t('calendar.timing.postponed');
     willUpdate = true;
   } else if (precision === 'date_only' && spanDays > 1) {
     // A span is not a missing kick-off — it IS the event's shape. Said
     // plainly so a fortnight-long banner does not read as a failure.
-    headline = `Runs over ${spanDays} days, so it sits in your calendar as a ${spanDays}-day event.`;
+    headline = t('calendar.timing.runsOverDays', { n: spanDays });
     if (isAppearance && provisional) {
-      headline =
-        `The exact time isn't set yet, so this covers the whole event — ${spanDays} days.`;
+      headline = t('calendar.timing.exactTimeNotSet', { n: spanDays });
       attribution = attributionFor(source, 'slot');
       willUpdate = true;
     }
   } else if (precision === 'date_only') {
     headline = isAppearance
-      ? 'Only the day is known — this sits on the day until the order of play is published.'
-      : 'Only the day is known, so this is an all-day entry rather than a time we made up.';
+      ? t('calendar.timing.dayOnlyAppearance')
+      : t('calendar.timing.dayOnly');
     attribution = attributionFor(source, isAppearance ? 'slot' : 'time');
     willUpdate = true;
   } else if (precision === 'nominal') {
@@ -142,13 +149,12 @@ export function explainTiming(
     // CONFIRMATION, not announcement. Saying "no start time has been
     // published" beside a printed start time was a straight
     // contradiction, on 3,020 future fixtures.
-    headline =
-      'The time shown is the published start, but it is not the settled one yet.';
+    headline = t('calendar.timing.nominal');
     attribution = attributionFor(source, 'confirmation');
     willUpdate = true;
   } else if (provisional) {
     // Exact but provisional: a real instant we expect to move.
-    headline = 'This time is confirmed for now, but it can still move.';
+    headline = t('calendar.timing.provisional');
     willUpdate = true;
   }
 
@@ -158,8 +164,7 @@ export function explainTiming(
 // The standing promise, said once at the bottom of an explanation rather
 // than repeated in every line. Matches NOMINAL_TIME_NOTE, which is what
 // the calendar event's own description says.
-export const WILL_UPDATE_NOTE =
-  'Your calendar updates on its own when it changes.';
+export const WILL_UPDATE_NOTE = t('calendar.timing.willUpdate');
 
 // ONE LINE, ON THE CARD (Prompt 16b).
 //
@@ -182,23 +187,31 @@ export function shortTimingNote(
   const spanDays =
     precision === 'date_only' ? dateOnlySpanDays(f.durationHours) : 1;
 
-  if (f.status === 'cancelled') return 'Cancelled';
-  if (f.status === 'postponed') return 'Postponed — no new date yet';
-  if (precision === 'date_only' && spanDays > 1) return `Runs ${spanDays} days`;
+  if (f.status === 'cancelled') return t('calendar.timing.shortCancelled');
+  if (f.status === 'postponed') return t('calendar.timing.shortPostponed');
+  if (precision === 'date_only' && spanDays > 1) {
+    return t('calendar.timing.runsDays', { n: spanDays });
+  }
   if (precision === 'date_only' || precision === 'nominal') {
     const subject =
       f.parentFixtureId !== undefined && precision === 'date_only'
-        ? 'No order of play'
+        ? t('calendar.timing.noOrderOfPlay')
         : precision === 'nominal'
-          ? 'No confirmed time'
-          : 'No start time';
-    if (named) return `${subject} from ${named} yet`;
+          ? t('calendar.timing.noConfirmedTime')
+          : t('calendar.timing.noStartTime');
+    if (named) {
+      return t('calendar.timing.subjectFromYet', { subject, source: named });
+    }
     const ago =
       opts.sliceCheckedAt != null
         ? agoLabel(opts.sliceCheckedAt, nowMs)
         : null;
-    return ago ? `${subject} published · checked ${ago}` : `${subject} published yet`;
+    return ago
+      ? t('calendar.timing.subjectChecked', { subject, ago })
+      : t('calendar.timing.subjectPublishedYet', { subject });
   }
-  if (f.confidence === 'provisional') return 'Confirmed for now, can still move';
+  if (f.confidence === 'provisional') {
+    return t('calendar.timing.shortProvisional');
+  }
   return null;
 }

@@ -29,6 +29,7 @@ import { ToastHost } from './src/core/toast';
 import { palette } from './src/core/tokens';
 import { useColorSchemeMode } from './src/core/useColorSchemeMode';
 import { BrandTitle, Wordmark } from './src/core/components';
+import { t as tr } from './src/core/i18n';
 import SearchScreen from './src/features/follows/screens/SearchScreen';
 import WelcomeScreen from './src/features/onboarding/WelcomeScreen';
 import CalendarPrimingScreen from './src/features/calendar-sync/screens/CalendarPrimingScreen';
@@ -73,7 +74,7 @@ function SettingsButton() {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Calendar preferences"
+      accessibilityLabel={tr('core.title.preferences')}
       onPress={() => navigation.navigate('Preferences')}
       hitSlop={12}
       style={{ paddingHorizontal: 8 }}
@@ -109,19 +110,25 @@ function Tabs() {
         options={{
           title: 'KickOffCal',
           headerTitle: () => <Wordmark />,
-          tabBarLabel: 'Home',
+          tabBarLabel: tr('core.title.home'),
           headerRight: () => <SettingsButton />,
         }}
       />
       <Tab.Screen
         name="Following"
         component={FollowingScreen}
-        options={{ headerTitle: () => <BrandTitle>Following</BrandTitle> }}
+        options={{
+          tabBarLabel: tr('core.title.following'),
+          headerTitle: () => <BrandTitle>{tr('core.title.following')}</BrandTitle>,
+        }}
       />
       <Tab.Screen
         name="Schedule"
         component={ScheduleScreen}
-        options={{ headerTitle: () => <BrandTitle>Schedule</BrandTitle> }}
+        options={{
+          tabBarLabel: tr('core.title.schedule'),
+          headerTitle: () => <BrandTitle>{tr('core.title.schedule')}</BrandTitle>,
+        }}
       />
     </Tab.Navigator>
   );
@@ -218,14 +225,14 @@ export default function App() {
           options={({ route }) =>
             route.params?.onboarding
               ? {
-                  title: 'Your calendar',
-                  headerTitle: () => <BrandTitle>Your calendar</BrandTitle>,
+                  title: tr('core.title.yourCalendar'),
+                  headerTitle: () => <BrandTitle>{tr('core.title.yourCalendar')}</BrandTitle>,
                   gestureEnabled: false,
                 }
               : {
                   presentation: 'modal' as const,
-                  title: 'Your calendar',
-                  headerTitle: () => <BrandTitle>Your calendar</BrandTitle>,
+                  title: tr('core.title.yourCalendar'),
+                  headerTitle: () => <BrandTitle>{tr('core.title.yourCalendar')}</BrandTitle>,
                 }
           }
         />
@@ -237,27 +244,27 @@ export default function App() {
         <Stack.Screen
           name="Search"
           component={SearchScreen}
-          options={{ title: 'Search', headerTitle: () => <BrandTitle>Search</BrandTitle> }}
+          options={{ title: tr('core.title.search'), headerTitle: () => <BrandTitle>{tr('core.title.search')}</BrandTitle> }}
         />
         <Stack.Screen
           name="SportPicker"
           component={SportPickerScreen}
-          options={{ title: 'Sports', headerTitle: () => <BrandTitle>Sports</BrandTitle> }}
+          options={{ title: tr('core.title.sports'), headerTitle: () => <BrandTitle>{tr('core.title.sports')}</BrandTitle> }}
         />
         <Stack.Screen
           name="LeagueList"
           component={LeagueListScreen}
           options={({ route }) => ({
-            title: route.params.title ?? 'Competitions',
+            title: route.params.title ?? tr('core.title.competitions'),
             headerTitle: () => (
-              <BrandTitle>{route.params.title ?? 'Competitions'}</BrandTitle>
+              <BrandTitle>{route.params.title ?? tr('core.title.competitions')}</BrandTitle>
             ),
           })}
         />
         <Stack.Screen
           name="AthleteList"
           component={AthleteListScreen}
-          options={{ title: 'Athletes', headerTitle: () => <BrandTitle>Athletes</BrandTitle> }}
+          options={{ title: tr('core.title.athletes'), headerTitle: () => <BrandTitle>{tr('core.title.athletes')}</BrandTitle> }}
         />
         <Stack.Screen
           name="TournamentList"
@@ -287,24 +294,24 @@ export default function App() {
           name="Preferences"
           component={PreferencesScreen}
           options={{
-            title: 'Preferences',
-            headerTitle: () => <BrandTitle>Preferences</BrandTitle>,
+            title: tr('core.title.preferences'),
+            headerTitle: () => <BrandTitle>{tr('core.title.preferences')}</BrandTitle>,
           }}
         />
         <Stack.Screen
           name="Region"
           component={RegionScreen}
-          options={{ title: 'Region', headerTitle: () => <BrandTitle>Region</BrandTitle> }}
+          options={{ title: tr('core.title.region'), headerTitle: () => <BrandTitle>{tr('core.title.region')}</BrandTitle> }}
         />
         <Stack.Screen
           name="CalendarTarget"
           component={CalendarTargetScreen}
-          options={{ title: 'Calendar', headerTitle: () => <BrandTitle>Calendar</BrandTitle> }}
+          options={{ title: tr('core.title.calendar'), headerTitle: () => <BrandTitle>{tr('core.title.calendar')}</BrandTitle> }}
         />
         <Stack.Screen
           name="Credits"
           component={CreditsScreen}
-          options={{ title: 'Photo credits', headerTitle: () => <BrandTitle>Photo credits</BrandTitle> }}
+          options={{ title: tr('core.title.photoCredits'), headerTitle: () => <BrandTitle>{tr('core.title.photoCredits')}</BrandTitle> }}
         />
         {__DEV__ ? (
           <Stack.Screen

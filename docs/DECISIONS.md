@@ -3333,3 +3333,59 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   the pipeline's provider (1,530-league sweep, pinned by test), and
   hand-importing official slam logos is barred separately by the
   owner. The Following rail's "U" is the honest mark.
+- 2026-08-29 (deploy convention, owner ruling): the agent DEPLOYS
+  green-gated, already-ruled work directly — `--only` incremental,
+  full gates first — and hands the command over only on classifier
+  refusal (the block is environmental and intermittent, not policy).
+  Catalogue seeds and every other prod DATA change stay owner-run.
+- 2026-08-29 (NCAA flip, owner ruling): NCAA Division 1 Football
+  ENABLED with the 1,439-events/season cost weighed and accepted —
+  seed constant flipped to enabled, table entry unstaged, client row
+  landed, one commit (the searchRoutes CI pin forces exactly this
+  trio). The owner's pending seed run creates the live row enabled;
+  no console edit needed.
+- 2026-08-29 (Phase C go, owner ruling): i18n as scoped — in-house
+  typed catalog; fixture titles stay provider truth in v1; the
+  language-switch calendar rewrite is DELIBERATE and announces itself
+  in-UI when it runs; working set es/de/fr/it/pt-BR; zh-CN and hi are
+  QUEUED named additions once the framework exists; RTL recorded as
+  its own future project, not attempted.
+- 2026-08-29 (Phase C BUILT + ruling-2 report + tennis key-rounds
+  upgrade): in-house typed catalog SHIPPED — core/i18n (t/tn,
+  Intl.PluralRules, device language via lazy expo-localization with
+  Intl fallback, resolved once per process), ~458 keys externalised
+  across four per-feature en modules with BYTE-IDENTICAL English
+  values (copy-asserting tests unchanged and green), es/de/fr/it/pt
+  catalogs typed `Catalog` so completeness is compile-enforced, plus
+  a parity test pinning key sets AND {placeholder} sets per language.
+  Sport names: non-English languages answer from core.sport.* keys;
+  ENGLISH KEEPS THE REGIONAL TABLE (Football/Soccer is a region fact
+  within English); the localised word joins sportSearchTerms so
+  search matches it. Exonyms: curated per-language table keyed by
+  FOLLOW KEY (exonyms.ts), BROWSE ROWS + global Search display/match
+  only — follows, fixtures and calendar keep provider names. The
+  LANGUAGE-SWITCH CALENDAR REWRITE announces itself once (toast at
+  the first sync after the device language changes, calendarLanguage
+  stamp — stamp-first so an interrupted pass can't repeat it); the
+  rewrite itself is the planner's ordinary title diff. Fixture titles
+  stay provider truth (v1 ruling). zh-CN + hi QUEUED as named
+  additions; RTL recorded as its own future project. TRANSLATIONS ARE
+  AGENT-WRITTEN, not professional — flagged for native-speaker review
+  before store listings ship in those languages.
+- 2026-08-29 (ruling 2 answered — the round column ALREADY EXISTS):
+  no Apps-Script change is needed for tennis key rounds. The ATP
+  sheet's canonical_matches ALREADY carries `round` ("Round of 32" …
+  "Final"), sheetAtp.ts already parses it and weaves it into titles —
+  so the title classifier catches ATP finals/semis/quarters the day
+  men's ingestion resumes. WTA tour events already stamp a STRUCTURED
+  draw-derived stage (96/132 staged at Cincinnati in prod); isKeyRound
+  now reads stage.round FIRST (both directions — a stated r32 beats a
+  title saying "Final") with the title heuristic as fallback. THE ONE
+  GAP IS THE SLAM: US Open WTA appearances carry 0 rungs because slam
+  MatchIDs are opaque vendor ids ("LS74150446"), not bracket
+  positions — but the slam feed publishes an explicit numeric RoundID
+  per match (probed live). Extension is REPO-OWNED (roundFromMatchId
+  learns the RoundID path) and CHECKPOINT-GATED per the module's own
+  F22 discipline: the late-round RoundID vocabulary is unverified
+  until those rounds appear in the feed (~US Open week 2), so it is
+  built against real data then, not guessed now.

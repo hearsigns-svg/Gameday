@@ -40,6 +40,17 @@ export interface Fixture {
   homeCrestUrl?: string;
   awayCrestUrl?: string;
   status: FixtureStatus;
+  // WHERE THIS FIXTURE SITS IN ITS COMPETITION'S STRUCTURE — the
+  // client mirror of the server's FixtureStage (functions/src/
+  // fixture.ts owns the full rationale). Stamped today on WTA tour
+  // appearances (draw-derived rung); the key-rounds tier reads
+  // `round` first and falls back to title text.
+  stage?: {
+    label?: string; // verbatim provider text, never parsed for meaning
+    round?: 'f' | 'sf' | 'qf' | 'third-place' | 'r16' | 'r32' | 'r64' | 'r128';
+    group?: string;
+    ordinal?: number;
+  };
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
   // HOW PRECISELY THE START TIME IS KNOWN. Separate from `status`, which

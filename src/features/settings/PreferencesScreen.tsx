@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
+import { t as tr, type CatalogKey } from '../../core/i18n';
 import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
@@ -58,15 +59,17 @@ import {
 
 // Colour choices for the Gameday calendar as it appears in the OS
 // calendar app. Named for accessibility; applied live when possible.
-const CALENDAR_COLOURS: Array<{ name: string; hex: string }> = [
-  { name: 'KickOffCal blue', hex: '#1463F3' },
-  { name: 'Red', hex: '#C81E1E' },
-  { name: 'Orange', hex: '#EA580C' },
-  { name: 'Green', hex: '#16A34A' },
-  { name: 'Teal', hex: '#0D9488' },
-  { name: 'Purple', hex: '#6D28D9' },
-  { name: 'Pink', hex: '#DB2777' },
-  { name: 'Graphite', hex: '#52525B' },
+// Names are CATALOG KEYS (Round 3 Phase C) — resolved at the use sites
+// so the words stay in the typed catalog, not in config.
+const CALENDAR_COLOURS: Array<{ nameKey: CatalogKey; hex: string }> = [
+  { nameKey: 'settings.colours.kickoffcalBlue', hex: '#1463F3' },
+  { nameKey: 'settings.colours.red', hex: '#C81E1E' },
+  { nameKey: 'settings.colours.orange', hex: '#EA580C' },
+  { nameKey: 'settings.colours.green', hex: '#16A34A' },
+  { nameKey: 'settings.colours.teal', hex: '#0D9488' },
+  { nameKey: 'settings.colours.purple', hex: '#6D28D9' },
+  { nameKey: 'settings.colours.pink', hex: '#DB2777' },
+  { nameKey: 'settings.colours.graphite', hex: '#52525B' },
 ];
 
 // One intent-group: a heading and its card. The heading is now a
@@ -99,7 +102,7 @@ function Section(props: {
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: props.open }}
-        accessibilityLabel={`${props.title} settings`}
+        accessibilityLabel={tr('settings.sections.a11y', { title: props.title })}
         onPress={props.onToggle}
         style={styles.sectionHeader}
       >
@@ -323,8 +326,10 @@ export default function PreferencesScreen({
     showToast({
       message:
         outcome === 'applied'
-          ? `Calendar colour is now ${name.toLowerCase()}`
-          : 'Colour saved — applies when your calendar connects',
+          ? tr('settings.calendar.colourApplied', {
+              colour: name.toLowerCase(),
+            })
+          : tr('settings.calendar.colourSaved'),
     });
   };
 
@@ -336,9 +341,11 @@ export default function PreferencesScreen({
 
   const regionValue =
     region === null
-      ? `Match my device (${regionLabel(detectedRegion())})`
+      ? tr('settings.region.matchDevice', {
+          region: regionLabel(detectedRegion()),
+        })
       : region === 'default'
-        ? 'Default'
+        ? tr('settings.region.default')
         : regionLabel(region);
 
   return (
@@ -347,7 +354,7 @@ export default function PreferencesScreen({
       contentContainerStyle={{ padding: spacing.l, paddingTop: 0 }}
     >
       <Section
-        title="Calendar"
+        title={tr('settings.sections.calendar')}
         open={openSection === 'calendar'}
         onToggle={() => toggleSection('calendar')}
       >
@@ -362,24 +369,28 @@ export default function PreferencesScreen({
           <>
             <ValueRow
               label="KickOffCal"
-              caption="In your Google Calendar — tap to reconnect the sign-in"
-              accessibilityLabel="KickOffCal in Google Calendar. Reconnect Google sign-in"
+              caption={tr('settings.calendar.googleReconnectCaption')}
+              accessibilityLabel={tr('settings.calendar.googleReconnectA11y')}
               onPress={() =>
                 void connectGoogleCalendar().then((r) => {
                   if (r.ok) {
-                    showToast({ message: 'Google Calendar reconnected' });
+                    showToast({
+                      message: tr('settings.calendar.googleReconnected'),
+                    });
                     void runSync();
                   }
                 })
               }
             />
             <ValueRow
-              label="Disconnect Google Calendar"
-              caption="Your calendar and its events are untouched"
-              accessibilityLabel="Disconnect Google Calendar"
+              label={tr('settings.calendar.disconnectGoogle')}
+              caption={tr('settings.calendar.disconnectCaption')}
+              accessibilityLabel={tr('settings.calendar.disconnectGoogle')}
               onPress={() =>
                 void disconnectGoogleCalendar().then(() => {
-                  showToast({ message: 'Google Calendar disconnected' });
+                  showToast({
+                    message: tr('settings.calendar.googleDisconnected'),
+                  });
                   setTarget(storedTarget());
                   forceRepaint((n) => n + 1);
                 })
@@ -390,14 +401,14 @@ export default function PreferencesScreen({
           // Android, not yet connected: settings is the later door into
           // the same priming flow onboarding offers.
           <ValueRow
-            label="Connect Google Calendar"
-            caption="Fixtures live in the app until you do"
-            accessibilityLabel="Connect Google Calendar"
+            label={tr('settings.calendar.connectGoogle')}
+            caption={tr('settings.calendar.connectCaption')}
+            accessibilityLabel={tr('settings.calendar.connectGoogle')}
             onPress={() => navigation.navigate('CalendarPriming', {})}
           />
         ) : (
           <ValueRow
-            label={target ? target.label : 'Choose a calendar'}
+            label={target ? target.label : tr('settings.calendar.choose')}
             caption={
               target
                 ? consequenceForTarget({
@@ -405,12 +416,15 @@ export default function PreferencesScreen({
                     sourceKind: target.sourceKind,
                     ours: target.kind === 'ours',
                   })
-                : 'Picked automatically when your calendar connects'
+                : tr('settings.calendar.autoPickedCaption')
             }
             accessibilityLabel={
               target
-                ? `Calendar: ${target.label}. ${target.accountLabel}. Change where fixtures are written`
-                : 'Choose where fixtures are written'
+                ? tr('settings.calendar.targetA11y', {
+                    label: target.label,
+                    account: target.accountLabel,
+                  })
+                : tr('settings.calendar.chooseA11y')
             }
             onPress={() => navigation.navigate('CalendarTarget')}
           />
@@ -419,7 +433,7 @@ export default function PreferencesScreen({
         {ownCalendar ? (
           <View style={styles.swatchRow}>
             <Text style={[type.body, { color: t.textPrimary, marginBottom: spacing.s }]}>
-              Colour
+              {tr('settings.calendar.colour')}
             </Text>
             <View style={styles.swatches}>
               {CALENDAR_COLOURS.map((c) => (
@@ -427,8 +441,10 @@ export default function PreferencesScreen({
                   key={c.hex}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: colour === c.hex }}
-                  accessibilityLabel={`Calendar colour ${c.name}`}
-                  onPress={() => void pickColour(c.hex, c.name)}
+                  accessibilityLabel={tr('settings.calendar.colourA11y', {
+                    name: tr(c.nameKey),
+                  })}
+                  onPress={() => void pickColour(c.hex, tr(c.nameKey))}
                   style={[
                     styles.swatch,
                     { backgroundColor: c.hex },
@@ -441,50 +457,51 @@ export default function PreferencesScreen({
               ))}
             </View>
             <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-              How KickOffCal events look inside your phone's calendar app.
+              {tr('settings.calendar.colourCaption')}
             </Text>
           </View>
         ) : (
           <View style={styles.swatchRow}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
-              Your fixtures take the colour of {target?.label ?? 'your calendar'},
-              which is yours to set in your calendar app.
+              {tr('settings.calendar.inheritedColour', {
+                calendar: target?.label ?? tr('settings.words.yourCalendar'),
+              })}
             </Text>
           </View>
         )}
       </Section>
 
       <Section
-        title="Events"
+        title={tr('settings.sections.events')}
         open={openSection === 'events'}
         onToggle={() => toggleSection('events')}
-        footnote="Timed events run kick-off to full time. Changes apply to every synced fixture on the next sync."
+        footnote={tr('settings.events.footnote')}
       >
         <SegmentedRow
-          label="Event style"
+          label={tr('settings.events.style')}
           options={[
             {
-              label: 'Timed',
+              label: tr('settings.events.timed'),
               selected: prefs.eventStyle === 'timed',
               onPress: () => apply({ ...prefs, eventStyle: 'timed' }),
             },
             {
-              label: 'All-day',
+              label: tr('settings.events.allDay'),
               selected: prefs.eventStyle === 'all-day',
               onPress: () => apply({ ...prefs, eventStyle: 'all-day' }),
             },
           ]}
         />
         <SegmentedRow
-          label="Race weekends"
+          label={tr('settings.events.raceWeekends')}
           options={[
             {
-              label: 'All sessions',
+              label: tr('settings.events.allSessions'),
               selected: prefs.seriesSessions === 'all',
               onPress: () => apply({ ...prefs, seriesSessions: 'all' }),
             },
             {
-              label: 'Race only',
+              label: tr('settings.events.raceOnly'),
               selected: prefs.seriesSessions === 'race-only',
               onPress: () => apply({ ...prefs, seriesSessions: 'race-only' }),
             },
@@ -492,23 +509,24 @@ export default function PreferencesScreen({
         />
         {/* Tournament calendar tiers (Round 3 B3): what a followed
             multi-day tournament writes — the full block, bookend notes
-            plus the key rounds, or bookends plus every match. */}
+            plus the key rounds, or bookends plus every match. The row's
+            word is the shared sport vocabulary — core, not settings. */}
         <SegmentedRow
-          label="Tournaments"
+          label={tr('core.tournaments')}
           last
           options={[
             {
-              label: 'Block',
+              label: tr('settings.events.block'),
               selected: prefs.tournamentTier === 'block',
               onPress: () => apply({ ...prefs, tournamentTier: 'block' }),
             },
             {
-              label: 'Key rounds',
+              label: tr('settings.events.keyRounds'),
               selected: prefs.tournamentTier === 'key',
               onPress: () => apply({ ...prefs, tournamentTier: 'key' }),
             },
             {
-              label: 'All matches',
+              label: tr('settings.events.allMatches'),
               selected: prefs.tournamentTier === 'all',
               onPress: () => apply({ ...prefs, tournamentTier: 'all' }),
             },
@@ -517,10 +535,10 @@ export default function PreferencesScreen({
       </Section>
 
       <Section
-        title="Reminders"
+        title={tr('settings.reminders.title')}
         open={openSection === 'reminders'}
         onToggle={() => toggleSection('reminders')}
-        footnote="Reminder changes apply to every synced fixture on the next sync."
+        footnote={tr('settings.reminders.footnote')}
       >
         {/* The three slots (Stage 5, redesigned to the mock): one row,
             three compact dropdowns under their digits; the wheel pair
@@ -557,7 +575,7 @@ export default function PreferencesScreen({
           />
         </View>
         <SegmentedRow
-          label="Days without dates"
+          label={tr('settings.reminders.daysWithoutDates')}
           last
           options={ALL_DAY_REMINDER_OPTIONS.map((opt) => ({
             // The short form is what fits a segment; the full wording
@@ -570,16 +588,16 @@ export default function PreferencesScreen({
       </Section>
 
       <Section
-        title="App"
+        title={tr('settings.sections.app')}
         open={openSection === 'app'}
         onToggle={() => toggleSection('app')}
       >
         <SegmentedRow
-          label="Appearance"
+          label={tr('settings.app.appearance')}
           options={[
-            { key: 'system', label: 'Auto' },
-            { key: 'light', label: 'Light' },
-            { key: 'dark', label: 'Dark' },
+            { key: 'system', label: tr('settings.app.auto') },
+            { key: 'light', label: tr('settings.app.light') },
+            { key: 'dark', label: tr('settings.app.dark') },
           ].map((o) => ({
             label: o.label,
             selected: appearance === o.key,
@@ -590,9 +608,11 @@ export default function PreferencesScreen({
           }))}
         />
         <ValueRow
-          label="Region"
+          label={tr('settings.app.region')}
           value={regionValue}
-          accessibilityLabel={`Region: ${regionValue}. Change region`}
+          accessibilityLabel={tr('settings.app.regionA11y', {
+            value: regionValue,
+          })}
           onPress={() => navigation.navigate('Region')}
           last
         />
@@ -603,18 +623,18 @@ export default function PreferencesScreen({
           record. (The rule that used to sit above this moved below Data
           & privacy — Round 2 layout ruling.) */}
       <Section
-        title="Past games"
+        title={tr('settings.sections.pastGames')}
         open={openSection === 'past'}
         onToggle={() => toggleSection('past')}
-        footnote="Only games KickOffCal added are ever removed, and only ones it still has a record of. Switching back stops further removals — it does not bring back anything already deleted."
+        footnote={tr('settings.past.footnote')}
       >
         <OptionRow
-          label="Keep past games in my calendar"
+          label={tr('settings.past.keep')}
           selected={!prefs.autoDeletePast}
           onPress={() => apply({ ...prefs, autoDeletePast: false })}
         />
         <OptionRow
-          label={`Remove them ${PAST_RETENTION_DAYS} days after they finish`}
+          label={tr('settings.past.remove', { days: PAST_RETENTION_DAYS })}
           selected={prefs.autoDeletePast}
           onPress={() => apply({ ...prefs, autoDeletePast: true })}
           last
@@ -622,7 +642,7 @@ export default function PreferencesScreen({
       </Section>
 
       <Section
-        title="Data & privacy"
+        title={tr('settings.sections.dataPrivacy')}
         open={openSection === 'privacy'}
         onToggle={() => toggleSection('privacy')}
       >
@@ -638,12 +658,12 @@ export default function PreferencesScreen({
       <View style={[styles.rule, { borderColor: t.border }]} />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Photo credits"
+        accessibilityLabel={tr('settings.tail.photoCredits')}
         onPress={() => navigation.navigate('Credits')}
         style={{ marginTop: spacing.m, minHeight: 44, justifyContent: 'center' }}
       >
         <Text style={[type.secondary, { color: t.textSecondary }]}>
-          Photo credits
+          {tr('settings.tail.photoCredits')}
         </Text>
       </Pressable>
 
@@ -653,16 +673,24 @@ export default function PreferencesScreen({
           const device = syncStalenessHours();
           const data = dataStaleness(loadFollowables());
           const fmt = (h: number) =>
-            h < 1 ? 'under an hour ago' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`;
+            h < 1
+              ? tr('settings.status.underHourAgo')
+              : h < 48
+                ? tr('settings.status.hoursAgo', { n: Math.round(h) })
+                : tr('settings.status.daysAgo', { n: Math.round(h / 24) });
           const deviceLine =
-            device === null ? 'This device: not synced yet' : `This device last synced ${fmt(device)}`;
+            device === null
+              ? tr('settings.status.deviceNotSynced')
+              : tr('settings.status.deviceSynced', { when: fmt(device) });
           const followCount = loadFollowables().length;
           const dataLine =
             followCount === 0
-              ? 'Fixture sources: nothing followed yet'
+              ? tr('settings.status.nothingFollowed')
               : data === null || data.worstHours === null
-                ? 'Fixture sources: freshness unknown'
-                : `Fixture sources last confirmed ${fmt(data.worstHours)}`;
+                ? tr('settings.status.freshnessUnknown')
+                : tr('settings.status.sourcesConfirmed', {
+                    when: fmt(data.worstHours),
+                  });
           return `${deviceLine} · ${dataLine}`;
         })()}
       </Text>

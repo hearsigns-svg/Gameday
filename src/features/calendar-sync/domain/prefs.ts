@@ -1,6 +1,11 @@
 // Calendar preference types + defaults. PURE — no storage imports here
 // (the domain layer is jest-testable without native modules). Load/save
-// lives in data/prefsStore.ts.
+// lives in data/prefsStore.ts. Display strings come from the typed
+// catalog (Round 3 Phase C) — t/tn are pure functions, so the layer
+// stays jest-testable, and en values are the previous literals
+// byte-for-byte.
+
+import { t, tn } from '../../../core/i18n';
 
 // A reminder for an event whose TIME nobody has published yet. "N
 // minutes before" is meaningless against a midnight day sentinel, so
@@ -82,15 +87,17 @@ export const DEFAULT_PREFS: CalendarPrefs = {
 // A stored 15 or 30 from before this change keeps working — the engine
 // honours any minutes value; the chips simply show no selection, which
 // is honest about a value the set no longer offers.
+// Labels ride the offset functions below — the same catalog-backed
+// vocabulary the chips and pickers use, so one key set serves all.
 export const REMINDER_OPTIONS: Array<{
   label: string;
   short: string;
   value: number | null;
 }> = [
-  { label: 'None', short: 'Off', value: null },
-  { label: '1 hour before', short: '1h', value: 60 },
-  { label: '6 hours before', short: '6h', value: 360 },
-  { label: '1 day before', short: '1d', value: 1440 },
+  { label: t('calendar.reminder.none'), short: t('calendar.offset.off'), value: null },
+  { label: offsetLabel(60), short: offsetShortLabel(60), value: 60 },
+  { label: offsetLabel(360), short: offsetShortLabel(360), value: 360 },
+  { label: offsetLabel(1440), short: offsetShortLabel(1440), value: 1440 },
 ];
 
 // The all-day counterpart, same shape so the same controls render it.
@@ -99,9 +106,17 @@ export const ALL_DAY_REMINDER_OPTIONS: Array<{
   short: string;
   value: AllDayReminder;
 }> = [
-  { label: 'None', short: 'Off', value: null },
-  { label: 'Evening before, 6pm', short: 'Eve before', value: 'day-before' },
-  { label: 'Morning of, 9am', short: 'Morning', value: 'morning-of' },
+  { label: t('calendar.reminder.none'), short: t('calendar.offset.off'), value: null },
+  {
+    label: t('calendar.allDayReminder.eveningBefore'),
+    short: t('calendar.allDayReminder.eveningBeforeShort'),
+    value: 'day-before',
+  },
+  {
+    label: t('calendar.allDayReminder.morningOf'),
+    short: t('calendar.allDayReminder.morningOfShort'),
+    value: 'morning-of',
+  },
 ];
 
 // ─── Offset vocabulary (Stage 5 wheel pickers) ────────────────────────
@@ -125,35 +140,33 @@ export const OFFSET_HOUR_VALUES: readonly number[] = Array.from(
 // before". Days only where the offset IS whole days — 36h said as
 // "1.5 days" reads like arithmetic, not a reminder.
 export function offsetLabel(minutes: number | null): string {
-  if (minutes === null) return 'Off';
-  if (minutes < 60) return `${minutes} min before`;
+  if (minutes === null) return t('calendar.offset.off');
+  if (minutes < 60) return t('calendar.offset.minBefore', { n: minutes });
   if (minutes % 1440 === 0) {
-    const d = minutes / 1440;
-    return `${d} day${d === 1 ? '' : 's'} before`;
+    return tn('calendar.offset.daysBefore', minutes / 1440);
   }
-  const h = minutes / 60;
-  return `${h} hour${h === 1 ? '' : 's'} before`;
+  return tn('calendar.offset.hoursBefore', minutes / 60);
 }
 
 // The chip form: "45m", "2h", "1d", "36h".
 export function offsetShortLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes % 1440 === 0) return `${minutes / 1440}d`;
-  return `${minutes / 60}h`;
+  if (minutes < 60) return t('calendar.offset.shortMinutes', { n: minutes });
+  if (minutes % 1440 === 0) {
+    return t('calendar.offset.shortDays', { n: minutes / 1440 });
+  }
+  return t('calendar.offset.shortHours', { n: minutes / 60 });
 }
 
 // The dropdown form (Stage 5 redesign, mock-canonical): "15 m",
 // "5 hrs", "1 day" — whole-day multiples say days (24/48/72h), 36 and
 // 60 stay in hrs, and an off slot reads "Off".
 export function offsetPickerLabel(minutes: number | null): string {
-  if (minutes === null) return 'Off';
-  if (minutes < 60) return `${minutes} m`;
+  if (minutes === null) return t('calendar.offset.off');
+  if (minutes < 60) return t('calendar.offset.pickerMinutes', { n: minutes });
   if (minutes % 1440 === 0) {
-    const d = minutes / 1440;
-    return `${d} day${d === 1 ? '' : 's'}`;
+    return tn('calendar.offset.pickerDays', minutes / 1440);
   }
-  const h = minutes / 60;
-  return `${h} hr${h === 1 ? '' : 's'}`;
+  return tn('calendar.offset.pickerHours', minutes / 60);
 }
 
 // Every configured offset, deduped in slot order — what a hero card's

@@ -12,6 +12,7 @@
 
 import { StyleProp, View, ViewStyle } from 'react-native';
 import { HeroCard, monogramOf } from '../../core/components';
+import { t } from '../../core/i18n';
 import { teamTheme } from '../../core/teamTheme';
 import { useColorSchemeMode } from '../../core/useColorSchemeMode';
 import { Followable } from './data/followStore';
@@ -103,7 +104,9 @@ export function FixtureHero(props: {
               // B5): city imagery is not "the ground", and the credit
               // is where that honesty lives.
               art.subject ?? null,
-              art.artist ? `Photo: ${art.artist}` : 'Photo: Wikimedia Commons',
+              art.artist
+                ? t('follows.hero.photoBy', { artist: art.artist })
+                : t('follows.hero.photoCommons'),
               art.licence,
             ]
               .filter(Boolean)

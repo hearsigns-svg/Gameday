@@ -18,6 +18,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { t as tr, tn } from '../../core/i18n';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import { showToast } from '../../core/toast';
 import {
@@ -63,14 +64,16 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
       // Failed deletes kept their ledger entries: protection and retry
       // survive, and the user hears it rather than assuming done.
       showToast({
-        message: `${failed} ${failed === 1 ? 'event' : 'events'} couldn’t be removed — try again`,
+        message: tn('settings.privacy.eraseFailed', failed),
       });
       return;
     }
     setOpen(null);
     showToast({
       message:
-        mode === 'nothing' ? 'Nothing synced to erase' : 'Synced events erased',
+        mode === 'nothing'
+          ? tr('settings.privacy.nothingToErase')
+          : tr('settings.privacy.erased'),
     });
     // Still connected → the next sync re-adds future events; run it now
     // rather than leaving a gap.
@@ -136,7 +139,7 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Erase synced events"
+          accessibilityLabel={tr('settings.privacy.erase')}
           accessibilityState={{
             disabled: !canErase,
             expanded: open === 'erase',
@@ -146,20 +149,25 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
           style={[styles.row, !canErase && { opacity: 0.45 }]}
         >
           <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
-            Erase synced events
+            {tr('settings.privacy.erase')}
           </Text>
         </Pressable>
         {open === 'erase' ? (
           <View style={styles.confirm}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
               {ownCalendarEraseMode()
-                ? `Removes the events KickOffCal added to ${storedTarget()?.label ?? 'your calendar'}, including past ones. Nothing else in it is touched.`
-                : 'Removes the KickOffCal calendar and every event in it — past ones included. Nothing else in your calendar is touched.'}
-              {' '}If sync stays connected, future events are added again.
+                ? tr('settings.privacy.eraseOwnTarget', {
+                    calendar:
+                      storedTarget()?.label ??
+                      tr('settings.words.yourCalendar'),
+                  })
+                : tr('settings.privacy.eraseOurs')}
+              {' '}
+              {tr('settings.privacy.eraseResync')}
             </Text>
             <View style={styles.actions}>
-              {actionButton('Cancel', () => setOpen(null), false, false)}
-              {actionButton('Erase', () => void runErase(), true, busy === 'erase')}
+              {actionButton(tr('core.actions.cancel'), () => setOpen(null), false, false)}
+              {actionButton(tr('settings.privacy.eraseAction'), () => void runErase(), true, busy === 'erase')}
             </View>
           </View>
         ) : null}
@@ -169,20 +177,19 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
       <View style={styles.rowBlock}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Delete my data and reset"
+          accessibilityLabel={tr('settings.privacy.deleteA11y')}
           accessibilityState={{ expanded: open === 'delete' }}
           onPress={() => toggleOpen('delete')}
           style={styles.row}
         >
           <Text style={[type.body, { color: t.danger, fontWeight: '600', flex: 1 }]}>
-            Delete my data & reset
+            {tr('settings.privacy.deleteTitle')}
           </Text>
         </Pressable>
         {open === 'delete' ? (
           <View style={styles.confirm}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
-              Removes everything this app holds about you — follows,
-              settings and the server-side registration — and starts over.
+              {tr('settings.privacy.deleteBody')}
             </Text>
             <View style={styles.toggleRow}>
               <Text
@@ -195,10 +202,10 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
                   },
                 ]}
               >
-                Also erase synced events from my calendar
+                {tr('settings.privacy.alsoErase')}
               </Text>
               <Switch
-                accessibilityLabel="Also erase synced events from my calendar"
+                accessibilityLabel={tr('settings.privacy.alsoErase')}
                 disabled={!canErase}
                 value={alsoErase && canErase}
                 onValueChange={setAlsoErase}
@@ -207,17 +214,17 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
             {armed ? (
               <>
                 <Text style={[type.secondary, { color: t.danger, fontWeight: '600' }]}>
-                  This can’t be undone.
+                  {tr('settings.privacy.cantUndo')}
                 </Text>
                 <View style={styles.actions}>
-                  {actionButton('Cancel', () => setArmed(false), false, false)}
-                  {actionButton('Delete', () => void runDelete(), true, busy === 'delete')}
+                  {actionButton(tr('core.actions.cancel'), () => setArmed(false), false, false)}
+                  {actionButton(tr('settings.privacy.deleteAction'), () => void runDelete(), true, busy === 'delete')}
                 </View>
               </>
             ) : (
               <View style={styles.actions}>
-                {actionButton('Cancel', () => setOpen(null), false, false)}
-                {actionButton('Delete my data', () => setArmed(true), true, false)}
+                {actionButton(tr('core.actions.cancel'), () => setOpen(null), false, false)}
+                {actionButton(tr('settings.privacy.deleteMyData'), () => setArmed(true), true, false)}
               </View>
             )}
           </View>

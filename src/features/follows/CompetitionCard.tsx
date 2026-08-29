@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FollowButton, SportCard, TileRow } from '../../core/components';
+import { t } from '../../core/i18n';
 import { spacing, type, useTheme } from '../../core/tokens';
 import type { TeamTheme } from '../../core/teamTheme';
 
@@ -58,7 +59,9 @@ export interface CompetitionCardProps {
 }
 
 export function CompetitionCard(props: CompetitionCardProps) {
-  const t = useTheme();
+  // `ui`, not `t`: the catalog's `t()` is imported above, and a theme
+  // binding named `t` would shadow it in every string below.
+  const ui = useTheme();
   const [expanded, setExpanded] = useState(false);
   const expandable =
     props.onTeams !== undefined || props.destinations !== undefined;
@@ -66,8 +69,8 @@ export function CompetitionCard(props: CompetitionCardProps) {
     props.destinations ??
     (props.onTeams
       ? [
-          { label: props.fixturesWord ?? 'Fixtures', onPress: props.onOpen },
-          { label: 'Teams', onPress: props.onTeams },
+          { label: props.fixturesWord ?? t('core.fixtures'), onPress: props.onOpen },
+          { label: t('core.teams'), onPress: props.onTeams },
         ]
       : []);
   return (
@@ -93,28 +96,34 @@ export function CompetitionCard(props: CompetitionCardProps) {
         {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
         accessibilityLabel={
           expandable
-            ? `${props.name}, ${props.caption}`
-            : `${props.name}, view fixtures`
+            ? t('follows.card.a11ySummary', {
+                name: props.name,
+                caption: props.caption,
+              })
+            : t('follows.card.a11yViewFixtures', { name: props.name })
         }
         {...(expandable ? { accessibilityExpanded: expanded } : {})}
         onPress={expandable ? () => setExpanded((v) => !v) : props.onOpen}
         expansion={
           expanded ? (
-            <View style={[styles.destinations, { borderColor: t.border }]}>
+            <View style={[styles.destinations, { borderColor: ui.border }]}>
               {destinations.map((d, i) => (
                 <Pressable
                   key={d.label}
                   accessibilityRole="button"
-                  accessibilityLabel={`${props.name} ${d.label.toLowerCase()}`}
+                  accessibilityLabel={t('follows.card.a11yDestination', {
+                    name: props.name,
+                    label: d.label.toLowerCase(),
+                  })}
                   onPress={d.onPress}
                   style={({ pressed }) => [
                     styles.destination,
-                    i > 0 && [styles.destinationDivided, { borderColor: t.border }],
+                    i > 0 && [styles.destinationDivided, { borderColor: ui.border }],
                     pressed && { opacity: 0.6 },
                   ]}
                 >
                   <Text
-                    style={[type.secondary, { color: t.primary, fontWeight: '600' }]}
+                    style={[type.secondary, { color: ui.primary, fontWeight: '600' }]}
                     numberOfLines={1}
                     maxFontSizeMultiplier={1.4}
                   >

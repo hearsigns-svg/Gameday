@@ -515,6 +515,19 @@ export const SPORTS: SportConfig[] = [
         teamPollPath:
           'pollTsdbLeague?leagueId=4391&season=2026&sport=nfl&durationHours=3',
       },
+      // NCAA Division 1 Football — enabled by owner ruling 2026-08-29
+      // with the 1,439-events/season volume weighed (the biggest slice
+      // the catalogue polls). 258 teams, drillable.
+      {
+        id: '4479',
+        name: 'NCAA Division 1 Football',
+        country: 'North America',
+        key: 'tsdb-league-4479',
+        pollPath:
+          'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3',
+      },
     ],
   },
   {

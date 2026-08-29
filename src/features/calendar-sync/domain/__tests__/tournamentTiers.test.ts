@@ -188,3 +188,14 @@ test('tier-1 block carries the pointer in its description', () => {
     endUtc: '2026-09-15T00:00:00.000Z',
   });
 });
+
+test('a structured round beats title text — in BOTH directions', () => {
+  const staged = (round: 'f' | 'sf' | 'qf' | 'r32', title: string) => ({
+    ...match('s', title),
+    stage: { round, label: 'x' },
+  });
+  expect(isKeyRound(staged('f', 'Eala vs Stoiana — US Open'))).toBe(true);
+  expect(isKeyRound(staged('qf', 'A vs B'))).toBe(true);
+  // Stated r32 wins over a title that happens to say "Final".
+  expect(isKeyRound(staged('r32', 'A vs B — Final'))).toBe(false);
+});

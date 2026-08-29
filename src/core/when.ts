@@ -9,6 +9,8 @@
 // the sentinel, anchored at local noon so weekday/date formatting is
 // DST-safe in every zone.
 
+import { t as tr } from './i18n';
+
 const DAY_MS = 86_400_000;
 
 function dayAnchor(iso: string, dateOnly: boolean): Date {
@@ -38,8 +40,8 @@ export function whenLabel(
 ): string {
   const ahead = daysAhead(iso, now, dateOnly);
   const d = dayAnchor(iso, dateOnly);
-  if (ahead === 0) return 'Today';
-  if (ahead === 1) return 'Tomorrow';
+  if (ahead === 0) return tr('core.when.today');
+  if (ahead === 1) return tr('core.when.tomorrow');
   if (ahead > 1 && ahead < 7) {
     return d.toLocaleDateString(undefined, { weekday: 'long' });
   }
@@ -66,8 +68,8 @@ export function timeLabel(
   status: string,
   precision?: 'exact' | 'nominal' | 'date_only',
 ): string {
-  if (status === 'postponed') return 'Postponed';
-  if (status === 'tbd' || precision === 'date_only') return 'Time TBC';
+  if (status === 'postponed') return tr('core.when.postponed');
+  if (status === 'tbd' || precision === 'date_only') return tr('core.when.timeTbc');
   return new Date(iso).toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
@@ -81,9 +83,9 @@ export function countdownLabel(
   now: Date = new Date(),
 ): string {
   const ahead = daysAhead(iso, now, dateOnly);
-  if (ahead <= 0) return 'TODAY';
-  if (ahead === 1) return 'TOMORROW';
-  if (ahead < 7) return `IN ${ahead} DAYS`;
+  if (ahead <= 0) return tr('core.when.countdownToday');
+  if (ahead === 1) return tr('core.when.countdownTomorrow');
+  if (ahead < 7) return tr('core.when.countdownInDays', { n: ahead });
   return dayAnchor(iso, dateOnly)
     .toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
     .toUpperCase();
@@ -107,8 +109,8 @@ export function dayHeading(
     day: 'numeric',
     month: 'long',
   });
-  if (ahead === 0) return `Today · ${base}`;
-  if (ahead === 1) return `Tomorrow · ${base}`;
+  if (ahead === 0) return tr('core.when.todayHeading', { date: base });
+  if (ahead === 1) return tr('core.when.tomorrowHeading', { date: base });
   return base;
 }
 

@@ -238,12 +238,12 @@ export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
     pollPath:
       'pollTsdbLeague?leagueId=4521&season=2026&sport=soccer&durationHours=2',
   },
-  // STAGED: the catalogue row ships disabled (1,439 events/season — the
-  // volume flag is the owner's to weigh), so this entry waits inert
-  // behind the `staged` flag. tsdbName is 'NCAA Division 1' — NOT the
-  // catalogue label: search_all_teams on 'NCAA Division 1 Football'
-  // returns 2 teams, on 'NCAA Division 1' all 258 (probed 2026-08-29),
-  // and the 2026 fixtures carry exactly those 258 team ids.
+  // ENABLED 2026-08-29 (owner weighed the 1,439-events/season volume
+  // and ruled it in — was staged behind that flag). tsdbName is
+  // 'NCAA Division 1' — NOT the catalogue label: search_all_teams on
+  // 'NCAA Division 1 Football' returns 2 teams, on 'NCAA Division 1'
+  // all 258 (probed 2026-08-29), and the 2026 fixtures carry exactly
+  // those 258 team ids.
   '4479': {
     tsdbName: 'NCAA Division 1',
     cacheKey: 'nfl-4479',
@@ -251,6 +251,5 @@ export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
     label: 'NCAA Division 1 Football',
     pollPath:
       'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3',
-    staged: true,
   },
 };

@@ -10,6 +10,11 @@
 // are called the same thing everywhere and belong in no table.
 
 import { RegionKey } from '../../../core/region';
+import {
+  currentLanguage,
+  t as tr,
+  type CatalogKey,
+} from '../../../core/i18n';
 
 // Overrides keyed sport → region → label. Sport-major because the
 // interesting question is always "who calls this something else".
@@ -55,11 +60,40 @@ const TERMS: Readonly<Record<string, Partial<Record<RegionKey, string>>>> = {
 // Competition names are proper nouns too and never vary: "Premier
 // League" is "Premier League" in Ohio.
 
+// Sport names per LANGUAGE (Phase C). English keeps the regional table
+// above — Football vs Soccer is a region fact within English — while
+// every other language answers from its catalog, where the region
+// distinction collapses into the language's own words (es says Fútbol
+// and Fútbol americano everywhere). Sparse table, same honesty pin
+// pattern as FIXTURES_WORDS: a sport missing here falls back to its
+// config label rather than crashing on a bad cast.
+const SPORT_NAME_KEYS: Readonly<Record<string, CatalogKey>> = {
+  soccer: 'core.sport.soccer',
+  cricket: 'core.sport.cricket',
+  'ice-hockey': 'core.sport.ice-hockey',
+  tennis: 'core.sport.tennis',
+  athletics: 'core.sport.athletics',
+  basketball: 'core.sport.basketball',
+  baseball: 'core.sport.baseball',
+  nfl: 'core.sport.nfl',
+  rugby: 'core.sport.rugby',
+  golf: 'core.sport.golf',
+  f1: 'core.sport.f1',
+  boxing: 'core.sport.boxing',
+  ufc: 'core.sport.ufc',
+  motorsport: 'core.sport.motorsport',
+  olympics: 'core.sport.olympics',
+};
+
 export function sportLabelFor(
   sportKey: string,
   fallbackLabel: string,
   region: RegionKey,
 ): string {
+  if (currentLanguage() !== 'en') {
+    const key = SPORT_NAME_KEYS[sportKey];
+    if (key) return tr(key);
+  }
   return TERMS[sportKey]?.[region] ?? fallbackLabel;
 }
 
@@ -88,7 +122,13 @@ export function sportSearchTerms(
   fallbackLabel: string,
 ): string[] {
   const variants = Object.values(TERMS[sportKey] ?? {});
-  return [...new Set([fallbackLabel, ...variants])];
+  // The ACTIVE language's word matches too (Phase C): a Spanish phone
+  // typing "fútbol" arrives with the word the app itself shows. The
+  // English forms stay in the set — matching never narrows by locale.
+  const key = SPORT_NAME_KEYS[sportKey];
+  const localised =
+    currentLanguage() !== 'en' && key !== undefined ? [tr(key)] : [];
+  return [...new Set([fallbackLabel, ...variants, ...localised])];
 }
 
 // Does any name this sport goes by contain the needle? Case-folded here
@@ -114,20 +154,22 @@ export const REGIONALLY_NAMED_SPORTS = Object.keys(TERMS).sort();
 // because it is the same job: display vocabulary keyed by sport,
 // identifiers untouched. Sparse: unlisted sports say "Fixtures", which
 // is the owner's mockup default (the NBA card reads Fixtures).
-const FIXTURES_WORDS: Readonly<Record<string, string>> = {
-  boxing: 'Fights',
-  ufc: 'Fights',
-  cricket: 'Matches',
-  tennis: 'Tournaments',
-  golf: 'Tournaments',
-  f1: 'Events',
-  motorsport: 'Events',
-  athletics: 'Events',
-  olympics: 'Events',
+// Catalog keys, not strings (Round 3 Phase C): the vocabulary itself
+// lives in the typed catalog; this table only picks the word per sport.
+const FIXTURES_WORDS: Readonly<Record<string, CatalogKey>> = {
+  boxing: 'core.fights',
+  ufc: 'core.fights',
+  cricket: 'core.matches',
+  tennis: 'core.tournaments',
+  golf: 'core.tournaments',
+  f1: 'core.events',
+  motorsport: 'core.events',
+  athletics: 'core.events',
+  olympics: 'core.events',
 };
 
 export function fixturesWordFor(sportKey: string): string {
-  return FIXTURES_WORDS[sportKey] ?? 'Fixtures';
+  return tr(FIXTURES_WORDS[sportKey] ?? 'core.fixtures');
 }
 
 // Same honesty pin as REGIONALLY_NAMED_SPORTS: a typo'd key here would

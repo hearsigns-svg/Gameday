@@ -10,6 +10,7 @@
 // Placeholders sharpen back into timed events when a schedule lands —
 // same fixture id, so it is always an update, never a duplicate.
 
+import { t } from '../../../core/i18n';
 import { Fixture } from '../../fixtures/domain/fixture';
 import {
   dateOnlySpanDays,
@@ -100,9 +101,9 @@ export interface DesiredEvent {
 
 // What a nominal time means, in the user's words. Deliberately promises
 // the correction rather than just warning: the app's whole claim is that
-// the calendar keeps itself right.
-export const NOMINAL_TIME_NOTE =
-  'Start time is not confirmed yet — this will update automatically.';
+// the calendar keeps itself right. Catalog-backed (Phase C): a
+// calendar-written string, so it must flow through t().
+export const NOMINAL_TIME_NOTE = t('calendar.event.nominalTimeNote');
 
 export type SyncOp =
   | { op: 'create'; fixture: Fixture; desired: DesiredEvent }
@@ -188,7 +189,9 @@ export function desiredEventFor(
   // A postponement carries the OLD day and no new time. The day is the
   // only honest thing left to show — deliberately ONE day, whatever the
   // fixture's normal span.
-  if (f.status === 'postponed') return allDayFor('postponed');
+  if (f.status === 'postponed') {
+    return allDayFor(t('calendar.event.postponed'));
+  }
 
   // A tournament BOOKEND (Round 3 B3): a single-day all-day note whose
   // title the tier pass already shaped ("US Open begins" / "US Open —
@@ -214,7 +217,7 @@ export function desiredEventFor(
   // the event's honest shape.
   if (precision === 'date_only') {
     const days = dateOnlySpanDays(f.durationHours);
-    const e = allDayFor(days > 1 ? '' : 'time TBC', days);
+    const e = allDayFor(days > 1 ? '' : t('calendar.event.timeTbc'), days);
     // The tier-1 block's description carries the pointer (Round 3 B3)
     // — only where the tier pass proved the card offers matches.
     return f.tournamentPointer === true

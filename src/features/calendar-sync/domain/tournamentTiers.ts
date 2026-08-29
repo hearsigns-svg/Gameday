@@ -27,6 +27,7 @@
 // date_only parent), so every block-synced tournament in every sport
 // rides the same rules.
 
+import { t } from '../../../core/i18n';
 import { Fixture } from '../../fixtures/domain/fixture';
 import {
   dateOnlySpanDays,
@@ -36,9 +37,10 @@ import {
 import { TournamentTier } from './prefs';
 
 // The calendar-description pointer (Round 3 B3): rides the tier-1
-// block and the tier-2/3 opening note.
-export const TOURNAMENT_POINTER_NOTE =
-  'Individual matches can be added from the tournament’s card in the app.';
+// block and the tier-2/3 opening note. Catalog-backed (Phase C) — the
+// calendar-rewrite mechanism depends on every calendar-written string
+// flowing through t().
+export const TOURNAMENT_POINTER_NOTE = t('calendar.tournament.pointer');
 
 // The block shape: a parent whose honest calendar form is the
 // multi-day all-day span.
@@ -64,7 +66,18 @@ export function isBlockParent(f: Fixture): boolean {
 const KEY_ROUND =
   /\b(?:finals?|semi[- ]?finals?|quarter[- ]?finals?|gold medal)\b/i;
 
+// The rounds the key tier keeps, where the STRUCTURED field exists —
+// WTA tour appearances carry a draw-derived rung today (96/132 at
+// Cincinnati in prod), and any future source that states rounds lands
+// here without touching the title heuristic.
+const KEY_ROUND_CODES = new Set(['f', 'sf', 'qf']);
+
 export function isKeyRound(f: Fixture): boolean {
+  // Structure first: a stated round is an answer, not a guess — in
+  // BOTH directions. A fixture whose source stamped r32 is NOT a key
+  // round however its title reads.
+  const round = f.stage?.round;
+  if (round !== undefined) return KEY_ROUND_CODES.has(round);
   const competition = f.competition.trim().toLowerCase();
   return f.title
     .split(' — ')
@@ -128,7 +141,9 @@ export function applyTournamentTiers(
       ...f,
       tournamentNote: 'open',
       // A single-day tournament collapses to one plain-titled note.
-      title: singleDay ? f.title : `${f.title} begins`,
+      title: singleDay
+        ? f.title
+        : t('calendar.tournament.begins', { title: f.title }),
       durationHours: 24,
     });
     if (!singleDay) {
@@ -136,7 +151,7 @@ export function applyTournamentTiers(
         ...f,
         id: `${f.id}${CLOSE_ID_SUFFIX}`,
         tournamentNote: 'close',
-        title: `${f.title} — final day`,
+        title: t('calendar.tournament.finalDay', { title: f.title }),
         startUtc: finalDayStartUtc(f),
         durationHours: 24,
       });

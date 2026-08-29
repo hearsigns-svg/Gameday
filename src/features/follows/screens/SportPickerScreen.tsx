@@ -7,6 +7,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { SportCard, TileRow } from '../../../core/components';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
 import { RootStackParamList } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
@@ -64,19 +66,25 @@ export default function SportPickerScreen({ navigation }: Props) {
                 caption={
                   item.enabled
                     ? following
-                      ? 'Following'
+                      ? i18n.t('follows.following')
                       : item.seriesFollowable
-                        ? 'All events · one follow'
+                        ? i18n.t('follows.sportPicker.allEventsOneFollow')
                         : undefined
-                    : 'Coming soon'
+                    : i18n.t('follows.sportPicker.comingSoon')
                 }
                 glyph={item.glyph}
                 theme={teamTheme(item.accent, mode)}
                 disabled={!item.enabled}
                 accessibilityLabel={
                   item.enabled
-                    ? `${sportLabelFor(item.key, item.label, activeRegion())}${following ? ', following' : ''}`
-                    : `${sportLabelFor(item.key, item.label, activeRegion())}, coming soon`
+                    ? following
+                      ? i18n.t('follows.sports.a11yFollowing', {
+                          name: sportLabelFor(item.key, item.label, activeRegion()),
+                        })
+                      : sportLabelFor(item.key, item.label, activeRegion())
+                    : i18n.t('follows.sports.a11yComingSoon', {
+                        name: sportLabelFor(item.key, item.label, activeRegion()),
+                      })
                 }
                 onPress={() =>
                   navigation.navigate('LeagueList', { sportKey: item.key })

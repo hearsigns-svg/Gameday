@@ -42,6 +42,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { t as tr } from './i18n';
 import { ToastHost } from './toast';
 import { motion, radius, spacing } from './tokens';
 
@@ -447,7 +448,7 @@ export function CardExpansionHost(props: {
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={tr('core.expansion.closeA11y')}
               onPress={close}
               style={StyleSheet.absoluteFill}
             />

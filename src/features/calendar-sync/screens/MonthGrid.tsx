@@ -10,9 +10,22 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+// Aliased: `t` is this screen's theme handle (useTheme), so the
+// catalog functions travel as `tr`/`tn` here.
+import { t as tr, tn } from '../../../core/i18n';
 import { radius, spacing, type, useTheme } from '../../../core/tokens';
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+// Monday-start initials, from the catalog (several languages do not
+// share English's duplicated T/S letters).
+const WEEKDAYS = [
+  tr('calendar.month.mon'),
+  tr('calendar.month.tue'),
+  tr('calendar.month.wed'),
+  tr('calendar.month.thu'),
+  tr('calendar.month.fri'),
+  tr('calendar.month.sat'),
+  tr('calendar.month.sun'),
+];
 
 const keyOf = (y: number, m: number, d: number): string =>
   `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -61,7 +74,7 @@ export function MonthGrid(props: {
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Previous month"
+          accessibilityLabel={tr('calendar.month.previous')}
           onPress={() => props.onChangeMonth(-1)}
           style={styles.nav}
         >
@@ -75,7 +88,7 @@ export function MonthGrid(props: {
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Next month"
+          accessibilityLabel={tr('calendar.month.next')}
           onPress={() => props.onChangeMonth(1)}
           style={styles.nav}
         >
@@ -105,13 +118,22 @@ export function MonthGrid(props: {
               <Pressable
                 key={i}
                 accessibilityRole="button"
-                accessibilityLabel={`${cell.day} ${title}${
+                accessibilityLabel={
                   count > 0
-                    ? `, ${count} fixture${count === 1 ? '' : 's'}`
+                    ? tn('calendar.month.dayFixtures', count, {
+                        day: cell.day,
+                        month: title,
+                      })
                     : removedOnly
-                      ? ', removed fixtures only'
-                      : ''
-                }`}
+                      ? tr('calendar.month.dayRemovedOnly', {
+                          day: cell.day,
+                          month: title,
+                        })
+                      : tr('calendar.month.day', {
+                          day: cell.day,
+                          month: title,
+                        })
+                }
                 onPress={() => props.onSelectDay(cell.key)}
                 style={[
                   styles.cell,

@@ -4,6 +4,7 @@
 // the hero card already carries.
 
 import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { t as tr } from '../../core/i18n';
 import { RootScreenProps } from '../../core/navigation';
 import { spacing, type, useTheme } from '../../core/tokens';
 import { photoCredits } from '../follows/data/photoCache';
@@ -17,15 +18,14 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
       <Text
         style={[type.body, { color: t.textSecondary, padding: spacing.l }]}
       >
-        Photographs come from Wikimedia Commons under licences that permit
-        reuse. Each is credited to its photographer below.
+        {tr('settings.credits.intro')}
       </Text>
       {/* TheSportsDB attribution: their terms require crediting them as
           the data source — a condition of the service, honoured here
           (Prompt 9b). */}
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel="Open TheSportsDB"
+        accessibilityLabel={tr('settings.credits.openSportsDbA11y')}
         onPress={() => void Linking.openURL('https://www.thesportsdb.com')}
       >
         <Text
@@ -34,8 +34,7 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
             { color: t.textSecondary, paddingHorizontal: spacing.l, paddingBottom: spacing.m },
           ]}
         >
-          Event data for several sports comes from TheSportsDB
-          (thesportsdb.com).
+          {tr('settings.credits.sportsDb')}
         </Text>
       </Pressable>
       {credits.length === 0 ? (
@@ -45,7 +44,7 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
             { color: t.textSecondary, paddingHorizontal: spacing.l },
           ]}
         >
-          No photographs loaded yet.
+          {tr('settings.credits.none')}
         </Text>
       ) : (
         <FlatList
@@ -60,7 +59,9 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
                 accessibilityRole={item.art.sourceUrl ? 'link' : undefined}
                 accessibilityLabel={
                   item.art.sourceUrl
-                    ? `Open source page for ${item.subject}`
+                    ? tr('settings.credits.openSourceA11y', {
+                        subject: item.subject,
+                      })
                     : undefined
                 }
                 onPress={
@@ -71,7 +72,9 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
               >
                 <Text style={[type.caption, { color: t.textSecondary }]}>
                   {item.art.artist || 'Wikimedia Commons'} · {item.art.licence}
-                  {item.art.sourceUrl ? ' · source' : ''}
+                  {item.art.sourceUrl
+                    ? ` · ${tr('settings.credits.source')}`
+                    : ''}
                 </Text>
               </Pressable>
             </View>
@@ -79,14 +82,14 @@ export default function CreditsScreen(_props: RootScreenProps<'Credits'>) {
           ListFooterComponent={
             <Pressable
               accessibilityRole="link"
-              accessibilityLabel="Open Wikimedia Commons licence information"
+              accessibilityLabel={tr('settings.credits.openLicenceA11y')}
               onPress={() =>
                 void Linking.openURL('https://commons.wikimedia.org/wiki/Commons:Licensing')
               }
               style={styles.row}
             >
               <Text style={[type.secondary, { color: t.primary }]}>
-                About these licences
+                {tr('settings.credits.aboutLicences')}
               </Text>
             </Pressable>
           }

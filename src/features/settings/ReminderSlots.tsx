@@ -23,6 +23,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { t as tr } from '../../core/i18n';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import {
   OFFSET_HOUR_VALUES,
@@ -155,7 +156,13 @@ function WheelColumn(props: {
 
 type Unit = 'off' | 'minutes' | 'hours';
 
-const UNIT_ITEMS: readonly string[] = ['Off', 'Minutes', 'Hours'];
+// Display words resolved at render (catalog); UNITS stays the value
+// axis the wheel's index maps to.
+const unitItems = (): readonly string[] => [
+  tr('settings.reminders.off'),
+  tr('settings.reminders.minutes'),
+  tr('settings.reminders.hours'),
+];
 const UNITS: readonly Unit[] = ['off', 'minutes', 'hours'];
 
 function unitOf(minutes: number | null): Unit {
@@ -194,7 +201,7 @@ export function ReminderSlotsRow(props: {
     <View>
       <View style={styles.row}>
         <Text style={[type.body, { color: t.textPrimary, flex: 1 }]}>
-          Reminders
+          {tr('settings.reminders.title')}
         </Text>
         <View style={styles.slots}>
           {props.slots.map((m, slot) => (
@@ -208,7 +215,10 @@ export function ReminderSlotsRow(props: {
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Reminder ${slot + 1}, ${offsetLabel(m ?? null)}`}
+                accessibilityLabel={tr('settings.reminders.slotA11y', {
+                  n: slot + 1,
+                  value: offsetLabel(m ?? null),
+                })}
                 accessibilityState={{ expanded: open === slot }}
                 onPress={() => props.onToggleSlot(slot)}
                 style={({ pressed }) => [
@@ -250,7 +260,9 @@ export function ReminderSlotsRow(props: {
               key={`${open}-${unit}`}
               items={grid.map(String)}
               index={valueIndex}
-              accessibilityLabel={`Reminder ${open + 1} value`}
+              accessibilityLabel={tr('settings.reminders.slotValueA11y', {
+                n: open + 1,
+              })}
               onSettle={(i) =>
                 props.onChange(
                   open,
@@ -263,9 +275,11 @@ export function ReminderSlotsRow(props: {
           )}
           <WheelColumn
             key={`unit-${open}`}
-            items={UNIT_ITEMS}
+            items={unitItems()}
             index={UNITS.indexOf(unit)}
-            accessibilityLabel={`Reminder ${open + 1} unit`}
+            accessibilityLabel={tr('settings.reminders.slotUnitA11y', {
+              n: open + 1,
+            })}
             onSettle={(i) => {
               const next = UNITS[i];
               if (next === unit) return;

@@ -10,6 +10,8 @@ import { monogramOf,
   TileRow,
 } from '../../../core/components';
 import { TabScreenProps } from '../../../core/navigation';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
 import { competitionMarkFor } from '../data/browsePriority';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
@@ -35,8 +37,10 @@ function captionFor(item: Followable, upcomingCount: number | undefined): string
     ? sportLabelFor(cfg.key, cfg.label, activeRegion())
     : item.sportKey;
   if (upcomingCount === undefined) return sport;
-  if (upcomingCount === 0) return `${sport} · no upcoming fixtures yet`;
-  return `${sport} · ${upcomingCount} upcoming`;
+  if (upcomingCount === 0) {
+    return i18n.t('follows.following.captionNoUpcoming', { sport });
+  }
+  return i18n.tn('follows.following.captionUpcoming', upcomingCount, { sport });
 }
 
 export default function FollowingScreen({ navigation }: Props) {
@@ -109,25 +113,27 @@ export default function FollowingScreen({ navigation }: Props) {
           accessibilityLiveRegion="polite"
         >
           <Text style={[type.secondary, { color: t.textPrimary, flex: 1 }]}>
-            Unfollowed {undoItem.label}
+            {i18n.t('follows.feedback.unfollowed', { name: undoItem.label })}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Undo unfollowing ${undoItem.label}`}
+            accessibilityLabel={i18n.t('follows.following.a11yUndo', {
+              name: undoItem.label,
+            })}
             onPress={() => void onUndo(undoItem)}
             hitSlop={12}
           >
             <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
-              Undo
+              {i18n.t('follows.undo')}
             </Text>
           </Pressable>
         </View>
       ) : null}
       {follows.length === 0 ? (
         <EmptyState
-          headline="Not following anything yet"
-          body="Pick a sport on Home, or browse everything here."
-          actionLabel="Browse sports"
+          headline={i18n.t('follows.following.emptyHeadline')}
+          body={i18n.t('follows.following.emptyBody')}
+          actionLabel={i18n.t('follows.following.browseSports')}
           onAction={() => navigation.navigate('SportPicker')}
         />
       ) : (
@@ -173,7 +179,15 @@ export default function FollowingScreen({ navigation }: Props) {
                   {...(flagEmojiOf(item.countryCode)
                     ? { tileBadge: flagEmojiOf(item.countryCode) as string }
                     : {})}
-                  accessibilityLabel={`${item.label}, followed ${item.type}. See their fixtures`}
+                  accessibilityLabel={i18n.t('follows.following.a11yRow', {
+                    name: item.label,
+                    // The display word, never the raw enum — the enum
+                    // is English whatever language the sentence is in
+                    // (caught by the de translation pass).
+                    type: i18n.t(
+                      `core.followType.${item.type}` as i18n.CatalogKey,
+                    ),
+                  })}
                   // A followed thing's own schedule was previously
                   // reachable only from browse or search — you could not
                   // open the page for something you already follow.
@@ -195,12 +209,12 @@ export default function FollowingScreen({ navigation }: Props) {
           ListFooterComponent={
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add more sports"
+              accessibilityLabel={i18n.t('follows.following.a11yAddMore')}
               onPress={() => navigation.navigate('SportPicker')}
               style={[styles.addMore, { borderColor: t.border }]}
             >
               <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
-                + Add more
+                {i18n.t('follows.following.addMore')}
               </Text>
             </Pressable>
           }

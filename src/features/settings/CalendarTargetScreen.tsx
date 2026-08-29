@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListRow, SectionHeader } from '../../core/components';
+import { t as tr, tn } from '../../core/i18n';
 import { RootScreenProps } from '../../core/navigation';
 import { messageOf } from '../../core/result';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
@@ -87,8 +88,8 @@ export default function CalendarTargetScreen({ navigation }: Props) {
     showToast({
       message:
         r.value.moved > 0
-          ? `Moved ${r.value.moved} fixture${r.value.moved === 1 ? '' : 's'} to ${label}`
-          : `Fixtures now go to ${label}`,
+          ? tn('settings.target.moved', r.value.moved, { calendar: label })
+          : tr('settings.target.nowGoTo', { calendar: label }),
     });
   };
 
@@ -96,12 +97,11 @@ export default function CalendarTargetScreen({ navigation }: Props) {
     return (
       <View style={[styles.screen, { backgroundColor: t.bg }]}>
         <Text style={[type.body, { color: t.textPrimary }]}>
-          Connect your calendar first and KickOffCal will pick the best place
-          for your fixtures automatically. You can change it here afterwards.
+          {tr('settings.target.connectFirst')}
         </Text>
         <ListRow
-          title="Put your games in your calendar"
-          accessibilityLabel="Connect your calendar"
+          title={tr('settings.target.putGames')}
+          accessibilityLabel={tr('settings.target.connectA11y')}
           onPress={() => navigation.navigate('CalendarPriming')}
         />
       </View>
@@ -119,14 +119,14 @@ export default function CalendarTargetScreen({ navigation }: Props) {
           .filter((s) => s.sourceId !== options?.ourSourceId)
           .map((s) => ({
             key: s.sourceId,
-            title: `New KickOffCal calendar in ${s.name}`,
+            title: tr('settings.target.newInSource', { source: s.name }),
             req: { kind: 'create', sourceId: s.sourceId },
           }))
       : options && options.ourCalendarId === null
         ? [
             {
               key: 'local',
-              title: 'New KickOffCal calendar on this device',
+              title: tr('settings.target.newOnDevice'),
               req: { kind: 'create' },
             },
           ]
@@ -139,7 +139,9 @@ export default function CalendarTargetScreen({ navigation }: Props) {
         key={c.id}
         title={c.title}
         caption={consequenceOf(c, ours)}
-        accessibilityLabel={`Write fixtures to ${c.title}`}
+        accessibilityLabel={tr('settings.target.writeToA11y', {
+          calendar: c.title,
+        })}
         disabled={busy}
         onPress={() => void choose({ kind: 'existing', calendarId: c.id }, c.title)}
         right={
@@ -161,7 +163,7 @@ export default function CalendarTargetScreen({ navigation }: Props) {
       {target ? (
         <View style={[styles.current, { backgroundColor: t.surface }]}>
           <Text style={[type.label, { color: t.textSecondary }]}>
-            Fixtures go to
+            {tr('settings.target.goTo')}
           </Text>
           <Text style={[type.body, { color: t.textPrimary, marginTop: 2 }]}>
             {targetSummary({
@@ -189,8 +191,9 @@ export default function CalendarTargetScreen({ navigation }: Props) {
           accessibilityLiveRegion="polite"
           style={[type.body, { color: t.textPrimary, padding: spacing.l }]}
         >
-          Moving {progress.total} fixture{progress.total === 1 ? '' : 's'}…{' '}
-          {progress.moved}/{progress.total}
+          {tn('settings.target.moving', progress.total, {
+            moved: progress.moved,
+          })}
         </Text>
       ) : null}
 
@@ -204,7 +207,7 @@ export default function CalendarTargetScreen({ navigation }: Props) {
         <Text
           style={[type.secondary, { color: t.textSecondary, padding: spacing.l }]}
         >
-          Reading your calendars…
+          {tr('settings.target.reading')}
         </Text>
       ) : null}
 
@@ -217,12 +220,12 @@ export default function CalendarTargetScreen({ navigation }: Props) {
 
       {createRows.length > 0 ? (
         <View>
-          <SectionHeader title="Its own calendar" />
+          <SectionHeader title={tr('settings.target.ownCalendarHeader')} />
           {createRows.map((r) => (
             <ListRow
               key={r.key}
               title={r.title}
-              caption="Keeps fixtures separate from your own events"
+              caption={tr('settings.target.keepsSeparate')}
               accessibilityLabel={r.title}
               disabled={busy}
               onPress={() => void choose(r.req, 'KickOffCal')}
@@ -238,9 +241,7 @@ export default function CalendarTargetScreen({ navigation }: Props) {
             { color: t.textSecondary, padding: spacing.l },
           ]}
         >
-          Whichever you pick, KickOffCal only ever adds, changes or removes the
-          fixtures it put there. Switching moves everything across — nothing is
-          left behind.
+          {tr('settings.target.scopePromise')}
         </Text>
       ) : null}
     </ScrollView>

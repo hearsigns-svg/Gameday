@@ -30,6 +30,9 @@ import {
   TileRow,
 } from '../../../core/components';
 import { RootStackParamList } from '../../../core/navigation';
+// Namespace import: `t` is this component's theme binding.
+import * as i18n from '../../../core/i18n';
+import { coverageNoteFor } from '../domain/coverageNotes';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { messageOf } from '../../../core/result';
@@ -93,9 +96,11 @@ function captionFor(a: AthleteCard, showGrouping: boolean): string {
   const retired = retiredCaption(a);
   if (retired) parts.push(retired);
   if (a.championOf && a.championOf.length > 0) {
-    parts.push(`Champion · ${a.championOf.join(', ')}`);
+    parts.push(
+      i18n.t('follows.athletes.champion', { orgs: a.championOf.join(', ') }),
+    );
   } else if (a.rank !== undefined) {
-    parts.push(`#${a.rank}`);
+    parts.push(i18n.t('follows.athletes.rank', { rank: a.rank }));
   }
   // Nationality leads with its flag (Prompt 16 B) — the athlete
   // equivalent of a crest, and the mark a boxing fan actually reads.
@@ -107,7 +112,9 @@ function captionFor(a: AthleteCard, showGrouping: boolean): string {
     const d = new Date(a.nextStartUtc);
     if (d.getTime() > Date.now()) {
       parts.push(
-        `Competes ${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`,
+        i18n.t('follows.athletes.competes', {
+          date: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        }),
       );
     }
   }
@@ -129,6 +136,10 @@ export default function AthleteListScreen({ navigation, route }: Props) {
   const sportName = sport
     ? sportLabelFor(sport.key, sport.label, activeRegion())
     : '';
+  // The sport's coverage note, read from the string catalog
+  // (domain/coverageNotes.ts) — the config field itself is no longer
+  // read by this screen.
+  const coverageNote = sport ? coverageNoteFor(sport.key) : undefined;
   const [browse, setBrowse] = useState<AthleteSection[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -167,7 +178,10 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         r.value.competingSoon.length > 0 &&
         route.params.sportKey !== 'tennis'
       ) {
-        sections.push({ title: 'Competing soon', data: r.value.competingSoon });
+        sections.push({
+          title: i18n.t('follows.athletes.competingSoon'),
+          data: r.value.competingSoon,
+        });
       }
       // A `tour` param narrows to one population (Prompt 19). Tennis
       // browses ATP and WTA as separate SECTIONS now, each with its own
@@ -197,14 +211,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           sections.push({
             title: g.grouping,
             data: g.athletes,
-            ...(i === 0 ? { blockTitle: 'Men’s' } : {}),
+            ...(i === 0 ? { blockTitle: i18n.t('follows.athletes.mens') } : {}),
           }),
         );
         women.forEach((g, i) =>
           sections.push({
             title: g.grouping,
             data: g.athletes,
-            ...(i === 0 ? { blockTitle: 'Women’s' } : {}),
+            ...(i === 0 ? { blockTitle: i18n.t('follows.athletes.womens') } : {}),
           }),
         );
         setBrowse(sections);
@@ -315,7 +329,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
 
   const sections: AthleteSection[] =
     results !== null
-      ? [{ title: searching ? 'Searching…' : 'Results', data: results }]
+      ? [
+          {
+            title: searching
+              ? i18n.t('follows.search.searching')
+              : i18n.t('follows.search.results'),
+            data: results,
+          },
+        ]
       : (browse ?? []).map((s) =>
           expanded.has(s.title) || s.data.length <= SECTION_PREVIEW
             ? { ...s, fullCount: s.data.length }
@@ -349,10 +370,14 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         // placeholder in a UK user's search box read "Search Soccer
         // athletes" on a screen they had reached from a tile saying
         // Football.
-        placeholder={`Search ${sportName} athletes`}
+        placeholder={i18n.t('follows.athletes.searchPlaceholder', {
+          sport: sportName,
+        })}
           placeholderTextColor={t.textSecondary}
           autoCorrect={false}
-          accessibilityLabel={`Search ${sportName} athletes`}
+          accessibilityLabel={i18n.t('follows.athletes.searchPlaceholder', {
+            sport: sportName,
+          })}
           style={[
             styles.input,
             { borderColor: t.border, color: t.textPrimary, backgroundColor: t.surface },
@@ -376,8 +401,8 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           note and shows per-tour SECTION_NOTES instead, and Prompt 18
           replaced the men's source outright. Both halves of the old
           comment were stale (22b). */}
-      {results === null && sport?.coverageNote ? (
-        <CoverageNote note={sport.coverageNote} />
+      {results === null && coverageNote ? (
+        <CoverageNote note={coverageNote} />
       ) : null}
       {browse === null && results === null && !error ? (
         <View style={styles.center}>
@@ -389,8 +414,8 @@ export default function AthleteListScreen({ navigation, route }: Props) {
             {results !== null
               ? searching
                 ? ' '
-                : 'No athletes match that name.'
-              : 'No athletes here yet — they arrive as rankings and entries are published.'}
+                : i18n.t('follows.athletes.noneMatch')
+              : i18n.t('follows.athletes.noneYet')}
           </Text>
         </View>
       ) : (
@@ -424,8 +449,13 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={
                   isOpen
-                    ? `Show fewer in ${section.title}`
-                    : `Show all ${full} in ${section.title}`
+                    ? i18n.t('follows.athletes.a11yShowFewer', {
+                        section: section.title,
+                      })
+                    : i18n.t('follows.athletes.a11yShowAll', {
+                        n: full,
+                        section: section.title,
+                      })
                 }
                 onPress={() =>
                   setExpanded((prev) => {
@@ -438,7 +468,9 @@ export default function AthleteListScreen({ navigation, route }: Props) {
                 style={styles.showAll}
               >
                 <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
-                  {isOpen ? 'Show fewer' : `Show all ${full}`}
+                  {isOpen
+                    ? i18n.t('follows.athletes.showFewer')
+                    : i18n.t('follows.athletes.showAll', { n: full })}
                 </Text>
               </Pressable>
             );
@@ -496,7 +528,9 @@ export default function AthleteListScreen({ navigation, route }: Props) {
               // boxer's weight class); the per-athlete hue otherwise —
               // hoisted above so the Follow burst shares it.
               theme={rowTheme}
-              accessibilityLabel={`${a.name}, open athlete page`}
+              accessibilityLabel={i18n.t('follows.athletes.a11yOpenPage', {
+                name: a.name,
+              })}
               onPress={() =>
                 navigation.navigate('Team', {
                   teamKey: a.key,
