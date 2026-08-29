@@ -36,12 +36,19 @@ import { isDateOnly, timeLabel } from '../../../core/when';
 import {
   fetchEventCard,
   fetchFixtureById,
+  fetchTournamentParents,
 } from '../../fixtures/data/fixturesRepo';
 import {
   refreshSliceFreshness,
   sliceCheckedAt,
 } from '../../fixtures/data/freshnessRepo';
-import { cardEntries, CardEntry } from '../../fixtures/domain/card';
+import {
+  CardEntry,
+  cardEntries,
+  entrySexOf,
+  jointCardEntries,
+  jointTournamentKeyOf,
+} from '../../fixtures/domain/card';
 import { Fixture } from '../../fixtures/domain/fixture';
 import { isPast, timePrecisionOf } from '../../fixtures/domain/horizon';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
@@ -144,6 +151,19 @@ export function FixtureCardBody(props: {
   );
   const [card, setCard] = useState<Fixture[] | null>(null);
   const [parentDoc, setParentDoc] = useState<Fixture | null>(null);
+  // The OTHER tour's parent(s) for a joint tournament, with their
+  // children — the union half of the card (Round 3, A1's second
+  // cause: the dedupe anchors the hero on one parent and a
+  // single-parent card silently dropped the other tour's matches).
+  const [siblingSides, setSiblingSides] = useState<
+    Array<{ parent: Fixture; children: Fixture[] }>
+  >([]);
+  // M/W filter (Round 3 B4): both on by default; never both off —
+  // turning off the sole lit chip flips the selection to the other.
+  const [sexOn, setSexOn] = useState<{ m: boolean; w: boolean }>({
+    m: true,
+    w: true,
+  });
   const [failed, setFailed] = useState(false);
   const [, forceRender] = useState(0);
   const repaint = useCallback(() => forceRender((n) => n + 1), []);
@@ -190,6 +210,39 @@ export function FixtureCardBody(props: {
         if (alive && r.ok) setParentDoc(r.value);
       });
     }
+    // Joint tournament: find the SAME EDITION's other-tour parent(s)
+    // under the shared tennis-t- key and fetch their children too. The
+    // key is year-agnostic, so siblings are windowed to the anchor —
+    // Wimbledon 2027's parent must not join this year's US Open card.
+    const jointKey = jointTournamentKeyOf(fixture.followKeys);
+    if (jointKey && !fixture.parentFixtureId) {
+      const anchorStart = Date.parse(fixture.startUtc);
+      const EDITION_WINDOW_MS = 21 * 24 * 3_600_000;
+      void fetchTournamentParents(jointKey).then(async (r) => {
+        if (!alive || !r.ok) return;
+        const siblings = r.value.filter(
+          (p) =>
+            p.id !== parentId &&
+            Math.abs(Date.parse(p.startUtc) - anchorStart) <
+              EDITION_WINDOW_MS,
+        );
+        const sides = await Promise.all(
+          siblings.map(async (parent) => {
+            const kids = await fetchEventCard(parent.id);
+            return kids.ok ? { parent, children: kids.value } : null;
+          }),
+        );
+        if (alive) {
+          setSiblingSides(
+            sides.filter((s): s is { parent: Fixture; children: Fixture[] } =>
+              Boolean(s),
+            ),
+          );
+        }
+      });
+    } else {
+      setSiblingSides([]);
+    }
     return () => {
       alive = false;
     };
@@ -218,9 +271,68 @@ export function FixtureCardBody(props: {
       ? parentDoc
       : fixture
     : null;
+  // A child was opened: the joint key lives on its PARENT (appearances
+  // deliberately carry no tournament key), so the sibling fetch waits
+  // for the parent doc and runs off its keys.
+  useEffect(() => {
+    if (!parentDoc) return;
+    let alive = true;
+    const jointKey = jointTournamentKeyOf(parentDoc.followKeys);
+    if (!jointKey) return;
+    const anchorStart = Date.parse(parentDoc.startUtc);
+    const EDITION_WINDOW_MS = 21 * 24 * 3_600_000;
+    void fetchTournamentParents(jointKey).then(async (r) => {
+      if (!alive || !r.ok) return;
+      const siblings = r.value.filter(
+        (p) =>
+          p.id !== parentDoc.id &&
+          Math.abs(Date.parse(p.startUtc) - anchorStart) < EDITION_WINDOW_MS,
+      );
+      const sides = await Promise.all(
+        siblings.map(async (parent) => {
+          const kids = await fetchEventCard(parent.id);
+          return kids.ok ? { parent, children: kids.value } : null;
+        }),
+      );
+      if (alive) {
+        setSiblingSides(
+          sides.filter((s): s is { parent: Fixture; children: Fixture[] } =>
+            Boolean(s),
+          ),
+        );
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [parentDoc?.id]);
   const entries: CardEntry[] = useMemo(
-    () => (card && cardParent ? cardEntries(cardParent, card) : []),
-    [card, cardParent],
+    () =>
+      card && cardParent
+        ? jointCardEntries([
+            { parent: cardParent, children: card },
+            ...siblingSides,
+          ])
+        : [],
+    [card, cardParent, siblingSides],
+  );
+  // The M/W filter applies only where the data classifies (Round 3 B4);
+  // unclassified entries show under either chip, never guessed. Chips
+  // render only when the card is actually mixed.
+  const sexesPresent = useMemo(
+    () => new Set(entries.map(entrySexOf).filter(Boolean)),
+    [entries],
+  );
+  const mixedCard = sexesPresent.has('m') && sexesPresent.has('w');
+  const visibleEntries = useMemo(
+    () =>
+      mixedCard
+        ? entries.filter((e) => {
+            const sex = entrySexOf(e);
+            return sex === null || sexOn[sex];
+          })
+        : entries,
+    [entries, mixedCard, sexOn],
   );
 
   if (!fixture) {
@@ -336,6 +448,45 @@ export function FixtureCardBody(props: {
     void runSync();
   };
 
+  // B2: the master acts on the VISIBLE (filtered) set only. Covered
+  // entries are already in the calendar through a follow — Add all
+  // skips them, Remove all leaves them (their per-row toggle is
+  // disabled for the same reason). One sync for the whole batch.
+  const followedKeys = new Set(loadFollowKeys());
+  const entryOn = (e: CardEntry) =>
+    e.followKeys.some((k) => followedKeys.has(k)) || isPinned(e.id);
+  const allOn =
+    visibleEntries.length > 0 && visibleEntries.every((e) => entryOn(e));
+  const toggleAll = () => {
+    if (allOn) {
+      for (const e of visibleEntries) {
+        if (isPinned(e.id)) {
+          setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), false);
+        }
+      }
+    } else {
+      for (const e of visibleEntries) {
+        if (!entryOn(e)) {
+          setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), true);
+        }
+      }
+    }
+    repaint();
+    void runSync();
+  };
+
+  // B4: either chip can go off, never both — turning off the sole lit
+  // chip flips the selection to the other, so every tap does something.
+  const toggleSex = (which: 'm' | 'w') => {
+    setSexOn((prev) => {
+      const next = { ...prev, [which]: !prev[which] };
+      if (!next.m && !next.w) {
+        return which === 'm' ? { m: false, w: true } : { m: true, w: false };
+      }
+      return next;
+    });
+  };
+
   const note = shortTimingNote(fixture, {
     sliceCheckedAt: fixture.competitionId
       ? sliceCheckedAt(fixture.id, fixture.competitionId, fixture.followKeys)
@@ -402,6 +553,9 @@ export function FixtureCardBody(props: {
           {...(art
             ? {
                 photoCredit: [
+                  // Host-city photos name the place (Round 3 B5) —
+                  // same phrasing as the collapsed hero.
+                  art.subject ?? null,
                   art.artist ? `Photo: ${art.artist}` : 'Photo: Wikimedia Commons',
                   art.licence,
                 ]
@@ -507,8 +661,62 @@ export function FixtureCardBody(props: {
           {entries.length > 0 ? (
             <>
               <Rule theme={theme} />
-              <View style={{ height: spacing.s }} />
-              {entries.map((e) => (
+              {/* B4: the sex filter, only on a genuinely mixed card —
+                  same visual language as the calendar toggle. */}
+              {mixedCard ? (
+                <View style={styles.row}>
+                  <SexChip
+                    label="Men’s"
+                    on={sexOn.m}
+                    theme={theme}
+                    onPress={() => toggleSex('m')}
+                  />
+                  <SexChip
+                    label="Women’s"
+                    on={sexOn.w}
+                    theme={theme}
+                    onPress={() => toggleSex('w')}
+                  />
+                  <View style={{ flex: 1 }} />
+                </View>
+              ) : null}
+              {/* B2: one master over the visible set, wearing the same
+                  pill the per-match toggles wear. */}
+              <View style={styles.row}>
+                <View style={{ flex: 1 }} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    allOn
+                      ? 'Remove all listed matches from your calendar'
+                      : 'Add all listed matches to your calendar'
+                  }
+                  onPress={toggleAll}
+                  hitSlop={8}
+                  style={[
+                    styles.boutToggle,
+                    {
+                      borderColor: theme.onGradient,
+                      backgroundColor: allOn ? theme.onGradient : 'transparent',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      type.caption,
+                      {
+                        fontWeight: '700',
+                        color: allOn ? theme.gradient[1] : theme.onGradient,
+                      },
+                    ]}
+                    numberOfLines={1}
+                    maxFontSizeMultiplier={1.4}
+                  >
+                    {allOn ? 'Remove all' : 'Add all'}
+                  </Text>
+                </Pressable>
+              </View>
+              {visibleEntries.map((e) => (
                 <BoutRow
                   key={e.id}
                   entry={e}
@@ -536,6 +744,47 @@ export function FixtureCardBody(props: {
         />
       </Pressable>
     </PosterSurface>
+  );
+}
+
+// The M/W chip — the SHARED control (Round 3 B4): one implementation,
+// rendered by the card every sport's fixtures pass through, in the
+// calendar toggle's own visual language. On = filled, off = outlined
+// and dimmed; the state is a filter, so both-on is the resting truth.
+function SexChip(props: {
+  label: string;
+  on: boolean;
+  theme: TeamTheme;
+  onPress: () => void;
+}) {
+  const { theme } = props;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: props.on }}
+      accessibilityLabel={`${props.label} matches, ${props.on ? 'shown' : 'hidden'}`}
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        styles.calendarToggle,
+        {
+          borderColor: theme.onGradient,
+          backgroundColor: props.on ? theme.onGradient : 'transparent',
+          opacity: pressed ? 0.55 : props.on ? 1 : 0.6,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          type.secondary,
+          {
+            fontWeight: '600',
+            color: props.on ? theme.gradient[1] : theme.onGradient,
+          },
+        ]}
+      >
+        {props.label}
+      </Text>
+    </Pressable>
   );
 }
 

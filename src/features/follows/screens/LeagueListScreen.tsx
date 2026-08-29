@@ -55,6 +55,11 @@ import {
 import { byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
+import {
+  OLYMPIC_EDITION_KEY,
+  olympicSeasonOf,
+  olympicsSubset,
+} from '../domain/olympicsBrowse';
 import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
 import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
@@ -89,6 +94,7 @@ function subtitleOf(item: DirectoryLeague): string {
     ? `${item.country} · ${item.teamCount} ${item.teamCount === 1 ? 'team' : 'teams'}`
     : item.country;
 }
+
 
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
@@ -142,7 +148,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       void refreshPriorities();
       const pr = cachedPriorities();
       const rows = byPriorityLive(
-        sport.staticCompetitions,
+        route.params.sportKey === 'olympics'
+          ? olympicsSubset(sport.staticCompetitions, route.params.olympics)
+          : sport.staticCompetitions,
         (c) => c.key,
         pr.priorities,
         new Set(pr.dormant),
@@ -757,6 +765,90 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         );
       }
     }
+  }
+
+  // Olympics at rest (Round 3 B6): TWO standard expandable cards —
+  // Summer and Winter — each expanding to [Sports | Games], ending the
+  // mixed 40-row mishmash. Follow on the card follows that season's
+  // NEXT edition (the config's own row, pollPath and all). Searching
+  // falls through to the generic list, which still matches every
+  // discipline and edition row.
+  if (
+    route.params.sportKey === 'olympics' &&
+    !route.params.olympics &&
+    needles.length === 0
+  ) {
+    const editions = (sport?.staticCompetitions ?? [])
+      .filter((c) => OLYMPIC_EDITION_KEY.test(c.key))
+      .sort((a, b) => a.key.localeCompare(b.key));
+    const seasonCards = (['summer', 'winter'] as const).flatMap((season) => {
+      const next = editions.find(
+        (e) =>
+          olympicSeasonOf(Number(e.key.match(OLYMPIC_EDITION_KEY)![1])) ===
+          season,
+      );
+      if (!next) return [];
+      const word = season === 'summer' ? 'Summer' : 'Winter';
+      return [{ season, word, next, name: `${word} Olympics` }];
+    });
+    return (
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        {searchField}
+        {banners}
+        <FlatList
+          data={seasonCards}
+          keyExtractor={(s) => s.season}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <>
+              {sportHeader}
+              {sport?.coverageNote ? (
+                <CoverageNote note={sport.coverageNote} />
+              ) : null}
+            </>
+          }
+          renderItem={({ item }) => (
+            <CompetitionCard
+              name={item.name}
+              caption={`${item.next.name} · Tap for sports · games`}
+              theme={teamTheme(sport?.accent ?? null, mode)}
+              monogram={monogramOf(item.name)}
+              glyph={sport?.glyph ?? '🏅'}
+              onOpen={() =>
+                navigation.push('LeagueList', {
+                  sportKey: 'olympics',
+                  olympics: { season: item.season, view: 'sports' },
+                  title: `${item.word} sports`,
+                })
+              }
+              destinations={[
+                {
+                  label: 'Sports',
+                  onPress: () =>
+                    navigation.push('LeagueList', {
+                      sportKey: 'olympics',
+                      olympics: { season: item.season, view: 'sports' },
+                      title: `${item.word} sports`,
+                    }),
+                },
+                {
+                  label: 'Games',
+                  onPress: () =>
+                    navigation.push('LeagueList', {
+                      sportKey: 'olympics',
+                      olympics: { season: item.season, view: 'games' },
+                      title: `${item.word} Games`,
+                    }),
+                },
+              ]}
+              following={isFollowed(item.next.key)}
+              onFollow={() => void toggle(item.next)}
+              busy={busyKey === item.next.key}
+            />
+          )}
+        />
+      </View>
+    );
   }
 
   const searchActive = needles.length > 0;

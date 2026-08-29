@@ -27,6 +27,7 @@ import {
   reminderMinutesFor,
 } from './eventSettings';
 import { CalendarPrefs } from './prefs';
+import { TOURNAMENT_POINTER_NOTE } from './tournamentTiers';
 
 // Re-exported so existing consumers keep their import site; the one
 // definition now lives with the fixture model, alongside isPast.
@@ -189,6 +190,17 @@ export function desiredEventFor(
   // fixture's normal span.
   if (f.status === 'postponed') return allDayFor('postponed');
 
+  // A tournament BOOKEND (Round 3 B3): a single-day all-day note whose
+  // title the tier pass already shaped ("US Open begins" / "US Open —
+  // final day"). Never "time TBC" — a note about a day is not claiming
+  // a missing kick-off. The pointer rides the opening note.
+  if (f.tournamentNote) {
+    const e = allDayFor('', 1);
+    return f.tournamentNote === 'open'
+      ? { ...e, note: TOURNAMENT_POINTER_NOTE }
+      : e;
+  }
+
   const precision = timePrecisionOf(f);
 
   // ALL-DAY IS RESERVED FOR date_only. A banner is what you write when you
@@ -202,7 +214,12 @@ export function desiredEventFor(
   // the event's honest shape.
   if (precision === 'date_only') {
     const days = dateOnlySpanDays(f.durationHours);
-    return allDayFor(days > 1 ? '' : 'time TBC', days);
+    const e = allDayFor(days > 1 ? '' : 'time TBC', days);
+    // The tier-1 block's description carries the pointer (Round 3 B3)
+    // — only where the tier pass proved the card offers matches.
+    return f.tournamentPointer === true
+      ? { ...e, note: TOURNAMENT_POINTER_NOTE }
+      : e;
   }
 
   // The user asked for all-day events regardless; span multi-day

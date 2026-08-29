@@ -6,7 +6,9 @@
 // floor, not an error state.
 
 import {
+  isPhotographFile,
   pickAthleteCandidate,
+  pickCityCandidate,
   pickTournamentCandidate,
   teamCandidateOrder,
   venueCandidateOrder,
@@ -173,9 +175,43 @@ export async function resolveVenueByName(
     )) as { search?: Array<{ id: string; description?: string }> };
     for (const id of venueCandidateOrder(d.search ?? [], city)) {
       const file = await claimValue(id, 'P18');
-      if (file) return artFromCommonsFile(file);
+      // A vector P18 is a diagram, not photography (Round 3 B5) —
+      // skipped before any metadata fetch; the walk continues.
+      if (file && !isPhotographFile(file)) continue;
+      if (file) {
+        const art = await artFromCommonsFile(file);
+        // The first venue-shaped P18 still ends the venue walk — but a
+        // gate refusal now falls THROUGH to the city rung instead of
+        // ending resolution (Shanghai's artist-less circuit photo).
+        if (art.status !== 'none') return art;
+        break;
+      }
     }
-    return { status: 'none' };
+    return city ? resolveCityPhoto(city) : { status: 'none' };
+  } catch {
+    return { status: 'failed' };
+  }
+}
+
+// HOST-CITY RUNG (Round 3 B5) — the deliberate second candidate shape.
+// Runs only when the venue walk resolved to nothing usable, from the
+// feed's own city string; the credit carries the place name because
+// city imagery is not "the ground". Same client, same licence gate,
+// same photograph preference.
+async function resolveCityPhoto(city: string): Promise<VenueArtResult> {
+  try {
+    const label = city.split(',')[0].trim();
+    if (label.length === 0) return { status: 'none' };
+    const d = (await getJson(
+      `${WD}?action=wbsearchentities&search=${encodeURIComponent(label)}&language=en&type=item&limit=5&format=json&origin=*`,
+    )) as { search?: Array<{ id: string; description?: string }> };
+    const entity = pickCityCandidate(d.search ?? []);
+    if (!entity) return { status: 'none' };
+    const file = await claimValue(entity, 'P18');
+    if (!file || !isPhotographFile(file)) return { status: 'none' };
+    const art = await artFromCommonsFile(file);
+    if (art.status !== 'found') return art;
+    return { status: 'found', art: { ...art.art, subject: label } };
   } catch {
     return { status: 'failed' };
   }

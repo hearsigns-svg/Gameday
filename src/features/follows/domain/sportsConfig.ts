@@ -198,6 +198,20 @@ export const SPORTS: SportConfig[] = [
         teamPollPath:
           'pollTsdbLeague?leagueId=4419&season=2026-2027&sport=ice-hockey&durationHours=2.5',
       },
+      // Round 3 Phase B ruling 7 (owner ruling, 2026-08-29): the May
+      // 2027 edition is already published — 56 events, all on TSDB's
+      // placeholder date, so they arrive as honest date-only holds.
+      // Follow-only: a nations tournament with no provider team list
+      // until fixtures prove one.
+      {
+        id: '4976',
+        name: 'IIHF World Championship',
+        country: 'International',
+        key: 'tsdb-league-4976',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4976&season=2027&sport=ice-hockey&durationHours=2.5',
+      },
     ],
   },
   { key: 'tennis', label: 'Tennis',
@@ -601,6 +615,31 @@ export const SPORTS: SportConfig[] = [
         // the directory derives them (fixtureTeams.ts).
         pollPath:
           'pollTsdbLeague?leagueId=5479&season=2026&sport=rugby&durationHours=2',
+      },
+      // Round 3 Phase B ruling 7 (owner ruling, 2026-08-29): the URC —
+      // 144 events for 2026-27 at seeding, drillable (16-team seeded
+      // directory, tsdbTeamLeagues.ts).
+      {
+        id: '4446',
+        name: 'URC',
+        country: 'Europe & South Africa',
+        key: 'tsdb-league-4446',
+        pollPath:
+          'pollTsdbLeague?leagueId=4446&season=2026-2027&sport=rugby&durationHours=2',
+        teamPollPath:
+          'pollTsdbLeague?leagueId=4446&season=2026-2027&sport=rugby&durationHours=2',
+      },
+      // Rugby World Cup 2027 (same ruling): 36 events, 1–17 Oct 2027,
+      // published in full. Follow-only until fixtures prove teams the
+      // way the other international rows' sweeps did.
+      {
+        id: '4574',
+        name: 'Rugby World Cup',
+        country: 'International',
+        key: 'tsdb-league-4574',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4574&season=2027&sport=rugby&durationHours=2',
       },
     ],
   },

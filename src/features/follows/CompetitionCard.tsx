@@ -51,18 +51,25 @@ export interface CompetitionCardProps {
   // The competition badge's extracted colour pair (Round 3) — the
   // follow burst's discrete palette.
   burstColours?: readonly string[];
+  // NAMED destinations override the [Fixtures-word | Teams] pair
+  // (Round 3 B6: the Olympics season cards expand to [Sports | Games]).
+  // Same expansion, same geometry — only the words and targets differ.
+  destinations?: ReadonlyArray<{ label: string; onPress: () => void }>;
 }
 
 export function CompetitionCard(props: CompetitionCardProps) {
   const t = useTheme();
   const [expanded, setExpanded] = useState(false);
-  const expandable = props.onTeams !== undefined;
-  const destinations = props.onTeams
-    ? [
-        { label: props.fixturesWord ?? 'Fixtures', onPress: props.onOpen },
-        { label: 'Teams', onPress: props.onTeams },
-      ]
-    : [];
+  const expandable =
+    props.onTeams !== undefined || props.destinations !== undefined;
+  const destinations =
+    props.destinations ??
+    (props.onTeams
+      ? [
+          { label: props.fixturesWord ?? 'Fixtures', onPress: props.onOpen },
+          { label: 'Teams', onPress: props.onTeams },
+        ]
+      : []);
   return (
     <TileRow
       right={

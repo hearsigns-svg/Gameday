@@ -15,6 +15,16 @@ export interface TsdbTeamLeague {
   sportKey: string; // client sportsConfig key
   label: string; // display label
   pollPath: string;
+  // Seeded AHEAD of the league's catalogue enable flip (Round 3 Phase B
+  // ruling 7: the NCAA row is expensive and ships catalogue-DISABLED).
+  // A staged entry is inert: excluded from the client drift pins
+  // (searchRoutes.test.ts), from search — both the live TSDB filter and
+  // the directory doc set — and from the static count rows, because
+  // every one of those surfaces would otherwise promise fixtures that
+  // nothing polls. The flip that enables the catalogue row removes this
+  // flag and lands the client browse row in the same change; the pin in
+  // searchRoutes.test.ts fails until it does.
+  staged?: boolean;
 }
 
 export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
@@ -192,5 +202,55 @@ export const TSDB_TEAM_LEAGUES: Record<string, TsdbTeamLeague> = {
     label: 'KBO League',
     pollPath:
       'pollTsdbLeague?leagueId=4830&season=2026&sport=baseball&durationHours=3',
+  },
+  // Round 3 Phase B ruling 7 (owner ruling, 2026-08-29). Team lists
+  // verified live 2026-08-29: URC 16 teams, MLS 30, WSL 14, NWSL 16,
+  // NCAA 258 — all fully badged.
+  '4446': {
+    tsdbName: 'United Rugby Championship',
+    cacheKey: 'rugby-4446',
+    sportKey: 'rugby',
+    label: 'URC',
+    pollPath:
+      'pollTsdbLeague?leagueId=4446&season=2026-2027&sport=rugby&durationHours=2',
+  },
+  '4346': {
+    tsdbName: 'American Major League Soccer',
+    cacheKey: 'soccer-4346',
+    sportKey: 'soccer',
+    label: 'MLS',
+    pollPath:
+      'pollTsdbLeague?leagueId=4346&season=2026&sport=soccer&durationHours=2',
+  },
+  '4849': {
+    tsdbName: 'English Womens Super League',
+    cacheKey: 'soccer-4849',
+    sportKey: 'soccer',
+    label: 'WSL',
+    pollPath:
+      'pollTsdbLeague?leagueId=4849&season=2026-2027&sport=soccer&durationHours=2',
+  },
+  '4521': {
+    tsdbName: 'American NWSL',
+    cacheKey: 'soccer-4521',
+    sportKey: 'soccer',
+    label: 'NWSL',
+    pollPath:
+      'pollTsdbLeague?leagueId=4521&season=2026&sport=soccer&durationHours=2',
+  },
+  // STAGED: the catalogue row ships disabled (1,439 events/season — the
+  // volume flag is the owner's to weigh), so this entry waits inert
+  // behind the `staged` flag. tsdbName is 'NCAA Division 1' — NOT the
+  // catalogue label: search_all_teams on 'NCAA Division 1 Football'
+  // returns 2 teams, on 'NCAA Division 1' all 258 (probed 2026-08-29),
+  // and the 2026 fixtures carry exactly those 258 team ids.
+  '4479': {
+    tsdbName: 'NCAA Division 1',
+    cacheKey: 'nfl-4479',
+    sportKey: 'nfl',
+    label: 'NCAA Division 1 Football',
+    pollPath:
+      'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3',
+    staged: true,
   },
 };

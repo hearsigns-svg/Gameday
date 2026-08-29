@@ -13,6 +13,10 @@ export interface VenueArt {
   // 9b lack them; every NEW fetch records both.
   sourceUrl?: string;
   verifiedAt?: string;
+  // Set ONLY by the host-city rung (Round 3 B5): the place the photo
+  // shows, because city imagery is not "the ground" and the credit
+  // line must say which it is. Absent = the venue itself.
+  subject?: string;
 }
 
 // Fetch-time verification (Prompt 9b): an image is usable only when
@@ -164,6 +168,35 @@ export function pickAthleteCandidate(
 const VENUE_CORE =
   /stadium|arena|ground|golf|course|club|park|venue|circuit|track|hall|centre|center|field|speedway|links/;
 const VENUE_HOSPITALITY = /hotel|resort|casino/;
+
+// PHOTOGRAPH-PREFERRED (Round 3 B5). Some venue entities' P18 is a
+// DIAGRAM — a track map, drawn not photographed (Madring's is an SVG
+// circuit outline) — and a line drawing where every neighbour shows
+// photography reads as an error. The mechanism is the file extension:
+// SVG is a vector format, which photographs never ship in, so an .svg
+// P18 is skipped and resolution walks on (next candidate, next rung).
+// Raster formats all pass — plenty of real photography lives in .png
+// and .webp, so excluding more than vectors would throw photos away.
+export function isPhotographFile(fileTitle: string): boolean {
+  return !/\.svgz?$/i.test(fileTitle.trim());
+}
+
+// HOST-CITY candidates (Round 3 B5) — the deliberate second shape. The
+// venue tiers above only ever admit venue-shaped descriptions, by
+// design; the city rung runs AFTER them, from the feed's own city
+// string, and admits only settlement-shaped candidates — never "the
+// first hit", which for a city name can be a song, a ship or a person.
+const CITY_SHAPED =
+  /\bcity\b|\btown\b|\bcapital\b|municipality|\bcommune\b|metropolis|\bborough\b|settlement|prefecture/;
+
+export function pickCityCandidate(
+  candidates: readonly WikidataCandidate[],
+): string | null {
+  const shaped = candidates.filter((c) =>
+    CITY_SHAPED.test((c.description ?? '').toLowerCase()),
+  );
+  return shaped[0]?.id ?? null;
+}
 
 export function venueCandidateOrder(
   candidates: readonly WikidataCandidate[],

@@ -225,6 +225,13 @@ const TSDB_SOCCER_EXTRAS = [
   { id: '4330', name: 'Scottish Premiership', country: 'Scotland', season: '2026-2027' },
   { id: '4485', name: 'DFB-Pokal', country: 'Germany', season: '2026-2027' },
   { id: '4506', name: 'Coppa Italia', country: 'Italy', season: '2026-2027' },
+  // Round 3 Phase B ruling 7 (2026-08-29), verified live the same day:
+  // MLS 510 events 2026 / NWSL 240 / WSL 182 for 2026-27, real times,
+  // and all three have seeded team directories (tsdbTeamLeagues.ts), so
+  // they serve as drillable rows, not follow-only.
+  { id: '4346', name: 'MLS', country: 'North America', season: '2026' },
+  { id: '4521', name: 'NWSL', country: 'USA', season: '2026' },
+  { id: '4849', name: 'WSL', country: 'England', season: '2026-2027' },
 ];
 
 export function listApiSportsLeagues() {

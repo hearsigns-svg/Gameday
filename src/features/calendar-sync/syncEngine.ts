@@ -17,6 +17,8 @@ import {
 import { loadExclusions, pruneExclusions } from './data/exclusionStore';
 import { pinFollowKeys, pinnedIds, prunePinStore } from './data/pinStore';
 import { loadPrefs } from './data/prefsStore';
+import { fetchTournamentChildrenFor } from './data/tournamentChildren';
+import { applyTournamentTiers } from './domain/tournamentTiers';
 import {
   assumedAppliedReminder,
   EventSettingsMap,
@@ -662,8 +664,26 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       pins,
       new Set(follows),
     );
-    const ops = planSync(
+    // Tournament tiers (Round 3 B3): the followed block tournaments'
+    // children are fetched — from the PRE-dedupe list, so a joint
+    // tournament's two parents union their draws — and the tier pass
+    // reshapes what the planner sees (block + pointer, or bookends +
+    // the tier's matches). A failed children read fails the pass, per
+    // the module's own contract.
+    const kids = await fetchTournamentChildrenFor(
+      fixtures.value.fixtures,
+      follows,
+    );
+    if (!kids.ok) return kids;
+    beat();
+    const tieredFixtures = applyTournamentTiers(
       planFixtures,
+      prefs.tournamentTier,
+      follows,
+      kids.value,
+    );
+    const ops = planSync(
+      tieredFixtures,
       ledger,
       follows,
       prefs,

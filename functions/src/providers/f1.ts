@@ -15,7 +15,14 @@ interface SessionTime {
 export interface F1Race extends SessionTime {
   round: string;
   raceName: string;
-  Circuit?: { circuitId?: string };
+  // circuitName + Location ship on every round (verified live
+  // 2026-08-29). The venue-photo layer keys on the venue NAME, so an
+  // adapter that drops these turns that path off for all of F1 (B5).
+  Circuit?: {
+    circuitId?: string;
+    circuitName?: string;
+    Location?: { locality?: string; country?: string };
+  };
   FirstPractice?: SessionTime;
   SecondPractice?: SessionTime;
   ThirdPractice?: SessionTime;
@@ -52,6 +59,16 @@ function sessionFixture(
   const startUtc = new Date(
     `${at.date}T${at.time ?? '00:00:00Z'}`,
   ).toISOString();
+  // Every session of a weekend runs at the round's one circuit, so the
+  // venue is stamped per session, not just on the race. City + country
+  // in one string is the house venueCity shape (fixture.ts).
+  const venue = race.Circuit?.circuitName?.trim();
+  const venueCity = [
+    race.Circuit?.Location?.locality?.trim(),
+    race.Circuit?.Location?.country?.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ');
   return {
     id: `f1-${season}-${circuitKey}-${slug}`,
     sport: 'f1',
@@ -60,6 +77,8 @@ function sessionFixture(
     title: `${race.raceName} — ${label}`,
     followKeys: ['f1-series-1'],
     startUtc,
+    ...(venue ? { venue } : {}),
+    ...(venueCity ? { venueCity } : {}),
     // Jolpica publishes session times in UTC with no venue zone.
     // No published time yet → the day is all we have.
     status: hasTime ? 'scheduled' : 'tbd',

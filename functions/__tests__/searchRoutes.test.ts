@@ -9,14 +9,22 @@
 // risk, a different pair of sides.
 
 import { TSDB_TEAM_LEAGUES } from '../src/search';
+import { CATALOGUE_SEED } from '../src/catalogue';
 import { listSoccerLeagues } from '../src/directory';
 import { SPORTS } from '../../src/features/follows/domain/sportsConfig';
 
+// STAGED entries (tsdbTeamLeagues.ts) are seeded ahead of their client
+// rows — their league's catalogue row ships disabled, so there is
+// deliberately nothing client-side to pin them to yet. They are
+// excluded here and pinned by their own coherence test below.
 const soccerEntries = Object.entries(TSDB_TEAM_LEAGUES).filter(
-  ([, e]) => e.sportKey === 'soccer',
+  ([, e]) => e.sportKey === 'soccer' && !e.staged,
 );
 const nonSoccerEntries = Object.entries(TSDB_TEAM_LEAGUES).filter(
-  ([, e]) => e.sportKey !== 'soccer',
+  ([, e]) => e.sportKey !== 'soccer' && !e.staged,
+);
+const stagedEntries = Object.entries(TSDB_TEAM_LEAGUES).filter(
+  ([, e]) => e.staged,
 );
 
 it('team-league pollPaths match client sportsConfig exactly', () => {
@@ -57,5 +65,31 @@ it('soccer team-league pollPaths match what listSoccerLeagues serves', () => {
     expect(row!.teamPollPath).toBe(entry.pollPath);
     // A seeded directory means the row is drillable, not follow-only.
     expect((row as { followOnly?: boolean }).followOnly).toBeUndefined();
+  }
+});
+
+it('a STAGED table entry stays coherent: catalogue-disabled, no client row', () => {
+  // The stage is one state, pinned from both sides. While staged, the
+  // league's catalogue row must be DISABLED (a staged entry beside an
+  // enabled row would mean the sweep polls a league search still hides)
+  // and no client surface may offer it. The flip that enables the
+  // catalogue row therefore FAILS HERE until it also removes `staged`
+  // and lands the client browse row — the whole checklist, or a red CI.
+  const clientKeys = new Set(
+    SPORTS.flatMap((s) => (s.staticCompetitions ?? []).map((c) => c.key)),
+  );
+  for (const [leagueId, entry] of stagedEntries) {
+    const seed = CATALOGUE_SEED.find(
+      (e) => e.competitionId === `tsdb-league-${leagueId}`,
+    );
+    expect({ leagueId, seeded: !!seed, enabled: seed?.enabled }).toEqual({
+      leagueId,
+      seeded: true,
+      enabled: false,
+    });
+    expect(clientKeys.has(`tsdb-league-${leagueId}`)).toBe(false);
+    // The route itself must already be valid — staging defers the
+    // client surface, never the correctness of what will be polled.
+    expect(entry.pollPath).toBe(seed!.pollPath);
   }
 });

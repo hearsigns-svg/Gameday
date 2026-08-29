@@ -29,11 +29,24 @@ export interface CalendarPrefs {
   allDayReminder: AllDayReminder;
   eventStyle: 'timed' | 'all-day';
   seriesSessions: 'all' | 'race-only'; // F1-style series: include practice/quali?
+  // Tournament calendar tiers (Round 3 B3). What a followed multi-day
+  // tournament writes to the calendar:
+  //   block — the full-span all-day block, as always; its description
+  //           carries the pointer to the in-app card.
+  //   key   — the block is REPLACED by two single-day bookend notes
+  //           ("US Open begins" / "US Open — final day", pointer on the
+  //           opening note) with the KEY-ROUND matches between them as
+  //           normal events — finals, semis, quarters, where the data
+  //           can name them.
+  //   all   — bookends plus every match on the card.
+  tournamentTier: TournamentTier;
   // Opt-in removal of events for fixtures that finished more than
   // PAST_RETENTION_DAYS ago. OFF unless the user turns it on: deleting
   // somebody's record of games they went to is not a default.
   autoDeletePast: boolean;
 }
+
+export type TournamentTier = 'block' | 'key' | 'all';
 
 export const DEFAULT_PREFS: CalendarPrefs = {
   reminderMinutes: 60,
@@ -49,6 +62,11 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   // events — opt INTO the flood, never discover it. Stored prefs are
   // untouched; this only shapes new installs.
   seriesSessions: 'race-only',
+  // Key rounds is the RULED default (Round 3 B3, finalised model).
+  // Deliberate consequence, owner-accepted: an existing install's
+  // tournament blocks morph into bookends on the next sync (same
+  // fixture id, so the block UPDATES in place to the opening note).
+  tournamentTier: 'key',
   // Never on without an explicit opt-in.
   autoDeletePast: false,
 };

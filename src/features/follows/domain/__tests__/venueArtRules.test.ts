@@ -1,6 +1,8 @@
 import {
   commonsThumbUrl,
   isAllowedLicence,
+  isPhotographFile,
+  pickCityCandidate,
   stripHtml,
   teamCandidateOrder,
   venueCandidateOrder,
@@ -271,5 +273,41 @@ describe('teamCandidateOrder — first teams before reserve sides (Stage 4B)', (
         { id: 'Qclub', description: 'association football club in London, England' },
       ]),
     ).toEqual(['Qclub', 'Qyouth']);
+  });
+});
+
+// Round 3 B5: the photograph preference and the host-city rung's
+// candidate shape.
+describe('isPhotographFile — vectors are diagrams, rasters pass', () => {
+  it('refuses SVG (the Madring track-map case) and nothing else', () => {
+    expect(isPhotographFile('Circuito de Madring layout.svg')).toBe(false);
+    expect(isPhotographFile('Map.SVG')).toBe(false);
+    expect(isPhotographFile('Compressed map.svgz')).toBe(false);
+    // Raster photography ships in all of these — excluding them would
+    // throw real photos away.
+    expect(isPhotographFile('1975 Italian GP start.jpg')).toBe(true);
+    expect(isPhotographFile('Shanghai montage.png')).toBe(true);
+    expect(isPhotographFile('Aerial Baku.webp')).toBe(true);
+    expect(isPhotographFile('Centre court 2006.JPEG')).toBe(true);
+  });
+});
+
+describe('pickCityCandidate — settlement-shaped only, never first-hit', () => {
+  it('finds the city among namesakes', () => {
+    expect(
+      pickCityCandidate([
+        { id: 'Q1', description: 'song by an Italian band' },
+        { id: 'Q2', description: 'city in Lombardy, Italy' },
+        { id: 'Q3', description: 'racing circuit in Italy' },
+      ]),
+    ).toBe('Q2');
+  });
+  it('no settlement-shaped candidate means NONE — a guess is worse', () => {
+    expect(
+      pickCityCandidate([
+        { id: 'Q1', description: 'ocean liner' },
+        { id: 'Q2', description: undefined },
+      ]),
+    ).toBeNull();
   });
 });

@@ -11,7 +11,7 @@
 // resolution costs one request a day for all of them rather than one per
 // competition.
 
-import { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Firestore } from 'firebase-admin/firestore';
 
 const BASE = 'https://api.football-data.org/v4';
 
@@ -101,4 +101,34 @@ export async function loadFdSeasons(
   );
   await ref.set({ seasons, cachedAt: new Date(nowMs).toISOString() });
   return new Map(seasons.map((s) => [s.code, s]));
+}
+
+// Mark the cache stale, never delete it: the seasons list must survive
+// as loadFdSeasons's serve-stale fallback, or a flip-week 404 followed
+// by a failed /competitions refresh would blank the whole directory.
+export async function invalidateFdSeasons(db: Firestore): Promise<void> {
+  await db
+    .collection('providerMeta')
+    .doc(CACHE_DOC)
+    .set({ cachedAt: FieldValue.delete() }, { merge: true });
+}
+
+// A poll that 404s on a resolved season is the season-flip window: the
+// provider has moved a competition's currentSeason while the cached copy
+// still holds the old year, and the TTL would serve it for up to a day
+// (the CL draw week, Round 3 ruling 5). Invalidate, resolve fresh, and
+// hand back the new season ONLY when it differs — the caller retries at
+// most once and never loops on the same answer. undefined means the 404
+// was not staleness (or the refresh could only serve the stale copy);
+// the caller must rethrow it, never read it as an empty season.
+export async function reresolveAfter404(
+  db: Firestore,
+  apiKey: string,
+  code: string,
+  seasonTried: number,
+  nowMs: number = Date.now(),
+): Promise<number | undefined> {
+  await invalidateFdSeasons(db);
+  const fresh = (await loadFdSeasons(db, apiKey, nowMs)).get(code)?.seasonYear;
+  return fresh !== undefined && fresh !== seasonTried ? fresh : undefined;
 }

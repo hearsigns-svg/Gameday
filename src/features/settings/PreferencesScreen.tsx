@@ -477,7 +477,6 @@ export default function PreferencesScreen({
         />
         <SegmentedRow
           label="Race weekends"
-          last
           options={[
             {
               label: 'All sessions',
@@ -488,6 +487,30 @@ export default function PreferencesScreen({
               label: 'Race only',
               selected: prefs.seriesSessions === 'race-only',
               onPress: () => apply({ ...prefs, seriesSessions: 'race-only' }),
+            },
+          ]}
+        />
+        {/* Tournament calendar tiers (Round 3 B3): what a followed
+            multi-day tournament writes — the full block, bookend notes
+            plus the key rounds, or bookends plus every match. */}
+        <SegmentedRow
+          label="Tournaments"
+          last
+          options={[
+            {
+              label: 'Block',
+              selected: prefs.tournamentTier === 'block',
+              onPress: () => apply({ ...prefs, tournamentTier: 'block' }),
+            },
+            {
+              label: 'Key rounds',
+              selected: prefs.tournamentTier === 'key',
+              onPress: () => apply({ ...prefs, tournamentTier: 'key' }),
+            },
+            {
+              label: 'All matches',
+              selected: prefs.tournamentTier === 'all',
+              onPress: () => apply({ ...prefs, tournamentTier: 'all' }),
             },
           ]}
         />

@@ -230,6 +230,46 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('tsdb-league-4373', 'IndyCar', 'motorsport', 'pollTsdbLeague?leagueId=4373&season=2026&sport=motorsport&durationHours=3', 37),
   T2('tsdb-league-4486', 'Formula 2', 'motorsport', 'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5', 28),
   T2('tsdb-league-4413', 'WEC', 'motorsport', 'pollTsdbLeague?leagueId=4413&season=2026&sport=motorsport&durationHours=6', 38),
+  // ── Round 3 Phase B ruling 7 — the majors additions (2026-08-29) ───
+  // Curated omissions, sequenced by season proximity. Each comment
+  // carries the row's measured per-poll volume (eventsseason, live
+  // 2026-08-29): pollTsdbLeague ingests a whole season per run, so that
+  // number IS the row's cost on every sweep that polls it.
+  //
+  // NCAA football is THE EXPENSIVE ROW — 1,439 events for 2026, NBA
+  // scale (the NBA runs ~1,380) — and ships DISABLED. The owner flips
+  // it (enabled:true in the console) after weighing that volume; the
+  // team table already stages its directory entry (tsdbTeamLeagues.ts),
+  // so the flip is the console edit plus the client browse row + search
+  // alias in the same change, per the tournament-cycle convention below.
+  { ...T2('tsdb-league-4479', 'NCAA Division 1 Football', 'nfl', 'pollTsdbLeague?leagueId=4479&season=2026&sport=nfl&durationHours=3', 44), enabled: false },
+  // MLS: 510 events 2026 — in season (196 still future at seeding).
+  T2('tsdb-league-4346', 'MLS', 'soccer', 'pollTsdbLeague?leagueId=4346&season=2026&sport=soccer&durationHours=2', 45),
+  // NWSL: 240 events 2026 — in season.
+  T2('tsdb-league-4521', 'NWSL', 'soccer', 'pollTsdbLeague?leagueId=4521&season=2026&sport=soccer&durationHours=2', 31),
+  // WSL: 182 events 2026-2027, published in full; season starts
+  // 2026-09-04.
+  T2('tsdb-league-4849', 'WSL', 'soccer', 'pollTsdbLeague?leagueId=4849&season=2026-2027&sport=soccer&durationHours=2', 35),
+  // URC: 144 events 2026-2027; season starts 2026-09-25. Weighted
+  // beside Premiership Rugby (32) and the Champions Cup (33) — the
+  // weekly league for four of the home unions' fanbases.
+  T2('tsdb-league-4446', 'URC', 'rugby', 'pollTsdbLeague?leagueId=4446&season=2026-2027&sport=rugby&durationHours=2', 34),
+  // IIHF World Championship: the 2026 edition is over (64 events, all
+  // past), and 2027 is already published — 56 events, every one on the
+  // placeholder date 2027-05-14, which the date_only/tbd machinery
+  // renders honestly. Pollable from birth, so it seeds enabled.
+  T2('tsdb-league-4976', 'IIHF World Championship', 'ice-hockey', 'pollTsdbLeague?leagueId=4976&season=2027&sport=ice-hockey&durationHours=2.5', 40),
+  // Rugby World Cup 2027: 36 events, 1–17 Oct 2027, published in full —
+  // NOT born-dead, so it seeds enabled, and dormancy demotion holds the
+  // big weight back until the fixtures near (the World Cup case exactly).
+  T2('tsdb-league-4574', 'Rugby World Cup', 'rugby', 'pollTsdbLeague?leagueId=4574&season=2027&sport=rugby&durationHours=2', 50),
+  // Tournament-cycle rows, seeded DISABLED — the Part B lesson applied:
+  // both PROBED EMPTY 2026-08-29 (eventsseason returns null), so a row
+  // enabled today could never yield a page. FLIP each (enabled:true in
+  // the console) when its schedule publishes, and add its browse static
+  // + search alias in the same change.
+  { ...T2('tsdb-league-4565', 'Women\'s World Cup', 'soccer', 'pollTsdbLeague?leagueId=4565&season=2027&sport=soccer&durationHours=2', 65), enabled: false },
+  { ...T2('tsdb-league-4503', 'Club World Cup', 'soccer', 'pollTsdbLeague?leagueId=4503&season=2029&sport=soccer&durationHours=2', 61), enabled: false },
   // ── Ranking-only (Prompt 11) ────────────────────────────────────────
   // The four slams above their tours; keys must match what
   // tennisTournaments.tournamentKey mints from the live feed titles.

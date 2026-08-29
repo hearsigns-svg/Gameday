@@ -3,7 +3,7 @@
 // Team/sport colour arrives here ONLY as a TeamTheme (never raw hex).
 
 import { LinearGradient } from 'expo-linear-gradient';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -158,22 +158,39 @@ export interface FollowRailItem {
   badge?: string;
 }
 
-// LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3). When
-// the strip overflows its viewport it renders the items THREE times and
-// the drift is ONE continuous native-driver translateX across the
-// middle copy's width — duration derived from px/s, zero per-frame JS
-// (the 50ms scrollTo tick this replaces was ~20fps stepping and the
-// audit's transition-jank risk). Each traversal of one copy resets the
-// value to an identical frame, so the wrap is invisible; the only JS is
-// one callback per traversal and the touch events. A finger stops the
-// animation exactly where it is (position preserved natively); it
-// resumes after a few idle seconds from the same spot. User flings ride
-// the ScrollView as ever, re-centred into the middle copy on settle —
-// with the finger down the drift is frozen, which is what keeps the
-// composed offset inside the tripled content. Everything stands down
-// when the content fits the viewport and under reduced motion.
+// LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3; touch
+// contract per Round 3 B1). When the strip overflows its viewport it
+// renders the items enough times that HALF the copies are fling runway
+// on each side, and the drift is ONE continuous native-driver
+// translateX across one copy's width — duration derived from px/s,
+// zero per-frame JS. Each traversal resets the value to an identical
+// frame, so the drift's own wrap is invisible; the only JS is one
+// callback per traversal and the touch events.
+//
+// Touch (B1): a finger stops the animation exactly where it is
+// (position preserved natively) and the drift resumes THE MOMENT the
+// interaction ends — on release for a tap or a settled drag, on
+// momentum end for a fling; there is no idle wait. The only timer left
+// is a race guard: end-drag reports its velocity before momentum
+// begins, and when the platform omits it a deferred resume is
+// scheduled and momentum-begin cancels it.
+//
+// Wrap at fling velocity (B1): user flings ride the ScrollView, and
+// mid-fling corrections are the one thing that CAN'T be made invisible
+// (a programmatic jump kills iOS momentum dead), so the runway copies
+// exist to make them unnecessary — sized so the hardest realistic
+// fling (~2,500px at UIScrollView's normal deceleration) settles
+// before an edge, and re-centred by EXACT single-copy multiples at
+// every settle, which lands on an identical frame. A scroll watchdog
+// remains as the last net for pathological chained flings: escaping
+// the runway band teleports back by copy multiples (still an identical
+// frame — no end-stop, no jitter; at worst that fling's remaining
+// momentum is spent). Everything stands down when the content fits the
+// viewport and under reduced motion.
 const RAIL_DRIFT_PX_PER_S = 30; // one tunable; owner-tuned on device
-const RAIL_IDLE_RESUME_MS = 3000;
+const RAIL_FLING_RUNWAY_PX = 2600; // per side; ≥ a violent fling's travel
+const RAIL_MAX_COPIES = 13; // small strips stay bounded in tile count
+const RAIL_MOMENTUM_GUARD_MS = 80; // endDrag→momentumBegin handoff race
 
 export function FollowRail(props: {
   items: FollowRailItem[];
@@ -192,13 +209,29 @@ export function FollowRail(props: {
   }, [itemsKey]);
   const looping =
     !reduceMotion && singleW > 0 && viewportW > 0 && singleW > viewportW;
+  // Odd copy count, middle copy is home; enough copies that the runway
+  // on EACH side absorbs a violent fling without reaching an edge.
+  const copies = looping
+    ? Math.min(
+        RAIL_MAX_COPIES,
+        1 + 2 * Math.max(1, Math.ceil(RAIL_FLING_RUNWAY_PX / singleW)),
+      )
+    : 1;
+  const midStart = ((copies - 1) / 2) * singleW;
   const drift = useRef(new Animated.Value(0)).current;
   const driftAt = useRef(0); // last KNOWN value — updated at events only
-  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const driftRunning = useRef(false);
+  const dragging = useRef(false);
+  const guardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearGuard = () => {
+    if (guardTimer.current !== null) clearTimeout(guardTimer.current);
+    guardTimer.current = null;
+  };
   const runLeg = (from: number) => {
     // One leg = the rest of the current copy; completion snaps to the
     // identical frame at 0 and starts the next full leg. One JS
     // callback every singleW/speed seconds — not per frame.
+    driftRunning.current = true;
     const remaining = singleW - Math.abs(from);
     Animated.timing(drift, {
       toValue: -singleW,
@@ -213,33 +246,56 @@ export function FollowRail(props: {
     });
   };
   const pause = () => {
-    if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
-    resumeTimer.current = null;
+    clearGuard();
+    driftRunning.current = false;
     drift.stopAnimation((v) => {
       driftAt.current = v; // preserved exactly where the finger landed
     });
   };
-  const scheduleResume = () => {
-    if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
-    resumeTimer.current = setTimeout(() => runLeg(driftAt.current), RAIL_IDLE_RESUME_MS);
+  // Idempotent — settle events can double-fire (watchdog + momentum
+  // end); the second call must not restart a running leg mid-frame.
+  const resume = () => {
+    clearGuard();
+    if (driftRunning.current) return;
+    runLeg(driftAt.current);
+  };
+  // The endDrag→momentumBegin gap: resume after a beat unless momentum
+  // announces itself first. This is a race guard, not an idle wait.
+  const resumeUnlessMomentum = () => {
+    clearGuard();
+    guardTimer.current = setTimeout(resume, RAIL_MOMENTUM_GUARD_MS);
+  };
+  // Jump by EXACT copy multiples — an identical frame, invisible even
+  // mid-gesture — putting the offset back inside the middle copy.
+  const recentre = (x: number) => {
+    const centred = midStart + (((x % singleW) + singleW) % singleW);
+    if (Math.abs(centred - x) > 0.5) {
+      scrollRef.current?.scrollTo({ x: centred, animated: false });
+    }
   };
   useEffect(() => {
     if (!looping) return;
-    // Start in the MIDDLE copy so user flings have room both ways.
-    scrollRef.current?.scrollTo({ x: singleW, animated: false });
+    // Start at the MIDDLE copy so user flings have runway both ways.
+    scrollRef.current?.scrollTo({ x: midStart, animated: false });
     drift.setValue(0);
     driftAt.current = 0;
     runLeg(0);
     return () => {
-      if (resumeTimer.current !== null) clearTimeout(resumeTimer.current);
+      clearGuard();
+      driftRunning.current = false;
       drift.stopAnimation();
       drift.setValue(0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [looping, singleW]);
-  const rendered = looping
-    ? [...props.items, ...props.items, ...props.items]
-    : props.items;
+  }, [looping, singleW, copies]);
+  const rendered = useMemo(
+    () =>
+      copies === 1
+        ? props.items
+        : Array.from({ length: copies }, () => props.items).flat(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [itemsKey, copies],
+  );
   return (
     <ScrollView
       ref={scrollRef}
@@ -254,27 +310,47 @@ export function FollowRail(props: {
         if (!looping) setSingleW(w);
       }}
       onTouchStart={pause}
-      onTouchEnd={scheduleResume}
+      onTouchEnd={() => {
+        // A tap (no drag ever began): the interaction is over the
+        // moment the finger lifts — resume NOW (B1). A drag's release
+        // is handled by endDrag/momentum below.
+        if (!dragging.current) resume();
+      }}
+      onScrollBeginDrag={() => {
+        dragging.current = true;
+      }}
       onScrollEndDrag={(e) => {
-        scheduleResume();
-        if (!looping) return;
-        const x = e.nativeEvent.contentOffset.x;
-        const centred = singleW + (((x % singleW) + singleW) % singleW);
-        if (Math.abs(centred - x) > 0.5) {
-          scrollRef.current?.scrollTo({ x: centred, animated: false });
-        }
+        dragging.current = false;
+        if (looping) recentre(e.nativeEvent.contentOffset.x);
+        // velocity says whether momentum follows: none → settled →
+        // resume now; some → momentum end resumes. Platforms that omit
+        // it get the guarded deferral instead.
+        const vx = e.nativeEvent.velocity?.x;
+        if (vx === undefined) resumeUnlessMomentum();
+        else if (Math.abs(vx) < 0.05) resume();
       }}
+      onMomentumScrollBegin={clearGuard}
       onMomentumScrollEnd={(e) => {
-        scheduleResume();
-        if (!looping) return;
         // Re-centre into the middle copy so the user can fling forever
-        // in either direction — identical frame, invisible jump.
+        // in either direction — identical frame, invisible jump — and
+        // resume immediately: the interaction is over (B1).
+        if (looping) recentre(e.nativeEvent.contentOffset.x);
+        resume();
+      }}
+      onScroll={(e) => {
+        // Last-net watchdog: a pathological chain of flings that
+        // escapes the runway band teleports back by copy multiples —
+        // an identical frame, never an end-stop. scrollTo can spend
+        // that fling's remaining momentum, so the band is generous and
+        // ordinary flings never trip it.
+        if (!looping) return;
         const x = e.nativeEvent.contentOffset.x;
-        const centred = singleW + (((x % singleW) + singleW) % singleW);
-        if (Math.abs(centred - x) > 0.5) {
-          scrollRef.current?.scrollTo({ x: centred, animated: false });
+        if (x < singleW || x > (copies - 1) * singleW - viewportW) {
+          recentre(x);
+          if (!dragging.current) resumeUnlessMomentum();
         }
       }}
+      scrollEventThrottle={48}
       contentContainerStyle={styles.rail}
     >
      <Animated.View
@@ -511,17 +587,34 @@ export function PosterFace(props: {
   const th = props.theme;
   const dateOnly = isDateOnly(props.status, props.timePrecision);
   const when = `${whenLabel(props.startUtc, dateOnly)} · ${timeLabel(props.startUtc, props.status, props.timePrecision)}`;
-  const mark =
-    props.hasPhoto || props.hasCrestPair ? null : usableImage(props.crestUrl);
+  // The badge watermark PERSISTS over photography (Round 3 B5 ruling —
+  // "the F1 logo… should probably be kept"): a badge over a soft scrim
+  // patch, full strength, because 0.22 texture-opacity disappears into
+  // a photo. It still stands down for a crest pair (two crests plus a
+  // third mark is clutter). The MONOGRAM watermark never rides a photo
+  // — 150pt letterforms over photography read as damage, and the
+  // ruling was about badges.
+  const mark = props.hasCrestPair ? null : usableImage(props.crestUrl);
   return (
     <View style={[styles.hero, props.minHeight ? { minHeight: props.minHeight } : null]}>
       {mark ? (
-        <Image
+        <View
+          style={[
+            styles.heroWatermarkCrestWrap,
+            props.hasPhoto ? styles.heroWatermarkOverPhoto : null,
+          ]}
           accessible={false}
-          source={{ uri: mark }}
-          style={styles.heroWatermarkCrest}
-          resizeMode="contain"
-        />
+        >
+          <Image
+            accessible={false}
+            source={{ uri: mark }}
+            style={[
+              styles.heroWatermarkCrest,
+              props.hasPhoto ? styles.heroWatermarkCrestOnPhoto : null,
+            ]}
+            resizeMode="contain"
+          />
+        </View>
       ) : null}
       {!props.hasPhoto && !props.hasCrestPair && !mark && props.monogram ? (
         <Text style={styles.heroWatermark} accessible={false}>
@@ -1176,6 +1269,11 @@ export function SportCard(props: {
       onPressOut={() => setPress(false)}
       style={[
         styles.sportCard,
+        // An ODD grid used to hand the last sport a full-width tile —
+        // the "double" Olympics tile was this layout accident, no
+        // recorded reason behind it (Round 3 A5/B6). Capped to the
+        // two-across geometry; the picker's fullWidth tiles opt out.
+        !props.fullWidth && styles.sportCardGridCap,
         props.disabled === true && { opacity: 0.45 },
         props.fullWidth && {
           flexBasis: 0,
@@ -1740,13 +1838,29 @@ const styles = StyleSheet.create({
   // off the edge: a crest cropped in half reads as a rendering fault
   // where a cropped letterform reads as design. Same quiet opacity as
   // the monogram it sits in front of — texture, not content.
-  heroWatermarkCrest: {
+  // Positioning lives on the wrap so the badge can carry a scrim patch
+  // over photography (Round 3 B5) without moving.
+  heroWatermarkCrestWrap: {
     position: 'absolute',
     right: spacing.l,
     bottom: spacing.l,
+  },
+  heroWatermarkCrest: {
     width: 96,
     height: 96,
     opacity: 0.22,
+  },
+  // Over a photo the badge is content, not texture: full strength on a
+  // soft dark patch that keeps it legible against any photograph.
+  heroWatermarkOverPhoto: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: radiusTokens.card,
+    padding: spacing.s,
+  },
+  heroWatermarkCrestOnPhoto: {
+    width: 64,
+    height: 64,
+    opacity: 0.9,
   },
   // The typographic watermark: the entity's monogram set huge and
   // quiet — the generated identity, still the fallback whenever there
@@ -1904,6 +2018,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
+  // Two-across ceiling: flexGrow may top a row's tiles up, never let a
+  // lone last tile swallow the whole row (48.5% + 48.5% + the grid's
+  // gap fits; a third won't).
+  sportCardGridCap: { maxWidth: '48.5%' },
   sportCardRow: {
     flexDirection: 'row',
     alignItems: 'center',

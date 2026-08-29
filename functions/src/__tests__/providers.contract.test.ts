@@ -157,4 +157,34 @@ describe('F1 adapter against real payload', () => {
     const race = fixtures.find((f) => f.sessionKind === 'race');
     expect(race?.status).toBe('tbd');
   });
+
+  test('every session of a round carries the circuit as venue + city', () => {
+    // LITERAL values from the banked payload (Circuit.circuitName,
+    // Location.locality/country) — the venue-photo layer keys on the
+    // venue name, and before B5 the adapter dropped both fields.
+    const fixtures = racesToFixtures('2026', [races[0]], NOW);
+    expect(fixtures).toHaveLength(5);
+    for (const f of fixtures) {
+      expect(f.venue).toBe('Albert Park Grand Prix Circuit');
+      expect(f.venueCity).toBe('Melbourne, Australia');
+    }
+    const [shanghai] = racesToFixtures('2026', [races[1]], NOW);
+    expect(shanghai.venue).toBe('Shanghai International Circuit');
+    expect(shanghai.venueCity).toBe('Shanghai, China');
+  });
+
+  test('a round without circuit metadata stamps no venue fields', () => {
+    // Absent, not empty string — a blank key would poison the photo path.
+    const bare: F1Race = {
+      ...races[0],
+      Circuit: { circuitId: 'albert_park' },
+    };
+    const fixtures = racesToFixtures('2026', [bare], NOW);
+    for (const f of fixtures) {
+      expect(f.venue).toBeUndefined();
+      expect(f.venueCity).toBeUndefined();
+      expect('venue' in f).toBe(false);
+      expect('venueCity' in f).toBe(false);
+    }
+  });
 });

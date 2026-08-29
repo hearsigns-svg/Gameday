@@ -247,7 +247,12 @@ export default function App() {
         <Stack.Screen
           name="LeagueList"
           component={LeagueListScreen}
-          options={{ title: 'Competitions', headerTitle: () => <BrandTitle>Competitions</BrandTitle> }}
+          options={({ route }) => ({
+            title: route.params.title ?? 'Competitions',
+            headerTitle: () => (
+              <BrandTitle>{route.params.title ?? 'Competitions'}</BrandTitle>
+            ),
+          })}
         />
         <Stack.Screen
           name="AthleteList"

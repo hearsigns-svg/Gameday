@@ -66,6 +66,12 @@ interface AthleteSection {
   // Rows in the FULL group, before the collapsed preview slice. Present
   // only on browse sections; search results are never collapsed.
   fullCount?: number;
+  // The fighter-level sex split (Round 3 B7): set on the FIRST section
+  // of a block, rendered as a standing header above the group's own
+  // title. Grouped only where the signal exists — the IBF-derived
+  // class keys — and never guessed: unclassed fighters live in
+  // "Competing soon", which stays unsplit by construction.
+  blockTitle?: string;
 }
 
 // EVERY group must be discoverable without archaeology (Prompt 11c fix,
@@ -175,6 +181,35 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         if (!tour) return true;
         return new RegExp(`\\b${tour}\\b`, 'i').test(title);
       };
+      if (route.params.sportKey === 'boxing') {
+        // FIGHTER-LEVEL SEX SPLIT (Round 3 B7, reshaped per A4): the
+        // weight-class groups are already sexed by their KEYS
+        // (boxing-w-* vs boxing-*) — the split makes the two blocks
+        // visible with standing Men's/Women's headers, partitioned on
+        // the key, never on server order. Unclassed fighters carry no
+        // class key at all, so they are in neither block — they stay
+        // in "Competing soon" above, unsplit, never guessed.
+        const isWomen = (g: { groupingKey?: string }) =>
+          g.groupingKey?.startsWith('boxing-w-') === true;
+        const men = r.value.groups.filter((g) => !isWomen(g));
+        const women = r.value.groups.filter(isWomen);
+        men.forEach((g, i) =>
+          sections.push({
+            title: g.grouping,
+            data: g.athletes,
+            ...(i === 0 ? { blockTitle: 'Men’s' } : {}),
+          }),
+        );
+        women.forEach((g, i) =>
+          sections.push({
+            title: g.grouping,
+            data: g.athletes,
+            ...(i === 0 ? { blockTitle: 'Women’s' } : {}),
+          }),
+        );
+        setBrowse(sections);
+        return;
+      }
       for (const g of r.value.groups) {
         if (wanted(g.grouping)) sections.push({ title: g.grouping, data: g.athletes });
       }
@@ -364,7 +399,21 @@ export default function AthleteListScreen({ navigation, route }: Props) {
           keyExtractor={(a) => a.key}
           stickySectionHeadersEnabled={false}
           renderSectionHeader={({ section }) => (
-            <SectionHeader title={section.title} />
+            <>
+              {section.blockTitle ? (
+                <Text
+                  accessibilityRole="header"
+                  style={[
+                    type.title,
+                    styles.blockTitle,
+                    { color: t.textPrimary },
+                  ]}
+                >
+                  {section.blockTitle}
+                </Text>
+              ) : null}
+              <SectionHeader title={section.title} />
+            </>
           )}
           renderSectionFooter={({ section }) => {
             const full = section.fullCount ?? section.data.length;
@@ -492,5 +541,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: spacing.l,
+  },
+  // The sex-block header (Round 3 B7): a standing title over its run
+  // of weight-class sections — weight and spacing, not a caps label.
+  blockTitle: {
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.xl,
   },
 });

@@ -99,6 +99,10 @@ export function FixtureHero(props: {
       photoCredit={
         art
           ? [
+              // A host-city photo says WHICH PLACE it shows (Round 3
+              // B5): city imagery is not "the ground", and the credit
+              // is where that honesty lives.
+              art.subject ?? null,
               art.artist ? `Photo: ${art.artist}` : 'Photo: Wikimedia Commons',
               art.licence,
             ]

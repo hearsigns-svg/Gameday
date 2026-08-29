@@ -94,13 +94,16 @@ export interface CardParent {
   awayTeam?: string;
 }
 
-export function cardEntries(
+// The collection half: one parent's worthwhile children, deduped by
+// pair within the caller's `seen`. Shared by the single-parent card and
+// the joint-tournament union below.
+function collectEntries(
   parent: CardParent,
   children: readonly Fixture[],
-  nowMs: number = Date.now(),
+  nowMs: number,
+  seen: Set<string>,
 ): CardEntry[] {
   const mainKey = `${parent.competitionId}-main`;
-  const seen = new Set<string>();
   const entries: CardEntry[] = [];
   for (const child of children) {
     if (child.id === parent.id) continue;
@@ -135,7 +138,11 @@ export function cardEntries(
         child.followKeys.includes(mainKey) || isParentHeadline(parent, child),
     });
   }
+  return entries;
+}
 
+// The finishing half — the noise rule and the order.
+function finishEntries(entries: CardEntry[]): CardEntry[] {
   // A "full card" whose only entry is the fight you are already looking
   // at is noise — and that is the shape 10 of 14 stored combat parents
   // have, because their single child is the headline bout re-parsed
@@ -151,6 +158,52 @@ export function cardEntries(
       a.startUtc.localeCompare(b.startUtc) || a.title.localeCompare(b.title)
     );
   });
+}
+
+export function cardEntries(
+  parent: CardParent,
+  children: readonly Fixture[],
+  nowMs: number = Date.now(),
+): CardEntry[] {
+  return finishEntries(collectEntries(parent, children, nowMs, new Set()));
+}
+
+// A JOINT tournament's card (Round 3, A1's second cause): the US Open
+// is stored as TWO parents — ATP and WTA — sharing one `tennis-t-` key,
+// and the display dedupe anchors the hero on one of them, so a
+// single-parent card silently showed one tour's matches. The union
+// lists every sibling parent's children as one card; the shared `seen`
+// keeps a cross-listed pairing from appearing twice, and the noise rule
+// and order apply to the WHOLE union, not per side.
+export function jointCardEntries(
+  sides: ReadonlyArray<{ parent: CardParent; children: readonly Fixture[] }>,
+  nowMs: number = Date.now(),
+): CardEntry[] {
+  const seen = new Set<string>();
+  return finishEntries(
+    sides.flatMap((s) => collectEntries(s.parent, s.children, nowMs, seen)),
+  );
+}
+
+// The tournament key that joins a tennis parent to its other-tour
+// sibling — the year-agnostic `tennis-t-` slug both tours stamp.
+export function jointTournamentKeyOf(
+  followKeys: readonly string[],
+): string | null {
+  return followKeys.find((k) => k.startsWith('tennis-t-')) ?? null;
+}
+
+// A card entry's sex, ONLY where the data states it — the tours arrive
+// under sexed slices, so a tennis appearance is classifiable from its
+// competitionId alone. Everything else (a boxing bout, an athletics
+// event) returns null and is NEVER guessed (Round 3 ruling 1); the M/W
+// filter shows null-classed entries under either chip.
+export function entrySexOf(entry: {
+  competitionId: string;
+}): 'm' | 'w' | null {
+  if (entry.competitionId === 'tennis-atp-appearances') return 'm';
+  if (entry.competitionId === 'tennis-wta-appearances') return 'w';
+  return null;
 }
 
 // What this list is called, per sport. The vocabulary is the only

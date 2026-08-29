@@ -13,6 +13,9 @@ const PREFS: CalendarPrefs = {
   allDayReminder: null,
   eventStyle: 'timed',
   seriesSessions: 'all',
+  // Round 3 B3: 'block' keeps these suites' pre-tier expectations —
+  // they pin other features.
+  tournamentTier: 'block',
   autoDeletePast: false,
 };
 

@@ -20,7 +20,15 @@ export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   Search: undefined;
   SportPicker: undefined;
-  LeagueList: { sportKey: string };
+  LeagueList: {
+    sportKey: string;
+    // Olympics restructure (Round 3 B6): the same screen serves the
+    // two season cards (no filter), a season's SPORTS (the followable
+    // discipline list) and its GAMES (the editions). Header follows
+    // `title` where given.
+    olympics?: { season: 'summer' | 'winter'; view: 'sports' | 'games' };
+    title?: string;
+  };
   // Individual-sport athlete browse (Prompt 8): search-first over the
   // canonical directory, curated entry points, competing-soon.
   // `tour` narrows an individual sport's directory to one population —

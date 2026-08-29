@@ -130,6 +130,35 @@ export async function fetchEventCard(
   }
 }
 
+// Every PARENT sharing one tournament follow key — the two tours' docs
+// for a joint tournament (Round 3: the US Open is an ATP parent and a
+// WTA parent sharing `tennis-t-us-open`; the card must union both
+// sides' children). Same single-field constraint as above:
+// array-contains alone rides the automatic index; children never carry
+// the tournament key by design, so the result set IS the parents.
+export async function fetchTournamentParents(
+  tournamentKey: string,
+): Promise<Result<Fixture[]>> {
+  try {
+    const snap = await getDocsFromServer(
+      query(
+        collection(db, 'fixtures'),
+        where('followKeys', 'array-contains', tournamentKey),
+      ),
+    );
+    return ok(
+      snap.docs
+        .map((d) => d.data() as Fixture)
+        .filter((f) => !f.parentFixtureId && f.status !== 'cancelled'),
+    );
+  } catch (e) {
+    console.warn(
+      `[kickoffcal] tournament parents fetch failed for ${tournamentKey}: ${e}`,
+    );
+    return err({ kind: 'offline' });
+  }
+}
+
 export async function requestPoll(
   teamId: number,
   season: number,

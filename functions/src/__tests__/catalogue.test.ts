@@ -198,15 +198,17 @@ test('the seed stays under the stop-gate and the sweep cap with room for devices
   expect(CATALOGUE_SEED.length).toBeLessThan(200);
   const pollable = CATALOGUE_SEED.filter((e) => e.enabled && e.pollPath !== '');
   expect(pollable.length).toBeLessThan(150);
-  // 250 slots minus what the sweep actually POLLS leaves ≥188 for
+  // 250 slots minus what the sweep actually POLLS leaves ≥182 for
   // device paths — rankOnly rows never become sweep paths, and
-  // DISABLED tournament-cycle rows (Part B) sit in the allowlist
-  // without consuming a slot until flipped. Was ≥190; the two slots
-  // were spent DELIBERATELY on the NHL/MLB league-freshness rows
-  // (Stage 6 addendum, owner ruling: fix league-only freshness before
-  // launch) — any further seed growth trips this gate again.
+  // DISABLED tournament-cycle rows (Part B, ruling 7) sit in the
+  // allowlist without consuming a slot until flipped. Was ≥190, then
+  // ≥188 (the NHL/MLB league-freshness rows, Stage 6 addendum); six
+  // more slots were spent DELIBERATELY on the Round 3 Phase B ruling-7
+  // majors (MLS, NWSL, WSL, URC, IIHF Worlds, Rugby World Cup — the
+  // three staged rows there cost nothing until flipped) — any further
+  // seed growth trips this gate again.
   const polled = ROUTES.filter((e) => e.enabled);
-  expect(250 - polled.length).toBeGreaterThanOrEqual(188);
+  expect(250 - polled.length).toBeGreaterThanOrEqual(182);
 });
 
 test('tier 2 polls only on the daily sweep', () => {

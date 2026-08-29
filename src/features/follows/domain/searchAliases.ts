@@ -31,6 +31,29 @@ const RULES: ReadonlyArray<{ when: string; add: string }> = [
   { when: 'new york marathon', add: 'marathon majors' },
   { when: 'chicago marathon', add: 'marathon majors' },
   { when: 'boston marathon', add: 'marathon majors' },
+  // Ruling 7 rows (2026-08-29) are NAMED by the abbreviation people
+  // type (URC, MLS, WSL, NWSL — the NBA/KHL precedent), so the aliases
+  // run the other way: the written-out names reach the short rows.
+  // 'urc' itself can never be a trigger — containment would fire it
+  // inside 'church'.
+  { when: 'united rugby', add: 'urc' },
+  { when: 'major league soccer', add: 'mls' },
+  // Both spellings: the fold turns "women's" into "women s".
+  { when: 'womens super league', add: 'wsl' },
+  { when: 'women s super league', add: 'wsl' },
+  // Golf's majors and the Ryder Cup are DELIVERED inside the PGA Tour
+  // follow (48 major-named fixtures live under tsdb-league-4425) but
+  // nothing searches fixture titles, so typing "Masters" found nothing
+  // (Round 3 A1, ruling 4). The alias is the cheap partial; the real
+  // fix — a fixture-title search channel — is recorded in DECISIONS as
+  // the post-launch item, because this same gap is what hid the
+  // European Championships.
+  { when: 'masters', add: 'pga tour' },
+  { when: 'pga championship', add: 'pga tour' },
+  { when: 'the open', add: 'pga tour' },
+  { when: 'open championship', add: 'pga tour' },
+  { when: 'ryder cup', add: 'pga tour' },
+  { when: 'us open golf', add: 'pga tour' },
 ];
 
 // The query, plus every alias its folded form triggers. Always returns

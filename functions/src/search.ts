@@ -78,12 +78,16 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
     })),
     { id: mlbTeamsDocId(FD_SEASON), sportKey: 'baseball', league: 'MLB' },
     { id: NHL_TEAMS_DOC_ID, sportKey: 'ice-hockey', league: 'NHL' },
-    ...Object.values(TSDB_LEAGUES).map((l) => ({
-      id: l.cacheKey,
-      sportKey: l.sportKey,
-      league: l.label,
-      tsdbPollPath: l.pollPath,
-    })),
+    // Staged leagues stay out: nothing polls them yet, and search must
+    // not promise fixtures we can't deliver (tsdbTeamLeagues.ts).
+    ...Object.values(TSDB_LEAGUES)
+      .filter((l) => !l.staged)
+      .map((l) => ({
+        id: l.cacheKey,
+        sportKey: l.sportKey,
+        league: l.label,
+        tsdbPollPath: l.pollPath,
+      })),
   ];
   const snaps = await db.getAll(
     ...specs.map((s) => db.collection('teamDirectory').doc(s.id)),
@@ -144,7 +148,10 @@ export async function searchTeams(
   try {
     for (const hit of await searchTsdbTeams(tsdbKey, rawQuery)) {
       const served = TSDB_LEAGUES[hit.leagueId];
-      if (!served) continue;
+      // A staged league's teams are findable the day its catalogue row
+      // flips — offering them earlier would mint device poll paths for
+      // a route the owner has deliberately not enabled.
+      if (!served || served.staged) continue;
       const key = `tsdb-team-${hit.id}`;
       if (seenKeys.has(key) || seenNames.has(normaliseName(hit.name))) continue;
       seenKeys.add(key);

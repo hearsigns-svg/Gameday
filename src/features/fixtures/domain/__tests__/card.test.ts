@@ -5,7 +5,14 @@
 // tournaments whose appearances are stored ONE PER PLAYER, so every
 // match is present twice.
 
-import { cardEntries, cardSectionTitle, boutTimingCaption } from '../card';
+import {
+  boutTimingCaption,
+  cardEntries,
+  cardSectionTitle,
+  entrySexOf,
+  jointCardEntries,
+  jointTournamentKeyOf,
+} from '../card';
 import { Fixture } from '../fixture';
 
 const CARD_START = '2026-08-22T22:00:00.000Z';
@@ -226,5 +233,99 @@ describe('a card shows what is still to come', () => {
     const now = Date.parse('2026-08-22T12:00:00.000Z');
     const titles = cardEntries(p, [played, upcoming], now).map((e) => e.title);
     expect(titles).toEqual(['Victor Santillan vs Gary Antonio Russell']);
+  });
+});
+
+// Round 3: the joint-tournament union (A1's second cause) and the M/W
+// classifier the B4 filter rests on.
+describe('jointCardEntries', () => {
+  const atpParent = parent({
+    id: 'tennis-usopen-atp',
+    sport: 'tennis',
+    competition: 'US Open',
+    competitionId: 'tennis-atp',
+    title: 'US Open',
+    followKeys: ['tennis-atp', 'tennis-t-us-open'],
+    homeTeam: undefined as never,
+    awayTeam: undefined as never,
+  });
+  const wtaParent = parent({
+    id: 'wta-905-2026',
+    sport: 'tennis',
+    competition: 'US Open',
+    competitionId: 'tennis-wta',
+    title: 'US Open',
+    followKeys: ['tennis-wta', 'tennis-t-us-open'],
+    homeTeam: undefined as never,
+    awayTeam: undefined as never,
+  });
+  const match = (
+    parentId: string,
+    slice: string,
+    names: [string, string],
+  ): Fixture =>
+    bout(names, {
+      id: `${parentId}-app-${names[0].toLowerCase().replace(/[^a-z]+/g, '-')}`,
+      competitionId: slice,
+      followKeys: [slice],
+      parentFixtureId: parentId,
+      startUtc: '2026-08-31T15:00:00.000Z',
+    });
+
+  it('unions both tours into one card — the dedupe-hidden side returns', () => {
+    const entries = jointCardEntries(
+      [
+        {
+          parent: wtaParent,
+          children: [match('wta-905-2026', 'tennis-wta-appearances', ['Anisimova', 'Krueger'])],
+        },
+        {
+          parent: atpParent,
+          children: [match('tennis-usopen-atp', 'tennis-atp-appearances', ['Alcaraz', 'Sinner'])],
+        },
+      ],
+      NOW,
+    );
+    expect(entries.map((e) => e.title).sort()).toEqual([
+      'Alcaraz vs Sinner',
+      'Anisimova vs Krueger',
+    ]);
+  });
+
+  it('one per-player duplicate across the union collapses once', () => {
+    const a = match('wta-905-2026', 'tennis-wta-appearances', ['Eala', 'Stoiana']);
+    const b = match('wta-905-2026', 'tennis-wta-appearances', ['Stoiana', 'Eala']);
+    b.id = 'wta-905-2026-app-stoiana';
+    const entries = jointCardEntries(
+      [{ parent: wtaParent, children: [a, b] }],
+      NOW,
+    );
+    expect(entries).toHaveLength(1);
+  });
+
+  it('the noise rule reads the WHOLE union, not one side', () => {
+    // A combat parent whose single child is its own headline stays
+    // silent alone — but with a real second side it must speak.
+    const p = parent();
+    const headline = bout(['Rolando Romero', 'Teofimo Lopez']);
+    expect(jointCardEntries([{ parent: p, children: [headline] }], NOW)).toEqual([]);
+  });
+});
+
+describe('entrySexOf', () => {
+  it('classifies ONLY where the slice states it', () => {
+    expect(entrySexOf({ competitionId: 'tennis-atp-appearances' })).toBe('m');
+    expect(entrySexOf({ competitionId: 'tennis-wta-appearances' })).toBe('w');
+    expect(entrySexOf({ competitionId: 'pbc-cards-appearances' })).toBeNull();
+    expect(entrySexOf({ competitionId: 'boxingdata-cards-appearances' })).toBeNull();
+  });
+});
+
+describe('jointTournamentKeyOf', () => {
+  it('finds the year-agnostic tournament key and nothing else', () => {
+    expect(
+      jointTournamentKeyOf(['tennis-wta', 'tennis-t-us-open']),
+    ).toBe('tennis-t-us-open');
+    expect(jointTournamentKeyOf(['pbc-cards'])).toBeNull();
   });
 });

@@ -71,6 +71,13 @@ export interface Fixture {
   // ISO codes, same order — present only when every participant has one
   // (server: resolveDrafts). The combat hero's flag pair reads this.
   participantCountries?: string[];
+  // SYNTHETIC, never stored (Round 3 B3 — tournament calendar tiers).
+  // Stamped only by domain/tournamentTiers.ts on the copies it hands
+  // the sync planner: a bookend note ('open' carries the pointer text)
+  // or a tier-1 block whose description should carry it. No fetch path
+  // ever populates these; a stored document carrying one is a bug.
+  tournamentNote?: 'open' | 'close';
+  tournamentPointer?: boolean;
   firstSeenAt?: string;
   updatedAt: string; // ISO 8601, server write time
 }

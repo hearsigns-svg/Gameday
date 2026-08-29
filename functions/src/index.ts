@@ -103,7 +103,7 @@ import { fetchCardParticipants } from './providers/cardParticipants';
 import { diffFixtures } from './diff';
 import { Fixture, FixtureStatus } from './fixture';
 import { loadCoverage } from './coverage';
-import { loadFdSeasons } from './fdSeasons';
+import { loadFdSeasons, reresolveAfter404 } from './fdSeasons';
 import {
   listReviewItems,
   ReviewItem,
@@ -1413,19 +1413,40 @@ export const pollFdCompetition = onRequest(async (req, res) => {
           body: { season: null, reason: 'no_future_events' },
         };
       }
-      trace.seasonsTried.push(String(resolved));
-      const r = await fetchFdCompetitionSeasonFixtures(
-        requireFdKey(),
-        code,
-        resolved,
-      );
-      return {
-        ...r,
-        followKey,
-        seasonResolved: String(resolved),
-        sliceComplete: true,
-        body: { season: resolved },
+      const attempt = async (season: number) => {
+        trace.seasonsTried.push(String(season));
+        const r = await fetchFdCompetitionSeasonFixtures(
+          requireFdKey(),
+          code,
+          season,
+        );
+        return {
+          ...r,
+          followKey,
+          seasonResolved: String(season),
+          sliceComplete: true,
+          body: { season },
+        };
       };
+      try {
+        return await attempt(resolved);
+      } catch (e) {
+        // A 404 on the resolved season is the season-flip window (the
+        // CL draw week): the cached season doc is a day stale. Mark it
+        // stale and retry once, ONLY with a season a fresh resolution
+        // actually changed to. Any other failure — and a 404 that a
+        // refetch does not explain — stays a loud error: a read failure
+        // must never look like an empty fixture list.
+        if (httpStatusFromError(e) !== 404) throw e;
+        const refreshed = await reresolveAfter404(
+          db,
+          requireFdKey(),
+          code,
+          resolved,
+        );
+        if (refreshed === undefined) throw e;
+        return await attempt(refreshed);
+      }
     },
   );
   res.status(out.status).json(out.body);

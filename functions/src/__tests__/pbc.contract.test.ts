@@ -67,6 +67,42 @@ test('the card fixture is the main event, with the provider\'s own window', () =
   expect(f.followKeys).toEqual(['pbc-cards']);
   expect(f.timePrecision).toBe('nominal');
   expect(f.confidence).toBe('provisional');
+  // Place.name as published: "T-Mobile Arena, Las Vegas, Nevada". First
+  // comma segment is the venue the photo layer keys on; the rest is the
+  // city line. Silently discarded until Round 3 B5.
+  expect(f.venue).toBe('T-Mobile Arena');
+  expect(f.venueCity).toBe('Las Vegas, Nevada');
+});
+
+// Minimal single-node card page for location edge cases the banked
+// capture cannot show.
+const pageWith = (location?: unknown): string => `
+  <script type="application/ld+json">
+  ${JSON.stringify({
+    '@type': 'SportsEvent',
+    name: 'A vs B',
+    startDate: '2026-08-22T17:00:00-05:00',
+    ...(location === undefined ? {} : { location }),
+  })}
+  </script>`;
+
+test('a card without a location stamps no venue fields', () => {
+  const f = cardToFixture(URL, pageWith(), AT)!;
+  // Absent, not empty string — a blank key would poison the photo path.
+  expect('venue' in f).toBe(false);
+  expect('venueCity' in f).toBe(false);
+});
+
+test('a comma-less location is all venue, never a guessed city', () => {
+  const f = cardToFixture(URL, pageWith({ name: 'T-Mobile Arena' }), AT)!;
+  expect(f.venue).toBe('T-Mobile Arena');
+  expect('venueCity' in f).toBe(false);
+});
+
+test('a plain-string JSON-LD location maps the same as a Place', () => {
+  const f = cardToFixture(URL, pageWith('MGM Grand, Las Vegas'), AT)!;
+  expect(f.venue).toBe('MGM Grand');
+  expect(f.venueCity).toBe('Las Vegas');
 });
 
 test('every bout becomes an appearance draft, named from performer givenName+familyName', () => {

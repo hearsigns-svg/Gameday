@@ -40,7 +40,9 @@ type Cache = Record<string, Entry>;
 // version reads as absent and re-resolves once. FOUND entries are
 // untouched: they were licence-verified at fetch and their credit is
 // recorded. Bump when the resolution rules widen.
-const NONE_RULES_VERSION = 2;
+// v3: the host-city rung + photograph-preferred (Round 3 B5) — a
+// pre-B5 "none" may now resolve through the city step.
+const NONE_RULES_VERSION = 3;
 
 const inflight = new Set<string>();
 

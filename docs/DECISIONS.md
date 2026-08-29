@@ -3247,3 +3247,89 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   ruling to "mark where the pipeline holds one, monogram otherwise"
   (owner named the tournament list as a mark gap in Round 3 A2).
   Fixture-derived teams stay monogram-only by design (last round).
+
+- 2026-08-29 — Round 3 Phase B ruling 7, the majors additions, seeded in
+  code (live seeding stays owner-run, add-only): URC 34 / MLS 45 / NWSL
+  31 / WSL 35 / IIHF Worlds 40 / Rugby World Cup 2027 50 enabled; NCAA
+  D1 Football DISABLED at seeding — 1,439 events/season measured, the
+  owner flips it after weighing that volume; Women's WC 2027 and Club WC
+  2029 staged disabled (probed empty). Team drill-downs seeded for URC/
+  MLS/WSL/NWSL now and NCAA behind a new `staged` table flag, which
+  keeps a not-yet-enabled league out of search, counts and the client
+  drift pins — searchRoutes.test pins the flip checklist (enable +
+  unstage + client row land together, or CI is red).
+- 2026-08-29 (Round 3 Phase B, rulings 1–8):
+  B3 TOURNAMENT TIERS — Preferences → Events gains Tournaments:
+  Block / Key rounds (DEFAULT, ruled) / All matches. Tiers 2–3 replace
+  the full-span block with two single-day bookend notes ("X begins"
+  carries the pointer text; "X — final day"; a one-day tournament just
+  keeps its single banner) with the tier's matches between them as
+  ordinary ledger-tracked events riding the parent's own follow key —
+  so unfollow and erase remove matches, bookends and all, and horizon/
+  ledger/dedupe/exclusion/pin/delete-cap rules are untouched
+  (tournamentTiers.ts is a pure pre-pass over the planner's input; the
+  opening note KEEPS the parent's fixture id so an existing block
+  UPDATES in place on the default flip). Children are fetched per
+  followed tournament at plan time — a failed children read fails the
+  PASS, never reads as "no matches". NO structured round data exists in
+  any stored fixture: key rounds are classified from title segments
+  (skipping the competition's own name — the ATP Finals trap), which
+  today means golf's "— Final Round" rows and any knockout tie titled
+  with its round; tennis appearances carry no round text, so the key
+  tier there is honestly bookends + pointer until a source states
+  rounds. Display surfaces (hero, Schedule) deliberately keep showing
+  the tournament object, not the bookends — the tiers are a CALENDAR
+  shape.
+  B1 DRIFT TOUCH CONTRACT — resume the moment the interaction ends
+  (release for a tap or settled drag, momentum end for a fling; the
+  3s idle wait is gone — the only timer left is an 80ms endDrag→
+  momentum race guard). Wrap at fling velocity = runway copies sized
+  to a violent fling (~2,600px/side, 13-copy cap) + settle recentring
+  by exact copy multiples; an onScroll watchdog teleports identical
+  frames only in the pathological chained-fling case.
+  B4/B7 (ruling 1) — M/W filter chips live on the EXPANDED card, one
+  shared control for every sport, rendered only when the visible set
+  is genuinely mixed; classification comes from entrySexOf (tour
+  slices only — everything else null, shown under either chip, never
+  guessed); never-both-off = turning off the sole lit chip flips to
+  the other. Card-level boxing split DROPPED as ill-posed; the
+  fighter browse gains standing Men's/Women's block headers over the
+  IBF-keyed class sections (partitioned on boxing-w-* keys, not
+  server order); unclassed fighters stay in Competing soon, unsplit.
+  Undercards are provider-bounded (already surfaced by the card) —
+  not a defect.
+  JOINT-HERO UNION (ruling 3) — the expanded card unions every sibling
+  parent's children under the shared tennis-t- key (jointCardEntries;
+  edition-windowed ±21d so Wimbledon 2027 never joins this US Open),
+  which is what makes men's matches appear on the joint hero once
+  ingestion resumes.
+  B5 — F1 stamps circuit+locality at ingest; PBC keeps location.name;
+  host-city photo rung as a SECOND candidate shape (settlement-shaped
+  descriptions only, credit names the place — city imagery is not
+  "the ground"); photograph-preferred = vector P18s (track-map SVGs)
+  are skipped and resolution walks on (extension is the mechanism:
+  photographs never ship as SVG; rasters all pass); the badge
+  watermark now PERSISTS over photos — full-strength badge on a soft
+  scrim patch (PosterFace), while the monogram watermark still stands
+  down over photography. photoCache none-verdicts bumped to v3.
+  B6 — Olympics browse is TWO expandable season cards ([Sports |
+  Games] via CompetitionCard's named destinations); season is a fact
+  of the year (÷4 = Summer), so LA28/Brisbane 2032 land right by
+  existing; imagery statutes untouched. The Home grid's "double"
+  Olympics tile had NO recorded reason (A5) — it was flexGrow on an
+  odd 15-tile grid; capped at two-across geometry (fullWidth lists
+  opt out).
+  RULING 4 — golf majors/Ryder Cup aliases → the PGA Tour row they
+  already live inside. RECORDED, POST-LAUNCH: search has NO
+  fixture-title channel and no competitions channel server-side —
+  the architecture gap that hid the European Championships and keeps
+  "Masters" from matching what the app already delivers. CL season
+  cache invalidates on 404 (ruling 5).
+  RULING 6, RECORDED NOT BUILT — cricket Tests need a second source
+  before the 2027 Ashes cycle (TSDB Test coverage dead since 2024);
+  enable the seeded-disabled Big Bash row when TSDB publishes
+  2026-27.
+  RULING 8 — the four slams STAY monogram: no per-slam badge exists in
+  the pipeline's provider (1,530-league sweep, pinned by test), and
+  hand-importing official slam logos is barred separately by the
+  owner. The Following rail's "U" is the honest mark.

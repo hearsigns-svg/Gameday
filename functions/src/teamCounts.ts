@@ -113,8 +113,10 @@ export function soccerRowDocId(row: {
 // listTeams route resolves the season from the current year the same way.
 export function staticCountRows(): Array<{ docId: string; rowKey: string }> {
   return [
+    // Staged leagues have no client row yet, so there is no subtitle to
+    // decorate (tsdbTeamLeagues.ts).
     ...Object.entries(TSDB_TEAM_LEAGUES)
-      .filter(([, l]) => l.sportKey !== 'soccer')
+      .filter(([, l]) => l.sportKey !== 'soccer' && !l.staged)
       .map(([id, l]) => ({ docId: l.cacheKey, rowKey: `tsdb-league-${id}` })),
     { docId: NHL_TEAMS_DOC_ID, rowKey: 'nhl-league-1' },
     { docId: mlbTeamsDocId(new Date().getFullYear()), rowKey: 'mlb-league-1' },

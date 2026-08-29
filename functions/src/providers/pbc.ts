@@ -163,6 +163,16 @@ export function cardToFixture(
     Number.isFinite(rawHours) && rawHours >= 0.5 && rawHours <= 24
       ? Math.round(rawHours * 10) / 10
       : 4;
+  // Place.name packs venue and city into one comma-joined string
+  // ("T-Mobile Arena, Las Vegas, Nevada" in the banked capture): the
+  // first segment is the venue the photo layer keys on, the remainder
+  // is the city line. No comma means a bare venue name — never guess a
+  // city out of it. JSON-LD also allows a plain-string location.
+  const locationName =
+    typeof main.location === 'string' ? main.location : main.location?.name;
+  const [venuePart, ...cityParts] = (locationName ?? '').split(',');
+  const venue = venuePart.trim();
+  const venueCity = cityParts.join(',').trim();
   return {
     id: `pbc-${url.replace(/\/$/, '').split('/').pop()}`,
     sport: 'boxing',
@@ -178,6 +188,8 @@ export function cardToFixture(
     // instant, unsettled — exactly what nominal is for.
     timePrecision: status === 'postponed' ? 'date_only' : 'nominal',
     confidence: 'provisional',
+    ...(venue ? { venue } : {}),
+    ...(venueCity ? { venueCity } : {}),
     updatedAt,
   };
 }
