@@ -3228,3 +3228,22 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   served the IPL for the T20 World Cup and the NBA for FIBA. An
   explicitly-tabled provider league that returns EMPTY now also falls
   through to derivation.
+- 2026-08-29 (Round 3 Phase A, mark audit v2 — the one Phase A item
+  that executes): TSDB_ART_SPORTS gains Athletics — the recorded "no
+  TSDB athletics art" claim was WRONG (all 22 TSDB athletics leagues
+  badge, verified live); six wa-* aliases + Laver Cup + United Cup +
+  Eredivisie added to COMPETITION_ART_ALIASES. THE FOUR TENNIS MAJORS
+  ARE GENUINELY MARKLESS — a 1,530-league TSDB sweep found no per-slam
+  league; they keep monograms honestly, pinned by test alongside an
+  Olympic-statute guard on the alias map (TSDB's "Olympics
+  Athletics"/"Olympics Tennis" badges must never be aliased). PBC
+  stays deliberately markless (no per-promotion badge). Eredivisie's
+  serve-time badge join healed by folding a leading definite article
+  off the normalised country on BOTH sides of the country-scoped
+  lookup (fd.org "Netherlands" vs TSDB "The Netherlands"). Client:
+  Search gains the id-then-key art fallback browse already had (NHL/
+  MLB/ATP/WTA monogrammed in Search only), and tournament cards now
+  read the art map by follow key — amending the 22b no-tournament-art
+  ruling to "mark where the pipeline holds one, monogram otherwise"
+  (owner named the tournament list as a mark gap in Round 3 A2).
+  Fixture-derived teams stay monogram-only by design (last round).
