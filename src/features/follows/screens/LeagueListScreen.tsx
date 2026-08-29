@@ -469,6 +469,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       caption={tournamentDateRange(row.startUtc, row.endUtc)}
       theme={teamTheme(sport?.accent ?? null, mode)}
       monogram={monogramOf(row.name)}
+      {...(cachedPriorities().competitionArt[row.key]
+        ? { crestUrl: cachedPriorities().competitionArt[row.key] }
+        : {})}
+      {...(cachedPriorities().competitionArtColours[row.key]
+        ? { burstColours: cachedPriorities().competitionArtColours[row.key] }
+        : {})}
       glyph={sport?.glyph ?? '🎾'}
       onOpen={() =>
         navigation.navigate('Team', {

@@ -82,6 +82,13 @@ function sportNameOf(sportKey: string): string {
   return cfg ? sportLabelFor(cfg.key, cfg.label, activeRegion()) : sportKey;
 }
 
+// A static competition's mark: by TSDB id, then by follow key — the
+// alias-keyed rows (NHL, MLB, ATP, WTA) only exist under their key.
+function searchMarkFor(c: { id: string | number; key: string }): string | undefined {
+  const art = cachedPriorities().competitionArt;
+  return art[String(c.id)] ?? art[c.key];
+}
+
 function localMatches(q: string): { sports: Row[]; comps: Row[] } {
   const needle = q.trim().toLowerCase();
   if (needle.length < 2) return { sports: [], comps: [] };
@@ -126,8 +133,12 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
         title: c.name,
         caption: `${c.country} · ${sportLabelFor(s.key, s.label, activeRegion())}`,
         sportKey: s.key,
-        ...(cachedPriorities().competitionArt[String(c.id)]
-          ? { imageUrl: cachedPriorities().competitionArt[String(c.id)] }
+        // By TSDB id, then by FOLLOW KEY — the same fallback browse
+        // uses. Search alone lacked it, so the alias-keyed statics
+        // (NHL, MLB, ATP, WTA) monogrammed here while carrying badges
+        // one screen away (Round 3 mark audit v2).
+        ...(searchMarkFor(c)
+          ? { imageUrl: searchMarkFor(c) }
           : {}),
         followable: {
           key: c.key,
@@ -137,8 +148,8 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
           ...(c.pollPath ? { pollPath: c.pollPath } : {}),
           // The row above shows this logo; the follow kept none of it
           // until Prompt 16, so following from search lost it.
-          ...(cachedPriorities().competitionArt[String(c.id)]
-            ? { crestUrl: cachedPriorities().competitionArt[String(c.id)] }
+          ...(searchMarkFor(c)
+            ? { crestUrl: searchMarkFor(c) }
             : {}),
         },
       })),
@@ -343,11 +354,19 @@ export default function SearchScreen({ navigation }: Props) {
             title: tr.name,
             caption: `Tournament · ${sportNameOf('tennis')}`,
             sportKey: 'tennis',
+            // Tournament keys the art map carries (the aliased cups —
+            // Round 3 mark audit v2); the majors have no provider mark.
+            ...(cachedPriorities().competitionArt[tr.key]
+              ? { imageUrl: cachedPriorities().competitionArt[tr.key] }
+              : {}),
             followable: {
               key: tr.key,
               label: tr.name,
               sportKey: 'tennis',
               type: 'competition' as const,
+              ...(cachedPriorities().competitionArt[tr.key]
+                ? { crestUrl: cachedPriorities().competitionArt[tr.key] }
+                : {}),
             },
           }))
       : [];

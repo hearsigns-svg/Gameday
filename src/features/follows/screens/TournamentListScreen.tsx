@@ -23,6 +23,7 @@ import { CompetitionCard } from '../CompetitionCard';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { cachedTournaments, fetchTournaments, TournamentRow } from '../data/directoryRepo';
+import { cachedPriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
 import { tournamentDateRange, tournamentsFor } from '../domain/tennisBrowse';
 import { sportByKey } from '../domain/sportsConfig';
@@ -106,15 +107,22 @@ export default function TournamentListScreen({ navigation, route }: Props) {
         keyExtractor={(r) => r.key}
         contentContainerStyle={{ paddingTop: spacing.l }}
         renderItem={({ item }) => (
-          // The tournament's own initials as the generated monogram, so
-          // Wimbledon and the Western & Southern Open are distinguishable
-          // at a glance without inventing per-tournament artwork we do
-          // not hold (22b, owner ruling).
+          // The tournament's own initials as the generated monogram
+          // where we hold no artwork (22b) — but a mark the art
+          // pipeline DOES hold (the aliased cups — Round 3 mark audit
+          // v2) renders; the majors have no provider mark and keep the
+          // monogram honestly.
           <CompetitionCard
             name={item.name}
             caption={tournamentDateRange(item.startUtc, item.endUtc)}
             theme={teamTheme(tennis?.accent ?? null, mode)}
             monogram={monogramOf(item.name)}
+            {...(cachedPriorities().competitionArt[item.key]
+              ? { crestUrl: cachedPriorities().competitionArt[item.key] }
+              : {})}
+            {...(cachedPriorities().competitionArtColours[item.key]
+              ? { burstColours: cachedPriorities().competitionArtColours[item.key] }
+              : {})}
             glyph={tennis?.glyph ?? '\u{1F3BE}'}
             onOpen={() =>
               navigation.navigate('Team', {

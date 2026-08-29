@@ -39,6 +39,11 @@ export const TSDB_ART_SPORTS: readonly string[] = [
   // ART ONLY — no tennis fixtures come from TSDB; the sport is fetched
   // for the tour badges the aliases below serve (Round 2 item 4).
   'Tennis',
+  // ART ONLY — athletics fixtures come from World Athletics, but TSDB
+  // holds badged athletics leagues (22 of them, every one with a badge,
+  // verified live 2026-08-29 — the older "no TSDB athletics art" note
+  // was wrong) for the wa-* aliases below (Round 3 mark audit v2).
+  'Athletics',
 ];
 
 // Competitions served by NON-TSDB routes whose marks TSDB nevertheless
@@ -46,17 +51,37 @@ export const TSDB_ART_SPORTS: readonly string[] = [
 // the competition FOLLOW KEY, valued by the TSDB league id whose badge
 // is that competition's real mark; the art map serves these under the
 // follow key so the client's row-key lookup finds them. Every id was
-// probed live with a badge present (2026-08-28). Deliberately absent:
-// the boxing promotions (PBC/boxingdata — TSDB has no per-promotion
-// badge, and a generic boxing mark on a PBC follow is a wrong mark),
-// athletics (no TSDB athletics art), and every olympics-* key (excluded
-// in code by statute — imagery.ts).
+// probed live with a badge present (2026-08-28; wa-*/cup rows
+// 2026-08-29). Deliberately absent: the boxing promotions
+// (PBC/boxingdata — TSDB has no per-promotion badge, and a generic
+// boxing mark on a PBC follow is a wrong mark), the four tennis majors
+// (a 1,530-league sweep found no per-slam league — genuinely
+// markless), the wa-* group rows that union what TSDB splits (Cross
+// Country Tour, U20s, National/Continental championships, wa-calendar
+// — any single badge would be a wrong mark for the group), and every
+// olympics-* key (excluded in code by statute — imagery.ts; TSDB's
+// "Olympics Athletics"/"Olympics Tennis" badges must never be aliased).
 export const COMPETITION_ART_ALIASES: Readonly<Record<string, string>> = {
   'f1-series-1': '4370', // Formula 1 (Motorsport)
   'nhl-league-1': '4380', // NHL (Ice Hockey)
   'mlb-league-1': '4424', // MLB (Baseball)
   'tennis-atp': '4464', // ATP World Tour (Tennis)
   'tennis-wta': '4517', // WTA Tour (Tennis)
+  // Round 3 mark audit v2 — athletics rows (Athletics fetched above):
+  'wa-wanda-diamond-league-meeting': '5282', // Diamond League
+  'wa-world-athletics-championships-world-athletics-series': '5007', // World Championships
+  'wa-world-athletics-continental-tour-gold': '5302', // Continental Tour Gold
+  'wa-world-athletics-indoor-tour-gold': '5785', // Indoor Tour Gold
+  'wa-world-athletics-label-road-races-platinum': '5443', // the Platinum label IS the Marathon Majors row
+  'wa-world-athletics-label-road-races-gold': '5442', // Gold Label Road Races
+  // Tennis cup rows (tournament keys — the client's tournament cards
+  // read the art map by follow key):
+  'tennis-t-laver-cup': '4581', // Laver Cup
+  'tennis-t-united-cup': '5872', // United Cup
+  // Eredivisie's serve-time badge join misses on a country-name split
+  // (fd.org "Netherlands" vs TSDB "The Netherlands"); the alias heals
+  // the follow-key surfaces regardless of the join.
+  'fdorg-comp-DED': '4337', // Eredivisie (Soccer)
 };
 
 const TSDB_LEAGUE_KEY = /^tsdb-league-(\d+)$/;

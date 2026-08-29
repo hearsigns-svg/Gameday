@@ -4,6 +4,7 @@
 
 import {
   artIsFresh,
+  COMPETITION_ART_ALIASES,
   COMPETITION_ART_TTL_MS,
   narrowToServed,
   TSDB_ART_SPORTS,
@@ -55,9 +56,12 @@ test('the payload is narrowed to served ids — not the whole badge set', () => 
 });
 
 test('every sport we browse is covered by the fetch list', () => {
-  // Verified live 2026-08-04: each of these returns leagues and every
-  // league carries a badge. A sport missing here means its
-  // competitions silently keep monograms.
+  // Verified live 2026-08-04 (Tennis 2026-08-28, Athletics 2026-08-29):
+  // each of these returns leagues and every league carries a badge. A
+  // sport missing here means its competitions silently keep monograms —
+  // and an ALIAS whose sport is missing resolves to nothing, which is
+  // exactly how athletics stayed markless while its aliases were
+  // "correct" on paper (Round 3 mark audit v2).
   for (const s of [
     'Soccer',
     'Basketball',
@@ -69,8 +73,32 @@ test('every sport we browse is covered by the fetch list', () => {
     'Golf',
     'Fighting',
     'Motorsport',
+    'Tennis',
+    'Athletics',
   ]) {
     expect(TSDB_ART_SPORTS).toContain(s);
+  }
+});
+
+test('no alias ever touches an Olympic key — statute, not preference', () => {
+  // TSDB holds "Olympics Athletics" (4994) and "Olympics Tennis" (5040)
+  // badges; aliasing an olympics-* follow key to either would put an
+  // excluded mark back on an excluded row. imagery.ts drops olympics-*
+  // downstream, but the alias map must never rely on that net.
+  for (const key of Object.keys(COMPETITION_ART_ALIASES)) {
+    expect(key).not.toMatch(/^(?:olympics|paralympics)/);
+  }
+  // The four majors are DELIBERATELY absent (no per-slam TSDB league
+  // exists — 1,530-league sweep, 2026-08-29): an entry appearing here
+  // means someone found real art, which deserves a fresh probe, not a
+  // silent pass.
+  for (const slam of [
+    'tennis-t-us-open',
+    'tennis-t-wimbledon',
+    'tennis-t-roland-garros',
+    'tennis-t-australian-open',
+  ]) {
+    expect(COMPETITION_ART_ALIASES).not.toHaveProperty(slam);
   }
 });
 

@@ -274,7 +274,7 @@ export async function fetchTsdbLeagueBadges(
   for (const l of body.countries ?? []) {
     if (!l.strBadge) continue;
     if (l.idLeague) byId.set(l.idLeague, l.strBadge);
-    const country = normalise((l.strCountry ?? '').trim());
+    const country = foldCountry(normalise((l.strCountry ?? '').trim()));
     if (!country) continue;
     const names = [l.strLeague, ...(l.strLeagueAlternate ?? '').split(',')];
     const bucket = namesByCountry.get(country) ?? [];
@@ -288,6 +288,15 @@ export async function fetchTsdbLeagueBadges(
     namesByCountry.set(country, bucket);
   }
   return { byId, byCountryName, namesByCountry };
+}
+
+// The two providers disagree on definite articles: fd.org says
+// "Netherlands", TSDB says "The Netherlands" — which made the
+// country-scoped join miss and left the Eredivisie the only badgeless
+// soccer row (Round 3 mark audit v2). Folded on BOTH sides — map build
+// and lookup — so the join stays symmetric.
+export function foldCountry(normalisedCountry: string): string {
+  return normalisedCountry.replace(/^the\s+/, '');
 }
 
 // Resolve one competition's logo. Tries, in order: the TSDB league id
@@ -305,7 +314,7 @@ export function leagueBadgeFor(
     const byId = art.byId.get(opts.id);
     if (byId) return byId;
   }
-  const country = normalise(opts.country.trim());
+  const country = foldCountry(normalise(opts.country.trim()));
   const name = normalise(opts.name.trim());
   if (!country || !name) return undefined;
   const exact = art.byCountryName.get(`${country}|${name}`);
