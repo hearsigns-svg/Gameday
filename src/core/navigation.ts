@@ -34,7 +34,14 @@ export type RootStackParamList = {
   // `tour` narrows an individual sport's directory to one population —
   // tennis browses ATP and WTA as separate sections, each with its own
   // way in, rather than one shared list with a split inside it.
-  AthleteList: { sportKey: string; tour?: 'atp' | 'wta' };
+  AthleteList: {
+    sportKey: string;
+    tour?: 'atp' | 'wta';
+    // Boxing's mirrored M/W browse (Round 3 B7 reinstated): one sex's
+    // fighter view; header follows `title` where given.
+    sex?: 'm' | 'w';
+    title?: string;
+  };
   // One league's clubs — the card's Teams segment (27C revised; the
   // all-leagues variant was deleted with the design that needed it).
   TeamList: {

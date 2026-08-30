@@ -32,6 +32,7 @@ import {
 import { RootStackParamList } from '../../../core/navigation';
 // Namespace import: `t` is this component's theme binding.
 import * as i18n from '../../../core/i18n';
+import { boxingCardSex, boxingGroupSex, inSexView } from '../domain/boxingBrowse';
 import { coverageNoteFor } from '../domain/coverageNotes';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
@@ -176,7 +177,10 @@ export default function AthleteListScreen({ navigation, route }: Props) {
       // information the sections genuinely do not carry.
       if (
         r.value.competingSoon.length > 0 &&
-        route.params.sportKey !== 'tennis'
+        route.params.sportKey !== 'tennis' &&
+        // A boxing SEX view builds its own filtered Competing soon
+        // below — the unfiltered one here would double it.
+        !(route.params.sportKey === 'boxing' && route.params.sex)
       ) {
         sections.push({
           title: i18n.t('follows.athletes.competingSoon'),
@@ -196,17 +200,44 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         return new RegExp(`\\b${tour}\\b`, 'i').test(title);
       };
       if (route.params.sportKey === 'boxing') {
-        // FIGHTER-LEVEL SEX SPLIT (Round 3 B7, reshaped per A4): the
-        // weight-class groups are already sexed by their KEYS
-        // (boxing-w-* vs boxing-*) — the split makes the two blocks
-        // visible with standing Men's/Women's headers, partitioned on
-        // the key, never on server order. Unclassed fighters carry no
-        // class key at all, so they are in neither block — they stay
-        // in "Competing soon" above, unsplit, never guessed.
-        const isWomen = (g: { groupingKey?: string }) =>
-          g.groupingKey?.startsWith('boxing-w-') === true;
-        const men = r.value.groups.filter((g) => !isWomen(g));
-        const women = r.value.groups.filter(isWomen);
+        // BOXING'S SEX VIEWS (Round 3 B7, mirrored structure
+        // reinstated 2026-08-30). The weight-class groups are sexed by
+        // their KEYS (boxing-w-* vs boxing-*; boxingBrowse.ts).
+        //
+        // With a `sex` param (arrived from the Men's/Women's browse
+        // sections) the screen IS that sex's fighter list: only its
+        // class groups, no block headers (the screen title says it),
+        // and Competing soon filtered by the card-label convention —
+        // an UNCLASSED fighter rides in BOTH views, which claims
+        // nothing (never guessed).
+        //
+        // Without one (search, deep links) the combined list keeps the
+        // standing Men's/Women's block headers.
+        const view = route.params.sex;
+        if (view) {
+          const soon = r.value.competingSoon.filter((a) =>
+            inSexView(view, boxingCardSex(a.grouping)),
+          );
+          if (soon.length > 0) {
+            sections.push({
+              title: i18n.t('follows.athletes.competingSoon'),
+              data: soon,
+            });
+          }
+          for (const g of r.value.groups) {
+            if (boxingGroupSex(g.groupingKey) === view) {
+              sections.push({ title: g.grouping, data: g.athletes });
+            }
+          }
+          setBrowse(sections);
+          return;
+        }
+        const men = r.value.groups.filter(
+          (g) => boxingGroupSex(g.groupingKey) === 'm',
+        );
+        const women = r.value.groups.filter(
+          (g) => boxingGroupSex(g.groupingKey) === 'w',
+        );
         men.forEach((g, i) =>
           sections.push({
             title: g.grouping,
@@ -229,7 +260,7 @@ export default function AthleteListScreen({ navigation, route }: Props) {
       }
       setBrowse(sections);
     })();
-  }, [route.params.sportKey, route.params.tour]);
+  }, [route.params.sportKey, route.params.tour, route.params.sex]);
 
   // Search-first: the box feeds the same canonical directory search as
   // global search, filtered to this sport. Stale responses are dropped.

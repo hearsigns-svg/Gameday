@@ -3389,3 +3389,20 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   F22 discipline: the late-round RoundID vocabulary is unverified
   until those rounds appear in the feed (~US Open week 2), so it is
   built against real data then, not guessed now.
+- 2026-08-30 (B7 mirrored structure REINSTATED, superseding the
+  ruling-1 reshape): boxing browse is Men's / Women's blocks, each
+  with Fighters, Major fight cards and the promotions. The Fighters
+  entries open per-sex fighter lists (AthleteList sex param: that
+  sex's IBF-keyed class groups + Competing soon filtered by the
+  marked-female/unmarked-male label convention; an UNCLASSED fighter
+  rides in BOTH views — presence claims nothing, never guessed). The
+  card/promotion rows are the SAME followables in both blocks — mixed
+  cards surface in both per the brief's own words — because cards are
+  0% sex-classifiable (A4): a sexed card follow cannot be honestly
+  delivered, so per-sex unfollow independence lives at FIGHTER level,
+  where the keys state the sex. A sexed card bundle becomes possible
+  only with upstream per-fighter gender data (boxing-data /v2/fighters
+  gender field; quota resets ~Sept 7) — recorded, not built.
+  Undercards re-verified: the expanded card already lists every bout
+  the providers publish structure for (6/22 future cards today) —
+  provider-bounded, per the standing ruling.

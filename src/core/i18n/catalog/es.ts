@@ -199,6 +199,8 @@ export const es: Catalog = {
   'follows.athletes.competingSoon': 'Compite pronto',
   'follows.athletes.mens': 'Masculino',
   'follows.athletes.womens': 'Femenino',
+  'follows.boxing.mensTitle': 'Boxeo masculino',
+  'follows.boxing.womensTitle': 'Boxeo femenino',
   'follows.athletes.searchPlaceholder': 'Buscar atletas de {sport}',
   'follows.athletes.noneMatch': 'Ningún atleta coincide con ese nombre.',
   'follows.athletes.noneYet':
