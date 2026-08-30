@@ -1,3 +1,6 @@
+// DEPLOY STAMP 2026-08-30 (second occurrence of the skip-wall: the
+// curated-merge deploy skipped as unchanged while prod rebuilt art
+// without the merge).
 // DEPLOY STAMP 2026-08-28: bump the codebase hash. Two overlapping
 // deploys left prod running a pre-fixtureTeams source zip while the
 // CLI's skip-unchanged hash matched the NEW source, so a plain

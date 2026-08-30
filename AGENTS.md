@@ -45,6 +45,17 @@ source of truth for build state — never chat history.
   com.hearsigns.Gameday app)/main.jsbundle" | grep -c <round-marker>`.
   If stale: `rm -rf ~/Library/Developer/Xcode/DerivedData/KickOffCal-*`
   and rebuild — that forces the bundle phase to regenerate.
+- **The functions skip-wall has a second face** (2026-08-30): a Cloud
+  Build FAILURE (a desynced functions/package-lock — client packages
+  like expo/react must NEVER appear in functions/package.json) records
+  the new source hash while the old container keeps running; every
+  later deploy then prints "Skipped (No changes detected)". A comment
+  stamp fixes only the upload-hash variant. The reliable bypass is in
+  the CLI's own planner: EXPLICITLY TARGETED functions are never
+  skipped — `firebase deploy --only functions:<name>`. Verify deploys
+  BEHAVIORALLY (probe the endpoint) and on failure read
+  /tmp-captured output: an exit-1 deploy may already have poisoned
+  the hashes.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network
