@@ -37,6 +37,14 @@ source of truth for build state — never chat history.
   builds via `expo run:ios` when ios/ already exists — run
   `npx expo prebuild -p ios --clean` first (same for android/). CNG:
   both directories are generated, never hand-edited.
+- **Xcode can reuse a STALE main.jsbundle across successive Release sim
+  builds** (proven 2026-08-30: a JS-only commit shipped, build exited 0,
+  relaunched — and the installed Hermes bundle still held the previous
+  commit's strings). After ANY JS-only round, verify the ARTIFACT, not
+  the exit code: `strings "$(xcrun simctl get_app_container <udid>
+  com.hearsigns.Gameday app)/main.jsbundle" | grep -c <round-marker>`.
+  If stale: `rm -rf ~/Library/Developer/Xcode/DerivedData/KickOffCal-*`
+  and rebuild — that forces the bundle phase to regenerate.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network
