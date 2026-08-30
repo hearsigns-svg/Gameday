@@ -1,6 +1,6 @@
 # Curated marks — review sheet
 
-Confident (imported without ceremony): 11 · Flagged below: 91 · Logoless by design: 3
+Confident (imported without ceremony): 9 · Flagged below: 93 · Logoless by design: 3
 
 | follow key | name | why flagged | candidates |
 |---|---|---|---|
@@ -27,6 +27,7 @@ Confident (imported without ceremony): 11 · Flagged below: 91 · Logoless by de
 | tennis-t-suzhou-open | Suzhou Open | no P154 logo claim | [Q136387275](https://www.wikidata.org/wiki/Q136387275) tennis tournament |
 | tennis-t-samsun-open | Samsun Open | no P154 logo claim | [Q136402202](https://www.wikidata.org/wiki/Q136402202) tennis tournament in Turkey |
 | tennis-t-rolex-shanghai-masters | Rolex Shanghai Masters | ambiguous (3) | [Q728085](https://www.wikidata.org/wiki/Q728085) men's tennis tournament at Shanghai, China<br>[Q69355546](https://www.wikidata.org/wiki/Q69355546) tennis tournament<br>[Q56844099](https://www.wikidata.org/wiki/Q56844099) outdoor tennis tournament |
+| tennis-t-wuhan-open | Wuhan Open | P154 is the tour logo, not the event’s (WTA logo 2010.svg) | [Q15650921](https://www.wikidata.org/wiki/Q15650921) women's tennis tournament |
 | tennis-t-vanda-pharmaceuticals-mallorca-women-s-championships | Vanda Pharmaceuticals Mallorca Women's Championships | no shaped candidate |  |
 | tennis-t-roveretopen-citta-della-pace | RoveretOpen Città della Pace | no P154 logo claim | [Q136523756](https://www.wikidata.org/wiki/Q136523756) tennis tournament |
 | tennis-t-lisboa-belem-open | Lisboa Belem Open | ambiguous (7) | [Q30329653](https://www.wikidata.org/wiki/Q30329653) tennis tournament<br>[Q30274567](https://www.wikidata.org/wiki/Q30274567) tennis tournament<br>[Q108744213](https://www.wikidata.org/wiki/Q108744213) tennis tournament<br>[Q100252613](https://www.wikidata.org/wiki/Q100252613) tennis tournament<br>[Q53332371](https://www.wikidata.org/wiki/Q53332371) tennis tournament<br>[Q63859420](https://www.wikidata.org/wiki/Q63859420) tennis tournament<br>[Q108766011](https://www.wikidata.org/wiki/Q108766011) tennis tournament |
@@ -84,6 +85,7 @@ Confident (imported without ceremony): 11 · Flagged below: 91 · Logoless by de
 | tennis-t-terra-wortmann-open | Terra Wortmann Open | ambiguous (3) | [Q299454](https://www.wikidata.org/wiki/Q299454) tennis tournament<br>[Q112189844](https://www.wikidata.org/wiki/Q112189844) tennis tournament<br>[Q127118178](https://www.wikidata.org/wiki/Q127118178) tennis tournament |
 | tennis-t-vanda-pharmaceuticals-mallorca-championships | Vanda Pharmaceuticals Mallorca Championships | no P154 logo claim | [Q140169307](https://www.wikidata.org/wiki/Q140169307) tennis tournament |
 | tennis-t-lexus-eastbourne-open | Lexus Eastbourne Open | no shaped candidate | [Q129328222](https://www.wikidata.org/wiki/Q129328222) combined WTA/ATP tournament<br>[Q140168657](https://www.wikidata.org/wiki/Q140168657) combined WTA/ATP tournament<br>[Q135003472](https://www.wikidata.org/wiki/Q135003472) Women's doubles |
+| tennis-t-nordea-open | Nordea Open | P154 is the tour logo, not the event’s (WTA logo 2010.svg) | [Q107336633](https://www.wikidata.org/wiki/Q107336633) women's tennis tournament |
 | tennis-t-plava-laguna-croatia-open-umag | Plava Laguna Croatia Open Umag | no P154 logo claim | [Q265586](https://www.wikidata.org/wiki/Q265586) men's tennis tournament at Umag, Croatia |
 | tennis-t-efg-swiss-open-gstaad | EFG Swiss Open Gstaad | ambiguous (5) | [Q299439](https://www.wikidata.org/wiki/Q299439) tennis tournament<br>[Q113004295](https://www.wikidata.org/wiki/Q113004295) tennis tournament<br>[Q126947933](https://www.wikidata.org/wiki/Q126947933) tennis tournament<br>[Q135233420](https://www.wikidata.org/wiki/Q135233420) tennis tournament<br>[Q140377412](https://www.wikidata.org/wiki/Q140377412) tennis tournament |
 | tennis-t-millennium-estoril-open | Millennium Estoril Open | ambiguous (5) | [Q13221816](https://www.wikidata.org/wiki/Q13221816) tennis tournament<br>[Q19820563](https://www.wikidata.org/wiki/Q19820563) tennis tournament<br>[Q29512398](https://www.wikidata.org/wiki/Q29512398) tennis tournament<br>[Q51923666](https://www.wikidata.org/wiki/Q51923666) tennis tournament<br>[Q63226424](https://www.wikidata.org/wiki/Q63226424) tennis tournament |
@@ -101,7 +103,7 @@ Confident (imported without ceremony): 11 · Flagged below: 91 · Logoless by de
 - wa-area-senior-outdoor-championships
 - wa-calendar
 
-## Volatile class: ~8 tennis tour events carry title-sponsored logos that rotate with sponsors — staleness accepted by ruling.
+## Volatile class: ~0 tennis tour events carry title-sponsored logos that rotate with sponsors — staleness accepted by ruling.
 
 ## Manual drop
 Save an official file as `scripts/curated-marks-manual/<followKey>.png` and re-run with `--apply` — manual files are uploaded verbatim and win over nothing (they only fill keys with no confident source).

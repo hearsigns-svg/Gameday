@@ -217,6 +217,16 @@ async function commonsInfo(fileTitle) {
       const shapedOne = pool;
       const entity = shapedOne[0].id;
       const logo = await claim(entity, 'P154');
+      // A P154 that is the TOUR's own generic logo is not the event's
+      // mark (Wuhan/Nordea both claim "WTA logo 2010.svg") — a tour
+      // badge on an event row is the wrong-mark class the gate exists
+      // to stop.
+      if (logo && /^(?:wta|atp)[ _-]/i.test(logo.trim())) {
+        const rec = { reason: `P154 is the tour logo, not the event’s (${logo})`, entity, candidates: [shapedOne[0]] };
+        state[t.key] = { kind: 'flagged', record: rec }; saveState();
+        flagged.push({ ...t, ...rec });
+        continue;
+      }
       if (!logo) {
         const rec = { reason: 'no P154 logo claim', entity, candidates: [shapedOne[0]] };
         state[t.key] = { kind: 'flagged', record: rec }; saveState();
