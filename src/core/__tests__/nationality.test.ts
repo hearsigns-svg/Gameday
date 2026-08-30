@@ -4,6 +4,7 @@
 
 import {
   codeFromDemonym,
+  codeFromTeamName,
   flagEmojiOf,
   nationLabelOf,
   nationOf,
@@ -146,5 +147,37 @@ describe('alpha-2 codes resolve', () => {
     // 'EN' is not ISO, not IOC, not a UK nation code — the backfill
     // normalises it to ENG rather than teaching the lookup a wrong code.
     expect(flagEmojiOf('EN')).toBeNull();
+  });
+});
+
+describe('codeFromTeamName (Round 5 — national-team flags)', () => {
+  it('maps provider national-team labels through the sport tail', () => {
+    expect(codeFromTeamName('South Africa Rugby')).toBe('RSA');
+    expect(codeFromTeamName('England Cricket')).toBe('ENG');
+    expect(codeFromTeamName('Argentina Basketball')).toBe('ARG');
+    expect(codeFromTeamName('Wales Rugby')).toBe('WAL');
+    expect(codeFromTeamName('England Rugby League')).toBe('ENG');
+  });
+  it('maps a bare country name (soccer national sides)', () => {
+    expect(codeFromTeamName('France')).toBe('FRA');
+    expect(codeFromTeamName('Antigua and Barbuda')).toBe('ANT');
+  });
+  it('accepts a code-shaped remainder — "USA Rugby" is the code USA', () => {
+    expect(codeFromTeamName('USA Rugby')).toBe('USA');
+  });
+  it('refuses clubs, counties and invitational sides — the miss IS the gate', () => {
+    expect(codeFromTeamName('Somerset')).toBeNull();
+    expect(codeFromTeamName('AUNZ Invitational XV')).toBeNull();
+    expect(codeFromTeamName('All Blacks XV')).toBeNull();
+    expect(codeFromTeamName('River Plate')).toBeNull();
+    expect(codeFromTeamName(undefined)).toBeNull();
+  });
+  it('every mapped code renders a real flag', () => {
+    for (const label of [
+      'South Africa Rugby', 'USA Rugby', 'Wales Rugby', 'France',
+      'England Cricket', 'Antigua and Barbuda',
+    ]) {
+      expect(flagEmojiOf(codeFromTeamName(label))).not.toBeNull();
+    }
   });
 });

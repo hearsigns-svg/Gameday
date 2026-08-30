@@ -53,6 +53,7 @@ import {
 import { Fixture } from '../../fixtures/domain/fixture';
 import { isPast, timePrecisionOf } from '../../fixtures/domain/horizon';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
+import { followMarkUrl } from '../../follows/data/browsePriority';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { loadFollowables, loadFollowKeys } from '../../follows/data/followStore';
@@ -179,6 +180,7 @@ export function FixtureCardBody(props: {
   const settings = loadEventSettings();
   const sport = fixture ? sportByKey(fixture.sport) : undefined;
   const owner = fixture ? identityFollow(fixture.followKeys, follows) : undefined;
+  const ownerMark = followMarkUrl(owner);
   const theme = teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode);
 
   useEffect(() => {
@@ -524,9 +526,7 @@ export function FixtureCardBody(props: {
       style={StyleSheet.absoluteFill}
       {...(sport?.key ? { sportKey: sport.key } : {})}
       monogram={monogramOf(owner?.label ?? fixture.homeTeam ?? fixture.competition)}
-      {...(owner?.crestUrl && usableImage(owner.crestUrl)
-        ? { crestUrl: owner.crestUrl }
-        : {})}
+      {...(ownerMark && usableImage(ownerMark) ? { crestUrl: ownerMark } : {})}
       {...(art?.url ? { photoUrl: art.url } : {})}
       {...(fixture.participantCountries?.length
         ? { participantCountries: fixture.participantCountries }
@@ -560,7 +560,7 @@ export function FixtureCardBody(props: {
           monogram={monogramOf(
             owner?.label ?? fixture.homeTeam ?? fixture.competition,
           )}
-          {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
+          {...(ownerMark ? { crestUrl: ownerMark } : {})}
           {...(usableImage(fixture.homeCrestUrl) || usableImage(fixture.awayCrestUrl)
             ? { hasCrestPair: true }
             : {})}

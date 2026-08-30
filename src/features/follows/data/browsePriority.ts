@@ -137,3 +137,17 @@ export function competitionMarkFor(key: string): string | undefined {
   const m = /^tsdb-league-(\d+)$/.exec(key);
   return m ? art[m[1]] : undefined;
 }
+
+// The DISPLAY mark for a follow: its stored crest, else whatever the
+// served art map carries for its key. Display-time, never a store
+// write — a mark added to the map appears within the hourly refresh,
+// and one removed retracts the same way (curated-mark takedown path).
+// The Following rail had this heal; the fixture surfaces did not, so
+// the imported tournament marks reached the rail and never the cards
+// (Round 5 item 1).
+export function followMarkUrl(
+  f: { key: string; crestUrl?: string } | undefined,
+): string | undefined {
+  if (!f) return undefined;
+  return f.crestUrl ?? competitionMarkFor(f.key);
+}

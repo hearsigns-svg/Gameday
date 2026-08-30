@@ -6,7 +6,13 @@
 // deliver.
 
 import { Firestore } from 'firebase-admin/firestore';
-import { fdTeamsDocId, mlbTeamsDocId, NHL_TEAMS_DOC_ID } from './directory';
+import {
+  derivedLeagueTeams,
+  fdTeamsDocId,
+  mlbTeamsDocId,
+  NHL_TEAMS_DOC_ID,
+} from './directory';
+import { DERIVED_TEAM_LEAGUES } from './fixtureTeams';
 import { normaliseName } from './identity';
 import { TSDB_TEAM_LEAGUES as TSDB_LEAGUES } from './tsdbTeamLeagues';
 import { searchTsdbTeams } from './providers/tsdb';
@@ -103,6 +109,25 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
       teams: (snap.data() as { teams?: DirectoryDocTeam[] }).teams ?? [],
     });
   });
+  // Fixture-derived leagues (Round 5): their teams exist nowhere but
+  // the fixtures, so the searchable set joins them here — browsable
+  // teams a search could not find were the South-Africa-Rugby gap.
+  // Same 24h directory cache the Teams route rides; this 60s cache
+  // bounds the per-keystroke cost. No pollPath: these follows deliver
+  // through catalogue warmth, exactly as following from the Teams list
+  // does today. A failed read throws — the standing invariant; a
+  // one-league outage must not quietly shrink the searchable world.
+  const derived = await Promise.all(
+    Object.entries(DERIVED_TEAM_LEAGUES).map(async ([id, meta]) => ({
+      sportKey: meta.sportKey,
+      league: meta.label,
+      teams: (await derivedLeagueTeams(`tsdb-league-${id}`)).map((t) => ({
+        name: t.name,
+        key: t.key,
+      })),
+    })),
+  );
+  docs.push(...derived);
   dirCache = { at: Date.now(), docs };
   return docs;
 }

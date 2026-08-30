@@ -34,6 +34,7 @@ import {
 } from '../../calendar-sync/data/exclusionStore';
 import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
+import { competitionMarkFor } from '../data/browsePriority';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
 import { dedupeSameEvent } from '../../fixtures/domain/sameBout';
 import { Fixture } from '../../fixtures/domain/fixture';
@@ -124,7 +125,14 @@ export default function TeamScreen({ navigation, route }: Props) {
   // while the stored copy may be months old (and may be absent
   // entirely, for follows made before crests existed).
   const storedFollowCrest = useMemo(
-    () => routeCrest ?? loadFollowables().find((f) => f.key === teamKey)?.crestUrl,
+    () =>
+      routeCrest ??
+      loadFollowables().find((f) => f.key === teamKey)?.crestUrl ??
+      // The served art map, last: a competition followed before its
+      // mark was imported has no stored crest and (from the rails) no
+      // route param either — the map is what the server already shows
+      // everywhere else (Round 5 item 1).
+      competitionMarkFor(teamKey),
     [teamKey, routeCrest],
   );
 

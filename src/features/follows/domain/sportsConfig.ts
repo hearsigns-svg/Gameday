@@ -642,15 +642,16 @@ export const SPORTS: SportConfig[] = [
         teamPollPath:
           'pollTsdbLeague?leagueId=4446&season=2026-2027&sport=rugby&durationHours=2',
       },
-      // Rugby World Cup 2027 (same ruling): 36 events, 1–17 Oct 2027,
-      // published in full. Follow-only until fixtures prove teams the
-      // way the other international rows' sweeps did.
+      // Rugby World Cup 2027 (Round 3 ruling; Teams since Round 5):
+      // 36 events, 1–17 Oct 2027, published in full — and the fixtures
+      // carry both sides' team keys (probed live 2026-08-30), so the
+      // directory derives its nations the way the other international
+      // rows' do (fixtureTeams.ts).
       {
         id: '4574',
         name: 'Rugby World Cup',
         country: 'International',
         key: 'tsdb-league-4574',
-        followOnly: true,
         pollPath:
           'pollTsdbLeague?leagueId=4574&season=2027&sport=rugby&durationHours=2',
       },

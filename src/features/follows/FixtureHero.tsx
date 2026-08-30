@@ -15,6 +15,7 @@ import { HeroCard, monogramOf } from '../../core/components';
 import { t } from '../../core/i18n';
 import { teamTheme } from '../../core/teamTheme';
 import { useColorSchemeMode } from '../../core/useColorSchemeMode';
+import { followMarkUrl } from './data/browsePriority';
 import { Followable } from './data/followStore';
 import { identityFollow } from './domain/followIdentity';
 import { sportByKey } from './domain/sportsConfig';
@@ -62,6 +63,7 @@ export function FixtureHero(props: {
   const mode = useColorSchemeMode();
   const sport = sportByKey(item.sport);
   const owner = identityFollow(item.followKeys, props.follows);
+  const ownerMark = followMarkUrl(owner);
   // The photograph is of the ground the match is PLAYED at, so it
   // follows the home team — not the team you happen to follow.
   const homeTeam = item.homeTeam ?? (owner?.type === 'team' ? owner.label : null);
@@ -99,7 +101,7 @@ export function FixtureHero(props: {
       {...(item.timePrecision ? { timePrecision: item.timePrecision } : {})}
       sportKey={item.sport}
       monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
-      {...(owner?.crestUrl ? { crestUrl: owner.crestUrl } : {})}
+      {...(ownerMark ? { crestUrl: ownerMark } : {})}
       photoUrl={art?.url}
       {...(item.participantCountries?.length
         ? { participantCountries: item.participantCountries }

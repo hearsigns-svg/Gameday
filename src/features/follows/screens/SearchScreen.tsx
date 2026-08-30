@@ -47,7 +47,7 @@ import { hydrateFollowArt, isFollowed, Followable } from '../data/followStore';
 import { isRetired, retiredCaption } from '../domain/careerStatus';
 import { colourFromKitText } from '../domain/entityColour';
 import { nationCaption } from '../domain/athleteIdentity';
-import { flagEmojiOf } from '../../../core/nationality';
+import { codeFromTeamName, flagEmojiOf } from '../../../core/nationality';
 import { SportConfig, sportByKey, SPORTS } from '../domain/sportsConfig';
 import { sportLabelFor, sportMatches } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
@@ -294,29 +294,38 @@ export default function SearchScreen({ navigation }: Props) {
               },
             }))
         : [];
-    const teamRows: Row[] = teams.map((hit) => ({
-      kind: 'team',
-      key: hit.key,
-      title: hit.name,
-      caption: i18n.t('follows.search.captionTeam', {
-        league: hit.league,
-        sport: sportNameOf(hit.sportKey),
-      }),
-      sportKey: hit.sportKey,
-      ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
-      ...(hit.burstColours ? { burstColours: hit.burstColours } : {}),
-      followable: {
+    const teamRows: Row[] = teams.map((hit) => {
+      // A national side with no served badge wears its flag (Round 5
+      // ruling: no official logo → the national flag) — derived from
+      // the name alone, the athlete nationality treatment.
+      const nation = hit.crestUrl ? null : codeFromTeamName(hit.name);
+      const flag = flagEmojiOf(nation);
+      return {
+        kind: 'team',
         key: hit.key,
-        label: hit.name,
+        title: hit.name,
+        caption: i18n.t('follows.search.captionTeam', {
+          league: hit.league,
+          sport: sportNameOf(hit.sportKey),
+        }),
         sportKey: hit.sportKey,
-        type: 'team' as const,
-        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
-        ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
+        ...(hit.crestUrl ? { imageUrl: hit.crestUrl } : {}),
+        ...(flag ? { tileBadge: flag, countryCode: nation as string } : {}),
+        ...(hit.burstColours ? { burstColours: hit.burstColours } : {}),
+        followable: {
+          key: hit.key,
+          label: hit.name,
+          sportKey: hit.sportKey,
+          type: 'team' as const,
+          ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
+          ...(nation ? { countryCode: nation } : {}),
+          ...(hit.pollPath ? { pollPath: hit.pollPath } : {}),
           ...(colourFromKitText(hit.colours)
-          ? { brandColour: colourFromKitText(hit.colours) as string }
-          : {}),
-      },
-    }));
+            ? { brandColour: colourFromKitText(hit.colours) as string }
+            : {}),
+        },
+      };
+    });
     const athleteRows: Row[] = athletes.map((hit) => ({
       kind: 'athlete',
       key: hit.key,

@@ -36,6 +36,7 @@ import { subscribeSync } from '../../calendar-sync/syncEngine';
 function teamPollPathFor(template: string, teamId: number | string): string {
   return template.replace('{teamId}', String(teamId));
 }
+import { codeFromTeamName, flagEmojiOf } from '../../../core/nationality';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { DirectoryTeam, fetchTeams } from '../data/directoryRepo';
@@ -93,12 +94,17 @@ export default function TeamListScreen({ navigation, route }: Props) {
 
   const toggle = useCallback(async (team: DirectoryTeam) => {
     const brandColour = colourFromKitText(team.colours);
+    // A national side with no served badge follows with its flag as the
+    // identity mark (Round 5 ruling) — the rails and the team page
+    // already render any follow's countryCode.
+    const nation = team.crestUrl ? null : codeFromTeamName(team.name);
     const item = {
       key: team.key,
       label: team.name,
       sportKey: route.params.sportKey,
       type: 'team' as const,
       ...(team.crestUrl ? { crestUrl: team.crestUrl } : {}),
+      ...(nation ? { countryCode: nation } : {}),
       ...(route.params.teamPollPath
         ? { pollPath: teamPollPathFor(route.params.teamPollPath, team.id) }
         : {}),
@@ -194,6 +200,13 @@ export default function TeamListScreen({ navigation, route }: Props) {
               )}
               monogram={monogramOf(item.name)}
               {...(item.crestUrl ? { imageUrl: item.crestUrl } : {})}
+              {...(!item.crestUrl && flagEmojiOf(codeFromTeamName(item.name))
+                ? {
+                    tileBadge: flagEmojiOf(
+                      codeFromTeamName(item.name),
+                    ) as string,
+                  }
+                : {})}
               accessibilityLabel={i18n.t('follows.card.a11yViewFixtures', {
                 name: item.name,
               })}
@@ -206,6 +219,9 @@ export default function TeamListScreen({ navigation, route }: Props) {
                     ? { pollPath: teamPollPathFor(route.params.teamPollPath, item.id) }
                     : {}),
                   ...(item.crestUrl ? { crestUrl: item.crestUrl } : {}),
+                  ...(!item.crestUrl && codeFromTeamName(item.name)
+                    ? { countryCode: codeFromTeamName(item.name) as string }
+                    : {}),
                   ...(item.colours ? { colours: item.colours } : {}),
                 })
               }

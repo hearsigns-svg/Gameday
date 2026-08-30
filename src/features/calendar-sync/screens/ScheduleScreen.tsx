@@ -53,6 +53,7 @@ import {
 } from '../../fixtures/data/freshnessRepo';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { headlineParticipant } from '../../follows/domain/participants';
+import { followMarkUrl } from '../../follows/data/browsePriority';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { Followable, loadFollowables } from '../../follows/data/followStore';
@@ -599,8 +600,9 @@ function ScheduleRow(props: {
       hidden={expansion.liftedKey === item.id}
       // A licensed portrait where the fixture names a person, the owning
       // follow's crest otherwise — the row had the crest in hand and
-      // rendered a monogram anyway (Prompt 16 C sweep).
-      imageUrl={photo?.url ?? owner?.crestUrl}
+      // rendered a monogram anyway (Prompt 16 C sweep). The crest heals
+      // from the served art map when the follow predates its mark.
+      imageUrl={photo?.url ?? followMarkUrl(owner)}
       onPress={() => {
         void fixtureCardRequest(ref, item.id, props.pagerIds).then(
           expansion.open,

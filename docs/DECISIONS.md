@@ -3523,3 +3523,35 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   surfaces as a vanishing toast ONCE PER APP SESSION on Schedule's
   first focus (module flag; skipped when never-synced), copy
   single-sourced with the chip via lastSyncLine().
+- 2026-08-30 (Round 5, owner brief — three items): (1) IMPORTED MARKS
+  ON FIXTURE SURFACES: server + hourly client cache were serving the
+  curated marks all along (probed: tennis-t-wimbledon URL + colours
+  live); every fixture-page identity site read only the STORED
+  follow's crestUrl. followMarkUrl() (stored crest ?? served art map)
+  now heals display at FixtureHero, the expanded card (both faces),
+  Schedule rows and the team-page header — display-time only, no
+  store writes, so curated-mark takedowns still retract via the
+  hourly refresh. (2) NATIONAL TEAMS IN SEARCH + FLAGS: the
+  fixture-derived team leagues (2026-08-28 ruling) were browsable but
+  invisible to searchTeams' closed enumeration — South Africa Rugby
+  hid while Wales rode the Six Nations directory doc. search now
+  joins the derived leagues (same 24h directory cache; labels pinned
+  to client rows by searchRoutes.test.ts; hits carry no pollPath —
+  catalogue warmth delivers, as Teams-list follows already do). Rugby
+  World Cup 4574 joins the derived set (fixtures carry both team
+  keys, probed live) and sheds followOnly. Flags: no official
+  logo → national flag (owner ruling), derived CLIENT-SIDE from the
+  team name (codeFromTeamName: sport-tail strip → nation table; the
+  lookup miss IS the national-team gate — clubs and invitational XVs
+  simply don't match). Crest always wins; crestless national hits
+  and follows wear the athlete nationality treatment (tile flag
+  badge, countryCode onto the follow → rails and team header light
+  up through the existing paths). NOTE for ops: TSDB league 5479 is
+  named 'Rugby Union International Friendlies' upstream (98 badged
+  teams — the 2026-08-28 'literally null' probe queried the
+  catalogue LABEL, not TSDB's name); the ruled fixture-derived
+  browse stands — it is the honest participants list. (3) TOURNAMENT
+  CALENDAR MODES: no build — the owner-requested block / individual
+  / hybrid choice shipped in Round 3 B3 as Preferences → Events →
+  Tournaments (Block | Key rounds | All matches, default Key
+  rounds); the owner's Pixel build predates it.

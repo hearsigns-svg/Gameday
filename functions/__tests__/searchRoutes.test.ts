@@ -93,3 +93,30 @@ it('a STAGED table entry stays coherent: catalogue-disabled, no client row', () 
     expect(entry.pollPath).toBe(seed!.pollPath);
   }
 });
+
+// Round 5: fixture-derived leagues joined SEARCH (South Africa Rugby
+// was browsable but unfindable). Their search-hit sport and league
+// caption come from DERIVED_TEAM_LEAGUES — pin both to the client
+// competition rows so a rename or a sport move cannot drift the
+// caption from the row the user browsed.
+import { DERIVED_TEAM_LEAGUES } from '../src/fixtureTeams';
+
+it('derived team leagues match the client competition rows', () => {
+  const clientRows = new Map<string, { name: string; sportKey: string }>();
+  for (const sport of SPORTS) {
+    for (const comp of sport.staticCompetitions ?? []) {
+      if (comp.key.startsWith('tsdb-league-')) {
+        clientRows.set(comp.key.replace('tsdb-league-', ''), {
+          name: comp.name,
+          sportKey: sport.key,
+        });
+      }
+    }
+  }
+  for (const [id, meta] of Object.entries(DERIVED_TEAM_LEAGUES)) {
+    const row = clientRows.get(id);
+    expect(row).toBeDefined();
+    expect(row!.name).toBe(meta.label);
+    expect(row!.sportKey).toBe(meta.sportKey);
+  }
+});

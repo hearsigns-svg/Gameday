@@ -266,6 +266,32 @@ for (const [ioc, code2, name, iso3] of ROWS) {
 for (const [code, { name }] of Object.entries(UK_NATIONS)) {
   BY_CODE.set(code, { code2: code, name });
 }
+
+// National-team labels → nation code (Round 5). Providers name national
+// sides "<Country> <Sport>" ("South Africa Rugby", "England Cricket",
+// "Argentina Basketball", "USA Rugby") or plainly ("France"): strip the
+// sport tail, then match the nation TABLE by name — or by code, which
+// is what "USA" is once "Rugby" goes. A label that survives neither
+// (clubs, counties, "AUNZ Invitational XV") returns null, and that
+// miss IS the national-team gate: no league flag or config needed.
+const TEAM_NAME_TAIL =
+  /\s+(?:rugby(?:\s+league)?|cricket|basketball|football|soccer|sevens|xv)$/i;
+const BY_NAME = new Map<string, string>();
+for (const [ioc, , name] of ROWS) BY_NAME.set(name.toLowerCase(), ioc);
+for (const [code, { name }] of Object.entries(UK_NATIONS)) {
+  BY_NAME.set(name.toLowerCase(), code);
+}
+
+export function codeFromTeamName(
+  label: string | null | undefined,
+): string | null {
+  if (!label) return null;
+  const stripped = label.replace(TEAM_NAME_TAIL, '').trim();
+  const byName = BY_NAME.get(stripped.toLowerCase());
+  if (byName) return byName;
+  const asCode = stripped.toUpperCase();
+  return /^[A-Z]{3}$/.test(asCode) && BY_CODE.has(asCode) ? asCode : null;
+}
 // ISO alpha-2 joined the mixture when boxing-data became an enrichment
 // source (Prompt 25 §7: its roster speaks alpha-2). Indexed LAST and
 // only where unclaimed — though a clash is impossible by construction:

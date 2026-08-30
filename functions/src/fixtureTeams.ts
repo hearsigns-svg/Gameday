@@ -22,16 +22,31 @@ import { Fixture } from './fixture';
 // Sweep sizes at ruling time: Copa Libertadores 47, T20 World Cup 20,
 // County Championship 10, FIBA WC qualifiers 81, Nations Championship
 // 12, Rugby League World Cup 10, Rugby Championship 16 (9 one-off,
-// owner-accepted).
-export const DERIVED_TEAM_LEAGUE_IDS: ReadonlySet<string> = new Set([
-  '4501', // Copa Libertadores (soccer)
-  '5103', // T20 World Cup (cricket)
-  '4458', // County Championship (cricket)
-  '4549', // FIBA World Cup qualifiers (basketball)
-  '5852', // Nations Championship (rugby)
-  '5806', // Rugby League World Cup (rugby)
-  '5479', // Rugby Championship (rugby)
-]);
+// owner-accepted). Rugby World Cup joined in Round 5 (owner ruling:
+// every national team with fixtures must be findable) — its 2027
+// fixtures carry both sides' team keys, probed live 2026-08-30.
+//
+// sportKey/label feed SEARCH hits (Round 5): the derived teams were
+// browsable but invisible to search, which is how South Africa Rugby
+// hid while Wales (a directory league) was findable. Labels are pinned
+// to the client competition rows by searchRoutes.test.ts.
+export const DERIVED_TEAM_LEAGUES: Record<
+  string,
+  { sportKey: string; label: string }
+> = {
+  '4501': { sportKey: 'soccer', label: 'Copa Libertadores' },
+  '5103': { sportKey: 'cricket', label: 'T20 World Cup' },
+  '4458': { sportKey: 'cricket', label: 'County Championship' },
+  '4549': { sportKey: 'basketball', label: 'FIBA World Cup qualifiers' },
+  '5852': { sportKey: 'rugby', label: 'Nations Championship' },
+  '5806': { sportKey: 'rugby', label: 'Rugby League World Cup' },
+  '5479': { sportKey: 'rugby', label: 'Rugby Championship' },
+  '4574': { sportKey: 'rugby', label: 'Rugby World Cup' },
+};
+
+export const DERIVED_TEAM_LEAGUE_IDS: ReadonlySet<string> = new Set(
+  Object.keys(DERIVED_TEAM_LEAGUES),
+);
 
 const TEAM_KEY = /^(?:tsdb|fdorg|mlb|nhl)-team-(.+)$/;
 
