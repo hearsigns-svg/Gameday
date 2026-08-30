@@ -135,7 +135,6 @@ export const de: Catalog = {
   'follows.home.oneFollow': 'Einmal folgen',
   'follows.home.browse': 'Entdecken',
   'follows.following': 'Du folgst',
-  'follows.sports.a11yFollowing': '{name}, du folgst',
   'follows.sports.a11yComingSoon': '{name}, bald verfügbar',
 
   // ── Sport picker ──────────────────────────────────────────────────

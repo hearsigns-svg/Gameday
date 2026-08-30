@@ -146,7 +146,6 @@ export const fr: Catalog = {
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
   'follows.following': 'Suivi',
-  'follows.sports.a11yFollowing': '{name}, suivi',
   'follows.sports.a11yComingSoon': '{name}, bientôt disponible',
 
   // ── Sport picker ──────────────────────────────────────────────────

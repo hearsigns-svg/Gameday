@@ -133,7 +133,6 @@ export const it: Catalog = {
   'follows.home.oneFollow': 'Un solo follow',
   'follows.home.browse': 'Esplora',
   'follows.following': 'Seguiti',
-  'follows.sports.a11yFollowing': '{name}, segui già',
   'follows.sports.a11yComingSoon': '{name}, in arrivo',
 
   // ── Sport picker ──────────────────────────────────────────────────

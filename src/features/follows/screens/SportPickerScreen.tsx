@@ -13,9 +13,7 @@ import { RootStackParamList } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { teamTheme } from '../../../core/teamTheme';
 import { useTheme } from '../../../core/tokens';
-import { subscribeSync } from '../../calendar-sync/syncEngine';
 import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
-import { isFollowed } from '../data/followStore';
 import { SPORTS } from '../domain/sportsConfig';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
@@ -27,9 +25,8 @@ export default function SportPickerScreen({ navigation }: Props) {
   const mode = useColorSchemeMode();
   const [, forceRender] = useState(0);
 
-  // Follows now happen on pushed screens — refresh the 'Following'
-  // captions when a sync lands or this screen regains focus.
-  useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+  // Re-render on focus so a catalogue-order refresh that landed while
+  // the screen was away is picked up on the next visit.
   useEffect(
     () => navigation.addListener('focus', () => forceRender((n) => n + 1)),
     [navigation],
@@ -46,13 +43,13 @@ export default function SportPickerScreen({ navigation }: Props) {
         data={ordered}
         keyExtractor={(s) => s.key}
         renderItem={({ item }) => {
-          const following =
-            item.seriesFollowable && isFollowed(item.seriesFollowable.key);
           return (
             // The same tile Home's grid uses, one per row instead of
             // two — this screen and Home are now literally the same
             // component, which is the point: the picker was the one
-            // place a sport did not look like a sport (22b).
+            // place a sport did not look like a sport (22b). Captions
+            // describe the tile, never the user's follow state — same
+            // Round 4 ruling as the Home grid.
             <TileRow>
               <SportCard
                 fullWidth
@@ -65,11 +62,9 @@ export default function SportPickerScreen({ navigation }: Props) {
                 label={sportLabelFor(item.key, item.label, activeRegion())}
                 caption={
                   item.enabled
-                    ? following
-                      ? i18n.t('follows.following')
-                      : item.seriesFollowable
-                        ? i18n.t('follows.sportPicker.allEventsOneFollow')
-                        : undefined
+                    ? item.seriesFollowable
+                      ? i18n.t('follows.sportPicker.allEventsOneFollow')
+                      : undefined
                     : i18n.t('follows.sportPicker.comingSoon')
                 }
                 glyph={item.glyph}
@@ -77,11 +72,7 @@ export default function SportPickerScreen({ navigation }: Props) {
                 disabled={!item.enabled}
                 accessibilityLabel={
                   item.enabled
-                    ? following
-                      ? i18n.t('follows.sports.a11yFollowing', {
-                          name: sportLabelFor(item.key, item.label, activeRegion()),
-                        })
-                      : sportLabelFor(item.key, item.label, activeRegion())
+                    ? sportLabelFor(item.key, item.label, activeRegion())
                     : i18n.t('follows.sports.a11yComingSoon', {
                         name: sportLabelFor(item.key, item.label, activeRegion()),
                       })

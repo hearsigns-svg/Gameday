@@ -26,7 +26,6 @@ export const followsStrings = {
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
   'follows.following': 'Following',
-  'follows.sports.a11yFollowing': '{name}, following',
   'follows.sports.a11yComingSoon': '{name}, coming soon',
 
   // ── Sport picker ──────────────────────────────────────────────────

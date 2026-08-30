@@ -138,7 +138,6 @@ export const pt: Catalog = {
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
   'follows.following': 'Seguindo',
-  'follows.sports.a11yFollowing': '{name}, seguindo',
   'follows.sports.a11yComingSoon': '{name}, em breve',
 
   // ── Sport picker ──────────────────────────────────────────────────

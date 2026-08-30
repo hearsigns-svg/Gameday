@@ -207,5 +207,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
   },
-  dot: { width: 5, height: 5, borderRadius: 2.5, marginTop: 2 },
+  // 7pt, up from 5 (Round 4): the synced-day mark has to read at a
+  // glance, and at 5 it disappeared next to the bold date.
+  dot: { width: 7, height: 7, borderRadius: 3.5, marginTop: 2 },
 });

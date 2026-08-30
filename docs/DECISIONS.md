@@ -3507,3 +3507,19 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   cards + every obscure-venue resolution failure (23/25 carry
   venues), boxing 2/14 venue-less; future pools fill via the
   review-sheet mechanism, not bulk-built.
+- 2026-08-30 (Round 4 polish, owner brief — four items): (1) sport
+  tiles never announce follow state: the "Following" caption could
+  only ever appear on F1 (seriesFollowable exists on exactly one
+  sport — verified before deleting), one tile carrying state in a
+  grid that cannot; caption is now what the tile IS (Home grid AND
+  the sport picker, same component, same fix; captionAccent prop and
+  the a11yFollowing key retired from all six catalogs). (2) The
+  Schedule partition's anonymous dash is a chevron button now — up
+  while the calendar shows, down while hidden; same tap/flick/drag
+  semantics, the dash read as a divider not a control. (3) Synced-day
+  dot on the month grid 5→7pt for glanceable contrast. (4) The
+  last-sync sentence leaves Schedule's chrome: the chip renders ONLY
+  on error or sources-quiet staleness; the happy-path sentence
+  surfaces as a vanishing toast ONCE PER APP SESSION on Schedule's
+  first focus (module flag; skipped when never-synced), copy
+  single-sourced with the chip via lastSyncLine().

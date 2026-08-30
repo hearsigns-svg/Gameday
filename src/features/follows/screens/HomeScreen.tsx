@@ -45,11 +45,7 @@ import {
   upcomingFixtures,
 } from '../../calendar-sync/syncEngine';
 import { isDateOnly, whenLabel } from '../../../core/when';
-import {
-  Followable,
-  isFollowed,
-  loadFollowables,
-} from '../data/followStore';
+import { Followable, loadFollowables } from '../data/followStore';
 import { sportByKey, SPORTS } from '../domain/sportsConfig';
 import { byPriority, cachedPriorities, competitionMarkFor, refreshPriorities } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
@@ -380,8 +376,6 @@ export default function HomeScreen({ navigation }: Props) {
       />
       <View style={styles.grid}>
         {orderedSports.map((s) => {
-          const series = s.seriesFollowable;
-          const following = series ? isFollowed(series.key) : false;
           const label = sportLabelFor(s.key, s.label, activeRegion());
           return (
             <SportCard
@@ -389,22 +383,20 @@ export default function HomeScreen({ navigation }: Props) {
               label={label}
               glyph={s.glyph}
               theme={teamTheme(s.accent, mode)}
+              // What the tile IS, never the user's state: only F1 has a
+              // series follow, so a "Following" caption could only ever
+              // appear on that one tile — one card announcing state in a
+              // grid of eleven that cannot (Round 4 ruling; verified:
+              // seriesFollowable exists on exactly one sport).
               caption={
-                series
-                  ? following
-                    ? i18n.t('follows.following')
-                    : i18n.t('follows.home.oneFollow')
+                s.seriesFollowable
+                  ? i18n.t('follows.home.oneFollow')
                   : i18n.t('follows.home.browse')
               }
-              captionAccent={following}
               onPress={() =>
                 navigation.navigate('LeagueList', { sportKey: s.key })
               }
-              accessibilityLabel={
-                following
-                  ? i18n.t('follows.sports.a11yFollowing', { name: label })
-                  : label
-              }
+              accessibilityLabel={label}
             />
           );
         })}

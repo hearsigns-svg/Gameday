@@ -143,7 +143,6 @@ export const es: Catalog = {
   'follows.home.oneFollow': 'Un solo seguimiento',
   'follows.home.browse': 'Explorar',
   'follows.following': 'Siguiendo',
-  'follows.sports.a11yFollowing': '{name}, siguiendo',
   'follows.sports.a11yComingSoon': '{name}, próximamente',
 
   // ── Sport picker ──────────────────────────────────────────────────

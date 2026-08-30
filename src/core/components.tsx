@@ -1227,7 +1227,6 @@ export function SportCard(props: {
   // the screen shares it — and `caption=""` would still render a Text
   // and still cost its line height on every row.
   caption?: string;
-  captionAccent?: boolean;
   onPress: () => void;
   accessibilityLabel: string;
   // Identity artwork, where the entity has any: a crest, a competition
@@ -1330,10 +1329,7 @@ export function SportCard(props: {
         </Text>
         {props.caption ? (
           <Text
-            style={[
-              type.caption,
-              { color: props.captionAccent ? t.accent : t.textSecondary },
-            ]}
+            style={[type.caption, { color: t.textSecondary }]}
             // TWO LINES ON A FULL TILE, one when compact — the same cut
             // the label makes, for the same reason. The rows these tiles
             // replaced wrapped their caption freely, so a single line
@@ -1585,6 +1581,17 @@ function relative(atIso: string): string {
 // SOURCE side has been quiet too long to keep saying up to date.
 export const DATA_STALE_HOURS = 48;
 
+// The happy-path sync sentence, single-sourced: Schedule's once-per-
+// session toast and the status chip say it with the same words.
+export function lastSyncLine(atIso: string, changed: number): string {
+  return changed > 0
+    ? tr('core.status.updated', {
+        changes: tn('core.status.changes', changed),
+        when: relative(atIso),
+      })
+    : tr('core.status.upToDate', { when: relative(atIso) });
+}
+
 export function SyncStatusChip(props: {
   running: boolean;
   lastAt: string | null;
@@ -1615,12 +1622,7 @@ export function SyncStatusChip(props: {
         ? tr('core.status.calendarOff')
         : tr('core.status.upToDateCalendarOff');
   else if (props.lastAt === null) text = tr('core.status.notSynced');
-  else if (props.changed > 0)
-    text = tr('core.status.updated', {
-      changes: tn('core.status.changes', props.changed),
-      when: relative(props.lastAt),
-    });
-  else text = tr('core.status.upToDate', { when: relative(props.lastAt) });
+  else text = lastSyncLine(props.lastAt, props.changed);
   return (
     <View
       accessibilityLiveRegion="polite"

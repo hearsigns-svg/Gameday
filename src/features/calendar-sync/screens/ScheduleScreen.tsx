@@ -24,12 +24,15 @@ import {
   View,
   ViewToken,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCardExpansion } from '../../../core/cardExpansion';
 import { fixtureCardRequest } from '../openFixtureCard';
 import { monogramOf,
   CalendarOffBanner,
+  DATA_STALE_HOURS,
   EmptyState,
   EventRow,
+  lastSyncLine,
   SyncStatusChip,
 } from '../../../core/components';
 import { calendarChoice } from '../data/calendarChoice';
@@ -41,7 +44,7 @@ import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { useReduceMotion } from '../../../core/useReduceMotion';
 import { teamTheme } from '../../../core/teamTheme';
-import { motion, spacing, type, useTheme } from '../../../core/tokens';
+import { motion, radius, spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
 import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
 import {
@@ -96,6 +99,12 @@ function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
 }
 
 const todayKey = () => dayKey(new Date().toISOString());
+
+// The last-sync sentence is a toast now, not chrome (Round 4): it says
+// its piece ONCE per app session, the first time Schedule is opened,
+// then vanishes. Module state, so a remount within the session cannot
+// repeat it — only relaunching the app resets it.
+let syncToastShownThisSession = false;
 
 export default function ScheduleScreen({ navigation }: Props) {
   const t = useTheme();
@@ -174,6 +183,23 @@ export default function ScheduleScreen({ navigation }: Props) {
       focus();
     };
   }, [navigation]);
+
+  // First focus per app session: say when the calendar was last checked,
+  // then get out of the way. A focus listener rather than a mount effect,
+  // so the toast can never fire while another tab is frontmost.
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        if (syncToastShownThisSession) return;
+        const l = lastSync();
+        if (!l) return; // never synced: nothing to tell yet
+        syncToastShownThisSession = true;
+        showToast({
+          message: lastSyncLine(l.at, l.created + l.updated + l.deleted),
+        });
+      }),
+    [navigation],
+  );
 
   const ahead = useMemo(
     () =>
@@ -390,19 +416,26 @@ export default function ScheduleScreen({ navigation }: Props) {
 
   const changed = last ? last.created + last.updated + last.deleted : 0;
   const calendarOff = calendarChoice() !== 'enabled';
+  // The chip earns its row only when something is WRONG — a sync error,
+  // or sources quiet past the staleness line. The happy state is silence
+  // plus the once-per-session toast (Round 4): a standing "up to date"
+  // sentence was chrome explaining a non-event.
+  const dataStale = dataStaleHours != null && dataStaleHours > DATA_STALE_HOURS;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      <View style={styles.header}>
-        <SyncStatusChip
-          running={running}
-          lastAt={last?.at ?? null}
-          changed={changed}
-          error={syncError}
-          calendarOff={calendarOff}
-          dataStaleHours={dataStaleHours}
-        />
-      </View>
+      {syncError || dataStale ? (
+        <View style={styles.header}>
+          <SyncStatusChip
+            running={running}
+            lastAt={last?.at ?? null}
+            changed={changed}
+            error={syncError}
+            calendarOff={calendarOff}
+            dataStaleHours={dataStaleHours}
+          />
+        </View>
+      ) : null}
       {calendarOff && fixtures.length > 0 ? (
         <CalendarOffBanner
           fixtureCount={fixtures.length}
@@ -481,7 +514,18 @@ export default function ScheduleScreen({ navigation }: Props) {
               hitSlop={8}
               style={styles.handleRow}
             >
-              <View style={[styles.handleBar, { backgroundColor: t.border }]} />
+              <View
+                style={[
+                  styles.handlePill,
+                  { backgroundColor: t.surface, borderColor: t.border },
+                ]}
+              >
+                <Ionicons
+                  name={split ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={t.primary}
+                />
+              </View>
             </Pressable>
           </View>
           <SectionList
@@ -590,17 +634,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  // The partition: a grab-handle on the seam between grid and list.
-  // Tap toggles; a flick or drag on it does the same by gesture.
+  // The partition: a chevron button on the seam between grid and list —
+  // up while the calendar is shown (swipe up / tap gives the list the
+  // screen), down while it is hidden. The anonymous dash it replaced
+  // read as a divider, not a control (Round 4). Tap toggles; a flick or
+  // drag on it does the same by gesture.
   handleRow: {
-    minHeight: 28,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  handleBar: {
-    width: 40,
-    height: 5,
-    borderRadius: 2.5,
+  handlePill: {
+    minWidth: 56,
+    height: 24,
+    borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayHeading: {
     paddingHorizontal: spacing.l,
