@@ -106,3 +106,6 @@ ui-debug.log
 # Firebase native configs (regenerate: firebase apps:sdkconfig)
 google-services.json
 GoogleService-Info.plist
+scripts/curated-marks/
+scripts/curated-marks-state.json
+scripts/curated-marks-manual/

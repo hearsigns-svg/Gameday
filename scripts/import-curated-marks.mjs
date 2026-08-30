@@ -41,6 +41,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, 'curated-marks');
 const MANUAL_DIR = join(HERE, 'curated-marks-manual');
 const SHEET = join(HERE, 'curated-marks-review.md');
+const STATE = join(HERE, 'curated-marks-state.json');
 
 const APPLY = process.argv.includes('--apply');
 const BUCKET =
@@ -51,15 +52,27 @@ const BUCKET =
 const WD = 'https://www.wikidata.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const UA = { 'User-Agent': 'KickOffCal-dev/1.0 (fixtures calendar app)' };
-const SPACING_MS = 1100;
+const SPACING_MS = 2000;
 let last = 0;
+// Bulk sweeps trip Wikimedia's limiter far sooner than device
+// traffic does: a 429 pauses the WHOLE run for a minute and the
+// request retries — three strikes marks the key transient (resumable)
+// rather than verdicted.
 async function getJson(url) {
-  const wait = last + SPACING_MS - Date.now();
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  last = Date.now();
-  const res = await fetch(url, { headers: UA });
-  if (!res.ok) throw new Error(`http ${res.status} ${url}`);
-  return res.json();
+  for (let attempt = 1; ; attempt++) {
+    const wait = last + SPACING_MS - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    last = Date.now();
+    const res = await fetch(url, { headers: UA });
+    if (res.status === 429) {
+      if (attempt >= 3) throw new Error('http 429');
+      console.log('  … 429, pausing 60s');
+      await new Promise((r) => setTimeout(r, 60_000));
+      continue;
+    }
+    if (!res.ok) throw new Error(`http ${res.status} ${url}`);
+    return res.json();
+  }
 }
 async function getBytes(url) {
   const wait = last + SPACING_MS - Date.now();
@@ -148,44 +161,95 @@ async function commonsInfo(fileTitle) {
   const VOLATILE = /open|classic|masters 1000|500|250|cup(?!s)/i; // sponsor-rotating class, tennis tour events
   let volatileCount = 0;
 
+  // Resume state: verdicts persist per key; only transient (429-class)
+  // keys are retried on a re-run, so consecutive invocations converge.
+  const state = existsSync(STATE) ? JSON.parse(readFileSync(STATE, 'utf8')) : {};
+  const saveState = () => writeFileSync(STATE, JSON.stringify(state, null, 1));
+
   for (const t of targets) {
     if (/^(?:olympics|paralympics)/.test(t.key)) continue; // statute
+    const prior = state[t.key];
+    if (prior && prior.kind === 'confident') {
+      if (existsSync(join(OUT_DIR, `${t.key}.png`))) {
+        confident.push({ ...t, ...prior.record, local: join(OUT_DIR, `${t.key}.png`) });
+        continue;
+      }
+    } else if (prior && prior.kind === 'flagged') {
+      flagged.push({ ...t, ...prior.record });
+      continue;
+    }
     try {
       const cands = (await wikidataCandidates(t.name)).filter(
         (c) => !NOT_AN_EVENT_ENTITY.test((c.description ?? '').toLowerCase()),
       );
-      const shaped = cands.filter((c) =>
-        t.shape.test((c.description ?? '').toLowerCase()),
+      // Editions, wheelchair/junior/doubles variants and the VENUE
+      // entity all share the tournament's name and its sport shape —
+      // the mark belongs to the MAIN tournament entity only.
+      const NOT_THE_MAIN_ENTITY =
+        /\b(19|20)\d{2}\b|edition|wheelchair|junior|doubles|qualifying|venue|stadium|arena/;
+      const shaped = cands.filter(
+        (c) =>
+          t.shape.test((c.description ?? '').toLowerCase()) &&
+          !NOT_THE_MAIN_ENTITY.test((c.description ?? '').toLowerCase()),
       );
-      if (shaped.length !== 1) {
-        flagged.push({ ...t, reason: shaped.length === 0 ? 'no shaped candidate' : `ambiguous (${shaped.length})`, candidates: shaped.length ? shaped : cands.slice(0, 3) });
+      // Tie-breaks within confidence: an exact-label match wins; if
+      // the tie survives, the single P154-bearing candidate wins.
+      let pool = shaped;
+      if (pool.length > 1) {
+        const exact = pool.filter(
+          (c) => (c.label ?? '').toLowerCase() === t.name.toLowerCase(),
+        );
+        if (exact.length >= 1) pool = exact;
+      }
+      if (pool.length > 1) {
+        const withLogo = [];
+        for (const c of pool) {
+          if (await claim(c.id, 'P154')) withLogo.push(c);
+        }
+        if (withLogo.length === 1) pool = withLogo;
+      }
+      if (pool.length !== 1) {
+        const rec = { reason: pool.length === 0 ? 'no shaped candidate' : `ambiguous (${pool.length})`, candidates: (pool.length ? pool : cands.slice(0, 3)) };
+        state[t.key] = { kind: 'flagged', record: rec }; saveState();
+        flagged.push({ ...t, ...rec });
         continue;
       }
-      const entity = shaped[0].id;
+      const shapedOne = pool;
+      const entity = shapedOne[0].id;
       const logo = await claim(entity, 'P154');
       if (!logo) {
-        flagged.push({ ...t, reason: 'no P154 logo claim', entity, candidates: [shaped[0]] });
+        const rec = { reason: 'no P154 logo claim', entity, candidates: [shapedOne[0]] };
+        state[t.key] = { kind: 'flagged', record: rec }; saveState();
+        flagged.push({ ...t, ...rec });
         continue;
       }
       const info = await commonsInfo(logo);
       if (!info) {
-        flagged.push({ ...t, reason: 'logo not on Commons (likely fair-use only) — official file via manual drop', entity, file: logo, candidates: [shaped[0]] });
+        const rec = { reason: 'logo not on Commons (likely fair-use only) — official file via manual drop', entity, file: logo, candidates: [shapedOne[0]] };
+        state[t.key] = { kind: 'flagged', record: rec }; saveState();
+        flagged.push({ ...t, ...rec });
         continue;
       }
       const { type, buf } = await getBytes(
         `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(logo.replace(/ /g, '_'))}?width=512`,
       );
       if (!type.startsWith('image/') || buf.length < 1024) {
-        flagged.push({ ...t, reason: `download not a usable raster (${type}, ${buf.length}B)`, entity, file: logo, candidates: [shaped[0]] });
+        const rec = { reason: `download not a usable raster (${type}, ${buf.length}B)`, entity, file: logo, candidates: [shapedOne[0]] };
+        state[t.key] = { kind: 'flagged', record: rec }; saveState();
+        flagged.push({ ...t, ...rec });
         continue;
       }
       const local = join(OUT_DIR, `${t.key}.png`);
       writeFileSync(local, buf);
       if (t.sport === 'tennis' && VOLATILE.test(t.name) && !t.key.match(/us-open|wimbledon|roland|australian/)) volatileCount++;
-      confident.push({ ...t, entity, file: logo, licence: info.licence, local, bytes: buf.length });
+      const record = { entity, file: logo, licence: info.licence, bytes: buf.length };
+      state[t.key] = { kind: 'confident', record }; saveState();
+      confident.push({ ...t, ...record, local });
       console.log(`  ✓ ${t.key} ← ${logo} (${info.licence || 'no licence tag'})`);
     } catch (e) {
-      flagged.push({ ...t, reason: `error: ${String(e).slice(0, 90)}` });
+      // Transient (429s and the like): NOT persisted as a verdict — a
+      // re-run retries exactly these.
+      flagged.push({ ...t, reason: `transient: ${String(e).slice(0, 60)} — re-run to retry` });
     }
   }
 
