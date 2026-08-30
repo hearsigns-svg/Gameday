@@ -163,7 +163,7 @@ export function FollowBurst(props: {
   const specs = useRef<ParticleSpec[]>([]);
   useEffect(() => {
     if (props.nonce === 0) return;
-    specs.current = particles(props.count ?? 16, props.radius ?? 60, props.palette);
+    specs.current = particles(props.count ?? 32, props.radius ?? 60, props.palette);
     progress.setValue(0);
     setActive(true);
     Animated.timing(progress, {
@@ -202,9 +202,10 @@ export function CelebrationHost(): ReactNode {
   useEffect(() => {
     grandListener = (palette) => {
       const radius = Math.hypot(width, height) / 2;
-      // ~5x the local burst's count at ~3x the piece size (Round 3):
+      // ~5x the local burst's count at ~3x the piece size (Round 3;
+      // both counts doubled 2026-08-30, owner: 32 local / 160 grand):
       // once per lifetime, so the extra particles are cheap.
-      setSpecs(particles(80, radius, palette, 3));
+      setSpecs(particles(160, radius, palette, 3));
       progress.setValue(0);
       Animated.timing(progress, {
         toValue: 1,

@@ -1,11 +1,9 @@
 # Curated marks — review sheet
 
-Confident (imported without ceremony): 9 · Flagged below: 93 · Logoless by design: 3
+Confident (imported without ceremony): 0 · Flagged below: 91 · Logoless by design: 3
 
 | follow key | name | why flagged | candidates |
 |---|---|---|---|
-| tennis-t-wimbledon | Wimbledon | no P154 logo claim | [Q41520](https://www.wikidata.org/wiki/Q41520) tennis tournament held in London |
-| tennis-t-roland-garros | Roland Garros | no P154 logo claim | [Q43605](https://www.wikidata.org/wiki/Q43605) tennis tournament held in Paris |
 | tennis-t-montreux-nestle-open | Montreux Nestlé Open | ambiguous (2) | [Q130214133](https://www.wikidata.org/wiki/Q130214133) women's tennis tournament<br>[Q135984917](https://www.wikidata.org/wiki/Q135984917) tennis tournament |
 | tennis-t-atik-antalya-open | ATIK Antalya Open | no shaped candidate |  |
 | tennis-t-kia-open | Kia Open | ambiguous (5) | [Q130223180](https://www.wikidata.org/wiki/Q130223180) tennis tournament<br>[Q138701830](https://www.wikidata.org/wiki/Q138701830) tennis tournament<br>[Q135720150](https://www.wikidata.org/wiki/Q135720150) tennis tournament<br>[Q136369189](https://www.wikidata.org/wiki/Q136369189) tennis tournament<br>[Q134359564](https://www.wikidata.org/wiki/Q134359564) tennis tournament |
