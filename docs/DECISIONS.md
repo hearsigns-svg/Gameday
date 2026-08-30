@@ -3454,3 +3454,29 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   DirectoryLeague.followLabel. NO CALENDAR CHURN: same fixture ids,
   and the planner's wanted-map is id-keyed — pinned by test (one card
   with both keys + both follows = one create).
+- 2026-08-30 (CURATED MARKS, owner ruling — broadened same-message
+  from a four-slam exception to ALL competitions/tournaments, every
+  sport, wherever an official mark exists and the provider serves
+  none; SUPERSEDES the recorded hand-import bar as a deliberate
+  owner-ruled exception): a curated layer rides the existing art map —
+  directoryArt/curated manifest merged at rebuild (mergeCuratedMarks:
+  GAPS ONLY, a provider badge always wins; Olympic statute enforced at
+  import AND merge AND serve; fixture-derived teams stay
+  treatment-by-design — this covers competition/tournament entities).
+  Marks are SELF-HOSTED in our storage, never hotlinked; burst colours
+  extract from curated marks through the same rebuild loop as crests.
+  SOURCING is confidence-gated (a wrong mark is worse than a
+  monogram): provider badge → automated confident (Wikidata unique
+  sport-shaped entity → P154 → Commons-hosted raster, the name-join
+  discipline) → below-confident lands on ONE review sheet
+  (scripts/curated-marks-review.md) with a manual-drop path
+  (curated-marks-manual/<key>.png) for official assets the owner
+  supplies — the expected route for slam logos that live only as
+  fair-use files. Confident set ships without ceremony; genuinely
+  logoless rows (our own grouping constructs) stay monogram, listed.
+  The volatile class (title-sponsored events whose logos rotate) is
+  counted in the report — staleness there is accepted fact, refreshed
+  by re-running the import. import-curated-marks.mjs --apply is
+  OWNER-RUN (storage upload + manifest write are prod data changes;
+  agent prod-writes are also classifier-blocked); the apply ages the
+  art cache so marks serve on the next rebuild.

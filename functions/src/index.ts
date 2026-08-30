@@ -43,6 +43,7 @@ import { imageryAllowed, withImageryPolicy } from './imagery';
 import {
   artIsFresh,
   COMPETITION_ART_ALIASES,
+  mergeCuratedMarks,
   narrowToServed,
   TSDB_ART_SPORTS,
   tsdbLeagueIdsFrom,
@@ -1104,17 +1105,36 @@ async function competitionArt(): Promise<CompetitionArtDoc> {
     const url = byId.get(id);
     if (url) art[key] = url;
   }
+  // CURATED marks (owner ruling 2026-08-30, broadened): official
+  // competition/tournament marks imported where a provider serves
+  // none — self-hosted in our storage, written to directoryArt/curated
+  // by scripts/import-curated-marks.mjs (owner-run). They FILL GAPS
+  // ONLY: a provider badge always wins, and the Olympic statute is
+  // enforced here as well as at import (imagery.ts remains the serve-
+  // time net). Burst colours ride the shared loop below like any mark.
+  let merged = art;
+  try {
+    const curatedSnap = await db.doc('directoryArt/curated').get();
+    merged = mergeCuratedMarks(
+      art,
+      (curatedSnap.data()?.marks ?? {}) as Record<string, { url?: string }>,
+    );
+  } catch (e) {
+    // Decorative layer: a failed curated read costs marks, never art.
+    console.warn(`[kickoffcal] curated marks unavailable: ${e}`);
+  }
   // Never overwrite a populated cache with nothing: a bad TSDB day
   // would otherwise strip every logo for the next 24 hours.
-  if (Object.keys(art).length === 0) return cached;
-  // Dominant colour pairs per badge (Round 3) — once per rebuild.
+  if (Object.keys(merged).length === 0) return cached;
+  // Dominant colour pairs per badge (Round 3; curated marks ride the
+  // same loop by ruling) — once per rebuild.
   const colours: Record<string, string[]> = {};
-  for (const [artKey, url] of Object.entries(art)) {
+  for (const [artKey, url] of Object.entries(merged)) {
     const pair = await extractCrestColours(url);
     if (pair) colours[artKey] = pair;
   }
-  await ref.set({ art, colours, cachedAt: new Date().toISOString() });
-  return { art, colours };
+  await ref.set({ art: merged, colours, cachedAt: new Date().toISOString() });
+  return { art: merged, colours };
 }
 
 export const listPriorities = onRequest(gz(async (req, res) => {

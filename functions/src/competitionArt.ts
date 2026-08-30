@@ -113,6 +113,23 @@ export function narrowToServed(
   return out;
 }
 
+// CURATED marks merge (owner ruling 2026-08-30) — PURE. Curated
+// entries FILL GAPS ONLY (a provider badge always wins), and the
+// Olympic statute is enforced at merge as well as at import and at
+// serve: no olympics-*/paralympics-* key can enter the art map from
+// the curated layer whatever the import wrote.
+export function mergeCuratedMarks(
+  art: Record<string, string>,
+  curated: Readonly<Record<string, { url?: string }>>,
+): Record<string, string> {
+  const out = { ...art };
+  for (const [key, entry] of Object.entries(curated)) {
+    if (/^(?:olympics|paralympics)/.test(key)) continue;
+    if (!out[key] && entry.url) out[key] = entry.url;
+  }
+  return out;
+}
+
 export const COMPETITION_ART_TTL_MS = 24 * 3_600_000;
 
 export function artIsFresh(

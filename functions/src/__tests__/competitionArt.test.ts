@@ -4,6 +4,7 @@
 
 import {
   artIsFresh,
+  mergeCuratedMarks,
   COMPETITION_ART_ALIASES,
   COMPETITION_ART_TTL_MS,
   narrowToServed,
@@ -88,10 +89,11 @@ test('no alias ever touches an Olympic key — statute, not preference', () => {
   for (const key of Object.keys(COMPETITION_ART_ALIASES)) {
     expect(key).not.toMatch(/^(?:olympics|paralympics)/);
   }
-  // The four majors are DELIBERATELY absent (no per-slam TSDB league
-  // exists — 1,530-league sweep, 2026-08-29): an entry appearing here
-  // means someone found real art, which deserves a fresh probe, not a
-  // silent pass.
+  // The four majors are DELIBERATELY absent FROM THE ALIAS MAP — no
+  // per-slam TSDB league exists (1,530-league sweep, 2026-08-29).
+  // Their marks now arrive through the CURATED layer instead (owner
+  // ruling 2026-08-30, superseding the hand-import bar); an alias
+  // entry appearing here would mean a TSDB league nobody verified.
   for (const slam of [
     'tennis-t-us-open',
     'tennis-t-wimbledon',
@@ -109,4 +111,32 @@ test('the art cache expires daily and a bad timestamp is never fresh', () => {
   expect(artIsFresh(undefined, now)).toBe(false);
   expect(artIsFresh('nonsense', now)).toBe(false);
   expect(COMPETITION_ART_TTL_MS).toBe(24 * 3_600_000);
+});
+
+// Owner ruling 2026-08-30 (broadened curated marks): the merge's three
+// laws — gaps only, provider wins, statute unbreachable.
+test('curated marks fill gaps only; a provider badge always wins', () => {
+  const merged = mergeCuratedMarks(
+    { '4387': 'https://tsdb/nba.png' },
+    {
+      '4387': { url: 'https://ours/nba-curated.png' }, // must LOSE
+      'tennis-t-us-open': { url: 'https://ours/usopen.png' },
+      'tennis-t-wimbledon': {}, // no url — contributes nothing
+    },
+  );
+  expect(merged['4387']).toBe('https://tsdb/nba.png');
+  expect(merged['tennis-t-us-open']).toBe('https://ours/usopen.png');
+  expect(merged).not.toHaveProperty('tennis-t-wimbledon');
+});
+
+test('the Olympic statute holds at the curated merge, whatever was imported', () => {
+  const merged = mergeCuratedMarks(
+    {},
+    {
+      'olympics-2028': { url: 'https://ours/rings.png' },
+      'paralympics-2028': { url: 'https://ours/agitos.png' },
+      'pbc-cards': { url: 'https://ours/pbc.png' },
+    },
+  );
+  expect(Object.keys(merged)).toEqual(['pbc-cards']);
 });
