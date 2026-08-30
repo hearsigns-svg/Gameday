@@ -193,6 +193,8 @@ export const de: Catalog = {
   'follows.athletes.competingSoon': 'Bald im Einsatz',
   'follows.athletes.mens': 'Herren',
   'follows.athletes.womens': 'Damen',
+  'follows.boxing.mensFighters': 'Boxer',
+  'follows.boxing.womensFighters': 'Boxerinnen',
   'follows.boxing.mensTitle': 'Boxen — Männer',
   'follows.boxing.womensTitle': 'Boxen — Frauen',
   'follows.athletes.searchPlaceholder': '{sport}-Athleten suchen',

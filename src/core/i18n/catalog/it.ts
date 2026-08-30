@@ -190,6 +190,8 @@ export const it: Catalog = {
   'follows.athletes.competingSoon': 'Presto in gara',
   'follows.athletes.mens': 'Maschile',
   'follows.athletes.womens': 'Femminile',
+  'follows.boxing.mensFighters': 'Pugili uomini',
+  'follows.boxing.womensFighters': 'Pugili donne',
   'follows.boxing.mensTitle': 'Boxe maschile',
   'follows.boxing.womensTitle': 'Boxe femminile',
   'follows.athletes.searchPlaceholder': 'Cerca atleti di {sport}',

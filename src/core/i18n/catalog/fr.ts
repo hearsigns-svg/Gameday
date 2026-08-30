@@ -207,6 +207,8 @@ export const fr: Catalog = {
   'follows.athletes.competingSoon': 'Bientôt en lice',
   'follows.athletes.mens': 'Messieurs',
   'follows.athletes.womens': 'Dames',
+  'follows.boxing.mensFighters': 'Boxeurs',
+  'follows.boxing.womensFighters': 'Boxeuses',
   'follows.boxing.mensTitle': 'Boxe masculine',
   'follows.boxing.womensTitle': 'Boxe féminine',
   'follows.athletes.searchPlaceholder': 'Rechercher des athlètes ({sport})',

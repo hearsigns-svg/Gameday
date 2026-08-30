@@ -1,5 +1,5 @@
-// Round 3 B7 (reinstated mirrored structure): the sex facts the two
-// views rest on.
+// Round 3 B7 (realigned 2026-08-30): the sex facts the two views rest
+// on — and the strictness the realignment demands.
 
 import { boxingCardSex, boxingGroupSex, inSexView } from '../boxingBrowse';
 
@@ -16,9 +16,13 @@ test('card sex rides the marked-female/unmarked-male label convention', () => {
   expect(boxingCardSex(undefined)).toBeNull(); // unclassed, never guessed
 });
 
-test('unclassed cards ride in BOTH views — presence claims nothing', () => {
-  expect(inSexView('m', null)).toBe(true);
-  expect(inSexView('w', null)).toBe(true);
+test('sexed views are STRICT — unclassed appears on NEITHER screen', () => {
+  // The realignment's own case: Andy Ruiz Jr. (unclassed vendor mint)
+  // was rendering under a "Women's boxing" title. Excluded from both
+  // sexed screens; still reachable via search and his cards' heroes.
+  expect(inSexView('m', null)).toBe(false);
+  expect(inSexView('w', null)).toBe(false);
   expect(inSexView('m', 'w')).toBe(false);
   expect(inSexView('w', 'w')).toBe(true);
+  expect(inSexView('m', 'm')).toBe(true);
 });

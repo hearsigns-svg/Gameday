@@ -3406,3 +3406,24 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   Undercards re-verified: the expanded card already lists every bout
   the providers publish structure for (6/22 future cards today) —
   provider-bounded, per the standing ruling.
+- 2026-08-30 (B7 REALIGNMENT, owner — supersedes both prior B7 lines):
+  the shipped mirror had drifted back to the card-level split A4 ruled
+  out (duplicated card/promotion rows with twin Follows leading to the
+  same lists), and the sexed screens leaked unclassed men under a
+  Women's title. Collapsed to ONE boxing section in tennis's exact
+  section language: Men's fighters · Women's fighters · Major fight
+  cards (one row) · Premier Boxing Champions (one row). Cards' sex
+  granularity lives in the hero chips and filtered Add-all, where the
+  data can honor it. SEXED SCREENS ARE STRICT everywhere on the screen,
+  Competing soon included: only fighters classed to that sex render;
+  unclassed appear on NEITHER sexed screen (search and their cards'
+  heroes keep them reachable) — "never guessed" stands, unlabeled
+  leakage ends. The unclassed set shrinks at the source: budgeted
+  gender backfill via boxing-data /v2/fighters (explicit gender field
+  the connector never calls), scripts/backfill-boxing-gender.mjs —
+  quota-checked (refuses without budget + 35-call reserve for the
+  daily poller), unique-folded-name matches only (F31), stamps
+  grouping ONLY where gender AND a mappable division both arrive
+  (gender-only reported, not written), dry-run default. Runs when the
+  vendor quota resets (~Sept 7), cost stated from page 1's own quota
+  headers before spending the rest.

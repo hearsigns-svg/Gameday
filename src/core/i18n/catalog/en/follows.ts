@@ -80,6 +80,8 @@ export const followsStrings = {
   'follows.athletes.competingSoon': 'Competing soon',
   'follows.athletes.mens': 'Men’s',
   'follows.athletes.womens': 'Women’s',
+  'follows.boxing.mensFighters': 'Men’s fighters',
+  'follows.boxing.womensFighters': 'Women’s fighters',
   'follows.boxing.mensTitle': 'Men’s boxing',
   'follows.boxing.womensTitle': 'Women’s boxing',
   'follows.athletes.searchPlaceholder': 'Search {sport} athletes',
