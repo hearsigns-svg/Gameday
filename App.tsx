@@ -23,6 +23,7 @@ import { hasSeenWelcome } from './src/features/calendar-sync/data/calendarChoice
 import { activeBackend } from './src/features/calendar-sync/data/calendarBackend';
 import { resumeGoogleCalendarAuth } from './src/features/calendar-sync/data/googleCalendarAuth';
 import { loadFollowables } from './src/features/follows/data/followStore';
+import { migrateBoxingSexFollows } from './src/features/follows/data/followMigrations';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { CelebrationHost } from './src/core/celebration';
 import { ToastHost } from './src/core/toast';
@@ -150,6 +151,12 @@ export default function App() {
     // its token provider armed, or the run answers auth-expired for a
     // wiring reason instead of a real one.
     if (activeBackend() === 'rest') resumeGoogleCalendarAuth();
+    // Launch-time follow normalizer, synchronously BEFORE the first
+    // sync trigger below: the boxing base→sexed mapping must be in
+    // place when the fetch builds its key set (B7 final shape). Either
+    // ordering keeps coverage — the base key stays on every fixture —
+    // but running first avoids one fetch on the legacy key.
+    migrateBoxingSexFollows();
     void registerBackgroundSync();
     void import('./src/features/calendar-sync/data/deviceRegistry').then(
       (m) => m.registerDevice(),

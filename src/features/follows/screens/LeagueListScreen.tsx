@@ -313,7 +313,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     const isSeries = league.key === sport?.seriesFollowable?.key;
     const item = {
       key: league.key,
-      label: league.name,
+      label: league.followLabel ?? league.name,
       sportKey: route.params.sportKey,
       type: isSeries ? ('series' as const) : ('competition' as const),
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
@@ -805,6 +805,117 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     }
   }
 
+  // Boxing at rest (B7 FINAL SHAPE, owner 2026-08-30 — the standing
+  // design): TWO sections in tennis's exact treatment — "BOXING —
+  // MEN'S" and "BOXING — WOMEN'S" small-caps headers, each with its
+  // own coverage line and three standard rows: Fighters · Major fight
+  // cards · Premier Boxing Champions. Row labels are UNSEXED — the
+  // section header carries the sex, exactly as tennis's Players rows
+  // do. The card rows are SEX-SCOPED views and follows (`<base>-m` /
+  // `<base>-w`, server-stamped from bout classification; a zero-classed
+  // card carries both — deliver, don't drop); their display keeps the
+  // base name and badge while the FOLLOW's stored label carries the
+  // sex so the Following screen stays tellable. Searching falls
+  // through to the generic list.
+  if (route.params.sportKey === 'boxing' && needles.length === 0) {
+    type BoxRow =
+      | { kind: 'header'; sex: 'm' | 'w' }
+      | { kind: 'fighters'; sex: 'm' | 'w' }
+      | { kind: 'comp'; sex: 'm' | 'w'; item: DirectoryLeague };
+    const sexWord = (sex: 'm' | 'w') =>
+      i18n.t(sex === 'm' ? 'follows.athletes.mens' : 'follows.athletes.womens');
+    const scoped = (base: DirectoryLeague, sex: 'm' | 'w'): DirectoryLeague => ({
+      ...base,
+      key: `${base.key}-${sex}`,
+      followLabel: `${base.name} — ${sexWord(sex)}`,
+    });
+    const section = (sex: 'm' | 'w'): BoxRow[] => [
+      { kind: 'header', sex },
+      { kind: 'fighters', sex },
+      ...visibleLeagues.map((item) => ({
+        kind: 'comp' as const,
+        sex,
+        item: scoped(item, sex),
+      })),
+    ];
+    const rows: BoxRow[] = [...section('m'), ...section('w')];
+    return (
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        {searchField}
+        {banners}
+        <FlatList
+          data={rows}
+          keyExtractor={(r) =>
+            r.kind === 'comp' ? r.item.key : `${r.kind}-${r.sex}`
+          }
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item: row }) => {
+            if (row.kind === 'header') {
+              return (
+                <View style={{ paddingTop: spacing.l }}>
+                  <Text
+                    style={[
+                      type.caption,
+                      {
+                        color: t.textSecondary,
+                        paddingHorizontal: spacing.l,
+                        paddingBottom: spacing.s,
+                        fontWeight: '600',
+                      },
+                    ]}
+                  >
+                    {i18n
+                      .t(
+                        row.sex === 'm'
+                          ? 'follows.boxing.sectionMens'
+                          : 'follows.boxing.sectionWomens',
+                      )
+                      .toUpperCase()}
+                  </Text>
+                  {coverageNote ? <CoverageNote note={coverageNote} /> : null}
+                </View>
+              );
+            }
+            if (row.kind === 'fighters') {
+              return (
+                <TileRow>
+                  <SportCard
+                    fullWidth
+                    label={athleteRowTitle('boxing')}
+                    caption={i18n.t('follows.athletes.caption')}
+                    glyph={sport?.glyph ?? '🥊'}
+                    theme={teamTheme(sport?.accent ?? null, mode)}
+                    accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {
+                      athletes: i18n
+                        .t(
+                          row.sex === 'm'
+                            ? 'follows.boxing.mensTitle'
+                            : 'follows.boxing.womensTitle',
+                        )
+                        .toLowerCase(),
+                    })}
+                    onPress={() =>
+                      navigation.navigate('AthleteList', {
+                        sportKey: 'boxing',
+                        sex: row.sex,
+                        title: i18n.t(
+                          row.sex === 'm'
+                            ? 'follows.boxing.mensTitle'
+                            : 'follows.boxing.womensTitle',
+                        ),
+                      })
+                    }
+                  />
+                </TileRow>
+              );
+            }
+            return leagueCard(row.item);
+          }}
+        />
+      </View>
+    );
+  }
+
   // Olympics at rest (Round 3 B6): TWO standard expandable cards —
   // Summer and Winter — each expanding to [Sports | Games], ending the
   // mixed 40-row mishmash. Follow on the card follows that season's
@@ -927,65 +1038,23 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                   on demand. */}
               {coverageNote ? <CoverageNote note={coverageNote} /> : null}
               {sport?.browse.includes('athlete') ? (
-                route.params.sportKey === 'boxing' ? (
-                  // B7 realignment (owner, 2026-08-30): ONE boxing
-                  // section in tennis's exact section language — the
-                  // sex granularity is TWO fighters rows, not a
-                  // card-level mirror (cards are 0% sex-classifiable,
-                  // A4; their sex granularity lives in the hero chips
-                  // and filtered Add-all, where data can honor it).
-                  (['m', 'w'] as const).map((sex) => {
-                    const rowLabel = i18n.t(
-                      sex === 'm'
-                        ? 'follows.boxing.mensFighters'
-                        : 'follows.boxing.womensFighters',
-                    );
-                    return (
-                      <TileRow key={sex}>
-                        <SportCard
-                          fullWidth
-                          label={rowLabel}
-                          caption={i18n.t('follows.athletes.caption')}
-                          glyph={sport?.glyph ?? '🥊'}
-                          theme={teamTheme(sport?.accent ?? null, mode)}
-                          accessibilityLabel={i18n.t(
-                            'follows.athletes.a11yBrowse',
-                            { athletes: rowLabel.toLowerCase() },
-                          )}
-                          onPress={() =>
-                            navigation.navigate('AthleteList', {
-                              sportKey: 'boxing',
-                              sex,
-                              title: i18n.t(
-                                sex === 'm'
-                                  ? 'follows.boxing.mensTitle'
-                                  : 'follows.boxing.womensTitle',
-                              ),
-                            })
-                          }
-                        />
-                      </TileRow>
-                    );
-                  })
-                ) : (
-                  <TileRow>
-                    <SportCard
-                      fullWidth
-                      label={athleteRowTitle(route.params.sportKey)}
-                      caption={i18n.t('follows.athletes.caption')}
-                      glyph={sport?.glyph ?? '🏟️'}
-                      theme={teamTheme(sport?.accent ?? null, mode)}
-                      accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {
-                        athletes: athleteRowTitle(route.params.sportKey).toLowerCase(),
-                      })}
-                      onPress={() =>
-                        navigation.navigate('AthleteList', {
-                          sportKey: route.params.sportKey,
-                        })
-                      }
-                    />
-                  </TileRow>
-                )
+                <TileRow>
+                  <SportCard
+                    fullWidth
+                    label={athleteRowTitle(route.params.sportKey)}
+                    caption={i18n.t('follows.athletes.caption')}
+                    glyph={sport?.glyph ?? '🏟️'}
+                    theme={teamTheme(sport?.accent ?? null, mode)}
+                    accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {
+                      athletes: athleteRowTitle(route.params.sportKey).toLowerCase(),
+                    })}
+                    onPress={() =>
+                      navigation.navigate('AthleteList', {
+                        sportKey: route.params.sportKey,
+                      })
+                    }
+                  />
+                </TileRow>
               ) : null}
             </>
           )

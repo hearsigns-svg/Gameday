@@ -3427,3 +3427,30 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   (gender-only reported, not written), dry-run default. Runs when the
   vendor quota resets (~Sept 7), cost stated from page 1's own quota
   headers before spending the rest.
+- 2026-08-30 (B7 FINAL SHAPE, owner — THE STANDING DESIGN, superseding
+  every prior boxing browse shape): TWO sections in tennis's exact
+  treatment — "BOXING — MEN'S" / "BOXING — WOMEN'S" small-caps headers,
+  each with its own coverage line and three standard rows: Fighters ·
+  Major fight cards · Premier Boxing Champions. Row labels UNSEXED —
+  the section header carries the sex, as tennis's Players rows do; the
+  strict sexed fighter screens sit behind the Fighters rows unchanged.
+  THE CARD ROWS ARE SEX-SCOPED VIEWS AND FOLLOWS: derived keys
+  `<base>-m`/`<base>-w` on tsdb-league-4445 and pbc-cards, stamped
+  server-side post-ingest (boxingSexScopes.ts, hooked into the shared
+  ingest()) from BOUT CLASSIFICATION — a card carries a sex's key when
+  ≥1 bout names a directory-classed fighter of that sex; mixed cards
+  carry both and keep the hero chips. UNCLASSED FALLBACK — DELIVER,
+  DON'T DROP: a zero-classed card carries BOTH keys until
+  classification arrives (a silently missing major card is the worse
+  failure; the removable extra is the tolerable cost; the Sept-7
+  gender backfill shrinks the class, size reported before/after).
+  Reclassification rebuilds the scoped pair from evidence, so a
+  fallback key retracts when bouts later prove one sex. The BASE key
+  stays on every fixture (catalogue, coverage, legacy follows).
+  MIGRATION: an idempotent launch normalizer (followMigrations.ts,
+  runs every start so late-arriving base follows convert too) maps a
+  base follower to BOTH sexed follows — labels gain the em-dash sex
+  suffix for the Following screen; rows display the unsexed name via
+  DirectoryLeague.followLabel. NO CALENDAR CHURN: same fixture ids,
+  and the planner's wanted-map is id-keyed — pinned by test (one card
+  with both keys + both follows = one create).

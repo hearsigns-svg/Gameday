@@ -29,6 +29,7 @@ import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
 import { extractCrestColours } from './crestColours';
 import { DERIVED_TEAM_LEAGUE_IDS } from './fixtureTeams';
+import { stampBoxingSexScopes } from './boxingSexScopes';
 import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
@@ -376,6 +377,15 @@ async function ingest(
     };
   }
   await flush();
+  // Sex-scoped card keys (B7 final shape): after the batch commits so
+  // cards and bouts see each other whichever poll delivered them.
+  // Instrumentation-grade failure handling — a stamping error must
+  // never fail the poll it rides.
+  try {
+    await stampBoxingSexScopes(db, incoming, followKey);
+  } catch (e) {
+    console.error(`[kickoffcal] boxing sex-scope stamping failed: ${e}`);
+  }
   return {
     fixtures: incoming.length,
     changes: changes.length,

@@ -110,6 +110,13 @@ export function hydrateFollowArt(rows: readonly ArtRow[]): boolean {
   return changed;
 }
 
+// Whole-store replacement for launch-time normalizers
+// (data/followMigrations.ts) — the ONE writer besides setFollowed, so
+// the storage key never leaks out of this module.
+export function replaceFollowables(next: Followable[]): void {
+  writeJson(KEY_V2, next);
+}
+
 // Attach lazily-resolved venue art to an existing follow. No-op if the
 // follow has gone (unfollowed while resolving).
 export function setFollowed(item: Followable, followed: boolean): Followable[] {

@@ -19,6 +19,12 @@ export interface DirectoryLeague {
   // May contain the literal {teamId}, substituted when a team inside this
   // competition is followed.
   teamPollPath?: string;
+  // The FOLLOW's stored label where it must differ from the row's
+  // display name (B7 final shape: boxing's sexed card rows display the
+  // unsexed name — the section header carries the sex — while the
+  // Followable needs "Major fight cards — Men's" to stay tellable on
+  // the Following screen).
+  followLabel?: string;
   // Squad size for the card subtitle ("England · 20 teams") — the cached
   // directory's size, server-joined (27C). Optional in both directions:
   // an old server never sends it, and a league whose directory has never
