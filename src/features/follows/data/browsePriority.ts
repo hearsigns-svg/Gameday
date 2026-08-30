@@ -9,6 +9,7 @@
 // empty map here is honest — the one place a silent fallback is right.
 
 import { readJson, writeJson } from '../../../core/storage';
+import { PoolPhoto } from '../domain/poolPhotos';
 import { activeRegion } from '../../../core/regionStore';
 import { functionsBaseUrl } from '../../../core/firebase';
 export { byPriority, byPriorityLive } from '../domain/browseOrder';
@@ -47,6 +48,11 @@ export interface BrowsePriorities {
   // id 1. Absent on an old server; a missing entry means the subtitle
   // simply omits the count.
   teamCounts: Record<string, number>;
+  // Sport-generic photo pools (owner ruling 2026-08-30): sportKey →
+  // curated Commons shots for the pool rung between venue resolution
+  // and the treatment floor. Absent on an old server and empty where
+  // no pool is curated — both mean the rung simply never fires.
+  photoPools: Record<string, PoolPhoto[]>;
 }
 
 interface PriorityCache extends BrowsePriorities {
@@ -62,6 +68,7 @@ export function cachedPriorities(): BrowsePriorities {
     competitionArt: c?.competitionArt ?? {},
     competitionArtColours: c?.competitionArtColours ?? {},
     teamCounts: c?.teamCounts ?? {},
+    photoPools: c?.photoPools ?? {},
   };
 }
 
@@ -106,6 +113,10 @@ export async function refreshPriorities(): Promise<void> {
       teamCounts:
         typeof body.teamCounts === 'object' && body.teamCounts !== null
           ? body.teamCounts
+          : {},
+      photoPools:
+        typeof body.photoPools === 'object' && body.photoPools !== null
+          ? body.photoPools
           : {},
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);

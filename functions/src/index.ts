@@ -1172,6 +1172,18 @@ export const listPriorities = onRequest(gz(async (req, res) => {
       const pair = raw.colours[id];
       if (pair) competitionArtColours[id] = pair;
     }
+    // Sport-generic photo pools (owner ruling 2026-08-30): curated
+    // Commons shots for the rung between venue resolution and the
+    // treatment floor. Decorative — a missing doc serves no pools and
+    // the client's rung simply never fires.
+    let photoPools: Record<string, unknown> = {};
+    try {
+      const poolsSnap = await db.doc('directoryArt/photoPools').get();
+      const pools = poolsSnap.data()?.pools;
+      if (pools && typeof pools === 'object') photoPools = pools;
+    } catch (e) {
+      console.warn(`[kickoffcal] photo pools unavailable: ${e}`);
+    }
     res.json({
       priorities: regionalMap,
       // Sport-row weights ride the same overlay: the `sport:<key>` rows
@@ -1180,6 +1192,7 @@ export const listPriorities = onRequest(gz(async (req, res) => {
       // leads in South Asia" actually is.
       sportWeights: sportWeightsOf2(regionalMap, sportWeights),
       dormant,
+      photoPools,
       competitionArt: competitionArtOut,
       competitionArtColours,
       // Squad sizes for the STATIC competition rows' card subtitles

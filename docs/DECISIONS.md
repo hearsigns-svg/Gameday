@@ -3480,3 +3480,30 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   OWNER-RUN (storage upload + manifest write are prod data changes;
   agent prod-writes are also classifier-blocked); the apply ages the
   art cache so marks serve on the next rebuild.
+- 2026-08-30 (sport-generic photo pools, owner ruling — UFC seeded):
+  a new imagery rung between venue resolution and the treatment
+  floor. Tier order: venue/composite resolution (unchanged, first) →
+  sport pool → treatment. THE POOL FIRES ONLY ON GENUINE FAILURE —
+  every upstream rung must have answered a definitive none; a pending
+  lookup is never jumped (usePoolPhoto gates on all-null). Assignment
+  is DETERMINISTIC: fixture id FNV-hashes to a pool index (same card
+  same shot across launches; spread pinned by test). Pools ride the
+  served priorities payload (directoryArt/photoPools →
+  listPriorities.photoPools), never the client bundle. Curation runs
+  the SAME Commons verified-at-fetch gate as venue photography plus a
+  SUBJECT rule: cage/arena-centric only, nothing fighter- or
+  person-centric (a card for one bout wearing other fighters
+  misleads; athlete shots carry personality-rights mess) — enforced
+  by script filters AND an eyeball pass: the first automated pool was
+  one Army fan-fest's burst-shots, the second still passed two named
+  fighters, both caught by review before/after apply; the live UFC
+  pool is FIVE clean octagon/arena shots from five events (PLMMA,
+  GMC, Coloseum X, Strikeforce, Paktagon). Credits ride the photo
+  cache (pool write-through) onto the Photo credits screen; the UFC
+  badge persists over pool photos per the standing watermark ruling.
+  SWEEP (report-only, measured): athletics is the big future pool
+  beneficiary (1,205/1,205 future meetings venue-less), tennis is
+  covered by the tournament rung, UFC's live surface = 2 venue-less
+  cards + every obscure-venue resolution failure (23/25 carry
+  venues), boxing 2/14 venue-less; future pools fill via the
+  review-sheet mechanism, not bulk-built.

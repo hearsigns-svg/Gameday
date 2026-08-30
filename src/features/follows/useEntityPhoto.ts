@@ -15,6 +15,8 @@ import {
   venueKey,
 } from './data/photoCache';
 import { resolveAthletePhoto, resolveTournamentVenue, resolveVenueByName, resolveVenuePhoto } from './data/venueArt';
+import { cachedPriorities } from './data/browsePriority';
+import { poolIndexFor } from './domain/poolPhotos';
 
 type Resolver = (name: string) => Promise<
   Awaited<ReturnType<typeof resolveAthletePhoto>>
@@ -146,4 +148,47 @@ export function useTournamentVenuePhoto(
     tournamentName ?? null,
     resolve,
   );
+}
+
+// SPORT-GENERIC POOL (owner ruling 2026-08-30) — the rung between
+// venue resolution and the treatment floor. Fires ONLY when
+// `chainResolvedNone` is true: every upstream rung answered a
+// definitive null (a pending rung must never be jumped — the pool is
+// a fallback, not a race winner). Deterministic by fixture id, no
+// network: the pool rides the served priorities payload. The chosen
+// shot is written through to the photo cache under a pool key so the
+// Photo credits screen lists it like every other photo.
+export function usePoolPhoto(
+  sportKey: string,
+  fixtureId: string,
+  chainResolvedNone: boolean,
+): VenueArt | null | undefined {
+  const entry = chainResolvedNone
+    ? (() => {
+        const pool = cachedPriorities().photoPools[sportKey];
+        if (!pool || pool.length === 0) return null;
+        const idx = poolIndexFor(fixtureId, pool.length);
+        const p = pool[idx];
+        return p?.url ? { idx, p } : null;
+      })()
+    : undefined;
+  const art: VenueArt | null | undefined =
+    entry === undefined
+      ? undefined
+      : entry === null
+        ? null
+        : {
+            url: entry.p.url,
+            artist: entry.p.artist,
+            licence: entry.p.licence,
+            ...(entry.p.sourceUrl ? { sourceUrl: entry.p.sourceUrl } : {}),
+          };
+  // Credits write-through — an effect, not a render side effect; the
+  // guard keeps it one write per pool slot per install.
+  useEffect(() => {
+    if (!entry || entry === null || !art) return;
+    const key = `pool:${sportKey}:${entry.idx}`;
+    if (cachedPhoto(key) === undefined) putPhoto(key, art);
+  }, [sportKey, entry && entry.idx]);
+  return art;
 }

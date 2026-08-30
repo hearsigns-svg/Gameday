@@ -19,6 +19,7 @@ import { Followable } from './data/followStore';
 import { identityFollow } from './domain/followIdentity';
 import { sportByKey } from './domain/sportsConfig';
 import {
+  usePoolPhoto,
   useTournamentVenuePhoto,
   useVenuePhoto,
   useVenuePlacePhoto,
@@ -80,7 +81,15 @@ export function FixtureHero(props: {
     item.venueCity,
   );
   const teamArt = useVenuePhoto(item.venue || isTennisParent ? null : homeTeam);
-  const art = placeArt ?? tournamentArt ?? teamArt;
+  // Sport-generic pool rung (owner ruling): only when every upstream
+  // rung is a DEFINITIVE miss — the disabled rungs answer null
+  // immediately, so a card with no venue, no tournament shape and no
+  // resolvable team reaches the pool without ever jumping a pending
+  // lookup.
+  const chainResolvedNone =
+    placeArt === null && tournamentArt === null && teamArt === null;
+  const poolArt = usePoolPhoto(item.sport, item.id, chainResolvedNone);
+  const art = placeArt ?? tournamentArt ?? teamArt ?? poolArt;
   return (
     <HeroCard
       title={item.title}

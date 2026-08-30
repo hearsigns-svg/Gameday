@@ -57,6 +57,7 @@ import { identityFollow } from '../../follows/domain/followIdentity';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { loadFollowables, loadFollowKeys } from '../../follows/data/followStore';
 import {
+  usePoolPhoto,
   useTournamentVenuePhoto,
   useVenuePhoto,
   useVenuePlacePhoto,
@@ -269,7 +270,14 @@ export function FixtureCardBody(props: {
       ? (fixture.homeTeam ?? (owner?.type === 'team' ? owner.label : null))
       : null,
   );
-  const art = placeArt ?? tournamentArt ?? teamArt;
+  const chainResolvedNone =
+    placeArt === null && tournamentArt === null && teamArt === null;
+  const poolArt = usePoolPhoto(
+    fixture?.sport ?? '',
+    fixture?.id ?? '',
+    Boolean(fixture) && chainResolvedNone,
+  );
+  const art = placeArt ?? tournamentArt ?? teamArt ?? poolArt;
 
   const cardParent: Displayed | null = fixture
     ? fixture.parentFixtureId
