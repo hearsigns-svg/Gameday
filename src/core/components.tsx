@@ -241,25 +241,49 @@ export function FollowRail(props: {
     if (guardTimer.current !== null) clearTimeout(guardTimer.current);
     guardTimer.current = null;
   };
+  // The steady state is a NATIVELY-looping full leg: with the native
+  // driver, Animated.loop's iterations restart on the UI thread with no
+  // JS round-trip. The first cut ran leg-by-leg with a JS completion
+  // callback doing reset-and-restart — native finishes the leg, then
+  // the strip FREEZES until the JS thread gets around to the callback
+  // (a frame when idle, several under a sync tick), then snaps onward:
+  // a visible hitch once per leg (~30s at 27px/s over a nine-item
+  // strip — the owner's "jitter every minute or so", 2026-09-01). A
+  // JS boundary now exists only on resume-after-touch, where the hand
+  // was just on the strip anyway.
+  const startLoop = () => {
+    driftRunning.current = true;
+    drift.setValue(0);
+    driftAt.current = 0;
+    Animated.loop(
+      Animated.timing(drift, {
+        // POSITIVE: the strip drifts rightward (ruling 2026-09-01).
+        // The wrap is invisible either way — one copy width in either
+        // direction is an identical frame.
+        toValue: singleW,
+        duration: Math.max(1, (singleW / RAIL_DRIFT_PX_PER_S) * 1000),
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    ).start();
+  };
   const runLeg = (from: number) => {
-    // One leg = the rest of the current copy; completion snaps to the
-    // identical frame at 0 and starts the next full leg. One JS
-    // callback every singleW/speed seconds — not per frame.
+    if (from === 0) {
+      startLoop();
+      return;
+    }
+    // Resume mid-copy: finish the current leg, then hand over to the
+    // native loop at the identical frame.
     driftRunning.current = true;
     const remaining = singleW - Math.abs(from);
     Animated.timing(drift, {
-      // POSITIVE: the strip drifts rightward (direction reversed by
-      // ruling 2026-09-01). The wrap stays invisible either way — one
-      // copy width in either direction is an identical frame.
       toValue: singleW,
       duration: Math.max(1, (remaining / RAIL_DRIFT_PX_PER_S) * 1000),
       easing: Easing.linear,
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (!finished) return;
-      drift.setValue(0);
-      driftAt.current = 0;
-      runLeg(0);
+      startLoop();
     });
   };
   const pause = () => {
