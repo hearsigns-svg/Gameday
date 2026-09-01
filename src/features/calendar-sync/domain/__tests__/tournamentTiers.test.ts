@@ -199,3 +199,41 @@ test('a structured round beats title text — in BOTH directions', () => {
   // Stated r32 wins over a title that happens to say "Final".
   expect(isKeyRound(staged('r32', 'A vs B — Final'))).toBe(false);
 });
+
+test('a per-tournament override beats the global tier (Round 7)', () => {
+  const final = match('m-final', 'A vs B — Final');
+  const r1 = match('m-r1', 'C vs D — Round of 64');
+  const children = { byParent: new Map([[parent.id, [final, r1]]]) };
+  // Global says block; this tournament says every match.
+  const all = applyTournamentTiers([parent], 'block', FOLLOWED, children,
+    new Map([['tennis-t-us-open', 'all' as const]]));
+  expect(all.map((f) => f.id)).toEqual([
+    parent.id,
+    `${parent.id}${CLOSE_ID_SUFFIX}`,
+    'm-final',
+    'm-r1',
+  ]);
+  // Global says all; this tournament says just the block.
+  const block = applyTournamentTiers([parent], 'all', FOLLOWED, children,
+    new Map([['tennis-t-us-open', 'block' as const]]));
+  expect(block.map((f) => f.id)).toEqual([parent.id]);
+  // An override on some OTHER follow key changes nothing here.
+  const other = applyTournamentTiers([parent], 'key', FOLLOWED, children,
+    new Map([['tennis-t-wimbledon', 'block' as const]]));
+  expect(other.map((f) => f.id)).toContain('m-final');
+  expect(other.map((f) => f.id)).not.toContain('m-r1');
+});
+
+test('the WTA final SLOT rides the key tier as a child — the retired finals scope owes no query key (Round 7)', () => {
+  // The live slot shape: parentFixtureId set, "— Final" title, only
+  // appearance + finals keys (probed wta-905-2026-slot-final).
+  const slot: Fixture = {
+    ...match('wta-905-2026-slot-final', 'US Open — Final'),
+    followKeys: ['tennis-wta-appearances', 'tennis-t-us-open-finals'],
+  };
+  const out = applyTournamentTiers([parent], 'key', FOLLOWED, {
+    byParent: new Map([[parent.id, [slot, match('m-r1', 'C vs D — Round of 64')]]]),
+  });
+  expect(out.map((f) => f.id)).toContain('wta-905-2026-slot-final');
+  expect(out.map((f) => f.id)).not.toContain('m-r1');
+});

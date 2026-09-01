@@ -16,10 +16,20 @@
 // global preference), so an F1 scope is a per-follow override of that
 // preference, not a query change.
 
+import { t } from '../../../core/i18n';
 import type { Followable } from '../data/followStore';
 
 export type FollowScope =
-  | 'finals' // tennis tournament: block + the final
+  // Tennis tournaments (Round 7): a per-tournament override of the
+  // GLOBAL tournamentTier preference — the F1 pattern, in the tier
+  // vocabulary Preferences already uses. The old 'finals' scope is
+  // retired: its whole value (the early-confirmed final slot) arrives
+  // through the tier pass's children fetch now, and the launch
+  // migration maps stored 'finals' to 'key-rounds'.
+  | 'block' // this tournament: the full-span block only
+  | 'key-rounds' // this tournament: bookends + finals/semis/quarters
+  | 'all-matches' // this tournament: bookends + every match
+  | 'finals' // RETIRED (pre-Round-7 stored value; migration target only)
   | 'final-round' // golf: the published Final Round only
   | 'all-sessions' // F1: override the global pref to all
   | 'race-only'; // F1: override the global pref to race only
@@ -41,17 +51,6 @@ const GOLF_LEAGUES = new Set([
   'tsdb-league-5329', // LIV Golf
 ]);
 
-// CORRECTED 2026-08-07: this said "ATP match times have no approved
-// source", which stopped being true the day the review sheet shipped —
-// production holds ATP matches at exact times. What is still true is
-// that the FINAL as a scoped event is built from the WTA draw feed,
-// which is the only source exposing a round marker.
-const TENNIS_FINALS_NOTE =
-  'The final as a calendar event comes from the WTA feed — for joint ' +
-  'events that is the women’s final. Men’s matches arrive through the ' +
-  'reviewed ATP feed, but without a round marker, so an ATP-only ' +
-  'tournament delivers its banner and its matches rather than a final.';
-
 const GOLF_FINAL_NOTE =
   'Only rounds the provider publishes as “Final Round” — a tournament ' +
   'without one delivers nothing under this setting.';
@@ -59,9 +58,19 @@ const GOLF_FINAL_NOTE =
 // The options a follow's page offers. Empty = no selector rendered.
 export function scopesFor(f: Followable): ScopeOption[] {
   if (f.type === 'competition' && f.key.startsWith('tennis-t-')) {
+    // The SAME three modes Preferences offers, as a per-tournament
+    // override (Round 7 — replacing the Tournament / Tournament+final
+    // pills, which predate the tier model). No null option: like F1,
+    // the selected chip reflects the EFFECTIVE value, and tapping the
+    // global default clears any stored override.
     return [
-      { scope: null, label: 'Tournament' },
-      { scope: 'finals', label: 'Tournament + final', note: TENNIS_FINALS_NOTE },
+      { scope: 'block', label: t('settings.events.block') },
+      {
+        scope: 'key-rounds',
+        label: t('settings.events.keyRounds'),
+        note: t('follows.scope.tennisKeyNote'),
+      },
+      { scope: 'all-matches', label: t('settings.events.allMatches') },
     ];
   }
   if (f.type === 'competition' && GOLF_LEAGUES.has(f.key)) {
@@ -81,14 +90,30 @@ export function scopesFor(f: Followable): ScopeOption[] {
 
 // The Firestore query keys this follow contributes. Scope narrows or
 // widens the key set; everything else about the fetch is unchanged.
+// The retired tennis 'finals' expansion is gone (Round 7): the final
+// slot carries parentFixtureId and reaches the planner through the
+// tier pass's children fetch, so no query key is needed to want it.
 export function followQueryKeys(f: Followable): string[] {
-  if (f.scope === 'finals' && f.key.startsWith('tennis-t-')) {
-    return [f.key, `${f.key}-finals`];
-  }
   if (f.scope === 'final-round' && GOLF_LEAGUES.has(f.key)) {
     return [`${f.key}-final`];
   }
   return [f.key];
+}
+
+// Per-tournament tier overrides for the tier pass (Round 7) — the
+// tennis analogue of seriesScopesFrom below: an explicit per-follow
+// choice beats the global tournamentTier preference. Values are the
+// tier literals the calendar domain already speaks.
+export function tournamentTierOverridesFrom(
+  follows: readonly Followable[],
+): ReadonlyMap<string, 'block' | 'key' | 'all'> {
+  const m = new Map<string, 'block' | 'key' | 'all'>();
+  for (const f of follows) {
+    if (f.scope === 'block') m.set(f.key, 'block');
+    else if (f.scope === 'key-rounds') m.set(f.key, 'key');
+    else if (f.scope === 'all-matches') m.set(f.key, 'all');
+  }
+  return m;
 }
 
 // Per-fixture seriesSessions override for the planner: the F1 scopes

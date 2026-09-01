@@ -143,6 +143,8 @@ export const pt: Catalog = {
   // ── Sport picker ──────────────────────────────────────────────────
   'follows.sportPicker.allEventsOneFollow': 'Todos os eventos · siga uma vez',
   'follows.sportPicker.comingSoon': 'Em breve',
+  'follows.scope.tennisKeyNote':
+    'Finais, semifinais e quartas, quando os dados indicam a fase. O chaveamento da WTA indica; a maioria dos jogos masculinos ainda não traz fase, então um torneio só masculino pode entregar apenas as notas de início e fim.',
 
   // ── Following (manage) ────────────────────────────────────────────
   'follows.following.captionNoUpcoming': '{sport} · ainda sem próximos jogos',

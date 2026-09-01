@@ -10,7 +10,11 @@ import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import { loadFollowables, loadFollowKeys } from '../follows/data/followStore';
-import { followQueryKeys, seriesScopesFrom } from '../follows/domain/followScopes';
+import {
+  followQueryKeys,
+  seriesScopesFrom,
+  tournamentTierOverridesFrom,
+} from '../follows/domain/followScopes';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import {
   loadEventSettings,
@@ -701,11 +705,21 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     );
     if (!kids.ok) return kids;
     beat();
-    const tieredFixtures = applyTournamentTiers(
-      planFixtures,
-      prefs.tournamentTier,
-      follows,
-      kids.value,
+    // Per-tournament overrides (Round 7) beat the global tier; then the
+    // same-event umbrella runs over the TIERED list too — the children
+    // join after the first dedupe, and the WTA final slot beside the
+    // real final match (same parent, same exact time, both wanted) is
+    // exactly the twin dedupeFinalSlots exists to collapse.
+    const tieredFixtures = dedupeSameEvent(
+      applyTournamentTiers(
+        planFixtures,
+        prefs.tournamentTier,
+        follows,
+        kids.value,
+        tournamentTierOverridesFrom(loadFollowables()),
+      ),
+      pins,
+      new Set(follows),
     );
     const ops = planSync(
       tieredFixtures,

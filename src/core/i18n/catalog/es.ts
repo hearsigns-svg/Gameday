@@ -149,6 +149,8 @@ export const es: Catalog = {
   'follows.sportPicker.allEventsOneFollow':
     'Todos los eventos · un solo seguimiento',
   'follows.sportPicker.comingSoon': 'Próximamente',
+  'follows.scope.tennisKeyNote':
+    'Finales, semifinales y cuartos, cuando los datos indican la ronda. El cuadro de la WTA la indica; la mayoría de los partidos masculinos aún no llevan ronda, así que un torneo solo masculino puede aportar únicamente sus notas de inicio y final.',
 
   // ── Following (manage) ────────────────────────────────────────────
   'follows.following.captionNoUpcoming': '{sport} · aún sin próximos partidos',

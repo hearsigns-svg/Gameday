@@ -138,6 +138,8 @@ export const it: Catalog = {
   // ── Sport picker ──────────────────────────────────────────────────
   'follows.sportPicker.allEventsOneFollow': 'Tutti gli eventi · un solo follow',
   'follows.sportPicker.comingSoon': 'In arrivo',
+  'follows.scope.tennisKeyNote':
+    'Finali, semifinali e quarti, dove i dati indicano il turno. Il tabellone WTA lo indica; la maggior parte dei match maschili non riporta ancora il turno, quindi un torneo solo maschile può fornire soltanto le note di inizio e fine.',
 
   // ── Following (manage) ────────────────────────────────────────────
   'follows.following.captionNoUpcoming':

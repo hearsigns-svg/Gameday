@@ -260,14 +260,20 @@ export default function TeamScreen({ navigation, route }: Props) {
   const scopeOptions = following ? scopesFor({ ...item, key: teamKey }) : [];
   const storedScope =
     loadFollowables().find((f) => f.key === teamKey)?.scope ?? null;
-  // F1 has no null option: the global preference is the default, and
-  // the selected chip reflects the EFFECTIVE value until overridden.
+  // F1 and tennis tournaments have no null option: the global
+  // preference is the default, and the selected chip reflects the
+  // EFFECTIVE value until overridden (Round 7 — the tournament chips
+  // are the Preferences tier vocabulary, per tournament).
   const globalDefault: FollowScope | null =
     item.type === 'series'
       ? loadPrefs().seriesSessions === 'race-only'
         ? 'race-only'
         : 'all-sessions'
-      : null;
+      : item.type === 'competition' && teamKey.startsWith('tennis-t-')
+        ? ((
+            { block: 'block', key: 'key-rounds', all: 'all-matches' } as const
+          )[loadPrefs().tournamentTier] as FollowScope)
+        : null;
   const effectiveScope: FollowScope | null = storedScope ?? globalDefault;
 
   const selectScope = async (next: FollowScope | null) => {

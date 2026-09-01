@@ -115,11 +115,15 @@ export interface TournamentChildren {
 // planner should actually see. `followedKeys` decides which parents the
 // pass may touch at all — an unfollowed tournament in the fetch (a
 // pinned child's parent, say) is not this feature's business.
+// `overrides` (Round 7) is the per-tournament choice from the follow's
+// own page: an explicit override on the owning follow key beats the
+// global tier, the F1 seriesSessions pattern.
 export function applyTournamentTiers(
   fixtures: readonly Fixture[],
-  tier: TournamentTier,
+  globalTier: TournamentTier,
   followedKeys: readonly string[],
   children: TournamentChildren = { byParent: new Map() },
+  overrides: ReadonlyMap<string, TournamentTier> = new Map(),
 ): Fixture[] {
   const followed = new Set(followedKeys);
   const out: Fixture[] = [];
@@ -129,6 +133,7 @@ export function applyTournamentTiers(
       out.push(f);
       continue;
     }
+    const tier = overrides.get(followKey) ?? globalTier;
     const kids = children.byParent.get(f.id) ?? [];
     if (tier === 'block') {
       // The pointer is only honest where the card actually OFFERS

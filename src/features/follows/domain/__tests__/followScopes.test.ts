@@ -6,6 +6,7 @@ import {
   followQueryKeys,
   scopesFor,
   seriesScopesFrom,
+  tournamentTierOverridesFrom,
 } from '../followScopes';
 
 const follow = (over: Partial<Followable>): Followable => ({
@@ -26,10 +27,14 @@ describe('followQueryKeys', () => {
     ]);
   });
 
-  test('tennis finals scope ADDS the scoped slot key — banner plus final', () => {
+  test('the RETIRED tennis finals scope no longer touches the query — the slot arrives as a tier-pass child (Round 7)', () => {
     expect(
       followQueryKeys(follow({ key: 'tennis-t-wimbledon', scope: 'finals' })),
-    ).toEqual(['tennis-t-wimbledon', 'tennis-t-wimbledon-finals']);
+    ).toEqual(['tennis-t-wimbledon']);
+    // The tier-override scopes never touch the query either.
+    expect(
+      followQueryKeys(follow({ key: 'tennis-t-wimbledon', scope: 'all-matches' })),
+    ).toEqual(['tennis-t-wimbledon']);
   });
 
   test('golf final-round scope SWAPS to the scoped key — one event per tournament', () => {
@@ -61,8 +66,9 @@ describe('followQueryKeys', () => {
 describe('scopesFor', () => {
   test('tennis tournaments, catalogued golf tours and the F1 series offer options; everything else none', () => {
     expect(scopesFor(follow({ key: 'tennis-t-us-open' })).map((o) => o.scope)).toEqual([
-      null,
-      'finals',
+      'block',
+      'key-rounds',
+      'all-matches',
     ]);
     expect(
       scopesFor(follow({ key: 'tsdb-league-5329', sportKey: 'golf' })).map((o) => o.scope),
@@ -76,12 +82,11 @@ describe('scopesFor', () => {
     expect(scopesFor(follow({ key: 'athlete_000001', type: 'athlete' }))).toEqual([]);
   });
 
-  test('the tennis finals option says the ATP asymmetry out loud', () => {
-    const finals = scopesFor(follow({ key: 'tennis-t-wimbledon' })).find(
-      (o) => o.scope === 'finals',
+  test('the key-rounds option says the round-marker asymmetry out loud', () => {
+    const key = scopesFor(follow({ key: 'tennis-t-wimbledon' })).find(
+      (o) => o.scope === 'key-rounds',
     )!;
-    expect(finals.note).toContain('WTA');
-    expect(finals.note).toContain('ATP');
+    expect(key.note).toContain('WTA');
   });
 });
 
@@ -100,5 +105,24 @@ describe('seriesScopesFrom', () => {
       follow({ key: 'f1-series-1', type: 'series', scope: 'all-sessions' }),
     ]);
     expect(m.get('f1-series-1')).toBe('all');
+  });
+});
+
+describe('tournamentTierOverridesFrom (Round 7)', () => {
+  test('collects only the tier scopes, mapped to the tier vocabulary', () => {
+    const m = tournamentTierOverridesFrom([
+      follow({ key: 'tennis-t-wimbledon', scope: 'all-matches' }),
+      follow({ key: 'tennis-t-us-open', scope: 'block' }),
+      follow({ key: 'tennis-t-cincinnati', scope: 'key-rounds' }),
+      // Non-tier scopes and scopeless follows contribute nothing.
+      follow({ key: 'f1-series-1', type: 'series', scope: 'race-only' }),
+      follow({ key: 'tsdb-league-4425', sportKey: 'golf', scope: 'final-round' }),
+      follow({ key: 'fdorg-comp-PL' }),
+    ]);
+    expect([...m.entries()].sort()).toEqual([
+      ['tennis-t-cincinnati', 'key'],
+      ['tennis-t-us-open', 'block'],
+      ['tennis-t-wimbledon', 'all'],
+    ]);
   });
 });

@@ -31,6 +31,8 @@ export const followsStrings = {
   // ── Sport picker ──────────────────────────────────────────────────
   'follows.sportPicker.allEventsOneFollow': 'All events · one follow',
   'follows.sportPicker.comingSoon': 'Coming soon',
+  'follows.scope.tennisKeyNote':
+    'Finals, semi-finals and quarter-finals, where the data names rounds. The WTA draw names them; most men\u2019s matches carry no round marker yet, so a men-only tournament may deliver just its start and end notes.',
 
   // ── Following (manage) ────────────────────────────────────────────
   'follows.following.captionNoUpcoming': '{sport} · no upcoming fixtures yet',

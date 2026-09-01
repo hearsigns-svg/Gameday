@@ -152,6 +152,8 @@ export const fr: Catalog = {
   'follows.sportPicker.allEventsOneFollow':
     'Toutes les épreuves · un seul suivi',
   'follows.sportPicker.comingSoon': 'Prochainement',
+  'follows.scope.tennisKeyNote':
+    'Finales, demi-finales et quarts, lorsque les données nomment les tours. Le tableau WTA les nomme\u00a0; la plupart des matchs masculins n\u2019ont pas encore de tour indiqué, un tournoi masculin peut donc ne livrer que ses notes de début et de fin.',
 
   // ── Following (manage) ────────────────────────────────────────────
   'follows.following.captionNoUpcoming':

@@ -44,3 +44,20 @@ export function migrateBoxingSexFollows(): void {
   }
   replaceFollowables(next);
 }
+
+// Round 7: the tennis 'Tournament + final' scope is retired — the tier
+// model owns what a tournament writes, and the final slot reaches the
+// planner through the tier pass's children fetch. A stored 'finals'
+// scope maps to the nearest RICHER tier ('key-rounds': bookends plus
+// finals/semis/quarters — the user explicitly asked for more than the
+// block, and under the default preference this is what they were
+// already receiving). Idempotent: after one pass no 'finals' remains.
+export function migrateTournamentFinalsScope(): void {
+  const follows = loadFollowables();
+  if (!follows.some((f) => f.scope === 'finals')) return;
+  replaceFollowables(
+    follows.map((f) =>
+      f.scope === 'finals' ? { ...f, scope: 'key-rounds' as const } : f,
+    ),
+  );
+}

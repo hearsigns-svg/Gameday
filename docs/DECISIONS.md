@@ -3603,3 +3603,24 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   (the standing pipes lore) — the failure was a test fixture built on
   the old 0.5 boundary, fixed and re-run green with an explicit exit
   check; never gate a deploy on a piped test run.
+- 2026-09-01 (Round 7, owner-approved design): the tennis Tournament /
+  Tournament+final pills are RETIRED — superseded by the tier model.
+  The tournament page now offers the SAME three modes Preferences does
+  (Block | Key rounds | All matches) as a per-tournament OVERRIDE of
+  the global tournamentTier, on the established F1 seriesSessions
+  pattern (effective value selected; tapping the global default clears
+  the stored override) — new FollowScope values 'block'/'key-rounds'/
+  'all-matches' riding the existing scope machinery, zero new setter
+  or selector code. The old scope's unique cargo (the early WTA final
+  slot) needs NO query key: the slot carries parentFixtureId (probed
+  live: wta-905-2026-slot-final, title '… — Final') so it arrives
+  through the tier pass's children fetch and isKeyRound keeps it under
+  Key rounds; followQueryKeys' '-finals' expansion is deleted. The
+  same-event umbrella now ALSO runs over the TIERED list — the slot
+  beside the confirmed real final (same parent, same exact time) is
+  exactly the twin dedupeFinalSlots collapses, and children previously
+  joined after the only dedupe. Launch migration maps stored 'finals'
+  scopes to a 'key-rounds' override (nearest richer mode — under the
+  default preference that is what those users already received);
+  idempotent, snapshot-pinned. The block+final combination dies by
+  design. Golf and F1 scopes untouched.

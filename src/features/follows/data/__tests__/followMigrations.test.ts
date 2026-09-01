@@ -11,7 +11,10 @@ jest.mock('../../../../core/storage', () => ({
   wipeAllLocalData: () => void mockMem.clear(),
 }));
 
-import { migrateBoxingSexFollows } from '../followMigrations';
+import {
+  migrateBoxingSexFollows,
+  migrateTournamentFinalsScope,
+} from '../followMigrations';
 import { Followable, loadFollowables } from '../followStore';
 
 const base = (key: string, label: string): Followable => ({
@@ -74,4 +77,20 @@ test('non-boxing follows pass through untouched, in order', () => {
     'fdorg-team-64',
     'tennis-t-us-open',
   ]);
+});
+
+test('the retired tennis finals scope maps to a key-rounds override, once (Round 7)', () => {
+  mockMem.set('follows.v2', [
+    { ...base('tennis-t-wimbledon', 'Wimbledon'), sportKey: 'tennis', scope: 'finals' },
+    { ...base('tennis-t-us-open', 'US Open'), sportKey: 'tennis' },
+    { ...base('f1-series-1', 'Formula 1'), sportKey: 'f1', type: 'series', scope: 'race-only' },
+  ]);
+  migrateTournamentFinalsScope();
+  const after = loadFollowables();
+  expect(after.find((f) => f.key === 'tennis-t-wimbledon')?.scope).toBe('key-rounds');
+  expect(after.find((f) => f.key === 'tennis-t-us-open')?.scope).toBeUndefined();
+  expect(after.find((f) => f.key === 'f1-series-1')?.scope).toBe('race-only');
+  const snapshot = JSON.stringify(after);
+  migrateTournamentFinalsScope();
+  expect(JSON.stringify(loadFollowables())).toBe(snapshot);
 });
