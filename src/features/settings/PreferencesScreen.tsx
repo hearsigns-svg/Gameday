@@ -158,12 +158,19 @@ function SegmentedRow(props: {
   label: string;
   options: Array<{ label: string; selected: boolean; onPress: () => void }>;
   last?: boolean;
+  // Label on its own line, segments beneath. For rows whose option set
+  // is wide (three tier chips): inline, the label column was squeezed
+  // to a letters-tall sliver ("Tou rna me nts" — owner screenshot,
+  // 2026-09-01). Explicit per row, so every language gets the same
+  // geometry for the same control.
+  stacked?: boolean;
 }) {
   const t = useTheme();
   return (
     <View
       style={[
         styles.row,
+        props.stacked && styles.rowStacked,
         !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
         { borderColor: t.border },
       ]}
@@ -171,7 +178,7 @@ function SegmentedRow(props: {
       <Text style={[type.body, { color: t.textPrimary, flexShrink: 1 }]}>
         {props.label}
       </Text>
-      <View style={{ flex: 1 }} />
+      {props.stacked ? null : <View style={{ flex: 1 }} />}
       {/* Bordered segments (Stage 5 restyle): joined by hairlines,
           selected = a light tint of the brand blue with blue text —
           the tint is the brand token at 10% alpha, not a new colour. */}
@@ -513,6 +520,7 @@ export default function PreferencesScreen({
             word is the shared sport vocabulary — core, not settings. */}
         <SegmentedRow
           label={tr('core.tournaments')}
+          stacked
           last
           options={[
             {
@@ -740,6 +748,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.s,
     gap: spacing.s,
+  },
+  rowStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   segments: {
     flexDirection: 'row',
