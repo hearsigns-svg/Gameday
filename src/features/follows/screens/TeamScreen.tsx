@@ -361,6 +361,9 @@ export default function TeamScreen({ navigation, route }: Props) {
           theme={theme}
           monogram={monogramOf(name)}
           {...(storedFollowCrest ? { imageUrl: storedFollowCrest } : {})}
+          {...(competitionTileFillFor(teamKey)
+            ? { fillColour: competitionTileFillFor(teamKey) as string }
+            : {})}
           size={56}
         />
         <View style={{ flex: 1 }}>
