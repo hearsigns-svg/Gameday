@@ -50,7 +50,7 @@ export default function SportPickerScreen({ navigation }: Props) {
             // place a sport did not look like a sport (22b). Captions
             // describe the tile, never the user's follow state — same
             // Round 4 ruling as the Home grid.
-            <TileRow>
+            <TileRow flush>
               <SportCard
                 fullWidth
                 // THE REGION'S WORD FOR THE SPORT, as Home, Following

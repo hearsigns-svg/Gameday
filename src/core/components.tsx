@@ -33,6 +33,11 @@ import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
 
 // RN Image cannot rasterise SVG; skip those (photo URLs may carry
 // query strings — strip before testing the extension).
+// The follow control's pinned width (90: 'Following' measures 88.17 at
+// 14pt semibold — see followButton below). Shared with TileRow's
+// reserved column so tile right-edges cannot drift from button rows.
+const FOLLOW_HIT_MIN_WIDTH = 90;
+
 export const usableImage = (url: string | undefined): string | undefined =>
   url && !url.toLowerCase().split('?')[0].endsWith('.svg') ? url : undefined;
 
@@ -1390,11 +1395,22 @@ export function TileRow(props: {
   children: ReactNode; // the tile
   right?: ReactNode; // its control, if any
   compact?: boolean;
+  // Full-bleed variant for screens where NO row carries a control (the
+  // sport picker): reserving an empty column there is dead space, not
+  // alignment.
+  flush?: boolean;
 }) {
   return (
     <View style={[styles.tileRow, props.compact && styles.tileRowCompact]}>
       {props.children}
-      {props.right}
+      {/* A controless row reserves the control column (owner ruling
+          2026-09-01): every tile in a MIXED list shares one right edge
+          — "Players" beside "ATP Tour" used to run the full width and
+          the list read as two card systems. The spacer is exactly the
+          follow control's pinned hit width, so the edges cannot
+          drift apart. */}
+      {props.right ??
+        (props.flush ? null : <View style={styles.tileRowSpacer} />)}
     </View>
   );
 }
@@ -1968,11 +1984,17 @@ const styles = StyleSheet.create({
   // The Follow control's HIT target: fixed geometry that never moves,
   // even while the visual box inside it pops (Round 3).
   followButtonHit: {
-    minWidth: 90,
+    minWidth: FOLLOW_HIT_MIN_WIDTH,
     minHeight: 44,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // The controless row's reserved column (TileRow) — the SAME constant
+  // as the hit target above, by construction.
+  tileRowSpacer: {
+    width: FOLLOW_HIT_MIN_WIDTH,
+    flexShrink: 0,
   },
   followButton: {
     paddingHorizontal: spacing.m,
