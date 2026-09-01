@@ -42,7 +42,7 @@ import {
   SearchTeamHit,
   TournamentRow,
 } from '../data/directoryRepo';
-import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities, subscribePriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed, Followable } from '../data/followStore';
 import { isRetired, retiredCaption } from '../domain/careerStatus';
 import { colourFromKitText } from '../domain/entityColour';
@@ -204,6 +204,9 @@ export default function SearchScreen({ navigation }: Props) {
   const requestSeq = useRef(0);
 
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+  // Marks/fills paint from the priorities cache at render — repaint
+  // when a fetch lands (Round 6 follow-up).
+  useEffect(() => subscribePriorities(() => forceRender((n) => n + 1)), []);
   useEffect(() => void refreshPriorities(), []);
   // The keyboard rises AFTER the push transition settles (Round 2 perf
   // ruling): autoFocus raised it mid-animation, and the two competing

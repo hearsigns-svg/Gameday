@@ -77,11 +77,22 @@ describe('content bounds and fill ratio', () => {
 });
 
 describe('the coverage contrast verdict', () => {
-  it('passes a mixed mark whose halves cover both modes (the MLB shape)', () => {
-    const half = grid(80, 80, (x) => opaque(x < 40 ? NAVY : WHITE));
-    const d = dominantColours(half, null);
+  it('passes a mark whose majority holds in BOTH modes (the England-rose shape)', () => {
+    // A mid-luminance majority (saturated red) contrasts against the
+    // dark AND the light container; the white minority melting in
+    // light mode does not drag it under the 0.55 coverage bar. A pure
+    // light+dark bicolour cannot pass that bar — one mode always
+    // melts half its mass — which is the 0.55 ruling (Wimbledon sat
+    // exactly on the old 0.5 knife-edge and read muddy on device).
+    const RED = { r: 200, g: 16, b: 46 };
+    const rose = grid(80, 80, (x) => opaque(x < 48 ? RED : WHITE));
+    const d = dominantColours(rose, null);
     expect(worstModeOkShare(d)).toBeGreaterThanOrEqual(CONTRAST_OK_SHARE_MIN);
-    expect(markTilePlan(assessMark(half)).flags).toEqual([]);
+    expect(markTilePlan(assessMark(rose)).flags).toEqual([]);
+  });
+  it('flags a half-and-half light/dark bicolour under the 0.55 bar', () => {
+    const half = grid(80, 80, (x) => opaque(x < 40 ? NAVY : WHITE));
+    expect(markTilePlan(assessMark(half)).flags).toContain('contrast');
   });
   it('flags a mark whose majority melts in one mode (the US Open shape)', () => {
     const mostlyNavy = grid(90, 90, (x) => opaque(x < 60 ? NAVY : WHITE));
@@ -119,10 +130,14 @@ describe('rule order', () => {
     expect(plan.tileFill).toBe(hexOf(BLUE));
   });
   it('an unflagged mark gets a strictly empty plan — the byte-identical contract', () => {
-    // Well-filled, transparent-edged, mixed colours: nothing to do.
+    // Well-filled, transparent-edged, and its majority is a
+    // mid-luminance colour that holds in both modes: nothing to do.
+    // (A 50/50 light/dark bicolour is NOT this case — the 0.55 bar
+    // flags it, by ruling.)
+    const RED = { r: 200, g: 16, b: 46 };
     const clean = grid(100, 100, (x, y) =>
       x >= 2 && x < 98 && y >= 2 && y < 98
-        ? opaque(x < 50 ? NAVY : WHITE)
+        ? opaque(x < 60 ? RED : WHITE)
         : CLEAR,
     );
     const a = assessMark(clean);

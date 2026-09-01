@@ -3585,3 +3585,21 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   ListRow/SportCard/CompetitionCard and every mark surface; cache v4;
   followMarkUrl flipped MAP-FIRST so prepared marks beat crests
   stored at follow time.
+- 2026-09-01 (Round 6 follow-up, owner device check): the owner's
+  screenshots showed the UNTREATED state — the cache-v4 bump emptied
+  the art map at first paint and the stale-first fetch had no repaint
+  signal, so the rail sat on monograms until re-navigation.
+  subscribePriorities() now notifies on every landed payload and all
+  seven mark surfaces repaint (Home, Following, Team, LeagueList,
+  TournamentList, Search, Schedule); verified on a fresh launch with
+  no navigation. Second finding the owner's eye made: Wimbledon
+  passed the 0.5 coverage knife-edge (okShare 0.52) and read muddy
+  beside the plated neighbours — bar raised to 0.55 (epoch 3): six
+  flips, all defensible (Wimbledon + Korea Open to near-white; NBA,
+  MLB, two athletics golds to the dark plate); a pure light/dark
+  bicolour now always plates, mid-luminance majorities still pass.
+  Live: 70 fills served. PROCESS FAULT recorded: one red test slipped
+  past the deploy gate because `npm test | grep` masked the exit code
+  (the standing pipes lore) — the failure was a test fixture built on
+  the old 0.5 boundary, fixed and re-run green with an explicit exit
+  check; never gate a deploy on a piped test run.

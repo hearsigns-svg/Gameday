@@ -244,7 +244,7 @@ export const FILL_RATIO_MIN = 0.78;
 export const CONTRAST_MIN = 1.9;
 // …and a mark fails a mode when less than this share of its visible
 // mass holds there — the majority-melts rule.
-export const CONTRAST_OK_SHARE_MIN = 0.5;
+export const CONTRAST_OK_SHARE_MIN = 0.55;
 // Trim margin: content max-dimension × this on every side.
 export const TRIM_MARGIN = 0.08;
 

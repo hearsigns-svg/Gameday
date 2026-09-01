@@ -23,7 +23,7 @@ import { CompetitionCard } from '../CompetitionCard';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import { cachedTournaments, fetchTournaments, TournamentRow } from '../data/directoryRepo';
-import { cachedPriorities } from '../data/browsePriority';
+import { cachedPriorities, subscribePriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
 import { tournamentDateRange, tournamentsFor } from '../domain/tennisBrowse';
 import { sportByKey } from '../domain/sportsConfig';
@@ -44,6 +44,9 @@ export default function TournamentListScreen({ navigation, route }: Props) {
   const [, forceRender] = useState(0);
 
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+  // Marks/fills paint from the priorities cache at render — repaint
+  // when a fetch lands (Round 6 follow-up).
+  useEffect(() => subscribePriorities(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
     // Cached-first (Round 2 perf ruling): the last served list paints

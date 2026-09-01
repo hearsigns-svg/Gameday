@@ -55,7 +55,7 @@ import {
   SearchTeamHit,
   TournamentRow,
 } from '../data/directoryRepo';
-import { byPriorityLive, cachedPriorities, refreshPriorities } from '../data/browsePriority';
+import { byPriorityLive, cachedPriorities, refreshPriorities, subscribePriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import {
@@ -120,6 +120,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
   // Toast Undo (and any other sync) must refresh Follow segments here too.
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
+  // Rows are DERIVED STATE with art stamped at build time — re-derive
+  // when the priorities payload lands (Round 6 follow-up), or a screen
+  // opened before the fetch keeps monograms until re-entered.
+  const [artVersion, setArtVersion] = useState(0);
+  useEffect(() => subscribePriorities(() => setArtVersion((n) => n + 1)), []);
 
   useEffect(() => {
     // Series sports (F1) render their one followable as a normal
@@ -212,7 +217,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         hydrateFollowArt(merged);
       } else if (!cached) setError(messageOf(r.error));
     })();
-  }, [sport]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sport, artVersion]);
 
   // Tournament rows (Prompt 9): the competitions people actually want —
   // Wimbledon, not "ATP Tour". Joint ATP+WTA events arrive merged under

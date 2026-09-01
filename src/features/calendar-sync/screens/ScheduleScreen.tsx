@@ -56,6 +56,7 @@ import { headlineParticipant } from '../../follows/domain/participants';
 import {
   competitionTileFillFor,
   followMarkUrl,
+  subscribePriorities,
 } from '../../follows/data/browsePriority';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
 import { identityFollow } from '../../follows/domain/followIdentity';
@@ -181,9 +182,13 @@ export default function ScheduleScreen({ navigation }: Props) {
       setSyncError(state.lastError);
       refresh();
     });
+    // Row marks/fills paint from the priorities cache — repaint when a
+    // fetch lands (Round 6 follow-up).
+    const unsubArt = subscribePriorities(refresh);
     const focus = navigation.addListener('focus', refresh);
     return () => {
       unsub();
+      unsubArt();
       focus();
     };
   }, [navigation]);

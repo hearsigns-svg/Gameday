@@ -53,6 +53,7 @@ import {
   competitionTileFillFor,
   followMarkUrl,
   refreshPriorities,
+  subscribePriorities,
 } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
 import { sportLabelFor } from '../domain/sportTerms';
@@ -89,6 +90,10 @@ export default function HomeScreen({ navigation }: Props) {
       forceRepaint((n) => n + 1);
     };
     const unsub = subscribeSync(refresh);
+    // Repaint when the priorities payload LANDS (Round 6 follow-up):
+    // the rail painted monograms from an empty bumped cache and
+    // nothing repainted it when the fetch completed seconds later.
+    const unsubArt = subscribePriorities(refresh);
     const focus = navigation.addListener('focus', () => {
       setExcludedAtEntry(loadExclusions());
       refresh();
@@ -98,6 +103,7 @@ export default function HomeScreen({ navigation }: Props) {
     void refreshPriorities();
     return () => {
       unsub();
+      unsubArt();
       focus();
     };
   }, [navigation]);

@@ -37,6 +37,7 @@ import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
 import {
   competitionMarkFor,
   competitionTileFillFor,
+  subscribePriorities,
 } from '../data/browsePriority';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
 import { dedupeSameEvent } from '../../fixtures/domain/sameBout';
@@ -127,17 +128,16 @@ export default function TeamScreen({ navigation, route }: Props) {
   // Route params win — they came from a directory read this session,
   // while the stored copy may be months old (and may be absent
   // entirely, for follows made before crests existed).
-  const storedFollowCrest = useMemo(
-    () =>
-      routeCrest ??
-      loadFollowables().find((f) => f.key === teamKey)?.crestUrl ??
-      // The served art map, last: a competition followed before its
-      // mark was imported has no stored crest and (from the rails) no
-      // route param either — the map is what the server already shows
-      // everywhere else (Round 5 item 1).
-      competitionMarkFor(teamKey),
-    [teamKey, routeCrest],
-  );
+  // NOT memoised: the served art map can land mid-session (Round 6
+  // repaint-on-fetch), and a memo keyed on the route froze the
+  // pre-fetch answer. The lookup is a find plus two map reads.
+  const storedFollowCrest =
+    // The served map first (Round 6 order): prepared marks live there
+    // and must beat a crest captured at follow time; route param and
+    // stored crest remain the answer for everything the map lacks.
+    competitionMarkFor(teamKey) ??
+    routeCrest ??
+    loadFollowables().find((f) => f.key === teamKey)?.crestUrl;
 
   // Same fallback for nationality: the Following rail and the Home rail
   // navigate with no directory data of their own, so an athlete opened
@@ -234,6 +234,7 @@ export default function TeamScreen({ navigation, route }: Props) {
       polledThisSession.add(teamKey);
       void ensurePolled(item).then(() => void loadFixtures());
     }
+    const unsubArt = subscribePriorities(() => forceRender((n) => n + 1));
     const unsub = subscribeSync(() => {
       setExcludedIds(loadExclusions());
       setPinIds(pinnedIds());
@@ -242,6 +243,7 @@ export default function TeamScreen({ navigation, route }: Props) {
     return () => {
       mounted.current = false;
       unsub();
+      unsubArt();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamKey]);

@@ -15,6 +15,7 @@ import * as i18n from '../../../core/i18n';
 import {
   competitionTileFillFor,
   followMarkUrl,
+  subscribePriorities,
 } from '../data/browsePriority';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
@@ -68,11 +69,15 @@ export default function FollowingScreen({ navigation }: Props) {
       setFollows(loadFollowables());
       setUpcoming(upcomingByFollow());
     });
+    // Marks and tile fills paint from the priorities cache at render —
+    // repaint when a fetch lands (Round 6 follow-up).
+    const unsubArt = subscribePriorities(() => setFollows(loadFollowables()));
     const focus = navigation.addListener('focus', () =>
       setFollows(loadFollowables()),
     );
     return () => {
       unsub();
+      unsubArt();
       focus();
     };
   }, [navigation]);

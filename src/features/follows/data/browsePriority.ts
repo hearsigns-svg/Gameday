@@ -65,6 +65,21 @@ interface PriorityCache extends BrowsePriorities {
   fetchedAt: string;
 }
 
+// Repaint-on-fetch (Round 6 follow-up). The cache is stale-first and
+// the fetch is fire-and-forget — which meant a screen that rendered
+// BEFORE the payload landed kept its stale (or, after a cache-version
+// bump, EMPTY) art until the next navigation: the rail showed
+// monograms for every mark on first launch of a bumped build. Screens
+// that paint from this cache subscribe; a successful write notifies.
+const listeners = new Set<() => void>();
+
+export function subscribePriorities(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
 export function cachedPriorities(): BrowsePriorities {
   const c = readJson<PriorityCache | null>(cacheKeyFor(activeRegion()), null);
   return {
@@ -132,6 +147,7 @@ export async function refreshPriorities(): Promise<void> {
           : {},
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);
+    for (const fn of listeners) fn();
   } catch {
     // Offline: keep whatever we had.
   }

@@ -1079,10 +1079,12 @@ const ART_DOC = 'directoryArt/competitions';
 // untouched, byte-identical — their entry records only the measured
 // source so the next rebuild can skip re-measuring it. Bump the epoch
 // to force one full re-prep after a rules change.
-// Epoch 2: re-prep after the runtime SA gained objectAdmin on the
-// marks bucket — the epoch-1 rebuild stored the three trim cases as
-// bare passthroughs when their uploads 403'd.
-const MARK_TILES_EPOCH = 2;
+// Epoch 3: coverage bar 0.5 → 0.55 (owner's eye beat the knife-edge:
+// Wimbledon passed at exactly 0.5 and read muddy on device; six marks
+// flip, all onto defensible plates). Epoch 2 was the re-prep after the
+// runtime SA gained objectAdmin on the marks bucket (epoch-1 uploads
+// 403'd and stored bare passthroughs).
+const MARK_TILES_EPOCH = 3;
 const MARKS_BUCKET = 'gameday-fixtures-marks';
 
 interface MarkTileEntry {
