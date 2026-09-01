@@ -175,3 +175,21 @@ describe('trim composition', () => {
     ]);
   });
 });
+
+describe('tile occupancy on non-square canvases (the Wimbledon shape)', () => {
+  it('measures content against the canvas MAXDIM, not per-axis', () => {
+    // A 40px disc-ish blob centred on a 100x50 canvas: contain-fit
+    // renders the canvas width-limited, so the content spans 0.4 of
+    // the tile — the per-axis max would have said 0.8 and skipped the
+    // trim that fixes exactly this.
+    const wide = grid(100, 50, (x, y) =>
+      x >= 30 && x < 70 && y >= 5 && y < 45 ? opaque(NAVY) : CLEAR,
+    );
+    const a = assessMark(wide);
+    expect(a.fillRatio).toBeCloseTo(0.4);
+    expect(markTilePlan(a).trim).toBe(true);
+    // And the trim output is square, so the blob now fills the tile.
+    const out = composeTrimmed(wide, trimBox(a.bounds!), null);
+    expect(out.width).toBe(out.height);
+  });
+});

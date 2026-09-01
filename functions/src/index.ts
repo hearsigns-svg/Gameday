@@ -1084,7 +1084,7 @@ const ART_DOC = 'directoryArt/competitions';
 // flip, all onto defensible plates). Epoch 2 was the re-prep after the
 // runtime SA gained objectAdmin on the marks bucket (epoch-1 uploads
 // 403'd and stored bare passthroughs).
-const MARK_TILES_EPOCH = 3;
+const MARK_TILES_EPOCH = 4;
 const MARKS_BUCKET = 'gameday-fixtures-marks';
 
 interface MarkTileEntry {

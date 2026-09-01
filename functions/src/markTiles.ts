@@ -118,10 +118,16 @@ export function contentBounds(g: Grid, bg: Rgb | null): Bounds | null {
   return x1 < 0 ? null : { x0, y0, x1, y1 };
 }
 
-// Contain-fit is linear in the LARGER dimension: this is the fraction
-// of the tile the mark's content actually spans once rendered.
+// TILE OCCUPANCY: contain-fit scales the CANVAS so its larger side
+// fits the tile, so what the eye gets is content maxdim over canvas
+// maxdim. The first cut took the per-axis max — a lone roundel on a
+// wide transparent canvas (Wimbledon, 268px disc on 512x288) scored
+// 0.93 through its height while actually rendering at 0.52 of the
+// tile, and sailed past the trim. Measured 2026-09-01.
 export function fillRatio(b: Bounds, w: number, h: number): number {
-  return Math.max((b.x1 - b.x0 + 1) / w, (b.y1 - b.y0 + 1) / h);
+  return (
+    Math.max(b.x1 - b.x0 + 1, b.y1 - b.y0 + 1) / Math.max(w, h)
+  );
 }
 
 // Dominant REAL colours for contrast — unlike the burst extractor this
@@ -312,7 +318,8 @@ export interface MarkTilePlan {
 // pass-through — the mark is never touched.
 export function markTilePlan(a: MarkAssessment): MarkTilePlan {
   const flags: MarkTilePlan['flags'] = [];
-  const trim = a.bounds !== null && a.fillRatio > 0 && a.fillRatio < FILL_RATIO_MIN;
+  const trim =
+    a.bounds !== null && a.fillRatio > 0 && a.fillRatio < FILL_RATIO_MIN;
   if (trim) flags.push('fill-ratio');
   let tileFill: string | undefined;
   if (a.bakedBg) {
