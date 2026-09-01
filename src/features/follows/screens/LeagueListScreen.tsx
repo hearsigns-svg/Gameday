@@ -447,6 +447,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     // key for the aliased marks (Round 3 burst ruling).
     const artColours = cachedPriorities().competitionArtColours;
     const burstColours = artColours[String(item.id)] ?? artColours[item.key];
+    // The prepared tile fill, same dual keying (Round 6 tile prep).
+    const artFills = cachedPriorities().competitionArtTileFills;
+    const tileFill = artFills[String(item.id)] ?? artFills[item.key];
     return (
       <CompetitionCard
         // Exonym where the active language genuinely has one (Phase C)
@@ -458,6 +461,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         theme={teamTheme(sport?.accent ?? null, mode)}
         monogram={monogramOf(item.name)}
         {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
+        {...(tileFill ? { tileFill } : {})}
         glyph={sport?.glyph ?? '🏟️'}
         fixturesWord={fixturesWordFor(route.params.sportKey)}
         onOpen={
@@ -500,6 +504,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       monogram={monogramOf(row.name)}
       {...(cachedPriorities().competitionArt[row.key]
         ? { crestUrl: cachedPriorities().competitionArt[row.key] }
+        : {})}
+      {...(cachedPriorities().competitionArtTileFills[row.key]
+        ? { tileFill: cachedPriorities().competitionArtTileFills[row.key] }
         : {})}
       {...(cachedPriorities().competitionArtColours[row.key]
         ? { burstColours: cachedPriorities().competitionArtColours[row.key] }

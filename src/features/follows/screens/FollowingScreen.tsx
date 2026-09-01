@@ -12,7 +12,10 @@ import { monogramOf,
 import { TabScreenProps } from '../../../core/navigation';
 // Namespace import: `t` is this component's theme binding.
 import * as i18n from '../../../core/i18n';
-import { competitionMarkFor } from '../data/browsePriority';
+import {
+  competitionTileFillFor,
+  followMarkUrl,
+} from '../data/browsePriority';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
@@ -173,8 +176,11 @@ export default function FollowingScreen({ navigation }: Props) {
                     mode,
                   )}
                   monogram={monogramOf(item.label)}
-                  {...((item.crestUrl ?? competitionMarkFor(item.key))
-                    ? { imageUrl: (item.crestUrl ?? competitionMarkFor(item.key)) as string }
+                  {...(followMarkUrl(item)
+                    ? { imageUrl: followMarkUrl(item) as string }
+                    : {})}
+                  {...(competitionTileFillFor(item.key)
+                    ? { tileFill: competitionTileFillFor(item.key) as string }
                     : {})}
                   {...(flagEmojiOf(item.countryCode)
                     ? { tileBadge: flagEmojiOf(item.countryCode) as string }

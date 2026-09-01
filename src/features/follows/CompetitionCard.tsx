@@ -31,6 +31,8 @@ export interface CompetitionCardProps {
   theme: TeamTheme;
   monogram: string;
   crestUrl?: string;
+  // Per-mark tile fill behind crestUrl (Round 6 tile prep).
+  tileFill?: string;
   glyph: string;
   // The competition's own content: its fixtures page, or for a tennis
   // tour its tournament list. No teams → tap lands here directly;
@@ -94,6 +96,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
         theme={props.theme}
         monogram={props.monogram}
         {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
+        {...(props.tileFill ? { tileFill: props.tileFill } : {})}
         accessibilityLabel={
           expandable
             ? t('follows.card.a11ySummary', {

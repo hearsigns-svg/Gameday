@@ -3555,3 +3555,33 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   / hybrid choice shipped in Round 3 B3 as Preferences → Events →
   Tournaments (Block | Key rounds | All matches, default Key
   rounds); the owner's Pixel build predates it.
+- 2026-09-01 (Round 6, owner brief — mark-tile audit + targeted prep):
+  audit MEASURED all 88 art-map marks (pngjs/jpeg-js decode; three
+  curated "PNGs" were JPEGs — magic bytes, not extensions). Contrast
+  baseline: client tile fill is theme.container, whose OKLCH lightness
+  is fixed per mode (measured cluster: dark lum 0.0187–0.0211, light
+  0.794–0.818) so WCAG contrast collapses to two constants. First-cut
+  any-dominant-fails flagged 74/85 — replaced with the MAJORITY-MELTS
+  rule (share-weighted ok-coverage < 0.5 in the worst mode; a mixed
+  navy+white badge passes because each mode is carried by half).
+  Thresholds recorded in markTiles.ts: fill-ratio < 0.78 (natural
+  break 0.77→0.87), contrast ≥ 1.9 counts as holding, margin 8%.
+  FLAGGED 64/88: 3 trims (T20I 0.64, Australian Open 0.75, China Open
+  0.77), 4 background adoptions (AO #1C91D0, Top 14 #FFFFFF, IEB
+  Argentina #015592, Libema #EDECEE — both JPEG cases), 57
+  one-polarity contrast plates (the two neutrals #F4F2ED/#22252A sit
+  within a hair of the light/dark containers, so each fix only
+  visibly changes the mode where the mark currently melts; US Open →
+  near-white). Prep runs in competitionArt()'s daily rebuild beside
+  the colours loop: trimmed PNGs upload to gameday-fixtures-marks/
+  tiles/<key>.png (makePublic, per-object ACL like the curated
+  importer), doc caches per-mark {src,url,fill} keyed to
+  MARK_TILES_EPOCH (bump = one forced re-prep; unchanged src = skip),
+  serve swaps the art URL to the trimmed copy and ships
+  competitionArtTileFills. Unflagged marks byte-identical — same URL,
+  originals never written. Client stays dumb: GlyphTile paints a
+  served fillColour while its image shows (falls back to the theme
+  container on image failure), threaded through FollowRail/EventRow/
+  ListRow/SportCard/CompetitionCard and every mark surface; cache v4;
+  followMarkUrl flipped MAP-FIRST so prepared marks beat crests
+  stored at follow time.

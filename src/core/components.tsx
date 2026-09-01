@@ -77,6 +77,11 @@ export function GlyphTile(props: {
   // weight class every fighter now shares one division tone, and the
   // flag is what distinguishes them.
   badge?: string;
+  // Per-mark tile fill (Round 6 tile prep, server-chosen): an adopted
+  // baked background or a contrast-picked neutral. Applies only while
+  // the IMAGE is actually showing — a failed image falls back to the
+  // monogram on the theme container, exactly as before.
+  fillColour?: string;
 }) {
   const size = props.size ?? 40;
   const [imageFailed, setImageFailed] = useState(false);
@@ -88,7 +93,8 @@ export function GlyphTile(props: {
         width: size,
         height: size,
         borderRadius: props.round ? size / 2 : size * 0.3,
-        backgroundColor: props.theme.container,
+        backgroundColor:
+          image && props.fillColour ? props.fillColour : props.theme.container,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -157,6 +163,8 @@ export interface FollowRailItem {
   // An athlete's flag. A team has a crest; a boxer has a country, and
   // without it five followed fighters are five identical tokens.
   badge?: string;
+  // Per-mark tile fill behind imageUrl (Round 6 tile prep).
+  tileFill?: string;
 }
 
 // LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3; touch
@@ -379,6 +387,7 @@ export function FollowRail(props: {
             monogram={monogramOf(item.label)}
             {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
             {...(item.badge ? { badge: item.badge } : {})}
+            {...(item.tileFill ? { fillColour: item.tileFill } : {})}
             size={64}
             round
           />
@@ -786,6 +795,8 @@ export function EventRow(props: {
   // the owning follow's crest. Whatever it is, it degrades to the
   // monogram, never to a blank tile.
   imageUrl?: string;
+  // Per-mark tile fill behind imageUrl (Round 6 tile prep).
+  tileFill?: string;
   // Opens the expanded card. The row's own +/× controls sit OUTSIDE
   // this press target so a mis-tap can never toggle the calendar.
   onPress?: () => void;
@@ -830,6 +841,7 @@ export function EventRow(props: {
         monogram={props.monogram}
         imageUrl={props.imageUrl}
         {...(props.tileBadge ? { badge: props.tileBadge } : {})}
+        {...(props.tileFill ? { fillColour: props.tileFill } : {})}
       />
       <View style={{ flex: 1, minWidth: 0 }}>
         <View
@@ -1038,6 +1050,8 @@ export function ListRow(props: {
   imageUrl?: string;
   // Corner mark on the tile — an athlete's flag (Prompt 16 B).
   tileBadge?: string;
+  // Per-mark tile fill behind imageUrl (Round 6 tile prep).
+  tileFill?: string;
   right?: ReactNode;
   onPress?: () => void;
   accessibilityLabel: string;
@@ -1093,6 +1107,7 @@ export function ListRow(props: {
             monogram={props.monogram}
             imageUrl={props.imageUrl}
             {...(props.tileBadge ? { badge: props.tileBadge } : {})}
+            {...(props.tileFill ? { fillColour: props.tileFill } : {})}
           />
         ) : (
           <Text style={[type.heading, styles.glyph]} accessible={false}>
@@ -1241,6 +1256,8 @@ export function SportCard(props: {
   // one line of label, less padding. Same component, same edge, same
   // press — extended rather than forked, so the two cannot drift.
   compact?: boolean;
+  // Per-mark tile fill behind imageUrl (Round 6 tile prep).
+  tileFill?: string;
   // Full width in a LIST; the Home grid still wants two per row.
   fullWidth?: boolean;
   // A tile that is NOT yet openable — a "Coming soon" sport. The row
@@ -1312,6 +1329,7 @@ export function SportCard(props: {
         {...(props.monogram ? { monogram: props.monogram } : {})}
         {...(props.imageUrl ? { imageUrl: props.imageUrl } : {})}
         {...(props.tileBadge ? { badge: props.tileBadge } : {})}
+        {...(props.tileFill ? { fillColour: props.tileFill } : {})}
       />
       <View style={{ flex: 1 }}>
         {/* TWO LINES, not one. A sport name is content, not chrome —

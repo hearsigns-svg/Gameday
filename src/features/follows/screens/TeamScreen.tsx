@@ -34,7 +34,10 @@ import {
 } from '../../calendar-sync/data/exclusionStore';
 import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
-import { competitionMarkFor } from '../data/browsePriority';
+import {
+  competitionMarkFor,
+  competitionTileFillFor,
+} from '../data/browsePriority';
 import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
 import { dedupeSameEvent } from '../../fixtures/domain/sameBout';
 import { Fixture } from '../../fixtures/domain/fixture';
@@ -476,6 +479,9 @@ export default function TeamScreen({ navigation, route }: Props) {
                 followType !== 'competition' && followType !== 'series'
               }
               {...(storedFollowCrest ? { crestUrl: storedFollowCrest } : {})}
+              {...(competitionTileFillFor(teamKey)
+                ? { tileFill: competitionTileFillFor(teamKey) as string }
+                : {})}
               {...(following
                 ? {
                     excluded: excludedIds.has(f.id),
@@ -509,6 +515,7 @@ function TeamFixtureRow(props: {
   theme: ReturnType<typeof teamTheme>;
   competitionInCaption: boolean;
   crestUrl?: string;
+  tileFill?: string; // per-mark tile fill (Round 6 tile prep)
   excluded?: boolean;
   onToggleExcluded?: () => void;
   pinned?: boolean;
@@ -536,6 +543,7 @@ function TeamFixtureRow(props: {
       glyph={props.glyph}
       monogram={monogramOf(f.homeTeam ?? props.name)}
       {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
+      {...(props.tileFill ? { tileFill: props.tileFill } : {})}
       theme={props.theme}
       onPress={() => {
         void fixtureCardRequest(ref, f.id, props.pagerIds).then(expansion.open);

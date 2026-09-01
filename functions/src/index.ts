@@ -30,8 +30,17 @@ const gz = (handler: Handler): Handler => (req, res) =>
 
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
+import { getStorage } from 'firebase-admin/storage';
 import { extractCrestColours } from './crestColours';
 import { DERIVED_TEAM_LEAGUE_IDS } from './fixtureTeams';
+import {
+  assessMark,
+  composeTrimmed,
+  gridFromImageBuffer,
+  markTilePlan,
+  pngBufferOf,
+  trimBox,
+} from './markTiles';
 import { stampBoxingSexScopes } from './boxingSexScopes';
 import { stampCrests } from './crestStamp';
 import {
@@ -1065,25 +1074,85 @@ function sportWeightsOf2(
 // the generated treatment and a broken browse screen does not.
 const ART_DOC = 'directoryArt/competitions';
 
+// Mark-tile prep (Round 6): flagged marks get a trimmed copy in the
+// marks bucket and/or a per-mark tile fill; UNFLAGGED marks are
+// untouched, byte-identical — their entry records only the measured
+// source so the next rebuild can skip re-measuring it. Bump the epoch
+// to force one full re-prep after a rules change.
+const MARK_TILES_EPOCH = 1;
+const MARKS_BUCKET = 'gameday-fixtures-marks';
+
+interface MarkTileEntry {
+  src: string; // the source URL this measurement belongs to
+  url?: string; // trimmed asset, when the fill-ratio rule fired
+  fill?: string; // tileFill, from background adoption or contrast pick
+}
+
 interface CompetitionArtDoc {
   art: Record<string, string>;
   // key → the badge's dominant colour pair (Round 3): the follow
   // burst's discrete palette, extracted once per rebuild so the client
   // never decodes an image.
   colours: Record<string, string[]>;
+  tiles: Record<string, MarkTileEntry>;
+}
+
+// Measure one mark and apply the three rules (trim → adopt → contrast;
+// see markTiles.ts). Every failure path returns a measured-passthrough
+// entry or throws to the caller's warn — a bad mark costs its prep,
+// never the art map.
+async function prepareMarkTile(
+  key: string,
+  url: string,
+): Promise<MarkTileEntry> {
+  const res = await fetch(url);
+  if (!res.ok) return { src: url };
+  const grid = gridFromImageBuffer(Buffer.from(await res.arrayBuffer()));
+  if (!grid) return { src: url };
+  const a = assessMark(grid);
+  const plan = markTilePlan(a);
+  const entry: MarkTileEntry = { src: url };
+  if (plan.tileFill) entry.fill = plan.tileFill;
+  if (plan.trim && a.bounds) {
+    const png = pngBufferOf(composeTrimmed(grid, trimBox(a.bounds), a.bakedBg));
+    const path = `tiles/${key}.png`;
+    const file = getStorage().bucket(MARKS_BUCKET).file(path);
+    await file.save(png, {
+      contentType: 'image/png',
+      metadata: { cacheControl: 'public,max-age=604800' },
+    });
+    // Per-object ACL, same as the curated importer — the bucket is not
+    // uniformly public.
+    await file.makePublic();
+    entry.url = `https://storage.googleapis.com/${MARKS_BUCKET}/${path}`;
+  }
+  return entry;
 }
 
 async function competitionArt(): Promise<CompetitionArtDoc> {
   const ref = db.doc(ART_DOC);
   const snap = await ref.get();
   const data = snap.exists
-    ? (snap.data() as Partial<CompetitionArtDoc> & { cachedAt?: string })
+    ? (snap.data() as Partial<CompetitionArtDoc> & {
+        cachedAt?: string;
+        tilesEpoch?: number;
+      })
     : undefined;
   const cached: CompetitionArtDoc = {
     art: data?.art ?? {},
     colours: data?.colours ?? {},
+    tiles: data?.tiles ?? {},
   };
-  if (data?.art && artIsFresh(data.cachedAt, Date.now())) return cached;
+  // A cache from before the current tile-prep rules is stale by
+  // definition — the epoch bump is how a deploy forces exactly one
+  // re-prep without touching the stored doc.
+  if (
+    data?.art &&
+    artIsFresh(data.cachedAt, Date.now()) &&
+    data.tilesEpoch === MARK_TILES_EPOCH
+  ) {
+    return cached;
+  }
 
   const key = optionalTsdbKey();
   if (!key) return cached;
@@ -1130,14 +1199,35 @@ async function competitionArt(): Promise<CompetitionArtDoc> {
   // would otherwise strip every logo for the next 24 hours.
   if (Object.keys(merged).length === 0) return cached;
   // Dominant colour pairs per badge (Round 3; curated marks ride the
-  // same loop by ruling) — once per rebuild.
+  // same loop by ruling) — once per rebuild. Mark-tile prep (Round 6)
+  // rides the same pass: a mark whose source URL is unchanged reuses
+  // its measured entry verbatim, so the flagged set is processed once
+  // and everything else is a skip.
   const colours: Record<string, string[]> = {};
+  const prevTiles =
+    data?.tilesEpoch === MARK_TILES_EPOCH ? (data.tiles ?? {}) : {};
+  const tiles: Record<string, MarkTileEntry> = {};
   for (const [artKey, url] of Object.entries(merged)) {
     const pair = await extractCrestColours(url);
     if (pair) colours[artKey] = pair;
+    try {
+      const prev = prevTiles[artKey];
+      tiles[artKey] =
+        prev?.src === url ? prev : await prepareMarkTile(artKey, url);
+    } catch (e) {
+      // Decorative: a failed prep serves the original mark.
+      console.warn(`[kickoffcal] mark tile prep failed for ${artKey}: ${e}`);
+      tiles[artKey] = { src: url };
+    }
   }
-  await ref.set({ art: merged, colours, cachedAt: new Date().toISOString() });
-  return { art: merged, colours };
+  await ref.set({
+    art: merged,
+    colours,
+    tiles,
+    tilesEpoch: MARK_TILES_EPOCH,
+    cachedAt: new Date().toISOString(),
+  });
+  return { art: merged, colours, tiles };
 }
 
 export const listPriorities = onRequest(gz(async (req, res) => {
@@ -1158,19 +1248,24 @@ export const listPriorities = onRequest(gz(async (req, res) => {
     // the served league rows.
     const off = await loadImageryOff();
     const raw = await competitionArt().catch(
-      () => ({ art: {}, colours: {} }) as CompetitionArtDoc,
+      () => ({ art: {}, colours: {}, tiles: {} }) as CompetitionArtDoc,
     );
     const competitionArtOut: Record<string, string> = {};
     const competitionArtColours: Record<string, string[]> = {};
+    const competitionArtTileFills: Record<string, string> = {};
     for (const [id, url] of Object.entries(raw.art)) {
       // Numeric keys are TSDB league ids; alias keys ARE the
       // competition key, and the kill-switch must see the real one.
       const compKey = /^\d+$/.test(id) ? `tsdb-league-${id}` : id;
       if (!imageryAllowed(compKey, off)) continue;
-      competitionArtOut[id] = url;
+      // The trimmed copy IS the served mark where one exists (Round 6
+      // tile prep); unflagged marks serve their original URL untouched.
+      const tile = raw.tiles[id];
+      competitionArtOut[id] = tile?.url ?? url;
       // Derived from the badge, so the same policy governs it.
       const pair = raw.colours[id];
       if (pair) competitionArtColours[id] = pair;
+      if (tile?.fill) competitionArtTileFills[id] = tile.fill;
     }
     // Sport-generic photo pools (owner ruling 2026-08-30): curated
     // Commons shots for the rung between venue resolution and the
@@ -1195,6 +1290,9 @@ export const listPriorities = onRequest(gz(async (req, res) => {
       photoPools,
       competitionArt: competitionArtOut,
       competitionArtColours,
+      // Per-mark tile fill (Round 6): background adoption or the
+      // contrast-picked neutral. The client paints, never computes.
+      competitionArtTileFills,
       // Squad sizes for the STATIC competition rows' card subtitles
       // (27C), keyed by row key — those rows never touch listLeagues,
       // and this is already the browse-metadata payload (see

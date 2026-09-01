@@ -120,6 +120,9 @@ export default function TournamentListScreen({ navigation, route }: Props) {
             {...(cachedPriorities().competitionArt[item.key]
               ? { crestUrl: cachedPriorities().competitionArt[item.key] }
               : {})}
+            {...(cachedPriorities().competitionArtTileFills[item.key]
+              ? { tileFill: cachedPriorities().competitionArtTileFills[item.key] }
+              : {})}
             {...(cachedPriorities().competitionArtColours[item.key]
               ? { burstColours: cachedPriorities().competitionArtColours[item.key] }
               : {})}

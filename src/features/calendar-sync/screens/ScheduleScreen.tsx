@@ -53,7 +53,10 @@ import {
 } from '../../fixtures/data/freshnessRepo';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { headlineParticipant } from '../../follows/domain/participants';
-import { followMarkUrl } from '../../follows/data/browsePriority';
+import {
+  competitionTileFillFor,
+  followMarkUrl,
+} from '../../follows/data/browsePriority';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { Followable, loadFollowables } from '../../follows/data/followStore';
@@ -603,6 +606,9 @@ function ScheduleRow(props: {
       // rendered a monogram anyway (Prompt 16 C sweep). The crest heals
       // from the served art map when the follow predates its mark.
       imageUrl={photo?.url ?? followMarkUrl(owner)}
+      {...(!photo?.url && owner && competitionTileFillFor(owner.key)
+        ? { tileFill: competitionTileFillFor(owner.key) as string }
+        : {})}
       onPress={() => {
         void fixtureCardRequest(ref, item.id, props.pagerIds).then(
           expansion.open,

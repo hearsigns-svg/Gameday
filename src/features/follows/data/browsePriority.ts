@@ -21,7 +21,9 @@ export { byPriority, byPriorityLive } from '../domain/browseOrder';
 // v3 (27C): teamCounts joined the payload — the bump discards the old
 // cache so the counts appear on first launch after update rather than
 // after the hourly refresh window.
-const CACHE_KEY_BASE = 'browsePriority.v3';
+// v4 (Round 6): competitionArtTileFills + trimmed mark URLs — same
+// first-launch reasoning.
+const CACHE_KEY_BASE = 'browsePriority.v4';
 const cacheKeyFor = (region: string) => `${CACHE_KEY_BASE}.${region}`;
 
 // The doc changes when ops tune the catalogue — rarely. Hourly matches
@@ -43,6 +45,10 @@ export interface BrowsePriorities {
   // key → the badge's dominant colour pair (Round 3): the follow
   // burst's discrete palette, same keying as competitionArt above.
   competitionArtColours: Record<string, string[]>;
+  // key → the tile fill behind that mark (Round 6 tile prep): an
+  // adopted baked background (the Australian Open blue) or the
+  // contrast-picked neutral. Absent = the theme container, as ever.
+  competitionArtTileFills: Record<string, string>;
   // Row KEY → squad size for the static competitions' card subtitles
   // (27C). Keyed by key, not id — the NHL and MLB statics both carry
   // id 1. Absent on an old server; a missing entry means the subtitle
@@ -67,6 +73,7 @@ export function cachedPriorities(): BrowsePriorities {
     dormant: c?.dormant ?? [],
     competitionArt: c?.competitionArt ?? {},
     competitionArtColours: c?.competitionArtColours ?? {},
+    competitionArtTileFills: c?.competitionArtTileFills ?? {},
     teamCounts: c?.teamCounts ?? {},
     photoPools: c?.photoPools ?? {},
   };
@@ -118,6 +125,11 @@ export async function refreshPriorities(): Promise<void> {
         typeof body.photoPools === 'object' && body.photoPools !== null
           ? body.photoPools
           : {},
+      competitionArtTileFills:
+        typeof body.competitionArtTileFills === 'object' &&
+        body.competitionArtTileFills !== null
+          ? body.competitionArtTileFills
+          : {},
       fetchedAt: new Date().toISOString(),
     } satisfies PriorityCache);
   } catch {
@@ -138,16 +150,25 @@ export function competitionMarkFor(key: string): string | undefined {
   return m ? art[m[1]] : undefined;
 }
 
-// The DISPLAY mark for a follow: its stored crest, else whatever the
-// served art map carries for its key. Display-time, never a store
-// write — a mark added to the map appears within the hourly refresh,
-// and one removed retracts the same way (curated-mark takedown path).
-// The Following rail had this heal; the fixture surfaces did not, so
-// the imported tournament marks reached the rail and never the cards
-// (Round 5 item 1).
+// The tile fill behind that mark (Round 6 tile prep), same key
+// aliasing as the mark itself. Undefined = the theme container.
+export function competitionTileFillFor(key: string): string | undefined {
+  const fills = cachedPriorities().competitionArtTileFills;
+  if (fills[key]) return fills[key];
+  const m = /^tsdb-league-(\d+)$/.exec(key);
+  return m ? fills[m[1]] : undefined;
+}
+
+// The DISPLAY mark for a follow. THE SERVED MAP WINS for competition
+// keys (Round 6): the map is where prepared marks land (trimmed
+// copies, replaced assets), and a stored crestUrl captured at follow
+// time would pin the stale original forever. The stored crest remains
+// the answer for everything the map does not carry — team and athlete
+// follows, and any mark the server stops serving. Display-time, never
+// a store write (Round 5 item 1).
 export function followMarkUrl(
   f: { key: string; crestUrl?: string } | undefined,
 ): string | undefined {
   if (!f) return undefined;
-  return f.crestUrl ?? competitionMarkFor(f.key);
+  return competitionMarkFor(f.key) ?? f.crestUrl;
 }

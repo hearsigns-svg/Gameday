@@ -71,6 +71,7 @@ interface Row {
   // The crest's extracted pair (Round 3) — the follow burst's palette.
   burstColours?: string[];
   tileBadge?: string; // the flag, on the tile
+  tileFill?: string; // per-mark tile fill (Round 6 tile prep)
   followable?: Followable; // absent → row navigates instead
 }
 
@@ -90,6 +91,12 @@ function sportNameOf(sportKey: string): string {
 function searchMarkFor(c: { id: string | number; key: string }): string | undefined {
   const art = cachedPriorities().competitionArt;
   return art[String(c.id)] ?? art[c.key];
+}
+
+// Its prepared tile fill, same dual keying (Round 6 tile prep).
+function searchFillFor(c: { id: string | number; key: string }): string | undefined {
+  const fills = cachedPriorities().competitionArtTileFills;
+  return fills[String(c.id)] ?? fills[c.key];
 }
 
 function localMatches(q: string): { sports: Row[]; comps: Row[] } {
@@ -158,6 +165,7 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
         ...(searchMarkFor(c)
           ? { imageUrl: searchMarkFor(c) }
           : {}),
+        ...(searchFillFor(c) ? { tileFill: searchFillFor(c) } : {}),
         followable: {
           key: c.key,
           label: c.name,
@@ -394,6 +402,9 @@ export default function SearchScreen({ navigation }: Props) {
             ...(cachedPriorities().competitionArt[tr.key]
               ? { imageUrl: cachedPriorities().competitionArt[tr.key] }
               : {}),
+            ...(cachedPriorities().competitionArtTileFills[tr.key]
+              ? { tileFill: cachedPriorities().competitionArtTileFills[tr.key] }
+              : {}),
             followable: {
               key: tr.key,
               label: tr.name,
@@ -588,6 +599,7 @@ export default function SearchScreen({ navigation }: Props) {
                     ? {}
                     : { monogram: monogramOf(item.title) })}
                   {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
+                  {...(item.tileFill ? { tileFill: item.tileFill } : {})}
                   {...(item.tileBadge ? { tileBadge: item.tileBadge } : {})}
                   accessibilityLabel={i18n.t('follows.card.a11ySummary', {
                     name: item.title,
