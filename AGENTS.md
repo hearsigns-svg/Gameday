@@ -45,6 +45,23 @@ source of truth for build state — never chat history.
   com.hearsigns.Gameday app)/main.jsbundle" | grep -c <round-marker>`.
   If stale: `rm -rf ~/Library/Developer/Xcode/DerivedData/KickOffCal-*`
   and rebuild — that forces the bundle phase to regenerate.
+  **ANDROID HAS THE SAME FACE** (proven 2026-09-01): the GRADLE BUILD
+  CACHE restored an ANCIENT index.android.bundle into
+  build/generated/assets/react/release with a fresh mtime (the task's
+  cache key does not fully track JS inputs), and assembleRelease
+  packaged it — the owner's Pixel got today's lastUpdateTime around
+  weeks-old JS, twice. Purging build/generated does NOT help (the
+  cache restores the same bytes); the fix is
+  `./gradlew :app:createBundleReleaseJsAndAssets --rerun-tasks`, then
+  assemble. VERIFY THE ARTIFACT AS A FILE, never through a pipe:
+  `unzip -o -q app-release.apk assets/index.android.bundle -d /tmp/x
+  && strings /tmp/x/assets/index.android.bundle | grep -c <marker>` —
+  macOS `strings` READS NOTHING FROM A PIPE (llvm-strings wants a
+  file and emits zero lines on stdin), so `unzip -p … | strings`
+  reports 0 on ANY bundle, fresh or stale: it false-alarmed a fresh
+  APK and would equally bless nothing. Final proof is the DEVICE
+  layer (rule 16): `adb shell pm path` → `adb pull` → file-based
+  strings on what the phone actually holds.
 - **The functions skip-wall has a second face** (2026-08-30): a Cloud
   Build FAILURE (a desynced functions/package-lock — client packages
   like expo/react must NEVER appear in functions/package.json) records
