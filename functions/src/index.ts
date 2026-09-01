@@ -31,7 +31,7 @@ const gz = (handler: Handler): Handler => (req, res) =>
 import { reconcileFixtures } from './reconcile';
 import { augmentFollowKeys, loadDirectoryJoins } from './aliases';
 import { getStorage } from 'firebase-admin/storage';
-import { extractCrestColours } from './crestColours';
+import { dominantPair } from './crestColours';
 import { DERIVED_TEAM_LEAGUE_IDS } from './fixtureTeams';
 import {
   assessMark,
@@ -1079,7 +1079,10 @@ const ART_DOC = 'directoryArt/competitions';
 // untouched, byte-identical — their entry records only the measured
 // source so the next rebuild can skip re-measuring it. Bump the epoch
 // to force one full re-prep after a rules change.
-const MARK_TILES_EPOCH = 1;
+// Epoch 2: re-prep after the runtime SA gained objectAdmin on the
+// marks bucket — the epoch-1 rebuild stored the three trim cases as
+// bare passthroughs when their uploads 403'd.
+const MARK_TILES_EPOCH = 2;
 const MARKS_BUCKET = 'gameday-fixtures-marks';
 
 interface MarkTileEntry {
@@ -1097,36 +1100,74 @@ interface CompetitionArtDoc {
   tiles: Record<string, MarkTileEntry>;
 }
 
+// ONE fetch per mark serves colours AND tile prep — the rebuild
+// already ran ~88 serial downloads inside a request, and a second
+// pass per mark would flirt with the function deadline on the
+// epoch-forced rebuild. Colour extraction here is byte-identical to
+// extractCrestColours (same PNG-only gate, same 4096-sample stride,
+// same dominantPair), so unflagged marks' colours cannot drift.
+const COLOUR_SAMPLES = 4096;
+
+function coloursFromGrid(g: Parameters<typeof assessMark>[0]) {
+  const total = g.width * g.height;
+  const stride = Math.max(1, Math.floor(total / COLOUR_SAMPLES));
+  const pixels = [];
+  for (let i = 0; i < total; i += stride) {
+    const o = i * 4;
+    pixels.push({
+      r: g.data[o],
+      g: g.data[o + 1],
+      b: g.data[o + 2],
+      a: g.data[o + 3],
+    });
+  }
+  return dominantPair(pixels);
+}
+
 // Measure one mark and apply the three rules (trim → adopt → contrast;
 // see markTiles.ts). Every failure path returns a measured-passthrough
 // entry or throws to the caller's warn — a bad mark costs its prep,
 // never the art map.
-async function prepareMarkTile(
+async function prepareMark(
   key: string,
   url: string,
-): Promise<MarkTileEntry> {
+): Promise<{ entry: MarkTileEntry; pair: string[] | null }> {
   const res = await fetch(url);
-  if (!res.ok) return { src: url };
-  const grid = gridFromImageBuffer(Buffer.from(await res.arrayBuffer()));
-  if (!grid) return { src: url };
+  if (!res.ok) return { entry: { src: url }, pair: null };
+  const buf = Buffer.from(await res.arrayBuffer());
+  const grid = gridFromImageBuffer(buf);
+  if (!grid) return { entry: { src: url }, pair: null };
+  // PNG-only, exactly as extractCrestColours: a JPEG mark has never
+  // had burst colours, and this refactor must not change that.
+  const isPng = buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50;
+  const pair = isPng ? coloursFromGrid(grid) : null;
   const a = assessMark(grid);
   const plan = markTilePlan(a);
   const entry: MarkTileEntry = { src: url };
   if (plan.tileFill) entry.fill = plan.tileFill;
   if (plan.trim && a.bounds) {
-    const png = pngBufferOf(composeTrimmed(grid, trimBox(a.bounds), a.bakedBg));
-    const path = `tiles/${key}.png`;
-    const file = getStorage().bucket(MARKS_BUCKET).file(path);
-    await file.save(png, {
-      contentType: 'image/png',
-      metadata: { cacheControl: 'public,max-age=604800' },
-    });
-    // Per-object ACL, same as the curated importer — the bucket is not
-    // uniformly public.
-    await file.makePublic();
-    entry.url = `https://storage.googleapis.com/${MARKS_BUCKET}/${path}`;
+    // The upload fails ALONE: a storage blip must not also cost the
+    // fill this mark was assessed to need (the epoch-1 403s did
+    // exactly that — the whole entry collapsed to a passthrough).
+    try {
+      const png = pngBufferOf(
+        composeTrimmed(grid, trimBox(a.bounds), a.bakedBg),
+      );
+      const path = `tiles/${key}.png`;
+      const file = getStorage().bucket(MARKS_BUCKET).file(path);
+      await file.save(png, {
+        contentType: 'image/png',
+        metadata: { cacheControl: 'public,max-age=604800' },
+      });
+      // Per-object ACL, same as the curated importer — the bucket is
+      // not uniformly public.
+      await file.makePublic();
+      entry.url = `https://storage.googleapis.com/${MARKS_BUCKET}/${path}`;
+    } catch (e) {
+      console.warn(`[kickoffcal] mark tile upload failed for ${key}: ${e}`);
+    }
   }
-  return entry;
+  return { entry, pair };
 }
 
 async function competitionArt(): Promise<CompetitionArtDoc> {
@@ -1199,21 +1240,28 @@ async function competitionArt(): Promise<CompetitionArtDoc> {
   // would otherwise strip every logo for the next 24 hours.
   if (Object.keys(merged).length === 0) return cached;
   // Dominant colour pairs per badge (Round 3; curated marks ride the
-  // same loop by ruling) — once per rebuild. Mark-tile prep (Round 6)
-  // rides the same pass: a mark whose source URL is unchanged reuses
-  // its measured entry verbatim, so the flagged set is processed once
-  // and everything else is a skip.
+  // same loop by ruling) + mark-tile prep (Round 6) — ONE fetch per
+  // mark serves both, once per rebuild. A mark whose source URL is
+  // unchanged reuses its measured tile entry AND its colours verbatim
+  // (a provider swapping bytes under a fixed URL would be missed until
+  // the URL moves — accepted; TSDB badge URLs are content-stable and
+  // the halved rebuild keeps the epoch re-prep inside the deadline).
   const colours: Record<string, string[]> = {};
   const prevTiles =
     data?.tilesEpoch === MARK_TILES_EPOCH ? (data.tiles ?? {}) : {};
   const tiles: Record<string, MarkTileEntry> = {};
   for (const [artKey, url] of Object.entries(merged)) {
-    const pair = await extractCrestColours(url);
-    if (pair) colours[artKey] = pair;
     try {
       const prev = prevTiles[artKey];
-      tiles[artKey] =
-        prev?.src === url ? prev : await prepareMarkTile(artKey, url);
+      if (prev?.src === url) {
+        tiles[artKey] = prev;
+        const prevPair = data?.colours?.[artKey];
+        if (prevPair) colours[artKey] = prevPair;
+        continue;
+      }
+      const { entry, pair } = await prepareMark(artKey, url);
+      tiles[artKey] = entry;
+      if (pair) colours[artKey] = pair;
     } catch (e) {
       // Decorative: a failed prep serves the original mark.
       console.warn(`[kickoffcal] mark tile prep failed for ${artKey}: ${e}`);
