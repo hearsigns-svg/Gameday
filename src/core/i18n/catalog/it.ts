@@ -563,7 +563,7 @@ export const it: Catalog = {
   'settings.events.raceWeekends': 'Weekend di gara',
   'settings.events.allSessions': 'Tutte le sessioni',
   'settings.events.raceOnly': 'Solo gara',
-  'settings.events.block': 'Blocco',
+  'settings.events.block': 'Solo date',
   'settings.events.keyRounds': 'Turni chiave',
   'settings.events.allMatches': 'Tutte le partite',
 

@@ -572,7 +572,7 @@ export const de: Catalog = {
   'settings.events.raceWeekends': 'Rennwochenenden',
   'settings.events.allSessions': 'Alle Sessions',
   'settings.events.raceOnly': 'Nur Rennen',
-  'settings.events.block': 'Block',
+  'settings.events.block': 'Nur Zeitraum',
   'settings.events.keyRounds': 'Wichtige Runden',
   'settings.events.allMatches': 'Alle Spiele',
 

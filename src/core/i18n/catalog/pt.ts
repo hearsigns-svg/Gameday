@@ -569,7 +569,7 @@ export const pt: Catalog = {
   'settings.events.raceWeekends': 'Fins de semana de corrida',
   'settings.events.allSessions': 'Todas as sessões',
   'settings.events.raceOnly': 'Só a corrida',
-  'settings.events.block': 'Bloco',
+  'settings.events.block': 'Só datas',
   'settings.events.keyRounds': 'Fases decisivas',
   'settings.events.allMatches': 'Todas as partidas',
 

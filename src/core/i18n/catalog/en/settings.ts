@@ -62,7 +62,7 @@ export const settingsStrings = {
   'settings.events.raceWeekends': 'Race weekends',
   'settings.events.allSessions': 'All sessions',
   'settings.events.raceOnly': 'Race only',
-  'settings.events.block': 'Block',
+  'settings.events.block': 'Dates only',
   'settings.events.keyRounds': 'Key rounds',
   'settings.events.allMatches': 'All matches',
 

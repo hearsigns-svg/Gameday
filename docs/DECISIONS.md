@@ -3624,3 +3624,14 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   default preference that is what those users already received);
   idempotent, snapshot-pinned. The block+final combination dies by
   design. Golf and F1 scopes untouched.
+- 2026-09-01 (owner ruling — tier vocabulary): the first tournament
+  tier is named "Dates only" (was "Block") everywhere the TERM shows —
+  the tournament page's Calendar events control and Preferences →
+  Events ride the one catalog key (settings.events.block; the KEY and
+  the internal 'block' value are code, unchanged). Six languages via
+  the parity gate: en 'Dates only', es 'Solo fechas', de 'Nur
+  Zeitraum', fr 'Dates seulement', it 'Solo date', pt 'Só datas' — no
+  language needed the plain-"Dates" width fallback (every row's width
+  is set by a longer neighbour chip). Canonical vocabulary: Tier 1 —
+  Dates only; Tier 2 — Key rounds; Tier 3 — All matches. The calendar
+  event itself never carried the word: unchanged.
