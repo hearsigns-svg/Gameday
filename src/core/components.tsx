@@ -201,7 +201,7 @@ export interface FollowRailItem {
 // frame — no end-stop, no jitter; at worst that fling's remaining
 // momentum is spent). Everything stands down when the content fits the
 // viewport and under reduced motion.
-const RAIL_DRIFT_PX_PER_S = 30; // one tunable; owner-tuned on device
+const RAIL_DRIFT_PX_PER_S = 27; // one tunable; owner-tuned on device (90% of the original 30, ruling 2026-09-01)
 const RAIL_FLING_RUNWAY_PX = 2600; // per side; ≥ a violent fling's travel
 const RAIL_MAX_COPIES = 13; // small strips stay bounded in tile count
 const RAIL_MOMENTUM_GUARD_MS = 80; // endDrag→momentumBegin handoff race
@@ -248,7 +248,10 @@ export function FollowRail(props: {
     driftRunning.current = true;
     const remaining = singleW - Math.abs(from);
     Animated.timing(drift, {
-      toValue: -singleW,
+      // POSITIVE: the strip drifts rightward (direction reversed by
+      // ruling 2026-09-01). The wrap stays invisible either way — one
+      // copy width in either direction is an identical frame.
+      toValue: singleW,
       duration: Math.max(1, (remaining / RAIL_DRIFT_PX_PER_S) * 1000),
       easing: Easing.linear,
       useNativeDriver: true,
