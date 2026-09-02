@@ -3878,3 +3878,13 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   them used an invalid cherry-pick flag whose chain hard-reset main to
   the round's base; recovered from the reflog with nothing lost.
   Rewrites of shared history are off the table from here.
+- 2026-09-02 (Round 4 close-out addendum): a HELD catalogue row also
+  stops DEVICE-submitted paths for its slice being polled (two devices
+  still carried the IPL route, one the T20 World Cup route, so the
+  held slices kept being polled and born_dead kept paging past the
+  hold); skipped paths are counted as `heldSkipped` in the sweep
+  record. Verified live: paths 30 → 27, heldSkipped 2, the two
+  born_dead alerts and the sheet alert resolved; the boxing-cards
+  coverage stamp refreshes every sweep again (banner basis restored).
+  Open alerts at close: boxing-data quota (external, owner decision on
+  the plan) and the WTA rankings 429 (weekly retry).
