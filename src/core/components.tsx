@@ -1351,7 +1351,10 @@ export function SportCard(props: {
         // two-across geometry; the picker's fullWidth tiles opt out.
         !props.fullWidth && styles.sportCardGridCap,
         props.disabled === true && { opacity: 0.45 },
-        props.rowHeight !== undefined && { height: props.rowHeight },
+        // Uniform collapsed height; an EXPANSION grows the card below the
+        // row (the height rides on the row, never on the card — a fixed
+        // card height clipped the [Fixtures | Teams] strip to a sliver).
+        props.rowHeight !== undefined && { minHeight: props.rowHeight },
         props.fullWidth && {
           flexBasis: 0,
           flexGrow: 1,
@@ -1374,7 +1377,11 @@ export function SportCard(props: {
         ]}
       />
       <View
-        style={[styles.sportCardRow, props.compact && styles.sportCardRowCompact]}
+        style={[
+          styles.sportCardRow,
+          props.compact && styles.sportCardRowCompact,
+          props.rowHeight !== undefined && { height: props.rowHeight },
+        ]}
       >
       <GlyphTile
         glyph={props.glyph}
