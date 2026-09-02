@@ -3965,3 +3965,43 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   post-grace cohort split in launch month 1. EXPECTATIONS, not targets:
   freemium ≈2% of downloads at day 35, hard paywalls ≈10.7%, a
   dismissible onboarding paywall between; trial→paid ≈ one third.
+
+- 2026-09-02 (Round 4 close-out item 3 — BOXING-DATA FITS THE FREE TIER):
+  the poller lives inside 100 requests per subscription cycle with
+  headroom, by cadence rather than by hope. Owner ruling: stay on Basic
+  ($0, 100/cycle, hard limit); revisit Pro when a free user base gives
+  the spend something to serve. THE PLAN (pure,
+  `functions/src/providers/boxingDataCadence.ts`, enforced in the route
+  where every trigger converges): BASELINE — one schedule call every
+  70h (≈ every third day; the 2h slack keeps a late run from pushing
+  the next one a whole day) while no known card starts within 3 days;
+  DENSE — 22h (daily) while any known card starts within 3 days (the
+  marker persists `cards[{id,startUtc}]` from the last schedule call,
+  so the mode is decided without spending a call); BOUTS — first sight,
+  one refetch when ≤5 days out and ≥3 days after the first, plus ONE
+  final look inside the last 24h (ring-walk changes land late) — at
+  most three calls per card, ever, pinned by a whole-life simulation
+  test; RESERVE — QUOTA_RESERVE = 10: a run whose schedule call would
+  take the cycle below the reserve does not happen
+  (`skipped_boxingdata_quota_reserve`, HTTP 200), and the bouts budget
+  per run is what the reserve leaves after the schedule call
+  (`boutBudget`, capped at 6). The persisted remaining-quota figure now
+  also survives a 429: `BoxingDataHttpError` carries RapidAPI's
+  metering headers out of the provider and the route persists them on
+  the error path, so the gate holds from the very next run instead of
+  re-learning the wall by knocking on it. THE ALERT FIRES BEFORE THE
+  WALL, NEVER AFTER: the marker persists `quota.reserve` and
+  `quota.projectedSpendToReset` (runs to the reset at the current mode
+  × (1 + bouts per run)); `quota_low` fires when remaining − reserve <
+  projected — while there is still a choice (hold, upgrade, accept the
+  gap); markers without a projection keep the runway heuristic. THE
+  TRADE, STATED: expected spend per 30-day cycle ≈ 10 baseline schedule
+  calls + ≈ 6–8 dense-day extras + ≈ 32–48 bouts calls (16–24 cards a
+  month at 2–3 calls each) ≈ 50 typical, ≈ 75 worst, against 90
+  spendable. WORST-CASE STALENESS: a card announced just after a
+  baseline run is first seen up to 70h later; a card-start change is
+  caught within 24h inside the dense window and within 70h outside it;
+  a bout time change is caught by the final look inside the last 24h —
+  so at fight time a bout is at most ~24h stale, and a card ≥3 days out
+  at most ~70h. What the September exhaustion cost — a daily schedule
+  call alone was ~30 of the 100 — is what the baseline buys back.

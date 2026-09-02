@@ -118,7 +118,8 @@ export type RunReason =
   // 'skipped' family and the same reason: no fetch happened, so no
   // evidence about the provider was gathered and lastSuccessAt must not
   // move — coverage keys on the prefix, not the specific value.
-  | 'skipped_boxingdata_daily_cap';
+  | 'skipped_boxingdata_daily_cap'
+  | 'skipped_boxingdata_quota_reserve';
 
 export interface SourceRun extends RunContext, RunOutcome {
   runId: string;

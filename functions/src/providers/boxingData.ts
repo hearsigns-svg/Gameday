@@ -265,7 +265,7 @@ export function shouldFetchBouts(
   cardStartUtc: string,
   state: BoutFetchState,
   nowMs: number,
-  cfg: { nearDays?: number; refetchAfterMs?: number } = {},
+  cfg: { nearDays?: number; refetchAfterMs?: number; finalHours?: number } = {},
 ): boolean {
   const last = state[eventId];
   if (!last) return true; // never seen — this is the first sight
@@ -276,6 +276,12 @@ export function shouldFetchBouts(
   const nearMs = (cfg.nearDays ?? 5) * 86_400_000;
   const isNear = startMs - nowMs <= nearMs;
   if (!isNear) return false;
+  // ONE FINAL LOOK inside the last 24 hours (Round 4 close-out cadence):
+  // ring-walk times land late, and a bout is otherwise up to three days
+  // stale at fight time. At most three calls per card, ever.
+  const finalMs = (cfg.finalHours ?? 24) * 3_600_000;
+  const inFinalWindow = startMs - nowMs <= finalMs && startMs > nowMs;
+  if (inFinalWindow) return startMs - lastMs > finalMs;
   // Near, but only worth one more look — not one a day.
   return nowMs - lastMs >= (cfg.refetchAfterMs ?? 3 * 86_400_000);
 }
@@ -293,6 +299,34 @@ export interface BoxingDataFetch extends ProviderFetch {
   boutsFetchedFor: string[];
   skippedForCap: number;
   callsSpent: number;
+}
+
+// A non-2xx that still carried RapidAPI's metering headers. The route
+// persists the figure from THIS too (Round 4 close-out): at the wall the
+// vendor answers 429 with remaining=0, and a reserve gate that only ever
+// learnt the quota from successes would keep knocking on it.
+export class BoxingDataHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly quota: { remaining: number | null; limit: number | null; resetSeconds: number | null },
+  ) {
+    super(message);
+    this.name = 'BoxingDataHttpError';
+  }
+}
+
+export function rejectHttp(
+  r: { status: number; body: unknown; remaining: number | null; limit: number | null; resetSeconds: number | null },
+  path: string,
+): void {
+  if (r.status >= 200 && r.status < 300) return;
+  const code = (r.body as { error?: { code?: string } } | null)?.error?.code ?? 'none';
+  throw new BoxingDataHttpError(
+    `boxing-data ${path}: HTTP ${r.status} (error code ${code})`,
+    r.status,
+    { remaining: r.remaining, limit: r.limit, resetSeconds: r.resetSeconds },
+  );
 }
 
 async function get(
@@ -351,6 +385,7 @@ export async function fetchBoxingData(
     key,
     `/v2/events/schedule?days=${days}&page_size=100&date_sort=ASC`,
   );
+  rejectHttp(sched, 'events/schedule');
   const events = unwrapList<VendorEvent>(sched.status, sched.body, 'events/schedule');
   let remaining = sched.remaining;
   let limit = sched.limit;
@@ -380,6 +415,7 @@ export async function fetchBoxingData(
     remaining = r.remaining ?? remaining;
     limit = r.limit ?? limit;
     resetSeconds = r.resetSeconds ?? resetSeconds;
+    rejectHttp(r, 'fights');
     const fights = unwrapList<VendorFight>(r.status, r.body, 'fights');
     rawBouts += fights.length;
     appearances.push(...fightsToAppearances(card, fights, updatedAt));

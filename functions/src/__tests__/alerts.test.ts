@@ -362,3 +362,71 @@ describe('appearance-only slices are judged by their appearance sibling (Round 4
     expect(evaluateAlerts([row()], DEMANDED, NOW)).toEqual([]);
   });
 });
+
+// Round 4 close-out (2026-09-02): with the cadence projection persisted
+// the rule fires when the planned spend to the reset will not fit above
+// the reserve — before the wall, never after — and stays quiet when it
+// will, however low the raw runway heuristic would have read.
+describe('quota_low — projected shortfall above the reserve', () => {
+  const SLICE = 'boxingdata|boxingdata-cards';
+
+  it('quiet while the projected spend fits above the reserve', () => {
+    expect(
+      evaluateQuotaAlerts(SLICE, {
+        remaining: 60,
+        reserve: 10,
+        projectedSpendToReset: 45,
+        callsThisRun: 9,
+      }),
+    ).toEqual([]);
+    // exactly fits
+    expect(
+      evaluateQuotaAlerts(SLICE, { remaining: 55, reserve: 10, projectedSpendToReset: 45 }),
+    ).toEqual([]);
+  });
+
+  it('fires the moment the projection exceeds what is left above the reserve', () => {
+    const a = evaluateQuotaAlerts(SLICE, {
+      remaining: 54,
+      limit: 100,
+      reserve: 10,
+      projectedSpendToReset: 45,
+      resetAt: '2026-09-20T00:00:00.000Z',
+    });
+    expect(a).toHaveLength(1);
+    expect(a[0].condition).toBe('quota_low');
+    expect(a[0].detail).toContain('44 above the reserve of 10');
+    expect(a[0].detail).toContain('~45 before the window resets');
+    expect(a[0].detail).toContain('2026-09-20');
+  });
+
+  it('a projection takes precedence over the runway heuristic in both directions', () => {
+    // runway would say fine (60 left at 1/run); projection says short
+    expect(
+      evaluateQuotaAlerts(SLICE, {
+        remaining: 60,
+        reserve: 10,
+        projectedSpendToReset: 80,
+        callsThisRun: 1,
+      }),
+    ).toHaveLength(1);
+    // runway would page (12 left at 9/run); projection says it fits
+    expect(
+      evaluateQuotaAlerts(SLICE, {
+        remaining: 12,
+        reserve: 0,
+        projectedSpendToReset: 6,
+        callsThisRun: 9,
+      }),
+    ).toEqual([]);
+  });
+
+  it('a null projection (no reset time yet) falls back to the runway heuristic', () => {
+    expect(
+      evaluateQuotaAlerts(SLICE, { remaining: 2, reserve: 10, projectedSpendToReset: null, callsThisRun: 1 }),
+    ).toHaveLength(1);
+    expect(
+      evaluateQuotaAlerts(SLICE, { remaining: 60, reserve: 10, projectedSpendToReset: null, callsThisRun: 9 }),
+    ).toEqual([]);
+  });
+});

@@ -300,13 +300,42 @@ export interface QuotaMarker {
   callsThisRun?: number;
   resetAt?: string | null;
   at?: string;
+  // Written by the cadence planner (Round 4 close-out): the floor the
+  // poller never spends below, and what the rest of the window is
+  // projected to cost at the current cadence.
+  reserve?: number | null;
+  projectedSpendToReset?: number | null;
 }
 
+// BEFORE THE WALL, NEVER AFTER. With a cadence projection the rule is
+// "will the planned spend to the reset fit above the reserve?" — the
+// poller's own reserve gate then stops the calls, so the alert is the
+// human's notice while there is still a choice to make (hold, upgrade,
+// accept the gap). Without a projection (older markers) the runway
+// heuristic stands.
 export function evaluateQuotaAlerts(
   sliceKey: string,
   quota: QuotaMarker | null | undefined,
 ): Alert[] {
   if (!quota || quota.remaining === null || quota.remaining === undefined) return [];
+  const projected = quota.projectedSpendToReset;
+  if (projected !== null && projected !== undefined) {
+    const reserve = quota.reserve ?? 0;
+    const spendable = quota.remaining - reserve;
+    if (spendable >= projected) return [];
+    return [
+      {
+        sliceKey,
+        condition: 'quota_low',
+        detail:
+          `${quota.remaining} request(s) left${quota.limit ? ` of ${quota.limit}` : ''}, ` +
+          `${Math.max(0, spendable)} above the reserve of ${reserve}; ` +
+          `the cadence needs ~${projected} before the window resets` +
+          (quota.resetAt ? ` at ${quota.resetAt}` : ' (reset time unknown)') +
+          ' — the poller will hold at the reserve; upgrade the plan on the same key or accept the gap',
+      },
+    ];
+  }
   const perDay = Math.max(1, quota.callsThisRun ?? 1);
   const runwayDays = quota.remaining / perDay;
   if (runwayDays >= QUOTA_RUNWAY_DAYS) return [];

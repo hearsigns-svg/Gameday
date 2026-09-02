@@ -46,6 +46,13 @@ import {
   stampBoxingSexScopes,
   withoutScopedKeys,
 } from './boxingSexScopes';
+import {
+  cadenceModeFor,
+  KnownCard,
+  planBoxingDataRun,
+  projectedSpendToReset,
+  QUOTA_RESERVE,
+} from './providers/boxingDataCadence';
 import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
@@ -171,6 +178,7 @@ import {
   shouldFetchBouts,
   SLICE as BOXING_SLICE,
   type BoutFetchState,
+  BoxingDataHttpError,
 } from './providers/boxingData';
 import { fetchPbcCards } from './providers/pbc';
 import { fetchTennisTournaments } from './providers/tennisIcs';
@@ -2502,17 +2510,11 @@ export const pollPbc = onRequest(
 // this vendor's window, gets its real start time, its per-bout ring-walk
 // times and its main-event billing, and nothing regresses when it leaves.
 //
-// 100 requests a MONTH, so the cadence is daily and the fights calls are
-// capped. One schedule call plus one call per card; `BOXINGDATA_MAX_CARDS`
-// bounds a busy week so it cannot silently eat the month, and anything it
-// drops is reported rather than quietly skipped.
-const BOXINGDATA_MAX_CARDS = 8;
-// The cadence commitment, enforced HERE where every trigger converges —
-// a sweep, a follow tap and a manual curl all land on this route, and a
-// monthly quota cannot survive being polled per-invocation. 22h rather
-// than 24 for the same reason the ICS uses it: yesterday's late success
-// must not block today's early attempt.
-const BOXINGDATA_MIN_INTERVAL_MS = 22 * 3_600_000;
+// 100 requests a CYCLE on the free tier, kept (owner ruling 2026-09-02):
+// the cadence is SPARSE by default and dense only near a card, and the
+// persisted remaining-quota figure gates every call — see
+// providers/boxingDataCadence.ts for the plan, the expected spend and
+// the worst-case staleness, recorded there as the trade.
 const BOXINGDATA_MARKER = 'status/boxingData';
 
 function requireBoxingKey(): string {
@@ -2534,16 +2536,31 @@ export const pollBoxingData = onRequest(async (req, res) => {
   const nowMs = Date.parse(startedAt);
   const marker = db.doc(BOXINGDATA_MARKER);
   const prior = (await marker.get().catch(() => null))?.data() as
-    | { lastSuccessAt?: string; boutsFetchedAt?: BoutFetchState }
+    | {
+        lastSuccessAt?: string;
+        boutsFetchedAt?: BoutFetchState;
+        cards?: KnownCard[];
+        quota?: { remaining: number | null; resetAt?: string | null; limit?: number | null };
+      }
     | undefined;
   const lastSuccessAt = prior?.lastSuccessAt ?? null;
-  const lastMs = Date.parse(lastSuccessAt ?? '');
 
   // THE CADENCE IS ENFORCED HERE, where every trigger converges. A
   // sweep, a follow tap and a manual curl all land on this route, and a
-  // hundred-a-MONTH quota does not survive being polled per-invocation.
-  if (Number.isFinite(lastMs) && nowMs - lastMs < BOXINGDATA_MIN_INTERVAL_MS) {
-    const reason = 'skipped_boxingdata_daily_cap' as const;
+  // hundred-a-cycle quota does not survive being polled per-invocation.
+  // The planner is pure: sparse baseline, dense near a card, and the
+  // reserve gate on the persisted quota (never a call that would breach it).
+  const plan = planBoxingDataRun({
+    nowMs,
+    lastSuccessAt,
+    cards: prior?.cards ?? [],
+    quota: prior?.quota ?? null,
+  });
+  if (plan.action === 'skip') {
+    const reason =
+      plan.reason === 'quota_reserve'
+        ? ('skipped_boxingdata_quota_reserve' as const)
+        : ('skipped_boxingdata_daily_cap' as const);
     await recordSourceRun(
       { ...ctx, trigger },
       {
@@ -2556,8 +2573,14 @@ export const pollBoxingData = onRequest(async (req, res) => {
       },
       startedAt,
     );
-    // 200: nothing is wrong. The slice is as fresh as the quota allows.
-    res.status(200).json({ skipped: reason, lastSuccessAt });
+    // 200: nothing is wrong. The slice is as fresh as the cadence and
+    // the quota allow; the body says which and when.
+    res.status(200).json({
+      skipped: reason,
+      lastSuccessAt,
+      cadence: plan.mode,
+      nextEligibleAt: plan.nextEligibleAt,
+    });
     return;
   }
 
@@ -2575,13 +2598,37 @@ export const pollBoxingData = onRequest(async (req, res) => {
       capped: number;
     } | null;
   } = { value: null };
+  const knownCardsBox: { value: KnownCard[] | null } = { value: null };
   const out = await servePoll(trigger, ctx, async (trace) => {
     trace.seasonsTried.push('current');
-    const r = await fetchBoxingData(requireBoxingKey(), startedAt, {
-      maxCards: BOXINGDATA_MAX_CARDS,
-      due: (eventId, startUtc) =>
-        shouldFetchBouts(eventId, startUtc, boutsFetchedAt, nowMs),
-    });
+    let r: Awaited<ReturnType<typeof fetchBoxingData>>;
+    try {
+      r = await fetchBoxingData(requireBoxingKey(), startedAt, {
+        // The bouts budget is what the reserve leaves after the schedule
+        // call — a busy week is reported as capped, never silently eaten.
+        maxCards: plan.boutBudget,
+        due: (eventId, startUtc) =>
+          shouldFetchBouts(eventId, startUtc, boutsFetchedAt, nowMs),
+      });
+    } catch (e) {
+      // A 429 (or any HTTP rejection) still tells us where the quota
+      // stands; persist it so the reserve gate holds from the next run
+      // instead of re-learning the wall by knocking on it.
+      if (e instanceof BoxingDataHttpError) {
+        spendBox.value = {
+          calls: 0,
+          remaining: e.quota.remaining,
+          limit: e.quota.limit,
+          resetAt:
+            e.quota.resetSeconds === null
+              ? null
+              : new Date(nowMs + e.quota.resetSeconds * 1000).toISOString(),
+          bouts: 0,
+          capped: 0,
+        };
+      }
+      throw e;
+    }
     for (const id of r.boutsFetchedFor) boutsFetchedAt[id] = startedAt;
     // Forget cards that have left the window, so the marker cannot grow
     // without bound.
@@ -2595,6 +2642,10 @@ export const pollBoxingData = onRequest(async (req, res) => {
       bouts: r.boutsFetchedFor.length,
       capped: r.skippedForCap,
     };
+    knownCardsBox.value = r.fixtures.map((f) => ({
+      id: f.id.replace(/^boxingdata-/, ''),
+      startUtc: f.startUtc,
+    }));
     return {
       rawCount: r.rawCount,
       fixtures: r.fixtures,
@@ -2623,6 +2674,7 @@ export const pollBoxingData = onRequest(async (req, res) => {
         // The vendor's own metering, persisted (Round 4 item 6): the
         // sweep's quota_low rule predicts exhaustion from this instead
         // of the app discovering it as a week of 429s.
+        ...(knownCardsBox.value ? { cards: knownCardsBox.value } : {}),
         ...(spendBox.value
           ? {
               quota: {
@@ -2630,6 +2682,19 @@ export const pollBoxingData = onRequest(async (req, res) => {
                 limit: spendBox.value.limit,
                 resetAt: spendBox.value.resetAt,
                 callsThisRun: spendBox.value.calls,
+                at: startedAt,
+                // The projection the quota_low rule reads: what the rest
+                // of the cycle costs at the mode the cards imply.
+                reserve: QUOTA_RESERVE,
+                projectedSpendToReset: projectedSpendToReset({
+                  nowMs,
+                  resetAt: spendBox.value.resetAt,
+                  mode: cadenceModeFor(knownCardsBox.value ?? [], nowMs),
+                  cardsPerRun: Math.max(1, spendBox.value.bouts),
+                }),
+              },
+              cadence: {
+                mode: cadenceModeFor(knownCardsBox.value ?? [], nowMs),
                 at: startedAt,
               },
             }
