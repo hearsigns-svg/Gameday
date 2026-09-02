@@ -1,4 +1,4 @@
-import { boxingStampBases, MAJOR_CARDS_KEY, PBC_KEY, withMajorCardsKey } from '../boxingMerge';
+import { MAJOR_CARDS_KEY, mergedBasesFor, PBC_KEY, withMajorCardsKey } from '../boxingMerge';
 
 describe('PBC → Major fight cards merge', () => {
   it('every PBC card also carries the Major fight cards key, once', () => {
@@ -11,9 +11,9 @@ describe('PBC → Major fight cards merge', () => {
     // ids untouched — the ledger keys on them, so nothing moves
     expect(out.map((f) => f.id)).toEqual(['pbc-1', 'pbc-2']);
   });
-  it('a PBC ingest stamps sex scopes for both bases; any other slice, its own only', () => {
-    expect(boxingStampBases(PBC_KEY)).toEqual([PBC_KEY, MAJOR_CARDS_KEY]);
-    expect(boxingStampBases(MAJOR_CARDS_KEY)).toEqual([MAJOR_CARDS_KEY]);
-    expect(boxingStampBases('boxingdata-cards')).toEqual(['boxingdata-cards']);
+  it('a PBC card belongs to both bases for sex scoping; any other slice, its own only', () => {
+    expect(mergedBasesFor(PBC_KEY)).toEqual([PBC_KEY, MAJOR_CARDS_KEY]);
+    expect(mergedBasesFor(MAJOR_CARDS_KEY)).toEqual([MAJOR_CARDS_KEY]);
+    expect(mergedBasesFor('boxingdata-cards')).toEqual(['boxingdata-cards']);
   });
 });

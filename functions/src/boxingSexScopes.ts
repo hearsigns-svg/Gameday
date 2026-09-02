@@ -18,6 +18,7 @@
 
 import { Firestore } from 'firebase-admin/firestore';
 import { Fixture } from './fixture';
+import { mergedBasesFor } from './boxingMerge';
 
 // The two client-followable card slices. boxingdata-cards is server-
 // side only (T2 ordering slice) and deliberately absent.
@@ -155,13 +156,15 @@ export async function stampBoxingSexScopes(
         if (sex) proved.add(sex);
       }
     }
-    const want = scopedKeysFor(parent.competitionId, proved);
     // Reclassification can also REMOVE a stale scoped key (a fallback
     // both-key card whose bouts later prove one sex): rebuild the
     // scoped pair from evidence, leave every other key untouched.
-    const others = parent.followKeys.filter(
-      (k) => k !== `${parent.competitionId}-m` && k !== `${parent.competitionId}-w`,
-    );
+    // Round 6 item 4: a PBC card is also a Major fight cards card, so it
+    // carries BOTH slices' sex keys — one follow per sex unions both.
+    const bases = mergedBasesFor(parent.competitionId);
+    const want = bases.flatMap((base) => scopedKeysFor(base, proved));
+    const scopedOfBases = new Set(bases.flatMap((base) => [`${base}-m`, `${base}-w`]));
+    const others = parent.followKeys.filter((k) => !scopedOfBases.has(k));
     const next = [...others, ...want];
     const same =
       next.length === parent.followKeys.length &&

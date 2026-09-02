@@ -4371,3 +4371,34 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   /Users/lnw/Gameday/scripts/seed-catalogue.mjs --apply
   --id=tsdb-league-4371`). listAthletes serves Motorsport's Drivers row
   from Formula 1's directory.
+
+- 2026-09-02 (Round 6 — VERIFICATION + two corrections found by it).
+  Verified on the rebuilt Release simulator: the light-mode search bar
+  wears the tile fill; people rows read "Tap to follow players" (the count
+  appears once the directory has been fetched; tennis serves 504); every
+  Competitions row is one height with single-line captions; one-open
+  expansion holds (La Liga opened, Premier League collapsed); the single
+  Motorsport tile flips label and icon with the region override ("F1 &
+  Motorsport" 🏎️ in UK & Ireland, "Motorsport" 🏁 in North America) and
+  every follow survives the flip; the Motorsport list shows Drivers + F1,
+  MotoGP, NASCAR, WEC, IndyCar, F2, Formula E in PROD priority order — the
+  Formula grouping and the North America pins wait on the prod catalogue
+  docs (the seeder only CREATES rows; priority/priorityByRegion edits to
+  existing rows are ops edits: 4486 priority 52 + NA 25, 4393 NA 95, 4373
+  NA 94, f1-series-1 NA 30; Formula E 4371 created by the seeder with
+  both). Following two Olympic sports produced one "Summer Olympics" node
+  in the strip with the medal and its toggle mark. CORRECTIONS: (a) the
+  fixed row height first sat on the CARD and clipped the [Fixtures |
+  Teams] expansion to a sliver — it now rides on the ROW (card minHeight),
+  so expansions grow below; (b) the strip drew the node as an "SO"
+  monogram because the rail always preferred a monogram — FollowRailItem
+  gained `emoji: true` (node and Olympic sport icons); (c) PBC cards
+  received the plain 4445 key but not `tsdb-league-4445-m/-w`: the sex
+  stamp derived its scoped keys from the CARD'S OWN slice only — it now
+  writes the scoped pair for every merged base (mergedBasesFor), and a PBC
+  run stamps every incoming card so existing cards gain the keys without
+  a change of their own. Server truth after deploy: 2 future PBC cards
+  carry 4445; listAthletes?sport=motorsport serves 32 F1 drivers;
+  listAthletes?sport=ufc derives 1 fighter today — the stored MMA cards are
+  event titles ("UFC 320"), and only bout-titled cards name participants,
+  so the Fighters row fills as bout-level cards land.

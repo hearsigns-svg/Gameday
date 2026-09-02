@@ -17,8 +17,9 @@ export function withMajorCardsKey<T extends { followKeys: string[] }>(fixtures: 
   );
 }
 
-// The sex-scope stamp runs per BASE key; a PBC ingest stamps both bases.
-export function boxingStampBases(followKey: string): string[] {
-  return followKey === PBC_KEY ? [PBC_KEY, MAJOR_CARDS_KEY] : [followKey];
+// Slices whose cards ALSO carry another slice's keys — the sex-scope
+// stamp writes `<base>-m/-w` for every base a card belongs to.
+export function mergedBasesFor(competitionId: string): string[] {
+  return competitionId === PBC_KEY ? [PBC_KEY, MAJOR_CARDS_KEY] : [competitionId];
 }
 

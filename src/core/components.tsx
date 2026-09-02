@@ -182,6 +182,9 @@ export interface FollowRailItem {
   badge?: string;
   // Per-mark tile fill behind imageUrl (Round 6 tile prep).
   tileFill?: string;
+  // Round 6 item 6: an EMOJI-STYLE tile — the glyph itself is the icon,
+  // no monogram (the Olympic group node's medal, its sports' emoji).
+  emoji?: boolean;
 }
 
 // LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3; touch
@@ -428,7 +431,7 @@ export function FollowRail(props: {
           <GlyphTile
             glyph={item.glyph}
             theme={item.theme}
-            monogram={monogramOf(item.label)}
+            {...(item.emoji ? {} : { monogram: monogramOf(item.label) })}
             {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
             {...(item.badge ? { badge: item.badge } : {})}
             {...(item.tileFill ? { fillColour: item.tileFill } : {})}

@@ -46,7 +46,7 @@ import {
   stampBoxingSexScopes,
   withoutScopedKeys,
 } from './boxingSexScopes';
-import { boxingStampBases, withMajorCardsKey } from './boxingMerge';
+import { PBC_KEY, withMajorCardsKey } from './boxingMerge';
 import { deriveMmaBrowse, MMA_SPORT, stampMmaFighterKeys } from './mmaFighters';
 import {
   authorised as rcAuthorised,
@@ -438,13 +438,10 @@ async function ingest(
   try {
     // A PBC ingest stamps the Major fight cards sex scopes too (Round 6
     // item 4), so `tsdb-league-4445-m/-w` followers see PBC's cards.
-    for (const base of boxingStampBases(followKey)) {
-      // The slice's own base stamps what this run wrote; the MERGED base
-      // (Major fight cards on a PBC ingest) stamps every incoming card —
-      // idempotent, and a run that changed nothing must still be able to
-      // give an existing PBC card its 4445 sex scopes.
-      await stampBoxingSexScopes(db, incoming, base, base === followKey ? writtenIds : undefined);
-    }
+    // A PBC run stamps EVERY incoming card, not only what it wrote: the
+    // merge (Round 6 item 4) gives an existing PBC card its Major fight
+    // cards sex keys, and a run that changed nothing must still do that.
+    await stampBoxingSexScopes(db, incoming, followKey, followKey === PBC_KEY ? undefined : writtenIds);
   } catch (e) {
     console.error(`[kickoffcal] boxing sex-scope stamping failed: ${e}`);
   }

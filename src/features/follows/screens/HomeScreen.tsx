@@ -250,10 +250,12 @@ export default function HomeScreen({ navigation }: Props) {
           // says which way it will go.
           badge: node.expanded ? '▴' : '▾',
           theme: teamTheme(sportByKey('olympics')?.accent ?? null, mode),
+          emoji: true, // the medal IS the icon — never a monogram, never the rings
         };
       }
       const { startUtc: _startUtc, ...rest } = entry as (typeof base)[number];
-      return rest;
+      // An Olympic SPORT under its node wears its emoji, not a monogram.
+      return olympicSportGlyph(rest.key) ? { ...rest, emoji: true } : rest;
     });
   }, [follows, upcoming, mode, olympicsOpen]);
 
