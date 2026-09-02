@@ -451,6 +451,7 @@ export const es: Catalog = {
     'Estos partidos se añadirán al calendario de tu teléfono cuando lo conectes.',
   'calendar.schedule.footerOn':
     'Todo lo que ves aquí está en el calendario de tu teléfono y se actualiza solo — las horas se confirman, los aplazamientos se mueven, las cancelaciones desaparecen.',
+  'calendar.schedule.showMore': 'Mostrar más',
 
   // ── Month grid (MonthGrid.tsx) ─────────────────────────────────────
   'calendar.month.previous': 'Mes anterior',

@@ -12,6 +12,14 @@
 // the tapped day's highlight), and the next onScrollBeginDrag — which
 // only a finger fires — hands the list back. Grid updates never scroll
 // the list, so there is no path around the circle in either direction.
+//
+// PAGED BY DATE (Round 5 ruling 4). The snapshot holds EVERY upcoming
+// fixture; the list shows the loaded window — this month and next to
+// begin with, one more calendar month per page (domain/schedulePaging).
+// Reaching the end loads the next page on its own; a "Show more" footer
+// is the reachable fallback, and when nothing more exists there is
+// nothing there at all. The GRID always marks the whole set, so a day
+// beyond the loaded window loads its pages first, then jumps.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -74,6 +82,15 @@ import {
   monthOfDay,
   sectionIndexForDay,
 } from '../domain/scheduleSync';
+import {
+  fixturesInWindow,
+  loadedWindow,
+  localDayEndUtc,
+  nextPageAvailable,
+  nextPagesLoaded,
+  pagesToFirst,
+  pagesToReach,
+} from '../domain/schedulePaging';
 import { MonthGrid } from './MonthGrid';
 
 type Props = TabScreenProps<'Schedule'>;
@@ -111,6 +128,13 @@ const todayKey = () => dayKey(new Date().toISOString());
 // repeat it — only relaunching the app resets it.
 let syncToastShownThisSession = false;
 
+// List tuning for a window that can hold a couple of hundred rows. A
+// row is ~72pt, so a dozen fills a phone screen at first paint; the next
+// page loads while the end is still half a viewport away — before the
+// footer can be seen, in ordinary scrolling.
+const INITIAL_ROWS = 12;
+const END_REACHED_VIEWPORTS = 0.5;
+
 export default function ScheduleScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
@@ -118,6 +142,9 @@ export default function ScheduleScreen({ navigation }: Props) {
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
+  // How many month pages the list holds (≥ 1). Only ever grows while
+  // the screen is up; the tab-press entry state takes it back to one.
+  const [pagesLoaded, setPagesLoaded] = useState(1);
   // Entry state: today highlighted, current month shown. The list opens
   // at its top, which IS the nearest upcoming section.
   const [selectedDay, setSelectedDay] = useState<string>(todayKey);
@@ -142,6 +169,9 @@ export default function ScheduleScreen({ navigation }: Props) {
   // A far jump can overshoot the render window; keep the target so the
   // failure handler can close in on it, boundedly.
   const pendingJump = useRef<{ sectionIndex: number; tries: number } | null>(null);
+  // A day tap that first had to load pages: the day to land on once the
+  // list holds them (see jumpToDay).
+  const pendingDayJump = useRef<string | null>(null);
   const sectionsRef = useRef<DaySection[]>([]);
   const selectedDayRef = useRef(selectedDay);
   const shownMonthRef = useRef(shownMonth);
@@ -196,7 +226,7 @@ export default function ScheduleScreen({ navigation }: Props) {
   // A TAB PRESS LANDS AT THE ENTRY STATE (Round 4 B3), whether the tab
   // is already frontmost or being switched back to: split open, today
   // selected in its month, the list at its top — which IS the nearest
-  // upcoming section.
+  // upcoming section — holding its first page only.
   useEffect(
     () =>
       navigation.addListener('tabPress', () => {
@@ -209,6 +239,8 @@ export default function ScheduleScreen({ navigation }: Props) {
         setShownMonth(m);
         syncFromScroll.current = false;
         pendingJump.current = null;
+        pendingDayJump.current = null;
+        setPagesLoaded(1);
         listRef.current
           ?.getScrollResponder()
           ?.scrollTo({ y: 0, animated: !reduceMotion });
@@ -233,23 +265,56 @@ export default function ScheduleScreen({ navigation }: Props) {
     [navigation],
   );
 
-  const ahead = useMemo(
-    () =>
-      fixtures.filter(
-        (f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000,
+  // The WHOLE upcoming set, less anything that kicked off over an hour
+  // ago — what the grid marks and what the pages are cut from. `nowMs`
+  // travels with it so the page windows are cut against the same
+  // instant the set was.
+  const { ahead, nowMs } = useMemo(() => {
+    const now = Date.now();
+    return {
+      nowMs: now,
+      ahead: fixtures.filter(
+        (f) => new Date(f.startUtc).getTime() > now - 3_600_000,
       ),
-    [fixtures],
+    };
+  }, [fixtures]);
+  // The pages actually shown: what has been loaded, floored so the first
+  // window always reaches the soonest fixture — an off-season follow
+  // opens on its next fixtures, not on two empty months.
+  const pages = useMemo(
+    () => Math.max(pagesLoaded, pagesToFirst(ahead, nowMs)),
+    [ahead, nowMs, pagesLoaded],
   );
-  const sections = useMemo(() => sectionsFrom(ahead), [ahead]);
-  useEffect(() => {
-    sectionsRef.current = sections;
-  }, [sections]);
+  // The loaded window and the rows inside it. Sections are built from
+  // the WINDOW only — the set can run to several hundred rows, and the
+  // grid never needs them grouped.
+  const loadedRange = useMemo(
+    () => loadedWindow(nowMs, pages),
+    [nowMs, pages],
+  );
+  const loaded = useMemo(
+    () => fixturesInWindow(ahead, loadedRange.fromUtc, loadedRange.toUtc),
+    [ahead, loadedRange],
+  );
+  const hasMore = useMemo(
+    () => nextPageAvailable(ahead, loadedRange.toUtc),
+    [ahead, loadedRange],
+  );
+  const sections = useMemo(() => sectionsFrom(loaded), [loaded]);
   // Display order across every day heading — what the expanded card
   // pages through, so a swipe follows the list exactly.
   const listIds = useMemo(
     () => sections.flatMap((s) => s.data.map((f) => f.id)),
     [sections],
   );
+
+  // The next page: the month holding the next fixture beyond the
+  // window (empty months are skipped, so every load shows a row). A
+  // no-op when nothing more exists — the state does not change — and
+  // idempotent when the auto-load and the footer fire together.
+  const loadMore = () => {
+    setPagesLoaded(nextPagesLoaded(ahead, nowMs, pages));
+  };
 
   const countsByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -278,6 +343,33 @@ export default function ScheduleScreen({ navigation }: Props) {
 
   // ---- calendar → list -----------------------------------------------
 
+  // The programmatic scroll to a day's section (or the nearest following
+  // one), against the sections the list currently holds.
+  const scrollToDay = (day: string) => {
+    const idx = sectionIndexForDay(
+      sectionsRef.current.map((s) => s.key),
+      day,
+    );
+    if (idx === null) return;
+    pendingJump.current = { sectionIndex: idx, tries: 0 };
+    listRef.current?.scrollToLocation({
+      sectionIndex: idx,
+      itemIndex: 0, // the section HEADER — the day lands with its heading
+      viewPosition: 0,
+      animated: !reduceMotion,
+    });
+  };
+
+  useEffect(() => {
+    sectionsRef.current = sections;
+    // A tap that had to load pages first lands now that the list holds
+    // them (jumpToDay). Nothing pending on an ordinary refresh.
+    const day = pendingDayJump.current;
+    if (day === null) return;
+    pendingDayJump.current = null;
+    scrollToDay(day);
+  }, [sections]);
+
   const jumpToDay = (day: string) => {
     setSelectedDay(day);
     selectedDayRef.current = day;
@@ -292,18 +384,17 @@ export default function ScheduleScreen({ navigation }: Props) {
     // This scroll is OURS: it must not re-drive the grid, and the snap
     // to a following section must not steal the tapped day's highlight.
     syncFromScroll.current = false;
-    const idx = sectionIndexForDay(
-      sectionsRef.current.map((s) => s.key),
-      day,
-    );
-    if (idx === null) return;
-    pendingJump.current = { sectionIndex: idx, tries: 0 };
-    listRef.current?.scrollToLocation({
-      sectionIndex: idx,
-      itemIndex: 0, // the section HEADER — the day lands with its heading
-      viewPosition: 0,
-      animated: !reduceMotion,
-    });
+    // The grid marks the whole set; the list may not hold the tapped
+    // day yet. Load the pages up to the instant that LOCAL day ends —
+    // its last hours can sit in the next UTC month — and land once the
+    // sections have caught up.
+    const needed = pagesToReach(nowMs, localDayEndUtc(day));
+    if (needed > pages) {
+      pendingDayJump.current = day;
+      setPagesLoaded(needed);
+      return;
+    }
+    scrollToDay(day);
   };
 
   // A jump outside the render window: get close by offset, then land
@@ -431,21 +522,6 @@ export default function ScheduleScreen({ navigation }: Props) {
     void runSync();
   };
 
-  // Rows are a component so the participant-photo hook is legal — and it
-  // is defined at MODULE level (below), not here: a component created
-  // inside the render is a new type on every sync tick, so every row
-  // unmounted and remounted and its resolved photo was thrown away.
-  const Row = ({ item, pagerIds }: { item: UpcomingFixture; pagerIds: readonly string[] }) => (
-    <ScheduleRow
-      item={item}
-      pagerIds={pagerIds}
-      follows={follows}
-      mode={mode}
-      excluded={excludedIds.has(item.id)}
-      onToggleExcluded={() => toggleExclude(item)}
-    />
-  );
-
   const changed = last ? last.created + last.updated + last.deleted : 0;
   // Off = not connected THROUGH A WRITE PATH (B4 item 5) — an Android
   // install waiting to connect Google reads as off, whatever its stored
@@ -477,7 +553,7 @@ export default function ScheduleScreen({ navigation }: Props) {
           onEnable={() => navigation.navigate('CalendarPriming')}
         />
       ) : null}
-      {sections.length === 0 ? (
+      {ahead.length === 0 ? (
         <EmptyState
           headline={tr('calendar.schedule.emptyHeadline')}
           body={
@@ -568,12 +644,15 @@ export default function ScheduleScreen({ navigation }: Props) {
             style={{ flex: 1 }}
             sections={sections}
             keyExtractor={(f) => f.id}
+            initialNumToRender={INITIAL_ROWS}
             stickySectionHeadersEnabled={false}
             onScrollBeginDrag={() => {
               // Only a finger fires this: the list is the user's again.
               syncFromScroll.current = true;
               pendingJump.current = null;
             }}
+            onEndReached={loadMore}
+            onEndReachedThreshold={END_REACHED_VIEWPORTS}
             viewabilityConfigCallbackPairs={viewability}
             onScrollToIndexFailed={onScrollToIndexFailed}
             renderSectionHeader={({ section }) => (
@@ -588,19 +667,54 @@ export default function ScheduleScreen({ navigation }: Props) {
                 {section.title}
               </Text>
             )}
-            renderItem={({ item }) => <Row item={item} pagerIds={listIds} />}
+            // The row is the MODULE-LEVEL component, rendered directly:
+            // a wrapper component created inside this render was a new
+            // type on every sync tick, so every row unmounted and
+            // remounted and its resolved photo was thrown away.
+            renderItem={({ item }) => (
+              <ScheduleRow
+                item={item}
+                pagerIds={listIds}
+                follows={follows}
+                mode={mode}
+                excluded={excludedIds.has(item.id)}
+                onToggleExcluded={() => toggleExclude(item)}
+              />
+            )}
             ListFooterComponent={
-              <Text
-                style={[
-                  type.caption,
-                  styles.footer,
-                  { color: t.textSecondary },
-                ]}
-              >
-                {calendarOff
-                  ? tr('calendar.schedule.footerOff')
-                  : tr('calendar.schedule.footerOn')}
-              </Text>
+              <View>
+                {/* The reachable way to the next page — the end-reached
+                    auto-load usually gets there first. Absent, not
+                    disabled, once nothing more exists (rule 10). */}
+                {hasMore ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={loadMore}
+                    hitSlop={8}
+                    style={styles.showMore}
+                  >
+                    <Text
+                      style={[
+                        type.secondary,
+                        { color: t.primary, fontWeight: '600' },
+                      ]}
+                    >
+                      {tr('calendar.schedule.showMore')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Text
+                  style={[
+                    type.caption,
+                    styles.footer,
+                    { color: t.textSecondary },
+                  ]}
+                >
+                  {calendarOff
+                    ? tr('calendar.schedule.footerOff')
+                    : tr('calendar.schedule.footerOn')}
+                </Text>
+              </View>
             }
           />
         </>
@@ -695,6 +809,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.l,
     paddingTop: spacing.xl,
     paddingBottom: spacing.s,
+  },
+  // The next-page control: a text button on the list's own rhythm, a
+  // full touch target tall, sitting where the next day heading would.
+  showMore: {
+    minHeight: 44,
+    marginTop: spacing.m,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     padding: spacing.l,

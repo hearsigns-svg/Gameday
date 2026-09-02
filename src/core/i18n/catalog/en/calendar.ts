@@ -143,6 +143,7 @@ export const calendarStrings = {
     'These fixtures will be added to your phone calendar once you connect it.',
   'calendar.schedule.footerOn':
     'Everything here is in your phone calendar and updates on its own — times firm up, postponements move, cancellations disappear.',
+  'calendar.schedule.showMore': 'Show more',
 
   // ── Month grid (MonthGrid.tsx) ─────────────────────────────────────
   'calendar.month.previous': 'Previous month',

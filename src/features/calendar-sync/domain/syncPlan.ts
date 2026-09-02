@@ -512,11 +512,15 @@ export interface SnapshotFixture {
   awayCrestUrl?: string;
 }
 
+// UNCAPPED (Round 5 ruling 4): every not-yet-finished fixture the
+// calendar wants is in it, sorted by start. The 60-fixture presentation
+// cap this once carried is gone — the in-app schedule is the free
+// product and pages the full set by date window
+// (domain/schedulePaging.ts); a 40-team follow set is ~550 entries.
 export function upcomingSnapshot(
   fixtures: Fixture[],
   prefs: CalendarPrefs,
   horizonStartUtc: string,
-  cap: number,
   seriesScopes?: SeriesScopeMap,
 ): SnapshotFixture[] {
   return fixtures
@@ -531,7 +535,6 @@ export function upcomingSnapshot(
         desiredEventFor(f, prefs, seriesScopes) !== null,
     )
     .sort((a, b) => a.startUtc.localeCompare(b.startUtc))
-    .slice(0, cap)
     .map((f) => ({
       id: f.id,
       title: f.title,

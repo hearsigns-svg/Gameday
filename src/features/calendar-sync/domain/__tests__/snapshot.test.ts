@@ -1,7 +1,9 @@
 // The presentation snapshot must show exactly what the calendar wants:
 // never a cancelled fixture (deleted by the same sync), never a
 // race-only-excluded support session — while keeping honest tbd and
-// postponed placeholders.
+// postponed placeholders. And ALL of it: the snapshot is uncapped
+// (Round 5 ruling 4) — Schedule pages it by date window, so nothing the
+// calendar wants may be trimmed before the screen sees it.
 
 import { Fixture } from '../../../fixtures/domain/fixture';
 import { CalendarPrefs } from '../prefs';
@@ -42,7 +44,6 @@ it('excludes cancelled fixtures — the calendar deletes them in the same run', 
     [fixture({ id: 'a', status: 'cancelled' }), fixture({ id: 'b' })],
     PREFS,
     HORIZON,
-    60,
   );
   expect(snap.map((f) => f.id)).toEqual(['b']);
 });
@@ -55,7 +56,6 @@ it('keeps tbd and postponed placeholders (they exist in the calendar)', () => {
     ],
     PREFS,
     HORIZON,
-    60,
   );
   expect(snap).toHaveLength(2);
 });
@@ -69,13 +69,12 @@ it('excludes support sessions under race-only, keeps them under all', () => {
     sessions,
     { ...PREFS, seriesSessions: 'race-only' },
     HORIZON,
-    60,
   );
   expect(raceOnly.map((f) => f.id)).toEqual(['race']);
-  expect(upcomingSnapshot(sessions, PREFS, HORIZON, 60)).toHaveLength(2);
+  expect(upcomingSnapshot(sessions, PREFS, HORIZON)).toHaveLength(2);
 });
 
-it('drops past fixtures, sorts ascending, and honours the cap', () => {
+it('drops past fixtures and sorts ascending — nothing is trimmed', () => {
   const snap = upcomingSnapshot(
     [
       fixture({ id: 'past', startUtc: '2026-07-01T14:00:00.000Z' }),
@@ -85,7 +84,25 @@ it('drops past fixtures, sorts ascending, and honours the cap', () => {
     ],
     PREFS,
     HORIZON,
-    2,
   );
-  expect(snap.map((f) => f.id)).toEqual(['sooner', 'mid']);
+  expect(snap.map((f) => f.id)).toEqual(['sooner', 'mid', 'later']);
+});
+
+it('the full upcoming set survives: 200 fixtures in, 200 out, by start (Round 5 ruling 4)', () => {
+  // Seven hours apart from 1 Aug 2026 — every one after the horizon —
+  // handed over in REVERSE so the ordering is the snapshot's own work.
+  const many = Array.from({ length: 200 }, (_, i) =>
+    fixture({
+      id: `f-${i}`,
+      startUtc: new Date(
+        Date.UTC(2026, 7, 1, 12) + i * 7 * 3_600_000,
+      ).toISOString(),
+    }),
+  ).reverse();
+  const snap = upcomingSnapshot(many, PREFS, HORIZON);
+  expect(snap).toHaveLength(200);
+  expect(snap[0].id).toBe('f-0');
+  expect(snap[199].id).toBe('f-199');
+  const starts = snap.map((f) => f.startUtc);
+  expect(starts).toEqual([...starts].sort());
 });

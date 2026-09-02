@@ -81,14 +81,14 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
 
   // Counts come from the snapshot — the same desiredEventFor-filtered
   // set the calendar would actually receive (race-only excluded etc.),
-  // never the raw fixture total. The snapshot is capped, so display
-  // saturates honestly at "60+".
-  const [total, capped, nextMonth] = useMemo(() => {
+  // never the raw fixture total. The snapshot holds the FULL upcoming
+  // set (Round 5 ruling 4), so the count is the real one — the "60+"
+  // saturation the old cap forced is gone with it.
+  const [total, nextMonth] = useMemo(() => {
     const snap = upcomingFixtures();
     const monthAhead = Date.now() + 30 * 86_400_000;
     return [
       snap.length,
-      snap.length >= 60,
       snap.filter((f) => new Date(f.startUtc).getTime() <= monthAhead).length,
     ];
   }, []);
@@ -226,11 +226,11 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         >
           {nextMonth > 0
             ? tn('calendar.priming.readyMonth', total, {
-                count: capped ? '60+' : total,
+                count: total,
                 month: nextMonth,
               })
             : tn('calendar.priming.ready', total, {
-                count: capped ? '60+' : total,
+                count: total,
               })}
         </Text>
       ) : null}
