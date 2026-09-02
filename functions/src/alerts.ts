@@ -45,7 +45,13 @@ export type AlertCondition =
   | 'no_success_24h'
   | 'yield_died'
   | 'born_dead'
-  | 'roster_stale';
+  | 'roster_stale'
+  // The poller's own runs are green while the SWEEP-SIDE coverage stamp
+  // the client banner reads has aged out: the route completes server-
+  // side but outruns the sweep's fetch timeout, so status/coverage is
+  // never refreshed. Ran silent for three days on the boxing-cards slice
+  // (Round 4 A1) — every server signal was green and the app said stale.
+  | 'coverage_lag';
 
 export interface Alert {
   sliceKey: string; // `${source}|${competitionId}`
@@ -193,6 +199,49 @@ export function evaluateAlerts(
         detail: `${row.runsInWindow} runs since ${row.firstRunAt}, never a future-dated fixture (last reason: ${row.lastReason ?? 'none'})`,
       });
     }
+  }
+  return alerts;
+}
+
+// Green-poller / stale-stamp divergence (Round 4). A slice whose latest
+// run succeeded within the last day but whose coverage stamp — the one
+// the in-app banner reads — is older than this, or missing while the
+// slice has succeeded in-window, is lagging: the sweep's own fetch of
+// that route is failing (timeout) while the route succeeds on its own.
+// Three sweeps of slack: one missed refresh is a transient; three is a
+// pattern the client will call "stale" within the day.
+export const COVERAGE_LAG_HOURS = 18;
+
+export function evaluateCoverageLagAlerts(
+  rows: readonly CoverageRow[],
+  demandedSlices: ReadonlySet<string>,
+  // slice key → the coverage-map key of its poll path (already `_`-folded).
+  pathKeyBySlice: ReadonlyMap<string, string>,
+  coveragePaths: Readonly<Record<string, string>>,
+  nowMs: number,
+): Alert[] {
+  const alerts: Alert[] = [];
+  for (const row of rows) {
+    const sliceKey = `${row.source}|${row.competitionId}`;
+    if (row.competitionId.startsWith('roster-')) continue;
+    if (!demandedSlices.has(sliceKey)) continue;
+    if (row.lastSuccessAt === null) continue; // no_success_24h owns that
+    const hoursSinceSuccess = (nowMs - Date.parse(row.lastSuccessAt)) / 3_600_000;
+    if (hoursSinceSuccess > NO_SUCCESS_HOURS) continue; // ditto
+    const pathKey = pathKeyBySlice.get(sliceKey);
+    if (!pathKey) continue;
+    const stamp = coveragePaths[pathKey];
+    const stampHours =
+      stamp === undefined ? Infinity : (nowMs - Date.parse(stamp)) / 3_600_000;
+    if (stampHours <= COVERAGE_LAG_HOURS) continue;
+    alerts.push({
+      sliceKey,
+      condition: 'coverage_lag',
+      detail:
+        stamp === undefined
+          ? `runs succeed (last ${row.lastSuccessAt}) but the route has never answered inside the sweep's fetch window — no coverage stamp; the app reads this slice as unknown`
+          : `runs succeed (last ${row.lastSuccessAt}) but the sweep-side coverage stamp is ${stamp} (${Math.round(stampHours)}h) — the route is outrunning the sweep's fetch timeout; the app reads this slice as stale`,
+    });
   }
   return alerts;
 }

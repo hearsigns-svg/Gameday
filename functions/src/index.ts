@@ -41,7 +41,11 @@ import {
   pngBufferOf,
   trimBox,
 } from './markTiles';
-import { stampBoxingSexScopes } from './boxingSexScopes';
+import {
+  carryScopedKeys,
+  stampBoxingSexScopes,
+  withoutScopedKeys,
+} from './boxingSexScopes';
 import { stampCrests } from './crestStamp';
 import {
   appearanceFor,
@@ -93,6 +97,7 @@ import { CatalogueEntry, sportWeightsOf } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
 import { readSheetTab } from './sheets';
 import {
+  hasLiveTournament,
   mappingIntents,
   matchTitle,
   newestStamp,
@@ -289,12 +294,19 @@ async function ingest(
   // Write only what actually changed: an unchanged fixture costs a read
   // we already did, not a write. (updatedAt is excluded from the compare
   // — it changes on every poll by construction.)
+  // The stamp pass's scoped card keys are invisible to this compare and
+  // carried across rewrites (boxingSexScopes.ts) — otherwise every poll
+  // of a card slice rewrote every card and re-stamped it (Round 4).
   const sameFixture = (a: Fixture, b: Fixture): boolean => {
     const strip = ({ updatedAt, firstSeenAt, ...rest }: Fixture) => rest;
-    return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+    return (
+      JSON.stringify(strip(withoutScopedKeys(a))) ===
+      JSON.stringify(strip(withoutScopedKeys(b)))
+    );
   };
   let stored = 0;
   let unchanged = 0;
+  const writtenIds = new Set<string>();
   for (const f of incoming) {
     const prev = existing.get(f.id);
     if (prev && sameFixture(prev, f)) {
@@ -303,8 +315,12 @@ async function ingest(
     }
     // firstSeenAt decides which id survives a cross-source merge — it
     // must never be reset by a re-poll.
-    const record: Fixture = { ...f, firstSeenAt: prev?.firstSeenAt ?? at };
+    const record: Fixture = {
+      ...carryScopedKeys(f, prev),
+      firstSeenAt: prev?.firstSeenAt ?? at,
+    };
     batch.set(db.collection('fixtures').doc(f.id), record);
+    writtenIds.add(f.id);
     stored++;
     if (++pending >= 450) await flush();
   }
@@ -395,7 +411,7 @@ async function ingest(
   // Instrumentation-grade failure handling — a stamping error must
   // never fail the poll it rides.
   try {
-    await stampBoxingSexScopes(db, incoming, followKey);
+    await stampBoxingSexScopes(db, incoming, followKey, writtenIds);
   } catch (e) {
     console.error(`[kickoffcal] boxing sex-scope stamping failed: ${e}`);
   }
@@ -3256,8 +3272,13 @@ export const pollSheetAtp = onRequest(
         }
 
         // A LIVE TOURNAMENT AND A FROZEN SHEET IS AN OUTAGE, and it is
-        // the one `yield_died` cannot see (providers/sheetAtp.ts).
-        if (parents.size > 0) {
+        // the one `yield_died` cannot see (providers/sheetAtp.ts). LIVE
+        // means live: an edition in play or starting inside the same
+        // 48h window activeTennisWindows uses — the parents map above
+        // holds every unfinished edition through 2027, and testing its
+        // size armed the guard permanently (Round 4 A2): an idle
+        // off-season script would have paged as an outage.
+        if (hasLiveTournament([...parents.values()], now)) {
           const stale = stalenessError(parsed.rows, Date.now(), SHEET_MAX_AGE_MS);
           if (stale !== null) throw new Error(stale);
         }

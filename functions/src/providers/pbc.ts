@@ -253,12 +253,24 @@ export interface PbcFetch extends ProviderFetch {
   appearanceRawCount: number;
 }
 
+// The crawl's own time budget. Twelve cards at a 10s crawl delay is
+// ~125s — every sweep-triggered run overran the sweep's 120s slow-route
+// fetch timeout (measured 121.7–131.2s, Round 4 A1), so the sweep
+// counted a pollError on every run and PBC never earned a coverage
+// stamp while its own run records stayed green. The crawl now stops
+// STARTING cards once the budget is spent; the remainder are picked up
+// next sweep (cards rarely change), and the route answers inside the
+// sweep's window every time.
+export const PBC_CRAWL_BUDGET_MS = 95_000;
+
 // Fetch the sitemap, then only the cards that have not already happened.
 // Honours the crawl delay between page fetches.
 export async function fetchPbcCards(
   fromDate: string, // ISO date; cards before this are not fetched
   maxCards = 12,
+  budgetMs: number = PBC_CRAWL_BUDGET_MS,
 ): Promise<PbcFetch> {
+  const startedAt = Date.now();
   const res = await fetch(SITEMAP, { headers: { 'User-Agent': USER_AGENT } });
   if (!res.ok) throw new Error(`pbc http ${res.status}`);
   const urls = parseSitemapUrls(await res.text());
@@ -271,6 +283,7 @@ export async function fetchPbcCards(
   const appearances: AppearanceDraft[] = [];
   let appearanceRawCount = 0;
   for (const url of candidates.slice(0, maxCards)) {
+    if (Date.now() - startedAt + PBC_CRAWL_DELAY_MS > budgetMs) break;
     const page = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
     if (page.ok) {
       const html = await page.text();

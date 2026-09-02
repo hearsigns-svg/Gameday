@@ -11,7 +11,11 @@
 
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { evaluateAlerts, evaluateRosterAlerts } from './alerts';
+import {
+  evaluateAlerts,
+  evaluateCoverageLagAlerts,
+  evaluateRosterAlerts,
+} from './alerts';
 import {
   CatalogueEntry,
   orderSweepPaths,
@@ -561,9 +565,17 @@ export async function sweepAll(): Promise<SweepResult> {
     // Only slices this sweep actually REACHED: a deadline-truncated run
     // must not page about paths it never polled.
     const demanded = new Set<string>();
+    // slice → the key its poll path has in status/coverage.paths (same
+    // fold the freshness write applies), for the coverage_lag rule.
+    const pathKeyBySlice = new Map<string, string>();
     for (const p of paths.slice(0, attempted)) {
       const slice = sliceOfPollPath(p);
-      if (slice) demanded.add(`${slice.source}|${slice.competitionId}`);
+      if (!slice) continue;
+      const sliceKey = `${slice.source}|${slice.competitionId}`;
+      demanded.add(sliceKey);
+      if (!pathKeyBySlice.has(sliceKey)) {
+        pathKeyBySlice.set(sliceKey, p.replace(/[./]/g, '_'));
+      }
     }
     const coverage = await loadCoverage(db, Date.now());
 
@@ -587,6 +599,26 @@ export async function sweepAll(): Promise<SweepResult> {
     }
 
     const active = evaluateAlerts(coverage.rows, demanded, Date.now());
+    // GREEN POLLER, STALE STAMP (Round 4): judge the sweep-side coverage
+    // map — the one the in-app banner reads — against the same rows. A
+    // read failure skips this rule loudly; it must never impersonate an
+    // empty map and page every slice as unstamped.
+    try {
+      const covSnap = await db.collection('status').doc('coverage').get();
+      const covPaths =
+        (covSnap.data()?.paths as Record<string, string> | undefined) ?? {};
+      active.push(
+        ...evaluateCoverageLagAlerts(
+          coverage.rows,
+          demanded,
+          pathKeyBySlice,
+          covPaths,
+          Date.now(),
+        ),
+      );
+    } catch (e) {
+      console.error(`[kickoffcal] coverage map read failed: ${e}`);
+    }
     // Roster staleness comes from the dedicated marker doc, never the
     // run-window join (see alerts.ts). A marker READ FAILURE skips the
     // roster evaluation loudly rather than paging "never refreshed" —

@@ -5,6 +5,8 @@
 // overwrite a correction.
 
 import {
+  hasLiveTournament,
+  LIVE_LOOKAHEAD_MS,
   mappingIntents,
   matchTitle,
   newestStamp,
@@ -302,5 +304,31 @@ describe('a frozen sheet is an outage, not a quiet week', () => {
     // parseSheet already turns a missing header into an error; a
     // legitimately empty tab must not ALSO be called stale.
     expect(stalenessError([], NOW, SIX_H)).toBeNull();
+  });
+});
+
+// The staleness guard arms only while a tournament is LIVE (Round 4
+// A2): every unfinished edition through next year used to count, so an
+// idle off-season script would have paged as an outage.
+describe('hasLiveTournament', () => {
+  const now = Date.parse('2026-09-02T10:00:00.000Z');
+  const days = (d: number) => d * 24 * 3_600_000;
+  const edition = (startOffsetDays: number, lengthDays = 14, status = 'scheduled') => ({
+    startUtc: new Date(now + days(startOffsetDays)).toISOString(),
+    durationHours: lengthDays * 24,
+    status,
+  });
+  test('an edition in play is live', () => {
+    expect(hasLiveTournament([edition(-3)], now)).toBe(true);
+  });
+  test('an edition starting inside the 48h lookahead is live', () => {
+    expect(hasLiveTournament([edition(1)], now)).toBe(true);
+    expect(LIVE_LOOKAHEAD_MS).toBe(48 * 3_600_000);
+  });
+  test('next year\'s edition, a finished one, or a cancelled one is NOT live', () => {
+    expect(hasLiveTournament([edition(150)], now)).toBe(false);
+    expect(hasLiveTournament([edition(-30)], now)).toBe(false);
+    expect(hasLiveTournament([edition(-3, 14, 'cancelled')], now)).toBe(false);
+    expect(hasLiveTournament([], now)).toBe(false);
   });
 });

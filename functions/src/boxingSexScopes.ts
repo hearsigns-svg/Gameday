@@ -60,20 +60,62 @@ export function touchesCardScopes(followKey: string): boolean {
   return false;
 }
 
+// A stamped scoped key on a card of one of the two slices: the pair the
+// stamp pass OWNS. Ingest treats these as invisible to its change
+// compare and carries them across rewrites — the Round 4 regression
+// (2026-08-30 → 09-02): incoming cards never carry them, so every poll
+// read all 103 stored cards as changed, rewrote them WITHOUT the pair,
+// and the stamp pass re-added it: ~500 wasted ops per run, a 1s poller
+// at 45s, past the sweep's 20s fetch timeout, its coverage stamp frozen
+// and the in-app banner tripped while every server signal stayed green.
+export function isScopedCardKey(key: string, competitionId: string): boolean {
+  return (
+    SCOPED_CARD_SLICES.has(competitionId) &&
+    (key === `${competitionId}-m` || key === `${competitionId}-w`)
+  );
+}
+
+// The doc as the change compare must see it: scoped pair removed.
+export function withoutScopedKeys(f: Fixture): Fixture {
+  if (!SCOPED_CARD_SLICES.has(f.competitionId)) return f;
+  return {
+    ...f,
+    followKeys: f.followKeys.filter((k) => !isScopedCardKey(k, f.competitionId)),
+  };
+}
+
+// The doc as it must be STORED on a real change: the incoming keys plus
+// the pair the previous record already earned, so a rewrite never
+// strips what the stamp pass would only put back.
+export function carryScopedKeys(incoming: Fixture, prev: Fixture | undefined): Fixture {
+  if (!prev || !SCOPED_CARD_SLICES.has(incoming.competitionId)) return incoming;
+  const carried = prev.followKeys.filter(
+    (k) => isScopedCardKey(k, incoming.competitionId) && !incoming.followKeys.includes(k),
+  );
+  return carried.length === 0
+    ? incoming
+    : { ...incoming, followKeys: [...incoming.followKeys, ...carried] };
+}
+
 // Post-ingest stamping pass. Reads the store (this batch is already
 // committed), so parents and bouts see each other whichever poll
 // delivered them. Additive writes only, skipped when nothing changes.
+// `writtenIds` — the docs ingest actually wrote this run: an unchanged
+// card is left alone entirely (no reads), because nothing about its
+// classification can have moved.
 export async function stampBoxingSexScopes(
   db: Firestore,
   incoming: readonly Fixture[],
   followKey: string,
+  writtenIds?: ReadonlySet<string>,
 ): Promise<number> {
   if (!touchesCardScopes(followKey)) return 0;
 
-  // Candidate parents: cards in this batch, plus the parents of any
-  // bouts in this batch.
+  // Candidate parents: WRITTEN cards in this batch, plus the parents of
+  // any WRITTEN bouts in this batch.
   const parentIds = new Set<string>();
   for (const f of incoming) {
+    if (writtenIds && !writtenIds.has(f.id)) continue;
     if (!f.parentFixtureId && SCOPED_CARD_SLICES.has(f.competitionId)) {
       parentIds.add(f.id);
     }

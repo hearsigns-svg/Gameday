@@ -3,7 +3,9 @@
 import {
   BORN_DEAD_HOURS,
   BORN_DEAD_MIN_RUNS,
+  COVERAGE_LAG_HOURS,
   evaluateAlerts,
+  evaluateCoverageLagAlerts,
   NO_SUCCESS_HOURS,
   YIELD_DIED_HOURS,
 } from '../alerts';
@@ -221,5 +223,47 @@ describe('born_dead — the hole the World Cup fell through', () => {
 
   test('undemanded slices never page — appearance funnels stay exempt', () => {
     expect(evaluateAlerts([wcShape()], new Set<string>(), NOW)).toEqual([]);
+  });
+});
+
+// coverage_lag (Round 4): green runs, stale sweep-side stamp — the
+// divergence that ran silent for three days on the boxing-cards slice.
+describe('coverage_lag', () => {
+  const PATH_KEY = 'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3';
+  const BY_SLICE = new Map([['tsdb|tsdb-league-4445', PATH_KEY]]);
+
+  test('a green slice whose coverage stamp is fresh raises nothing', () => {
+    expect(
+      evaluateCoverageLagAlerts([row()], DEMANDED, BY_SLICE, { [PATH_KEY]: hoursAgo(3) }, NOW),
+    ).toEqual([]);
+  });
+
+  test('a green slice whose stamp aged past the threshold pages, naming the divergence', () => {
+    const alerts = evaluateCoverageLagAlerts(
+      [row()],
+      DEMANDED,
+      BY_SLICE,
+      { [PATH_KEY]: hoursAgo(COVERAGE_LAG_HOURS + 1) },
+      NOW,
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].condition).toBe('coverage_lag');
+    expect(alerts[0].detail).toContain('outrunning');
+  });
+
+  test('a green slice with NO stamp at all pages too (the PBC shape)', () => {
+    const alerts = evaluateCoverageLagAlerts([row()], DEMANDED, BY_SLICE, {}, NOW);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].detail).toContain('never answered');
+  });
+
+  test('a FAILING slice is no_success_24h business, not coverage_lag — one incident, not two', () => {
+    const failing = row({ lastSuccessAt: hoursAgo(30), lastError: 'boom' });
+    expect(evaluateCoverageLagAlerts([failing], DEMANDED, BY_SLICE, {}, NOW)).toEqual([]);
+  });
+
+  test('undemanded slices and slices without a mapped path are ignored', () => {
+    expect(evaluateCoverageLagAlerts([row()], new Set(), BY_SLICE, {}, NOW)).toEqual([]);
+    expect(evaluateCoverageLagAlerts([row()], DEMANDED, new Map(), {}, NOW)).toEqual([]);
   });
 });

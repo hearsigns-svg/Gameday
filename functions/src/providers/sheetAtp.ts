@@ -333,3 +333,22 @@ export function stalenessError(
   if (ageMs <= maxAgeMs) return null;
   return `sheet is stale: newest row written ${Math.round(ageMs / 60_000)} min ago while a tournament is live`;
 }
+
+// LIVE means live (Round 4 A2): an edition in play now or starting
+// inside the 48h lookahead — the same window activeTennisWindows hands
+// the fetcher, so the staleness guard and the fetch agree on when a
+// silent sheet is an outage and when it is an off-season. Pure.
+export const LIVE_LOOKAHEAD_MS = 48 * 3_600_000;
+
+export function hasLiveTournament(
+  parents: readonly { startUtc: string; durationHours?: number; status?: string }[],
+  nowMs: number,
+  lookaheadMs: number = LIVE_LOOKAHEAD_MS,
+): boolean {
+  return parents.some((p) => {
+    if (p.status === 'cancelled') return false;
+    const start = Date.parse(p.startUtc);
+    const end = start + (p.durationHours ?? 24) * 3_600_000;
+    return end > nowMs && start < nowMs + lookaheadMs;
+  });
+}
