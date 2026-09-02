@@ -293,5 +293,69 @@ describe('quota_low', () => {
   });
   test('exactly at the threshold is still fine — the rule is strict-below', () => {
     expect(evaluateQuotaAlerts(SLICE, { remaining: 9 * QUOTA_RUNWAY_DAYS, callsThisRun: 9 })).toEqual([]);
+describe('appearance-only slices are judged by their appearance sibling (Round 4 item 7)', () => {
+  // pollAtpVendor publishes zero fixtures by design: on its own row it
+  // never yields, so born_dead would fire a week after deploy and
+  // yield_died could never see a live slam publishing nothing — the
+  // sheet slice's exact blind spot while its Apps Script lay dead.
+  const VENDOR = 'tennisapi1|tennis-atp-vendor';
+  const demanded = new Set([VENDOR]);
+  const vendor = (over: Partial<CoverageRow> = {}) =>
+    row({
+      source: 'tennisapi1',
+      competitionId: 'tennis-atp-vendor',
+      sport: 'tennis',
+      storedFutureDated: 0,
+      runsInWindow: 40,
+      firstRunAt: hoursAgo(BORN_DEAD_HOURS + 100),
+      lastNonZeroYieldAt: null, // never — by design
+      hoursSinceLastNonZeroYield: null,
+      ...over,
+    });
+  const sibling = (over: Partial<CoverageRow> = {}) =>
+    row({
+      source: 'tennisapi1',
+      competitionId: 'tennis-atp-appearances',
+      sport: 'tennis',
+      ...over,
+    });
+
+  test('a live slam whose appearances yielded recently is healthy, own-row zero yield notwithstanding', () => {
+    expect(evaluateAlerts([vendor(), sibling({ lastNonZeroYieldAt: hoursAgo(2) })], demanded, NOW)).toEqual([]);
+  });
+
+  test('a live window with no appearance yield for 72h pages yield_died on the VENDOR slice', () => {
+    const alerts = evaluateAlerts(
+      [vendor({ lastReason: null }), sibling({ lastNonZeroYieldAt: hoursAgo(YIELD_DIED_HOURS + 5) })],
+      demanded,
+      NOW,
+    );
+    expect(alerts).toEqual([expect.objectContaining({ sliceKey: VENDOR, condition: 'yield_died' })]);
+  });
+
+  test('between tournaments the parent says no_future_events, and nothing pages', () => {
+    const quiet = [
+      vendor({ lastReason: 'no_future_events' }),
+      sibling({ lastNonZeroYieldAt: hoursAgo(24 * 30) }),
+    ];
+    expect(evaluateAlerts(quiet, demanded, NOW)).toEqual([]);
+  });
+
+  test('never a single appearance while LIVE for a week is born_dead; while idle it is not', () => {
+    expect(evaluateAlerts([vendor({ lastReason: null })], demanded, NOW)).toEqual([
+      expect.objectContaining({ sliceKey: VENDOR, condition: 'born_dead' }),
+    ]);
+    expect(evaluateAlerts([vendor({ lastReason: 'no_future_events' })], demanded, NOW)).toEqual([]);
+  });
+
+  test('liveness stays the parent’s own: a day of failures pages no_success_24h, once', () => {
+    const dead = vendor({ lastSuccessAt: hoursAgo(NO_SUCCESS_HOURS + 1), lastError: 'tennisapi1 http 429' });
+    expect(evaluateAlerts([dead, sibling({ lastNonZeroYieldAt: hoursAgo(200) })], demanded, NOW)).toEqual([
+      expect.objectContaining({ sliceKey: VENDOR, condition: 'no_success_24h' }),
+    ]);
+  });
+
+  test('an ordinary slice is untouched by the rule', () => {
+    expect(evaluateAlerts([row()], DEMANDED, NOW)).toEqual([]);
   });
 });

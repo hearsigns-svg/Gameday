@@ -150,18 +150,50 @@ export function evaluateRosterAlerts(
   return alerts;
 }
 
+// APPEARANCE-ONLY SLICES (Round 4 item 7). pollAtpVendor publishes ZERO
+// fixtures by design: its matches are appearances under
+// tennis-atp-appearances, and it never mints tournament parents (those
+// are the ICS's). Judged on its own row it is born_dead for ever, and
+// the bound stated above means yield_died could never see it — exactly
+// the sheet slice's blind spot, which paged on nothing while the Apps
+// Script lay dead for four days of the US Open. So for these slices the
+// YIELD questions are asked of the appearance sibling row, while
+// liveness (no_success_24h) and the honest-empty reason stay the
+// parent's own. Two consequences:
+//   - a live slam with nothing publishing for 72h pages (yield_died);
+//   - born_dead is judged only while the parent is NOT honestly empty.
+//     Between tournaments the parent records no_future_events from the
+//     live ICS parents — recomputed every run from the store, not a
+//     stale season parameter — so the World Cup pathology this rule
+//     exists for (a dead season reading as off-season for ever) cannot
+//     arise here, and a fortnight of genuine off-season must not page.
+export const APPEARANCE_ONLY_SLICES: Readonly<Record<string, string>> = {
+  'tennisapi1|tennis-atp-vendor': 'tennisapi1|tennis-atp-appearances',
+};
+
 export function evaluateAlerts(
   rows: readonly CoverageRow[],
   demandedSlices: ReadonlySet<string>,
   nowMs: number,
 ): Alert[] {
   const alerts: Alert[] = [];
-  for (const row of rows) {
-    const sliceKey = `${row.source}|${row.competitionId}`;
+  const byKey = new Map(rows.map((r) => [`${r.source}|${r.competitionId}`, r]));
+  for (const own of rows) {
+    const sliceKey = `${own.source}|${own.competitionId}`;
     // roster-* rows may appear in coverage while their runs are in the
     // window; they are evaluated from the marker doc instead.
-    if (row.competitionId.startsWith('roster-')) continue;
+    if (own.competitionId.startsWith('roster-')) continue;
     if (!demandedSlices.has(sliceKey)) continue;
+    const siblingKey = APPEARANCE_ONLY_SLICES[sliceKey];
+    const appearanceOnly = siblingKey !== undefined;
+    // The row the YIELD questions are asked of. For an ordinary slice
+    // that is itself; for an appearance-only slice it is the sibling —
+    // or, before the sibling has ever run, a row that has yielded
+    // nothing, which is the truth.
+    const yieldRow: Pick<CoverageRow, 'lastNonZeroYieldAt'> = appearanceOnly
+      ? (byKey.get(siblingKey) ?? { lastNonZeroYieldAt: null })
+      : own;
+    const row: CoverageRow = { ...own, lastNonZeroYieldAt: yieldRow.lastNonZeroYieldAt };
     const hoursSinceSuccess =
       row.lastSuccessAt === null
         ? Infinity
@@ -196,7 +228,10 @@ export function evaluateAlerts(
     if (
       !yieldedOnce &&
       row.runsInWindow >= BORN_DEAD_MIN_RUNS &&
-      hoursTrying > BORN_DEAD_HOURS
+      hoursTrying > BORN_DEAD_HOURS &&
+      // Appearance-only slices: see APPEARANCE_ONLY_SLICES — an honest
+      // off-season is not a dead birth.
+      (!appearanceOnly || !honestlyEmpty)
     ) {
       alerts.push({
         sliceKey,

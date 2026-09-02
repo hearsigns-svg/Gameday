@@ -1,0 +1,734 @@
+{
+ "results": [
+  {
+   "entity": {
+    "id": 2449,
+    "name": "US Open, Men",
+    "slug": "us-open",
+    "userCount": 31705,
+    "category": {
+     "id": 3,
+     "name": "ATP",
+     "slug": "atp",
+     "flag": "atp",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+      "az": "US Open, Kişilər",
+      "bn": "ইউএস ওপেন, পুরুষ একক",
+      "de": "US Open Herreneinzel",
+      "el": "Αμερικανικό Όπεν, απλό ανδρών",
+      "es": "US Open, masculino",
+      "fr": "US Open simple messieurs",
+      "hi": "यूएस ओपन, पुरुष",
+      "hr": "US Open (M)",
+      "hu": "US Open, férfi egyes",
+      "id": "US Open, Tunggal (Pa)",
+      "it": "US Open (M)",
+      "ja": "全米オープン、男子",
+      "ko": "US 오픈 남자 단식",
+      "nl": "US Open mannenenkelspel",
+      "no": "US Open, menn",
+      "pl": "US Open, singiel mężczyzn",
+      "pt": "US Open masculino",
+      "ro": "US Open, simplu masculin",
+      "ru": "US Open, мужской одиночный разряд",
+      "sr": "Ју Ес опен, појединачно (М)",
+      "sv": "US Open, herrsingel",
+      "th": "ยูเอสโอเพน ชายเดี่ยว",
+      "tr": "Amerika Açık, Tek Erkekler",
+      "vi": "Mỹ Mở rộng, đơn nam",
+      "es-la": "US Open, Varonil",
+      "pt-pt": "US Open (M)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 21455.922,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 2601,
+    "name": "US Open, Women",
+    "slug": "us-open",
+    "userCount": 11220,
+    "category": {
+     "id": 6,
+     "name": "WTA",
+     "slug": "wta",
+     "flag": "wta",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، فردي السيدات",
+      "az": "US Open, Qadınlar",
+      "bn": "ইউএস ওপেন, নারী একক",
+      "de": "US Open Dameneinzel",
+      "el": "Αμερικανικό Όπεν, απλό γυναικών",
+      "es": "US Open, femenino",
+      "fr": "US Open simple dames",
+      "hi": "यूएस ओपन, महिला",
+      "hr": "US Open (Ž)",
+      "hu": "US Open, női egyes",
+      "id": "US Open, Tunggal (Pi)",
+      "it": "US Open (F)",
+      "ja": "全米オープン、女子",
+      "ko": "US 오픈 여자 단식",
+      "nl": "US Open vrouwenenkelspel",
+      "no": "US Open, kvinner",
+      "pl": "US Open, singiel kobiet",
+      "pt": "US Open feminino",
+      "ro": "US Open, simplu feminin",
+      "ru": "Открытый чемпионат США",
+      "sr": "Ју Ес опен, појединачно (Ж)",
+      "sv": "US Open, damsingel",
+      "th": "ยูเอสโอเพน หญิงเดี่ยว",
+      "tr": "Amerika Açık, Tek Kadınlar",
+      "vi": "Mỹ Mở rộng, đơn nữ",
+      "es-la": "US Open, Femenil",
+      "pt-pt": "US Open (F)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 12763.793,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 2402,
+    "name": "US Open, Mixed Doubles",
+    "slug": "us-open-mixed-doubles",
+    "userCount": 1769,
+    "category": {
+     "id": 3,
+     "name": "ATP",
+     "slug": "atp",
+     "flag": "atp",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، زوجي مختلط",
+      "az": "US Open, Qarışıq cüt",
+      "bn": "ইউএস ওপেন, মিশ্র দ্বৈত",
+      "de": "US Open Mixed",
+      "el": "Αμερικανικό Όπεν, διπλό μικτό",
+      "es": "US Open, dobles mixto",
+      "fr": "US Open double mixte",
+      "hi": "यूएस ओपन, मिश्रित डबल्स",
+      "hr": "US Open, parovi (M/Ž)",
+      "hu": "US Open, vegyes páros",
+      "id": "US Open, Ganda Campuran",
+      "it": "US Open, doppio misto",
+      "ja": "全米オープン、混合ダブルス",
+      "ko": "US 오픈 혼합 복식",
+      "nl": "US Open gemengd dubbelspel",
+      "no": "US Open, mixeddobbel",
+      "pl": "US Open, mikst",
+      "pt": "US Open duplas mistas",
+      "ro": "US Open, dublu mixt",
+      "ru": "US Open, смешанный парный разряд",
+      "sr": "Ју Ес опен, парови (М/Ж)",
+      "sv": "US Open, mixeddubbel",
+      "th": "ยูเอสโอเพน คู่ผสม",
+      "tr": "Amerika Açık, Karışık Çiftler",
+      "vi": "Mỹ Mở rộng, đôi nam nữ",
+      "es-la": "US Open, Dobles mixtos",
+      "pt-pt": "US Open, pares mistos"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "X"
+   },
+   "score": 5068.124,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 2508,
+    "name": "US Open, Men Doubles",
+    "slug": "us-open-doubles",
+    "userCount": 905,
+    "category": {
+     "id": 3,
+     "name": "ATP",
+     "slug": "atp",
+     "flag": "atp",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، زوجي الرجال",
+      "az": "US Open, Kişilər cütü",
+      "bn": "ইউএস ওপেন, পুরুষ দ্বৈত",
+      "de": "US Open Herrendoppel",
+      "el": "Αμερικανικό Όπεν, διπλό ανδρών",
+      "es": "US Open, dobles masculino",
+      "fr": "US Open double messieurs",
+      "hi": "यूएस ओपन, पुरुष डबल्स",
+      "hr": "US Open, parovi (M)",
+      "hu": "US Open, férfi páros",
+      "id": "US Open, Ganda (Pa)",
+      "it": "US Open (M), doppio",
+      "ja": "全米オープン、男子ダブルス",
+      "ko": "US 오픈 남자 복식",
+      "nl": "US Open mannendubbelspel",
+      "no": "US Open, menn dobbel",
+      "pl": "US Open, debel mężczyzn",
+      "pt": "US Open duplas masculinas",
+      "ro": "US Open, dublu masculin",
+      "ru": "Открытый чемпионат США, парный разряд",
+      "sr": "Ју Ес опен, парови (М)",
+      "sv": "US Open, herrdubbel",
+      "th": "ยูเอสโอเพน ชายคู่",
+      "tr": "Amerika Açık, Çift Erkekler",
+      "vi": "Amerika Ochiq, erkaklar juftlik",
+      "es-la": "US Open, Dobles varonil",
+      "pt-pt": "US Open (M), pares"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 3624.9966,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 2551,
+    "name": "US Open, Women Doubles",
+    "slug": "us-open-doubles",
+    "userCount": 770,
+    "category": {
+     "id": 6,
+     "name": "WTA",
+     "slug": "wta",
+     "flag": "wta",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، زوجي السيدات",
+      "az": "US Open, Qadınlar cütü",
+      "bn": "ইউএস ওপেন, নারী দ্বৈত",
+      "de": "US Open Damendoppel",
+      "el": "Αμερικανικό Όπεν, διπλό γυναικών",
+      "es": "US Open, dobles femenino",
+      "fr": "US Open double dames",
+      "hi": "यूएस ओपन, महिला डबल्स",
+      "hr": "US Open, parovi (Ž)",
+      "hu": "US Open, női páros",
+      "id": "US Open, Ganda (Pi)",
+      "it": "US Open (F), doppio",
+      "ja": "全米オープン、女子ダブルス",
+      "ko": "US 오픈 여자 복식",
+      "nl": "US Open vrouwendubbelspel",
+      "no": "US Open, kvinner dobbel",
+      "pl": "US Open, debel kobiet",
+      "pt": "US Open duplas femininas",
+      "ro": "US Open, dublu feminin",
+      "ru": "Открытый чемпионат США, парный разряд",
+      "sr": "Ју Ес опен, парови (Ж)",
+      "sv": "US Open, damdubbel",
+      "th": "ยูเอสโอเพน หญิงคู่",
+      "tr": "Amerika Açık, Çift Kadınlar",
+      "vi": "Mỹ Mở rộng, đôi nữ",
+      "es-la": "US Open, Dobles femenil",
+      "pt-pt": "US Open (F), pares"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 3343.7104,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10466,
+    "name": "US Open, Boys",
+    "slug": "us-open-boys",
+    "userCount": 112,
+    "category": {
+     "id": 1474,
+     "name": "Juniors",
+     "slug": "juniors",
+     "flag": "juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، فردي الناشئين",
+      "az": "US Open, Oğlanlar",
+      "bn": "ইউএস ওপেন, বালকদের একক",
+      "de": "US Open Junioren-Einzel",
+      "el": "Αμερικανικό Όπεν, απλό εφήβων",
+      "es": "US Open, júnior masculino",
+      "fr": "US Open simple garçons",
+      "hi": "यूएस ओपन, बॉयज़",
+      "hr": "US Open, juniori",
+      "hu": "US Open, fiú egyes",
+      "id": "US Open, Tunggal Junior (Pa)",
+      "it": "US Open, juniores (M)",
+      "ja": "全米オープン、ジュニア男子",
+      "ko": "US 오픈 주니어 남자 단식",
+      "nl": "US Open jongensenkelspel",
+      "no": "US Open, gutter",
+      "pl": "US Open, singiel chłopców",
+      "pt": "US Open juvenil masculino",
+      "ro": "US Open, simplu juniori",
+      "ru": "US Open, одиночный разряд (юноши)",
+      "sr": "Ју Ес опен, јуниори",
+      "sv": "US Open, pojksingel",
+      "th": "ยูเอสโอเพน ยุวชนชายเดี่ยว",
+      "tr": "Amerika Açık, Genç Erkekler",
+      "vi": "Mỹ Mở rộng, đơn nam trẻ",
+      "es-la": "US Open, Juvenil varonil",
+      "pt-pt": "US Open, juniores (M)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 1275.2412,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10467,
+    "name": "US Open, Girls",
+    "slug": "us-open-girls",
+    "userCount": 93,
+    "category": {
+     "id": 1474,
+     "name": "Juniors",
+     "slug": "juniors",
+     "flag": "juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، فردي الناشئات",
+      "az": "US Open, Qızlar",
+      "bn": "ইউএস ওপেন, বালিকাদের একক",
+      "de": "US Open Juniorinnen-Einzel",
+      "el": "Αμερικανικό Όπεν, απλό νεανίδων",
+      "es": "US Open, júnior femenino",
+      "fr": "US Open simple filles",
+      "hi": "यूएस ओपन, गर्ल्स",
+      "hr": "US Open, juniorke",
+      "hu": "US Open, lány egyes",
+      "id": "US Open, Tunggal Junior (Pi)",
+      "it": "US Open, juniores (F)",
+      "ja": "全米オープン、ジュニア女子",
+      "ko": "US 오픈 주니어 여자 단식",
+      "nl": "US Open meisjesenkelspel",
+      "no": "US Open, jenter",
+      "pl": "US Open, singiel dziewcząt",
+      "pt": "US Open juvenil feminino",
+      "ro": "US Open, simplu junioare",
+      "ru": "US Open, одиночный разряд (девушки)",
+      "sr": "Ју Ес опен, јуниорке",
+      "sv": "US Open, flicksingel",
+      "th": "ยูเอสโอเพน ยุวชนหญิงเดี่ยว",
+      "tr": "Amerika Açık, Genç Kızlar",
+      "vi": "Mỹ Mở rộng, đơn nữ trẻ",
+      "es-la": "US Open, Juvenil femenil",
+      "pt-pt": "US Open, juniores (F)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 1162.0499,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10469,
+    "name": "US Open, Girls Doubles",
+    "slug": "us-open-girls-doubles",
+    "userCount": 39,
+    "category": {
+     "id": 1474,
+     "name": "Juniors",
+     "slug": "juniors",
+     "flag": "juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، زوجي الناشئات",
+      "az": "US Open, İkili qızlar",
+      "bn": "ইউএস ওপেন, বালিকাদের দ্বৈত",
+      "de": "US Open Juniorinnen-Doppel",
+      "el": "Αμερικανικό Όπεν, διπλό νεανίδων",
+      "es": "US Open, dobles júnior femenino",
+      "fr": "US Open double filles",
+      "hi": "यूएस ओपन, गर्ल्स डबल्स",
+      "hr": "US Open, juniorke parovi",
+      "hu": "US Open, lány páros",
+      "id": "US Open, Ganda Junior (Pi)",
+      "it": "US Open (F), doppio juniores",
+      "ja": "全米オープン、ジュニア女子ダブルス",
+      "ko": "US 오픈 주니어 여자 복식",
+      "nl": "US Open meisjesdubbelspel",
+      "no": "US Open, jenter dobbel",
+      "pl": "US Open, debel dziewcząt",
+      "pt": "US Open duplas juvenis femininas",
+      "ro": "US Open, dublu junioare",
+      "ru": "US Open, парный разряд (девушки)",
+      "sr": "Ју Ес опен, парови јуниорки",
+      "sv": "US Open, flickdubbel",
+      "th": "ยูเอสโอเพน ยุวชนหญิงคู่",
+      "tr": "Amerika Açık, Çift Genç Kızlar",
+      "vi": "Mỹ Mở rộng, đôi nữ trẻ",
+      "es-la": "US Open, Dobles juvenil femenil",
+      "pt-pt": "US Open, pares juniores (F)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 752.5158,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10468,
+    "name": "US Open, Boys Doubles",
+    "slug": "us-open-boys-doubles",
+    "userCount": 31,
+    "category": {
+     "id": 1474,
+     "name": "Juniors",
+     "slug": "juniors",
+     "flag": "juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، زوجي الناشئين",
+      "az": "US Open, İkili oğlanlar",
+      "bn": "ইউএস ওপেন, বালকদের দ্বৈত",
+      "de": "US Open Junioren-Doppel",
+      "el": "Αμερικανικό Όπεν, διπλό εφήβων",
+      "es": "US Open, dobles júnior masculino",
+      "fr": "US Open double garçons",
+      "hi": "यूएस ओपन, बॉयज़ डबल्स",
+      "hr": "US Open, juniori parovi",
+      "hu": "US Open, fiú páros",
+      "id": "US Open, Ganda Junior (Pa)",
+      "it": "US Open (M), doppio juniores",
+      "ja": "全米オープン、ジュニア男子ダブルス",
+      "ko": "US 오픈 주니어 남자 복식",
+      "nl": "US Open jongensdubbelspel",
+      "no": "US Open, gutter dobbel",
+      "pl": "US Open, debel chłopców",
+      "pt": "US Open duplas juvenis masculinas",
+      "ro": "US Open, dublu juniori",
+      "ru": "US Open, парный разряд (юноши)",
+      "sr": "Ју Ес опен, парови јуниора",
+      "sv": "US Open, pojkdubbel",
+      "th": "ยูเอสโอเพน ยุวชนชายคู่",
+      "tr": "Amerika Açık, Çift Genç Erkekler",
+      "vi": "Mỹ Mở rộng, đôi nam trẻ",
+      "es-la": "US Open, Dobles juvenil varonil",
+      "pt-pt": "US Open, pares juniores (M)"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 670.90985,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10474,
+    "name": "US Open, Wheelchairs Women",
+    "slug": "us-open-wheelchairs-women",
+    "userCount": 16,
+    "category": {
+     "id": 1475,
+     "name": "Wheelchairs",
+     "slug": "wheelchairs",
+     "flag": "wheelchairs",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة، فردي السيدات للكراسي المتحركة",
+      "az": "US Open, Əlil arabasında qadınlar",
+      "bn": "ইউএস ওপেন, হুইলচেয়ার নারী একক",
+      "de": "US Open Rollstuhl-Dameneinzel",
+      "el": "Αμερικανικό Όπεν, απλό γυναικών (αμαξίδιο)",
+      "es": "US Open, femenino en silla de ruedas",
+      "fr": "US Open tennis-fauteuil simple dames",
+      "hi": "यूएस ओपन, व्हीलचेयर महिला",
+      "hr": "US Open, kolica (Ž)",
+      "hu": "US Open, kerekesszékes női egyes",
+      "id": "US Open, Tunggal Kursi Roda (Pi)",
+      "it": "US Open (F), carrozzina",
+      "ja": "全米オープン、車いす女子",
+      "ko": "US 오픈 휠체어 여자 단식",
+      "nl": "US Open rolstoeltennis vrouwenenkelspel",
+      "no": "US Open, rullestol kvinner",
+      "pl": "US Open, singiel kobiet (na wózkach)",
+      "pt": "US Open feminino em cadeira de rodas",
+      "ro": "US Open, simplu feminin (scaun cu rotile)",
+      "ru": "US Open, женский одиночный разряд (на колясках)",
+      "sr": "Ју Ес опен, колица (Ж)",
+      "sv": "US Open, damsingel (rullstol)",
+      "th": "ยูเอสโอเพน วีลแชร์หญิงเดี่ยว",
+      "tr": "Amerika Açık, Tekerlekli Sandalye Tek Kadınlar",
+      "vi": "Mỹ Mở rộng, đơn nữ xe lăn",
+      "es-la": "US Open, Femenil en silla de ruedas",
+      "pt-pt": "US Open (F), cadeira de rodas"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 481.99585,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10475,
+    "name": "US Open, Legends Doubles, Women",
+    "slug": "us-open-legends-doubles-women",
+    "userCount": 13,
+    "category": {
+     "id": 1476,
+     "name": "Legends",
+     "slug": "legends",
+     "flag": "legends",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة للتنس، زوجي الأساطير، السيدات",
+      "ru": "Открытый чемпионат США, парный разряд легенд, женщины"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 434.46518,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 10470,
+    "name": "US Open, Legends Doubles",
+    "slug": "us-open-legends-doubles",
+    "userCount": 10,
+    "category": {
+     "id": 1476,
+     "name": "Legends",
+     "slug": "legends",
+     "flag": "legends",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة أمريكا المفتوحة للتنس، زوجي الأساطير",
+      "ru": "Открытый чемпионат США, парный разряд легенд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 381.05118,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 19242,
+    "name": "Wheelchairs Juniors US Open, New York, USA Women Singles",
+    "slug": "wheelchairs-juniors-us-open-new-york-usa-women-singles",
+    "userCount": 6,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة الكراسي المتحركة للناشئين، أمريكا المفتوحة، نيويورك، الولايات المتحدة، فردي السيدات",
+      "ru": "Колясочные юниоры Открытый чемпионат США, Нью-Йорк, США, одиночный разряд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 295.16098,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 19243,
+    "name": "Wheelchairs Juniors US Open, New York, USA Men Singles",
+    "slug": "wheelchairs-juniors-us-open-new-york-usa-men-singles",
+    "userCount": 4,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة الكراسي المتحركة للناشئين، أمريكا المفتوحة، نيويورك، الولايات المتحدة، فردي الرجال",
+      "ru": "Колясочные юниоры Открытый чемпионат США, Нью-Йорк, США, одиночный разряд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 240.99792,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 29226,
+    "name": "Wheelchairs Juniors US Open, Paris, France Boys Doubles",
+    "slug": "wheelchairs-juniors-us-open-paris-france-boys-doubles",
+    "userCount": 2,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة الكراسي المتحركة الناشئين، أمريكا المفتوحة، باريس، فرنسا، زوجي أولاد",
+      "ru": "Wheelchairs Juniors Открытый чемпионат США, Париж, Франция, парный разряд среди юношей"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 170.41127,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 29225,
+    "name": "Wheelchairs Juniors US Open, New York, USA Girls Doubles",
+    "slug": "wheelchairs-juniors-us-open-new-york-usa-girls-doubles",
+    "userCount": 1,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بطولة الكراسي المتحركة الناشئين، أمريكا المفتوحة، نيويورك، الولايات المتحدة، زوجي فتيات",
+      "ru": "Wheelchairs Juniors Открытый чемпионат США, Нью-Йорк, США, парный разряд среди девушек"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 120.49896,
+   "type": "uniqueTournament"
+  }
+ ]
+}

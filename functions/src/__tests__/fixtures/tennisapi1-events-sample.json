@@ -1,0 +1,8254 @@
+{
+ "events": [
+  {
+   "homeTeamSeed": "7",
+   "awayTeamSeed": "WC",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "evpbsUqnd",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "louis-armstrong-stadium",
+    "name": "Louis Armstrong Stadium",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18084,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب لويس أرمسترونغ",
+      "hi": "लुईस आर्मस्ट्रांग स्टेडियम",
+      "bn": "লুই আর্মস্ট্রং স্টেডিয়াম"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Louis Armstrong Stadium"
+    }
+   },
+   "homeTeam": {
+    "name": "Daniil Medvedev",
+    "slug": "medvedev-daniil",
+    "shortName": "D. Medvedev",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 71103,
+    "playerTeamInfo": {
+     "id": 15
+    },
+    "nameCode": "MED",
+    "ranking": 8,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "RU",
+     "alpha3": "RUS",
+     "name": "Russia",
+     "slug": "russia"
+    },
+    "id": 163504,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دانييل ميدفيديف",
+      "ru": "Даниил Медведев"
+     },
+     "shortNameTranslation": {
+      "ar": "د. ميدفيديف",
+      "bn": "ডি মেদভেদেভ",
+      "hi": "डी. मेदवेदेव",
+      "ru": "Д. Медведев"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Sebastian Gorzny",
+    "slug": "gorzny-sebastian",
+    "shortName": "S. Gorzny",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 548,
+    "playerTeamInfo": {
+     "id": 11938
+    },
+    "nameCode": "GOR",
+    "ranking": 731,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 408344,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "سيباستيان غورزني",
+      "ru": "Себастьян Горжны"
+     },
+     "shortNameTranslation": {
+      "ar": "س. غورزني",
+      "ru": "С. Горжны"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901497,
+   "slug": "sebastian-gorzny-daniil-medvedev",
+   "startTimestamp": 1788361200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "23",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "fKRsPCKc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-11",
+    "name": "Court 11",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18071,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 11",
+      "hi": "कोर्ट 11",
+      "bn": "কোর্ট 11"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 11"
+    }
+   },
+   "homeTeam": {
+    "name": "Daniel Merida",
+    "slug": "merida-aguilar-daniel",
+    "shortName": "D. Merida",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 6428,
+    "playerTeamInfo": {
+     "id": 4956
+    },
+    "nameCode": "MER",
+    "ranking": 39,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ES",
+     "alpha3": "ESP",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "id": 338890,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دانييل مريديا",
+      "ru": "Даниэль Мерида"
+     },
+     "shortNameTranslation": {
+      "ar": "د. مريديا",
+      "ru": "Д. Мерида"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Andrey Rublev",
+    "slug": "rublev-andrey",
+    "shortName": "A. Rublev",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 43701,
+    "playerTeamInfo": {
+     "id": 125
+    },
+    "nameCode": "RUB",
+    "ranking": 24,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "RU",
+     "alpha3": "RUS",
+     "name": "Russia",
+     "slug": "russia"
+    },
+    "id": 106755,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أندريه روبليف",
+      "ru": "Андрей Рублёв"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. روبليف",
+      "bn": "এ. রুবলেভ",
+      "hi": "ए. रुबलेव",
+      "ru": "А. Рублёв"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901500,
+   "slug": "daniel-merida-andrey-rublev",
+   "startTimestamp": 1788361200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "16",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "BlUbsDJmd",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "grandstand",
+    "name": "Grandstand",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18202,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "المدرج",
+      "hi": "ग्रैंडस्टैंड",
+      "bn": "গ্র্যান্ডস্ট্যান্ড"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Grandstand"
+    }
+   },
+   "homeTeam": {
+    "name": "Brandon Nakashima",
+    "slug": "nakashima-brandon",
+    "shortName": "B. Nakashima",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11703,
+    "playerTeamInfo": {
+     "id": 2981
+    },
+    "nameCode": "NAK",
+    "ranking": 17,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 235576,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "براندون ناكاشيما",
+      "bn": "বি ল্যান্ডন নাকাজিমা",
+      "hi": "ब्रैंडन नकशिमा",
+      "ru": "Брэндон Накашима"
+     },
+     "shortNameTranslation": {
+      "ar": "ب. ناكاشيما",
+      "ru": "Б. Накашима"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Alex Michelsen",
+    "slug": "michelsen-alex",
+    "shortName": "A. Michelsen",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 8281,
+    "playerTeamInfo": {
+     "id": 5333
+    },
+    "nameCode": "MIC",
+    "ranking": 46,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 406728,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أليكس ميشيلسن",
+      "bn": "অ্যালেক্স মিশেলসেন",
+      "hi": "एलेक्स मिकेलसन",
+      "ru": "Алекс Микельсен"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. ميشيلسن",
+      "ru": "А. Микельсен"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901503,
+   "slug": "alex-michelsen-brandon-nakashima",
+   "startTimestamp": 1788361200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "26",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "gxAsgCab",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-10",
+    "name": "Court 10",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18070,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 10",
+      "hi": "कोर्ट 10",
+      "bn": "কোর্ট 10"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 10"
+    }
+   },
+   "homeTeam": {
+    "name": "Jaume Munar",
+    "slug": "munar-jaume",
+    "shortName": "J. Munar",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 9588,
+    "playerTeamInfo": {
+     "id": 61
+    },
+    "nameCode": "MUN",
+    "ranking": 55,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ES",
+     "alpha3": "ESP",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "id": 126356,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "جاومي مونار",
+      "ru": "Хауме Мунар"
+     },
+     "shortNameTranslation": {
+      "ar": "ج. مونار",
+      "bn": "জে. মুনার",
+      "hi": "जे. मुनार",
+      "ru": "Х. Мунар"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Arthur Rinderknech",
+    "slug": "rinderknech-arthur",
+    "shortName": "A. Rinderknech",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 10771,
+    "playerTeamInfo": {
+     "id": 626
+    },
+    "nameCode": "RIN",
+    "ranking": 29,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "FR",
+     "alpha3": "FRA",
+     "name": "France",
+     "slug": "france"
+    },
+    "id": 63606,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "آرثر ريندركنش",
+      "bn": "আর্থার রিন্ডারকনেচ",
+      "hi": "आर्थर रिंडरक्नेक",
+      "ru": "Артур Риндеркнеш"
+     },
+     "shortNameTranslation": {
+      "ar": "آ. ريندركنش",
+      "ru": "А. Риндеркнеш"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901475,
+   "slug": "jaume-munar-arthur-rinderknech",
+   "startTimestamp": 1788361200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "27",
+   "awayTeamSeed": "LL",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "WOrbsYtkc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-12",
+    "name": "Court 12",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18075,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 12",
+      "hi": "कोर्ट 12",
+      "bn": "কোর্ট 12"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 12"
+    }
+   },
+   "homeTeam": {
+    "name": "Tomas Martin Etcheverry",
+    "slug": "etcheverry-tomas-martin",
+    "shortName": "T. Etcheverry",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11884,
+    "playerTeamInfo": {
+     "id": 2399
+    },
+    "nameCode": "ETC",
+    "ranking": 32,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AR",
+     "alpha3": "ARG",
+     "name": "Argentina",
+     "slug": "argentina"
+    },
+    "id": 169496,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "توماس مارتن إتشيفيري",
+      "ru": "Томас Мартин Этчеверри"
+     },
+     "shortNameTranslation": {
+      "ar": "ت. إتشيفيري",
+      "bn": "টি. ইচভেরি",
+      "hi": "टी. एटचेवरी",
+      "ru": "Т. Мартин Этчеверри"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Jacob Fearnley",
+    "slug": "fearnley-jacob",
+    "shortName": "J. Fearnley",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 5633,
+    "playerTeamInfo": {
+     "id": 4502
+    },
+    "nameCode": "FEA",
+    "ranking": 101,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "GB",
+     "alpha3": "GBR",
+     "name": "United Kingdom",
+     "slug": "united-kingdom"
+    },
+    "id": 275948,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "جاكوب فيرنلي",
+      "ru": "Фирнли, Джейкоб"
+     },
+     "shortNameTranslation": {
+      "ar": "ج. فيرنلي"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901499,
+   "slug": "jacob-fearnley-tomas-martin-etcheverry",
+   "startTimestamp": 1788365400,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "12",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "CJbcsJBId",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-17",
+    "name": "Court 17",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18076,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 17",
+      "hi": "कोर्ट 17",
+      "bn": "কোর্ট 17"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 17"
+    }
+   },
+   "homeTeam": {
+    "name": "Rafael Jodar",
+    "slug": "jodar-rafael",
+    "shortName": "R. Jódar",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 27516,
+    "playerTeamInfo": {
+     "id": 15332
+    },
+    "nameCode": "JOD",
+    "ranking": 13,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ES",
+     "alpha3": "ESP",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "id": 458834,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "رافائيل جودار",
+      "ru": "Рафаэль Ходар"
+     },
+     "shortNameTranslation": {
+      "ar": "ر. جودار",
+      "ru": "Р. Ходар"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Yunchaokete Bu",
+    "slug": "bu-yunchaokete",
+    "shortName": "Y. Bu",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 4869,
+    "playerTeamInfo": {
+     "id": 5226
+    },
+    "nameCode": "YUN",
+    "ranking": 124,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "CN",
+     "alpha3": "CHN",
+     "name": "China",
+     "slug": "china"
+    },
+    "id": 254227,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "يونتشوكيت ب",
+      "ru": "Юнчаокете Бу"
+     },
+     "shortNameTranslation": {
+      "ar": "ي. ب",
+      "bn": "বি. ইউনচাওকেতে",
+      "hi": "बी. युनचाओकेटे",
+      "ru": "Ю. Бу"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16976590,
+   "slug": "rafael-jodar-yunchaokete-bu",
+   "startTimestamp": 1788366600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "32",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "EXqsHQDc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-6",
+    "name": "Court 6",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18074,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 6",
+      "hi": "कोर्ट 6",
+      "bn": "কোর্ট 6"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 6"
+    }
+   },
+   "homeTeam": {
+    "name": "Marcos Giron",
+    "slug": "giron-marcos",
+    "shortName": "M. Giron",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 6729,
+    "playerTeamInfo": {
+     "id": 288
+    },
+    "nameCode": "GIR",
+    "ranking": 78,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 42379,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ماركوس جيرون",
+      "ru": "Маркос Жирон"
+     },
+     "shortNameTranslation": {
+      "ar": "م. جيرون",
+      "bn": "এম. গিরন",
+      "hi": "एम. गिरोन"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Ignacio Buse",
+    "slug": "buse-ignacio",
+    "shortName": "I. Buse",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 12314,
+    "playerTeamInfo": {
+     "id": 5617
+    },
+    "nameCode": "BUS",
+    "ranking": 30,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "PE",
+     "alpha3": "PER",
+     "name": "Peru",
+     "slug": "peru"
+    },
+    "id": 322082,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "إغناسيو بوسي",
+      "ru": "Игнасио Бусе"
+     },
+     "shortNameTranslation": {
+      "ar": "إ. بوسي",
+      "ru": "И. Бусе"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940134,
+   "slug": "ignacio-buse-marcos-giron",
+   "startTimestamp": 1788366600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "OWPshmR",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-5",
+    "name": "Court 5",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18069,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 5",
+      "hi": "कोर्ट 5",
+      "bn": "কোর্ট 5"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 5"
+    }
+   },
+   "homeTeam": {
+    "name": "Jan Choinski",
+    "slug": "choinski-jan",
+    "shortName": "J. Choinski",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 3189,
+    "playerTeamInfo": {
+     "id": 402
+    },
+    "nameCode": "CHO",
+    "ranking": 76,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "GB",
+     "alpha3": "GBR",
+     "name": "United Kingdom",
+     "slug": "united-kingdom"
+    },
+    "id": 105607,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "يان تشوينسكي",
+      "bn": "জান চোইনস্কি",
+      "hi": "जान चोइनस्की",
+      "ru": "Чоински, Ян"
+     },
+     "shortNameTranslation": {
+      "ar": "ي. تشوينسكي"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Botic Van de Zandschulp",
+    "slug": "van-de-zandschulp-botic",
+    "shortName": "B. Van de Zandschulp",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 10342,
+    "playerTeamInfo": {
+     "id": 1936
+    },
+    "nameCode": "VAN",
+    "ranking": 70,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "NL",
+     "alpha3": "NLD",
+     "name": "Netherlands",
+     "slug": "netherlands"
+    },
+    "id": 102339,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بوتيك فان دي زاندشولب",
+      "ru": "ван де Зандсюлп, Ботик"
+     },
+     "shortNameTranslation": {
+      "ar": "ب. فان دي زاندشولب",
+      "bn": "বি. ভ্যান ডি জ্যান্ডসচাল্প",
+      "hi": "बी. वैन डी ज़ैंडस्चुल्प"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940139,
+   "slug": "jan-choinski-botic-van-de-zandschulp",
+   "startTimestamp": 1788366600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "iUabsXouc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-7",
+    "name": "Court 7",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18078,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 7",
+      "hi": "कोर्ट 7",
+      "bn": "কোর্ট 7"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 7"
+    }
+   },
+   "homeTeam": {
+    "name": "Zachary Svajda",
+    "slug": "svajda-zachary",
+    "shortName": "Z. Svajda",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 4347,
+    "playerTeamInfo": {
+     "id": 4041
+    },
+    "nameCode": "SVA",
+    "ranking": 80,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 298247,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "زاكاري سفايدا",
+      "ru": "Свайда, Захари"
+     },
+     "shortNameTranslation": {
+      "ar": "ز. سفايدا",
+      "bn": "জেড. শভাজদা",
+      "hi": "ज़ेड. स्वैज्दा"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Daniel Altmaier",
+    "slug": "altmaier-daniel",
+    "shortName": "D. Altmaier",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 8419,
+    "playerTeamInfo": {
+     "id": 2163
+    },
+    "nameCode": "ALT",
+    "ranking": 57,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "DE",
+     "alpha3": "DEU",
+     "name": "Germany",
+     "slug": "germany"
+    },
+    "id": 127208,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دانييل ألتماير",
+      "ru": "Альтмайер, Даниэль"
+     },
+     "shortNameTranslation": {
+      "ar": "د. ألتماير",
+      "bn": "ডি. অল্টমায়ার",
+      "hi": "डी. अल्टमायर"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940142,
+   "slug": "zachary-svajda-daniel-altmaier",
+   "startTimestamp": 1788366600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "firstToServe": 2,
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "KOMsFcib",
+   "status": {
+    "code": 81,
+    "description": "Suspended",
+    "type": "suspended"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-13",
+    "name": "Court 13",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18080,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 13",
+      "hi": "कोर्ट 13",
+      "bn": "কোর্ট 13"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 13"
+    }
+   },
+   "homeTeam": {
+    "name": "Alex Molčan",
+    "slug": "molcan-alex",
+    "shortName": "A. Molčan",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 4124,
+    "playerTeamInfo": {
+     "id": 509
+    },
+    "nameCode": "MOL",
+    "ranking": 86,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "SK",
+     "alpha3": "SVK",
+     "name": "Slovakia",
+     "slug": "slovakia"
+    },
+    "id": 145130,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أليكس مولكان",
+      "ru": "Молчан, Алекс"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. مولكان",
+      "bn": "এ. মোলকান",
+      "hi": "ए. मोल्कान"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Benjamin Bonzi",
+    "slug": "bonzi-benjamin",
+    "shortName": "B. Bonzi",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 6395,
+    "playerTeamInfo": {
+     "id": 375
+    },
+    "nameCode": "BON",
+    "ranking": 97,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "FR",
+     "alpha3": "FRA",
+     "name": "France",
+     "slug": "france"
+    },
+    "id": 94485,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بنجامين بونزي",
+      "ru": "Бонзи, Бенжамин"
+     },
+     "shortNameTranslation": {
+      "ar": "ب. بونزي",
+      "bn": "বি. বনজি",
+      "hi": "बी. बॉन्ज़ी"
+     }
+    }
+   },
+   "homeScore": {
+    "current": 0,
+    "display": 0,
+    "period1": 2,
+    "point": "0"
+   },
+   "awayScore": {
+    "current": 0,
+    "display": 0,
+    "period1": 1,
+    "point": "30"
+   },
+   "time": {
+    "currentPeriodStartTimestamp": 1788302044
+   },
+   "changes": {
+    "changes": [
+     "time.currentPeriodStart"
+    ],
+    "changeTimestamp": 1788310045
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940135,
+   "slug": "alex-molcan-benjamin-bonzi",
+   "startTimestamp": 1788366600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "8",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "WCnbsKjed",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "arthur-ashe-stadium",
+    "name": "Arthur Ashe Stadium",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18203,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب آرثر آش",
+      "hi": "आर्थर ऐश स्टेडियम",
+      "bn": "আর্থার অ্যাশে স্টেডিয়াম"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Arthur Ashe Stadium"
+    }
+   },
+   "homeTeam": {
+    "name": "Ben Shelton",
+    "slug": "shelton-ben",
+    "shortName": "B. Shelton",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 48721,
+    "playerTeamInfo": {
+     "id": 4948
+    },
+    "nameCode": "SHE",
+    "ranking": 9,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 385485,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "بن شيلتون",
+      "ru": "Бен Шелтон"
+     },
+     "shortNameTranslation": {
+      "ar": "ب. شيلتون",
+      "bn": "বি. শেলটন,",
+      "hi": "बी. शेल्टन",
+      "ru": "Б. Шелтон"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Hubert Hurkacz",
+    "slug": "hurkacz-hubert",
+    "shortName": "H. Hurkacz",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 32723,
+    "playerTeamInfo": {
+     "id": 77
+    },
+    "nameCode": "HUR",
+    "ranking": 47,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "PL",
+     "alpha3": "POL",
+     "name": "Poland",
+     "slug": "poland"
+    },
+    "id": 158896,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "هوبرت هوركاش",
+      "ru": "Гуркач, Хуберт"
+     },
+     "shortNameTranslation": {
+      "ar": "ه. هوركاش",
+      "bn": "এইচ. হুরকাজ",
+      "hi": "एच. हुरकाच"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901505,
+   "slug": "ben-shelton-hubert-hurkacz",
+   "startTimestamp": 1788367200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "Q",
+   "awayTeamSeed": "6",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "CrBbsOzFb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-11",
+    "name": "Court 11",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18071,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 11",
+      "hi": "कोर्ट 11",
+      "bn": "কোর্ট 11"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 11"
+    }
+   },
+   "homeTeam": {
+    "name": "Andrea Guerrieri",
+    "slug": "guerrieri-andrea",
+    "shortName": "A. Guerrieri",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 1717,
+    "playerTeamInfo": {
+     "id": 2523
+    },
+    "nameCode": "GUE",
+    "ranking": 187,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 190877,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أندريا غويرييري",
+      "ru": "Гуеррьери, Андреа"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. غويرييري"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Alex de Minaur",
+    "slug": "de-minaur-alex",
+    "shortName": "A. de Minaur",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 36737,
+    "playerTeamInfo": {
+     "id": 26
+    },
+    "nameCode": "DE",
+    "ranking": 7,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AU",
+     "alpha3": "AUS",
+     "name": "Australia",
+     "slug": "australia"
+    },
+    "id": 201239,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أليكس دي ميناور",
+      "ru": "Алекс де Минор"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. دي ميناور",
+      "bn": "এ. ডি মিনাউর",
+      "hi": "ए. डी मिनौर",
+      "ru": "А. де Минор"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16948995,
+   "slug": "alex-de-minaur-andrea-guerrieri",
+   "startTimestamp": 1788367200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "WC",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "jpMbsKfed",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-10",
+    "name": "Court 10",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18070,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 10",
+      "hi": "कोर्ट 10",
+      "bn": "কোর্ট 10"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 10"
+    }
+   },
+   "homeTeam": {
+    "name": "Fábián Marozsán",
+    "slug": "marozsan-fabian",
+    "shortName": "F. Marozsán",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 8843,
+    "playerTeamInfo": {
+     "id": 2861
+    },
+    "nameCode": "MAR",
+    "ranking": 63,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "HU",
+     "alpha3": "HUN",
+     "name": "Hungary",
+     "slug": "hungary"
+    },
+    "id": 218259,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فابيان ماروزسان",
+      "ru": "Марожан, Фабиан"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. ماروزسان",
+      "bn": "এফ. মারোজসান",
+      "hi": "एफ. मरोज़सान"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Michael Zheng",
+    "slug": "zheng-michael",
+    "shortName": "M. Zheng",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 2978,
+    "playerTeamInfo": {
+     "id": 5270
+    },
+    "nameCode": "ZHE",
+    "ranking": 107,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 385285,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "مايكل زينغ",
+      "bn": "মাইকেল ঝেং",
+      "hi": "माइकल झेंग",
+      "ru": "Майкл Чжэн"
+     },
+     "shortNameTranslation": {
+      "ar": "م. زينغ",
+      "ru": "М. Чжэн"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940143,
+   "slug": "michael-zheng-fabian-marozsan",
+   "startTimestamp": 1788367200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "firstToServe": 2,
+   "homeTeamSeed": "31",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "jwTsWttb",
+   "status": {
+    "code": 81,
+    "description": "Suspended",
+    "type": "suspended"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-12",
+    "name": "Court 12",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18075,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 12",
+      "hi": "कोर्ट 12",
+      "bn": "কোর্ট 12"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 12"
+    }
+   },
+   "homeTeam": {
+    "name": "Zizou Bergs",
+    "slug": "bergs-zizou",
+    "shortName": "Z. Bergs",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11710,
+    "playerTeamInfo": {
+     "id": 636
+    },
+    "nameCode": "BER",
+    "ranking": 37,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "BE",
+     "alpha3": "BEL",
+     "name": "Belgium",
+     "slug": "belgium"
+    },
+    "id": 170946,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "زيزو بيرغس",
+      "bn": "জিজু ভার্গস",
+      "hi": "जिजू बर्ग्स",
+      "ru": "Зизу Бергс"
+     },
+     "shortNameTranslation": {
+      "ar": "ز. بيرغس",
+      "ru": "З. Бергс"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Carlos Taberner",
+    "slug": "taberner-carlos",
+    "shortName": "C. Taberner",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 2676,
+    "playerTeamInfo": {
+     "id": 449
+    },
+    "nameCode": "TAB",
+    "ranking": 406,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ES",
+     "alpha3": "ESP",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "id": 108559,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "كارلوس تابيرنر",
+      "bn": "কার্লোস ট্যাবারনার",
+      "hi": "कार्लोस ताबेर्नेर",
+      "ru": "Табернер, Карлос"
+     },
+     "shortNameTranslation": {
+      "ar": "ك. تابيرنر"
+     }
+    }
+   },
+   "homeScore": {
+    "current": 2,
+    "display": 2,
+    "period1": 6,
+    "period2": 3,
+    "period3": 6,
+    "period4": 2,
+    "point": "0"
+   },
+   "awayScore": {
+    "current": 1,
+    "display": 1,
+    "period1": 3,
+    "period2": 6,
+    "period3": 2,
+    "period4": 1,
+    "point": "0"
+   },
+   "time": {
+    "period1": 1933,
+    "period2": 2463,
+    "period3": 2631,
+    "currentPeriodStartTimestamp": 1788313336
+   },
+   "changes": {
+    "changes": [
+     "status.code",
+     "status.description",
+     "status.type"
+    ],
+    "changeTimestamp": 1788322825
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16940140,
+   "slug": "zizou-bergs-carlos-taberner",
+   "startTimestamp": 1788371400,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "qiXsccJc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-13",
+    "name": "Court 13",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18080,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 13",
+      "hi": "कोर्ट 13",
+      "bn": "কোর্ট 13"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 13"
+    }
+   },
+   "homeTeam": {
+    "name": "Denis Shapovalov",
+    "slug": "shapovalov-denis",
+    "shortName": "D. Shapovalov",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 15640,
+    "playerTeamInfo": {
+     "id": 24
+    },
+    "nameCode": "SHA",
+    "ranking": 48,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "CA",
+     "alpha3": "CAN",
+     "name": "Canada",
+     "slug": "canada"
+    },
+    "id": 117916,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دينيس شابوفالوف",
+      "ru": "Денис Шаповалов"
+     },
+     "shortNameTranslation": {
+      "ar": "د. شابوفالوف",
+      "bn": "ডি. শাপোভালভ",
+      "hi": "डी. शापोवालोव",
+      "ru": "Д. Шаповалов"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Luca Van Assche",
+    "slug": "van-assche-luca",
+    "shortName": "L. Van Assche",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 5989,
+    "playerTeamInfo": {
+     "id": 4788
+    },
+    "nameCode": "VAN",
+    "ranking": 40,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "FR",
+     "alpha3": "FRA",
+     "name": "France",
+     "slug": "france"
+    },
+    "id": 335102,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "لوكا فان أسيش",
+      "ru": "Люка ван Аш"
+     },
+     "shortNameTranslation": {
+      "ar": "ل. فان أسيش",
+      "bn": "এল. ভ্যান অ্যাশে",
+      "hi": "एल. वान एस्च",
+      "ru": "Л. ван Аш"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901501,
+   "slug": "luca-van-assche-denis-shapovalov",
+   "startTimestamp": 1788372000,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "firstToServe": 1,
+   "awayTeamSeed": "Q",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 64,
+    "name": "Round of 128",
+    "slug": "round-of-128"
+   },
+   "customId": "vNXbsiDdc",
+   "status": {
+    "code": 81,
+    "description": "Suspended",
+    "type": "suspended"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-10",
+    "name": "Court 10",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18070,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 10",
+      "hi": "कोर्ट 10",
+      "bn": "কোর্ট 10"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 10"
+    }
+   },
+   "homeTeam": {
+    "name": "Jesper De Jong",
+    "slug": "de-jong-jesper",
+    "shortName": "J. De Jong",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 8084,
+    "playerTeamInfo": {
+     "id": 3025
+    },
+    "nameCode": "DEJ",
+    "ranking": 100,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "NL",
+     "alpha3": "NLD",
+     "name": "Netherlands",
+     "slug": "netherlands"
+    },
+    "id": 244420,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ييسبر دي يونغ",
+      "bn": "জেসপার ডি জং",
+      "hi": "जैस्पर डी जोंग",
+      "ru": "Де Йонг, Йеспер"
+     },
+     "shortNameTranslation": {
+      "ar": "ي. دي يونغ"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Francesco Passaro",
+    "slug": "passaro-francesco",
+    "shortName": "F. Passaro",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 5862,
+    "playerTeamInfo": {
+     "id": 3931
+    },
+    "nameCode": "PAS",
+    "ranking": 207,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 258908,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فرانشيسكو باسارو",
+      "bn": "ফ্রান্সেসকো প্যাসারো",
+      "hi": "फ्रांसिस्को पास्सारो",
+      "ru": "Пассаро, Франческо"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. باسارو"
+     }
+    }
+   },
+   "homeScore": {
+    "current": 1,
+    "display": 1,
+    "period1": 2,
+    "period2": 6,
+    "period3": 4,
+    "period4": 1,
+    "point": "15"
+   },
+   "awayScore": {
+    "current": 2,
+    "display": 2,
+    "period1": 6,
+    "period2": 2,
+    "period3": 6,
+    "period4": 1,
+    "point": "15"
+   },
+   "time": {
+    "period1": 2123,
+    "period2": 2839,
+    "period3": 3566,
+    "currentPeriodStartTimestamp": 1788313865
+   },
+   "changes": {
+    "changes": [
+     "status.code",
+     "status.description",
+     "status.type"
+    ],
+    "changeTimestamp": 1788322763
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16948991,
+   "slug": "francesco-passaro-jesper-de-jong",
+   "startTimestamp": 1788372600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "lUpsLICb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-6",
+    "name": "Court 6",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18074,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 6",
+      "hi": "कोर्ट 6",
+      "bn": "কোর্ট 6"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 6"
+    }
+   },
+   "homeTeam": {
+    "name": "James Duckworth",
+    "slug": "duckworth-james",
+    "shortName": "J. Duckworth",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 4738,
+    "playerTeamInfo": {
+     "id": 223
+    },
+    "nameCode": "DUC",
+    "ranking": 71,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AU",
+     "alpha3": "AUS",
+     "name": "Australia",
+     "slug": "australia"
+    },
+    "id": 39711,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "جيمس دكويرث",
+      "bn": "জেমস ডাকওয়ার্থ",
+      "hi": "जेम्स डकवर्थ",
+      "ru": "Дакворт, Джеймс"
+     },
+     "shortNameTranslation": {
+      "ar": "ج. دكويرث"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Yibing Wu",
+    "slug": "wu-yibing",
+    "shortName": "Y. Wu",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 5317,
+    "playerTeamInfo": {
+     "id": 456
+    },
+    "nameCode": "YIB",
+    "ranking": 113,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "CN",
+     "alpha3": "CHN",
+     "name": "China",
+     "slug": "china"
+    },
+    "id": 194186,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ييبينغ وو",
+      "ru": "Ву, Жибин"
+     },
+     "shortNameTranslation": {
+      "ar": "ي. وو",
+      "bn": "ডব্লিউ. ইবিং",
+      "hi": "डब्ल्यू. यीबिंग"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901486,
+   "slug": "yibing-wu-james-duckworth",
+   "startTimestamp": 1788372600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "IfVsOCic",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-12",
+    "name": "Court 12",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18075,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 12",
+      "hi": "कोर्ट 12",
+      "bn": "কোর্ট 12"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 12"
+    }
+   },
+   "homeTeam": {
+    "name": "Matteo Berrettini",
+    "slug": "berrettini-matteo",
+    "shortName": "M. Berrettini",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 45701,
+    "playerTeamInfo": {
+     "id": 56
+    },
+    "nameCode": "BER",
+    "ranking": 43,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 112783,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ماتيو بيريتيني",
+      "ru": "Маттео Берреттини"
+     },
+     "shortNameTranslation": {
+      "ar": "م. بيريتيني",
+      "bn": "এম. বেরেটিনি",
+      "hi": "एम. बेरेटिनी",
+      "ru": "М. Берреттини"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Mariano Navone",
+    "slug": "navone-mariano",
+    "shortName": "M. Navone",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 9842,
+    "playerTeamInfo": {
+     "id": 4034
+    },
+    "nameCode": "NAV",
+    "ranking": 49,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AR",
+     "alpha3": "ARG",
+     "name": "Argentina",
+     "slug": "argentina"
+    },
+    "id": 271389,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ماريانو نافوني",
+      "bn": "মারিয়ানো নাভোনে",
+      "hi": "मारियानो नवोने",
+      "ru": "Мариано Навоне"
+     },
+     "shortNameTranslation": {
+      "ar": "م. نافوني",
+      "ru": "М. Навоне"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901498,
+   "slug": "mariano-navone-matteo-berrettini",
+   "startTimestamp": 1788373200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "20",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "WvfbsOGOc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "grandstand",
+    "name": "Grandstand",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18202,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "المدرج",
+      "hi": "ग्रैंडस्टैंड",
+      "bn": "গ্র্যান্ডস্ট্যান্ড"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Grandstand"
+    }
+   },
+   "homeTeam": {
+    "name": "Dino Prižmić",
+    "slug": "prizmic-dino",
+    "shortName": "D. Prižmić",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11211,
+    "playerTeamInfo": {
+     "id": 5316
+    },
+    "nameCode": "PRI",
+    "ranking": 102,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "HR",
+     "alpha3": "HRV",
+     "name": "Croatia",
+     "slug": "croatia"
+    },
+    "id": 349089,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دينو بريزميتش",
+      "ru": "Дино Прижмич"
+     },
+     "shortNameTranslation": {
+      "ar": "د. بريزميتش",
+      "ru": "Д. Прижмич"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Tommy Paul",
+    "slug": "paul-tommy",
+    "shortName": "T. Paul",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 22484,
+    "playerTeamInfo": {
+     "id": 278
+    },
+    "nameCode": "PAU",
+    "ranking": 21,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 138546,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "تومي بول",
+      "ru": "Томми Пол"
+     },
+     "shortNameTranslation": {
+      "ar": "ت. بول",
+      "bn": "টি. পল",
+      "hi": "टी. पॉल",
+      "ru": "Т. Пол"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901490,
+   "slug": "dino-prizmic-tommy-paul",
+   "startTimestamp": 1788374400,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "18",
+   "awayTeamSeed": "Q",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "RUbcsQKDc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-5",
+    "name": "Court 5",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18069,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 5",
+      "hi": "कोर्ट 5",
+      "bn": "কোর্ট 5"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 5"
+    }
+   },
+   "homeTeam": {
+    "name": "Jiri Lehečka",
+    "slug": "lehecka-jiri",
+    "shortName": "J. Lehečka",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 15484,
+    "playerTeamInfo": {
+     "id": 3050
+    },
+    "nameCode": "LEH",
+    "ranking": 19,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "CZ",
+     "alpha3": "CZE",
+     "name": "Czechia",
+     "slug": "czechia"
+    },
+    "id": 254742,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ييري ليهتشكا",
+      "ru": "Иржи Лехечка"
+     },
+     "shortNameTranslation": {
+      "ar": "ي. ليهتشكا",
+      "bn": "জে. লেহেকা",
+      "hi": "जे. लेहका",
+      "ru": "И. Лехечка"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Toby Samuel",
+    "slug": "samuel-toby",
+    "shortName": "T. Samuel",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 2354,
+    "playerTeamInfo": {
+     "id": 5564
+    },
+    "nameCode": "SAM",
+    "ranking": 110,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "GB",
+     "alpha3": "GBR",
+     "name": "United Kingdom",
+     "slug": "united-kingdom"
+    },
+    "id": 321791,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "توبى صامويل",
+      "ru": "Самуэль, Тоби"
+     },
+     "shortNameTranslation": {
+      "ar": "ت. صامويل"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901504,
+   "slug": "toby-samuel-jiri-lehecka",
+   "startTimestamp": 1788375000,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "15",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "UrgsFupb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-7",
+    "name": "Court 7",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18078,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 7",
+      "hi": "कोर्ट 7",
+      "bn": "কোর্ট 7"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 7"
+    }
+   },
+   "homeTeam": {
+    "name": "Alexander Bublik",
+    "slug": "bublik-alexander",
+    "shortName": "A. Bublik",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 30588,
+    "playerTeamInfo": {
+     "id": 196
+    },
+    "nameCode": "BUB",
+    "ranking": 16,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "KZ",
+     "alpha3": "KAZ",
+     "name": "Kazakhstan",
+     "slug": "kazakhstan"
+    },
+    "id": 163480,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ألكسندر بوبليك",
+      "ru": "Алекса́ндр Бу́блик"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. بوبليك",
+      "bn": "এ. বুবলিক",
+      "hi": "ए. बुब्लिक",
+      "ru": "А. Бу́блик"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Adrian Mannarino",
+    "slug": "mannarino-adrian",
+    "shortName": "A. Mannarino",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 9391,
+    "playerTeamInfo": {
+     "id": 51
+    },
+    "nameCode": "MAN",
+    "ranking": 67,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "FR",
+     "alpha3": "FRA",
+     "name": "France",
+     "slug": "france"
+    },
+    "id": 15894,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "أدريان مانارينوا",
+      "ru": "Адриан Маннарино"
+     },
+     "shortNameTranslation": {
+      "ar": "أ. مانارينوا",
+      "bn": "এ. মান্নারিনো",
+      "hi": "ए. मनारिनो",
+      "ru": "А. Маннарино"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901489,
+   "slug": "alexander-bublik-adrian-mannarino",
+   "startTimestamp": 1788376800,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "Q",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "qXYsignb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-17",
+    "name": "Court 17",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18076,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 17",
+      "hi": "कोर्ट 17",
+      "bn": "কোর্ট 17"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 17"
+    }
+   },
+   "homeTeam": {
+    "name": "Lloyd Harris",
+    "slug": "harris-lloyd",
+    "shortName": "L. Harris",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 4312,
+    "playerTeamInfo": {
+     "id": 100
+    },
+    "nameCode": "HAR",
+    "ranking": 139,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ZA",
+     "alpha3": "ZAF",
+     "name": "South Africa",
+     "slug": "south-africa"
+    },
+    "id": 157808,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "لويد هاريس",
+      "ru": "Харрис, Ллойд"
+     },
+     "shortNameTranslation": {
+      "ar": "ل. هاريس",
+      "bn": "এল. হ্যারিস",
+      "hi": "एल. हैरिस"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Stefanos Tsitsipas",
+    "slug": "tsitsipas-stefanos",
+    "shortName": "S. Tsitsipas",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 54166,
+    "playerTeamInfo": {
+     "id": 11
+    },
+    "nameCode": "TSI",
+    "ranking": 53,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "GR",
+     "alpha3": "GRC",
+     "name": "Greece",
+     "slug": "greece"
+    },
+    "id": 122366,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ستيفانوس تسيتسيباس",
+      "ru": "Стефанос Циципас"
+     },
+     "shortNameTranslation": {
+      "ar": "س. تسيتسيباس",
+      "bn": "এস সিটসিপাস",
+      "hi": "एस. त्सित्सिपास",
+      "ru": "С. Циципас"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901502,
+   "slug": "lloyd-harris-stefanos-tsitsipas",
+   "startTimestamp": 1788381000,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "22",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "jzTsmDnb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "court-13",
+    "name": "Court 13",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18080,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب 13",
+      "hi": "कोर्ट 13",
+      "bn": "কোর্ট 13"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Court 13"
+    }
+   },
+   "homeTeam": {
+    "name": "Valentin Vacherot",
+    "slug": "vacherot-valentin",
+    "shortName": "V. Vacherot",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11772,
+    "playerTeamInfo": {
+     "id": 2304
+    },
+    "nameCode": "VAC",
+    "ranking": 23,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "MC",
+     "alpha3": "MCO",
+     "name": "Monaco",
+     "slug": "monaco"
+    },
+    "id": 158912,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فالنتين فاشيرو",
+      "ru": "Валентин Вашеро"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. فاشيرو",
+      "ru": "В. Вашеро"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Kamil Majchrzak",
+    "slug": "majchrzak-kamil",
+    "shortName": "K. Majchrzak",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 11007,
+    "playerTeamInfo": {
+     "id": 204
+    },
+    "nameCode": "MAJ",
+    "ranking": 73,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "PL",
+     "alpha3": "POL",
+     "name": "Poland",
+     "slug": "poland"
+    },
+    "id": 108709,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "كاميلا مايجشراك",
+      "bn": "কামিল মাজচার্জাক",
+      "hi": "कामिल माईख्रजाक",
+      "ru": "Майхжак, Камиль"
+     },
+     "shortNameTranslation": {
+      "ar": "ك. مايجشراك"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901493,
+   "slug": "valentin-vacherot-kamil-majchrzak",
+   "startTimestamp": 1788382200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "Q",
+   "awayTeamSeed": "11",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "bxPsWppd",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "louis-armstrong-stadium",
+    "name": "Louis Armstrong Stadium",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18084,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب لويس أرمسترونغ",
+      "hi": "लुईस आर्मस्ट्रांग स्टेडियम",
+      "bn": "লুই আর্মস্ট্রং স্টেডিয়াম"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Louis Armstrong Stadium"
+    }
+   },
+   "homeTeam": {
+    "name": "Rei Sakamoto",
+    "slug": "sakamoto-rei",
+    "shortName": "R. Sakamoto",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 3310,
+    "playerTeamInfo": {
+     "id": 5734
+    },
+    "nameCode": "SAK",
+    "ranking": 157,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "JP",
+     "alpha3": "JPN",
+     "name": "Japan",
+     "slug": "japan"
+    },
+    "id": 413296,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ري ساكاموتو",
+      "ru": "Рей Сакамо́то"
+     },
+     "shortNameTranslation": {
+      "ar": "ر. ساكاموتو",
+      "ru": "Р. Сакамо́то"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Frances Tiafoe",
+    "slug": "tiafoe-frances",
+    "shortName": "F. Tiafoe",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 27711,
+    "playerTeamInfo": {
+     "id": 34
+    },
+    "nameCode": "TIA",
+    "ranking": 12,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 101101,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فرانسيس تيافوي",
+      "ru": "Фрэнсис Тиафо"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. تيافوي",
+      "bn": "এফ. টিয়াফো",
+      "hi": "एफ. टियाफो",
+      "ru": "Ф. Тиафо"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901477,
+   "slug": "rei-sakamoto-frances-tiafoe",
+   "startTimestamp": 1788390000,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "awayTeamSeed": "2",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "ytkcstLLc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "venue": {
+    "city": {
+     "name": "New York",
+     "country": {
+      "alpha2": "US",
+      "alpha3": "USA",
+      "name": "USA",
+      "slug": "usa"
+     },
+     "id": 18529
+    },
+    "hidden": true,
+    "slug": "arthur-ashe-stadium",
+    "name": "Arthur Ashe Stadium",
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 18203,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ملعب آرثر آش",
+      "hi": "आर्थर ऐश स्टेडियम",
+      "bn": "আর্থার অ্যাশে স্টেডিয়াম"
+     },
+     "shortNameTranslation": {}
+    },
+    "stadium": {
+     "name": "Arthur Ashe Stadium"
+    }
+   },
+   "homeTeam": {
+    "name": "Jaime Faria",
+    "slug": "faria-jaime",
+    "shortName": "J. Faria",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 9101,
+    "playerTeamInfo": {
+     "id": 5418
+    },
+    "nameCode": "FAR",
+    "ranking": 72,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "PT",
+     "alpha3": "PRT",
+     "name": "Portugal",
+     "slug": "portugal"
+    },
+    "id": 341818,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "خايمي فاريا",
+      "ru": "Хайме Фария"
+     },
+     "shortNameTranslation": {
+      "ar": "خ. فاريا",
+      "ru": "Х. Фария"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Carlos Alcaraz",
+    "slug": "alcaraz-carlos",
+    "shortName": "C. Alcaraz",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 272853,
+    "playerTeamInfo": {
+     "id": 3111
+    },
+    "nameCode": "ALC",
+    "ranking": 3,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "ES",
+     "alpha3": "ESP",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "id": 275923,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "كارلوس ألكاراز",
+      "ru": "Карлос Алькарас"
+     },
+     "shortNameTranslation": {
+      "ar": "ك. ألكاراز",
+      "bn": "সি আলকারাজ",
+      "hi": "सी. अल्काराज़",
+      "ru": "К. Алькарас"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901495,
+   "slug": "jaime-faria-carlos-alcaraz",
+   "startTimestamp": 1788394200,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "WC",
+   "awayTeamSeed": "13",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "BmTbspvec",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "homeTeam": {
+    "name": "Dane Sweeny",
+    "slug": "sweeny-dane",
+    "shortName": "D. Sweeny",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 2332,
+    "playerTeamInfo": {
+     "id": 4444
+    },
+    "nameCode": "SWE",
+    "ranking": 123,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AU",
+     "alpha3": "AUS",
+     "name": "Australia",
+     "slug": "australia"
+    },
+    "id": 233126,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "دين سوييني",
+      "bn": "ডেন সুইনি",
+      "hi": "डेन स्वीनी",
+      "ru": "Суини, Дэйн"
+     },
+     "shortNameTranslation": {
+      "ar": "د. سوييني"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Lorenzo Musetti",
+    "slug": "musetti-lorenzo",
+    "shortName": "L. Musetti",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 62153,
+    "playerTeamInfo": {
+     "id": 3705
+    },
+    "nameCode": "MUS",
+    "ranking": 14,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 261015,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "لورينزو موسيتي",
+      "ru": "Лоренцо Музетти"
+     },
+     "shortNameTranslation": {
+      "ar": "ل. موسيتي",
+      "bn": "এল. মুসেটি",
+      "hi": "एल. मुसेटी",
+      "ru": "Л. Музетти"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901506,
+   "slug": "lorenzo-musetti-dane-sweeny",
+   "startTimestamp": 1788447600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "9",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "RvebsMLrc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "homeTeam": {
+    "name": "Taylor Fritz",
+    "slug": "fritz-taylor",
+    "shortName": "T. Fritz",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 44307,
+    "playerTeamInfo": {
+     "id": 46
+    },
+    "nameCode": "FRI",
+    "ranking": 10,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 136042,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "تايلور فريتز",
+      "ru": "Те́йлор Фриц"
+     },
+     "shortNameTranslation": {
+      "ar": "ت. فريتز",
+      "bn": "টি. ফ্রিটজ",
+      "hi": "टी. फ्रिट्ज",
+      "ru": "Т. Фриц"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Mattia Bellucci",
+    "slug": "bellucci-mattia",
+    "shortName": "M. Bellucci",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 10707,
+    "playerTeamInfo": {
+     "id": 3143
+    },
+    "nameCode": "BEL",
+    "ranking": 95,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 294337,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ماتيا بيلوتشي",
+      "bn": "মাতিয়া বেলুচি",
+      "hi": "मैटिया बेलुचि",
+      "ru": "Маттиа Беллуччи"
+     },
+     "shortNameTranslation": {
+      "ar": "م. بيلوتشي",
+      "ru": "М. Беллуччи"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901473,
+   "slug": "mattia-bellucci-taylor-fritz",
+   "startTimestamp": 1788447600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "3",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "FbLsnPBb",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "homeTeam": {
+    "name": "Felix Auger-Aliassime",
+    "slug": "auger-aliassime-felix",
+    "shortName": "F. Auger-Aliassime",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 35507,
+    "playerTeamInfo": {
+     "id": 60
+    },
+    "nameCode": "AUG",
+    "ranking": 4,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "CA",
+     "alpha3": "CAN",
+     "name": "Canada",
+     "slug": "canada"
+    },
+    "id": 192013,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فيليكس أوجر-علياسيم",
+      "ru": "Фе́ликс Оже-Альясси́м"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. أوجر-علياسيم",
+      "bn": "এফ অগার-আলিয়াসিম",
+      "hi": "एफ. ऑगर-अलियासिम",
+      "ru": "Фе. Оже-Альясси́м"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Karen Khachanov",
+    "slug": "khachanov-karen",
+    "shortName": "K. Khachanov",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 20058,
+    "playerTeamInfo": {
+     "id": 12
+    },
+    "nameCode": "KHA",
+    "ranking": 50,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "RU",
+     "alpha3": "RUS",
+     "name": "Russia",
+     "slug": "russia"
+    },
+    "id": 90080,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "كارين خاشانوف",
+      "ru": "Карен Хачанов"
+     },
+     "shortNameTranslation": {
+      "ar": "ك. خاشانوف",
+      "bn": "কে. খাচানভ",
+      "hi": "के. खाचानोव",
+      "ru": "К. Хачанов"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901481,
+   "slug": "felix-auger-aliassime-karen-khachanov",
+   "startTimestamp": 1788447600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "Q",
+   "awayTeamSeed": "5",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "Fyjcswjkc",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "homeTeam": {
+    "name": "Tristan Schoolkate",
+    "slug": "schoolkate-tristan",
+    "shortName": "T. Schoolkate",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 3124,
+    "playerTeamInfo": {
+     "id": 4439
+    },
+    "nameCode": "SCH",
+    "ranking": 180,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "AU",
+     "alpha3": "AUS",
+     "name": "Australia",
+     "slug": "australia"
+    },
+    "id": 275471,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "تريستان سكولكيت",
+      "ru": "Скулкейт, Тристан"
+     },
+     "shortNameTranslation": {
+      "ar": "ت. سكولكيت"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Flavio Cobolli",
+    "slug": "flavio-cobolli",
+    "shortName": "F. Cobolli",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 40999,
+    "playerTeamInfo": {
+     "id": 4435
+    },
+    "nameCode": "COB",
+    "ranking": 6,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "IT",
+     "alpha3": "ITA",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "id": 273680,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فلافيو كوبولي",
+      "ru": "Флавио Коболли"
+     },
+     "shortNameTranslation": {
+      "ar": "ف. كوبولي",
+      "bn": "এফ. কোবলি",
+      "hi": "एफ. कोबोल्ली",
+      "ru": "Ф. Коболли"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901476,
+   "slug": "tristan-schoolkate-flavio-cobolli",
+   "startTimestamp": 1788447600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  },
+  {
+   "homeTeamSeed": "WC",
+   "awayTeamSeed": "14",
+   "tournament": {
+    "name": "US Open, New York, USA",
+    "slug": "us-open-new-york-usa",
+    "category": {
+     "name": "ATP",
+     "slug": "atp",
+     "sport": {
+      "name": "Tennis",
+      "slug": "tennis",
+      "id": 5
+     },
+     "priority": 8,
+     "country": {},
+     "id": 3,
+     "flag": "atp",
+     "fieldTranslations": {
+      "nameTranslation": {
+       "bn": "এটিপি",
+       "hi": "डब्ल्यूटीए",
+       "ar": "رابطة محترفي التنس",
+       "ru": "ATP"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "uniqueTournament": {
+     "name": "US Open, Men",
+     "slug": "us-open",
+     "primaryColorHex": "#00288c",
+     "secondaryColorHex": "#63a1e0",
+     "category": {
+      "name": "ATP",
+      "slug": "atp",
+      "sport": {
+       "name": "Tennis",
+       "slug": "tennis",
+       "id": 5
+      },
+      "priority": 8,
+      "country": {},
+      "id": 3,
+      "flag": "atp",
+      "fieldTranslations": {
+       "nameTranslation": {
+        "bn": "এটিপি",
+        "hi": "डब्ल्यूटीए",
+        "ar": "رابطة محترفي التنس",
+        "ru": "ATP"
+       },
+       "shortNameTranslation": {}
+      }
+     },
+     "userCount": 31705,
+     "groundType": "Hardcourt outdoor",
+     "tennisPoints": 2000,
+     "hasPerformanceGraphFeature": false,
+     "country": {},
+     "id": 2449,
+     "hasEventPlayerStatistics": false,
+     "displayInverseHomeAwayTeams": false,
+     "fieldTranslations": {
+      "nameTranslation": {
+       "de": "US Open Herreneinzel",
+       "el": "Αμερικανικό Όπεν, απλό ανδρών",
+       "es": "US Open, masculino",
+       "es-la": "US Open, Varonil",
+       "fr": "US Open simple messieurs",
+       "hu": "US Open, férfi egyes",
+       "id": "US Open, Tunggal (Pa)",
+       "it": "US Open (M)",
+       "ja": "全米オープン、男子",
+       "ko": "US 오픈 남자 단식",
+       "nl": "US Open mannenenkelspel",
+       "no": "US Open, menn",
+       "pl": "US Open, singiel mężczyzn",
+       "pt": "US Open masculino",
+       "pt-pt": "US Open (M)",
+       "ro": "US Open, simplu masculin",
+       "sr": "Ју Ес опен, појединачно (М)",
+       "sv": "US Open, herrsingel",
+       "th": "ยูเอสโอเพน ชายเดี่ยว",
+       "vi": "Mỹ Mở rộng, đơn nam",
+       "hi": "यूएस ओपन, पुरुष",
+       "ru": "US Open, мужской одиночный разряд",
+       "az": "US Open, Kişilər",
+       "hr": "US Open (M)",
+       "ar": "بطولة أمريكا المفتوحة، فردي الرجال",
+       "bn": "ইউএস ওপেন, পুরুষ একক",
+       "tr": "Amerika Açık, Tek Erkekler"
+      },
+      "shortNameTranslation": {}
+     }
+    },
+    "priority": 30,
+    "isGroup": false,
+    "id": 196855,
+    "endTimestamp": 1789257600,
+    "startTimestamp": 1788048000
+   },
+   "season": {
+    "name": "US Open Men Singles 2026",
+    "year": "2026",
+    "editor": false,
+    "id": 85956
+   },
+   "roundInfo": {
+    "round": 32,
+    "name": "Round of 64",
+    "slug": "round-of-64"
+   },
+   "customId": "UWfstgpd",
+   "status": {
+    "code": 0,
+    "description": "Not started",
+    "type": "notstarted"
+   },
+   "homeTeam": {
+    "name": "Gael Monfils",
+    "slug": "monfils-gael",
+    "shortName": "G. Monfils",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 23962,
+    "playerTeamInfo": {
+     "id": 23
+    },
+    "nameCode": "MON",
+    "ranking": 311,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "FR",
+     "alpha3": "FRA",
+     "name": "France",
+     "slug": "france"
+    },
+    "id": 14844,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "غايل مونفيلس",
+      "ru": "Монфис, Гаэль"
+     },
+     "shortNameTranslation": {
+      "ar": "غ. مونفيلس",
+      "bn": "জি. মনফিলস",
+      "hi": "जी. मोनफ़िल्स"
+     }
+    }
+   },
+   "awayTeam": {
+    "name": "Learner Tien",
+    "slug": "tien-learner",
+    "shortName": "L. Tien",
+    "gender": "M",
+    "sport": {
+     "name": "Tennis",
+     "slug": "tennis",
+     "id": 5
+    },
+    "userCount": 14740,
+    "playerTeamInfo": {
+     "id": 5357
+    },
+    "nameCode": "TIE",
+    "ranking": 15,
+    "disabled": false,
+    "national": false,
+    "type": 1,
+    "country": {
+     "alpha2": "US",
+     "alpha3": "USA",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "id": 412818,
+    "subTeams": [],
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ليرنر تيان",
+      "bn": "লার্নার তিয়েন",
+      "hi": "लर्नर टिएन",
+      "ru": "Лёрнер Тьен"
+     },
+     "shortNameTranslation": {
+      "ar": "ل. تيان",
+      "ru": "Л. Тьен"
+     }
+    }
+   },
+   "homeScore": {},
+   "awayScore": {},
+   "time": {},
+   "changes": {
+    "changeTimestamp": 0
+   },
+   "hasGlobalHighlights": false,
+   "crowdsourcingDataDisplayEnabled": false,
+   "id": 16901478,
+   "slug": "learner-tien-gael-monfils",
+   "startTimestamp": 1788447600,
+   "periods": {
+    "point": "Game",
+    "current": "Match",
+    "period1": "1st set",
+    "period2": "2nd set",
+    "period3": "3rd set",
+    "period4": "4th set",
+    "period5": "5th set"
+   },
+   "finalResultOnly": false,
+   "feedLocked": false,
+   "groundType": "Hardcourt outdoor",
+   "isEditor": false,
+   "eventFilters": {
+    "category": [
+     "singles"
+    ],
+    "level": [
+     "pro"
+    ],
+    "tournament": [
+     "grand-slam"
+    ],
+    "gender": [
+     "M"
+    ]
+   }
+  }
+ ],
+ "hasNextPage": true
+}
