@@ -4068,3 +4068,73 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   reworded; the 200-key push-registry ceiling gets a VISIBLE notice at
   the ceiling instead of silent push loss. (9) STRING SET approved as
   listed in the Stage 1 report, all six languages via the parity gate.
+
+- 2026-09-02 (ROUND 5 STAGE 2 — BASICS MECHANICS, NO BILLING; flag-gated,
+  launch state unchanged). ENFORCEMENT LAYER: `src/core/entitlement.ts`
+  (pure) turns store state into planner EFFECTS — `PlanEntitlement
+  {tier, removeAfterUtc?, removeFuture?}`: Premium or an OPEN sync gate
+  → no effect at all (the rollout switch is inert while open); Free →
+  the planner skips `create` ONLY; trial lapse → boundary = trial start
+  + 30d from the store receipt, placed events starting after it are
+  removed; paid lapse → nothing added or removed inside the 72h renew
+  window, then every not-yet-started placed event is removed; the past
+  is never touched; removals are judged on the LEDGER (what is in the
+  calendar), capped at DOWNGRADE_DELETE_CAP = 40 per pass, and flow
+  through the engine's existing delete op (ledger clears per event);
+  restore = Premium again = the normal create path refills in one pass.
+  Offline grace 3 days past a cached period end. `planSync` takes it as
+  an OPTIONS OBJECT (11th parameter), every existing caller unchanged;
+  the engine passes `planEntitlement()` (core/entitlementStore.ts).
+  Rule-2 invariant pinned by tests: unfollow-deletes, cancellations,
+  opt-in past-deletion run identically on every tier. FLAGS:
+  `status/flags` → `src/core/flags.ts`, hourly cached server read, field-
+  by-field parse, FAIL-SAFE DEFAULTS = launch state (syncGate 'open',
+  adsEnabled false, paywallDismissible true, analyticsEnabled true); a
+  dev-only override (`flags.override.v1`) lets a test build run flag-on
+  without writing production. ANALYTICS: Firebase Analytics via
+  `@react-native-firebase/analytics` 26.0.0 (matching app/messaging),
+  `src/core/analytics.ts`: the brief's funnel events only (follow wired
+  now; paywall shown/accepted/declined per entry, trial started/
+  converted, lapsed exported for Stages 3–4); consent map defaults
+  analytics_storage on and every ad signal off until the Stage 6 form;
+  lazy native load, every call guarded — measurement cannot crash the
+  product. REMINDERS (the Free channel): `src/features/reminders/` — pure
+  planner (`desiredNotifications`: timed fixtures only, one slot, soonest
+  50 under iOS's 64; `diffNotifications`: our prefix only, idempotent,
+  60s tolerance), MMKV tri-state choice, expo-notifications wrapper (probe
+  never prompts; DATE triggers; Android channel `fixtures`, DEFAULT
+  importance, inexact alarms), `reconcileFixtureReminders` runs only when
+  the choice is 'enabled' AND the grant holds. Wired through a
+  COMPOSITION LAYER `src/wiring/` (not a feature, so it may reach across
+  features, like App.tsx): the engine emits `fixturesRefreshed` after
+  BOTH sync paths and the reminders reconcile subscribes; a notification
+  tap opens the fixture card with no fly-in frame. Preferences Reminders
+  gains an Off/On row: On probes first, asks only from never-asked, a
+  denial shows the Settings link — never a re-prompt. iOS lore from the
+  build: a DATE trigger reads back as a time interval, so the fire time
+  is stamped in `content.data` or every sync would reschedule
+  everything. RULING 7 FIXES: (a) per-event colour reaches REST events —
+  `DesiredEvent.colour` from the event settings, `LedgerEntry.colour`
+  (absent = none), `entryMatches` compares it, the engine passes it, and
+  `googleColorIdFor(hex)` maps to Google's eleven swatches HUE-FIRST with
+  greys pinned to Graphite (RGB distance sent black to the darkest
+  green); the product palette lands Tomato/Banana/Basil/Peacock/Grape/
+  Graphite; (b) calendar permission PROBES FIRST: granted → no dialog on
+  any later sync; denied → typed `permission-denied` with `canAskAgain`
+  and NO prompt; the Schedule chip offers Open Settings on that error.
+  LOCKS (Stage 2 "Sync-row states and lock badges"): Preferences' Sync
+  row shows "Part of Premium · Start 14 days free" when locked and not
+  connected, tapping `requestPaywall('on_demand')` (a no-op until a
+  presenter registers in Stage 3/4); schedule rows carry a lock badge
+  (with a spoken a11y form) for fixtures not in the calendar when
+  locked. RULING 8: AGENTS rule 16 now names DOWNGRADE_DELETE_CAP (the
+  phantom SYNCED_DELETE_CAP retired with REST); PRODUCT and ARCHITECTURE
+  state the client-planner enforcement model; the Preferences reminder
+  footnote reads "Changes apply on the next sync."; the 200-key push-
+  registry ceiling raises a once-per-session toast. STRINGS: the approved
+  Stage 2 set in six languages via the parity gate (premium.syncRow,
+  premium.lockA11y, notifications.off/openSettings, reminders.notify,
+  reminders.notification.body, registry.ceiling, settings.reminders.on).
+  NOT IN THIS STAGE, by design: the paywall itself, RevenueCat, the
+  downgrade screen and its single notification, ads, the proactive
+  onboarding sequence — Stages 3–6.
