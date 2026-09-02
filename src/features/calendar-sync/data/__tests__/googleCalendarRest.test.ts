@@ -4,6 +4,8 @@
 
 import { ok, Result } from '../../../../core/result';
 import {
+  calendarColourPatch,
+  contrastForeground,
   createOwnedCalendar,
   deleteRestEvent,
   FIXTURE_KEY,
@@ -11,6 +13,7 @@ import {
   listRestTaggedEvents,
   MARKER_KEY,
   MARKER_VALUE,
+  patchCalendarListColour,
   RestEventInput,
   updateRestEvent,
 } from '../googleCalendarRest';
@@ -210,4 +213,95 @@ test('ATTACK: 401 becomes auth-expired, never unknown, and never retries', async
   expect(r.ok).toBe(false);
   if (!r.ok) expect(r.error.kind).toBe('auth-expired');
   expect(calls.length).toBe(1);
+});
+
+// ── Calendar colour (Round 4 B4 item 3) ─────────────────────────────
+
+test('calendar colour PATCH hits the calendarList entry with colorRgbFormat=true and an RGB pair', async () => {
+  const { fetchFn, calls } = fakeFetch([{ status: 200, json: { id: 'cal-9' } }]);
+  const r = await patchCalendarListColour('cal-9', '#1463F3', token, {
+    fetchFn,
+    sleep: noSleep,
+  });
+  expect(r).toEqual(ok(undefined));
+  expect(calls[0]!.init.method).toBe('PATCH');
+  expect(calls[0]!.url).toBe(
+    'https://www.googleapis.com/calendar/v3/users/me/calendarList/cal-9?colorRgbFormat=true',
+  );
+  expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+    backgroundColor: '#1463f3',
+    foregroundColor: '#ffffff',
+  });
+});
+
+test('the patch builder: encoded id, lowercase hex with a leading #, contrast-picked foreground', () => {
+  expect(calendarColourPatch('a b@group.calendar.google.com', '52525B')).toEqual({
+    path: '/users/me/calendarList/a%20b%40group.calendar.google.com?colorRgbFormat=true',
+    body: { backgroundColor: '#52525b', foregroundColor: '#ffffff' },
+  });
+  // Every swatch the picker offers gets the higher-contrast foreground
+  // (WCAG luminance break-even 0.179): the mid-tone green and orange
+  // take dark text, the deep red and blue take white.
+  expect(contrastForeground('#EA580C')).toBe('#000000'); // orange, L≈0.25
+  expect(contrastForeground('#C81E1E')).toBe('#ffffff'); // red, L≈0.13
+  expect(contrastForeground('#16A34A')).toBe('#000000'); // green, L≈0.27
+  expect(contrastForeground('#1463F3')).toBe('#ffffff'); // KickOffCal blue
+  expect(contrastForeground('#ffffff')).toBe('#000000');
+  expect(contrastForeground('#000000')).toBe('#ffffff');
+  expect(contrastForeground('nonsense')).toBe('#ffffff'); // never throws
+});
+
+test('ATTACK: a 403 insufficientPermissions surfaces ONCE as a typed refusal — never retried as rate limiting', async () => {
+  // If the scope does not cover calendarList for an app-created entry,
+  // Google answers 403 with reason insufficientPermissions. The old
+  // transport treated EVERY 403 as a rate limit: three retries, seven
+  // seconds of backoff, then a generic provider error — the refusal
+  // would have looked like flakiness. Reintroduce the response and
+  // require the immediate, typed answer.
+  const forbidden = {
+    error: {
+      code: 403,
+      message: 'Insufficient Permission',
+      errors: [
+        {
+          domain: 'global',
+          reason: 'insufficientPermissions',
+          message: 'Insufficient Permission',
+        },
+      ],
+    },
+  };
+  const { fetchFn, calls } = fakeFetch([{ status: 403, json: forbidden }]);
+  const slept: number[] = [];
+  const r = await patchCalendarListColour('cal-9', '#1463F3', token, {
+    fetchFn,
+    sleep: async (ms) => {
+      slept.push(ms);
+    },
+  });
+  expect(r.ok).toBe(false);
+  if (!r.ok) {
+    expect(r.error.kind).toBe('provider');
+    if (r.error.kind === 'provider') expect(r.error.status).toBe(403);
+  }
+  expect(calls.length).toBe(1);
+  expect(slept).toEqual([]);
+});
+
+test('403 rateLimitExceeded still retries with backoff, and a reasonless 403 keeps the rate-limit assumption', async () => {
+  const limited = { error: { code: 403, errors: [{ reason: 'rateLimitExceeded' }] } };
+  const a = fakeFetch([{ status: 403, json: limited }, { status: 200, json: {} }]);
+  const r = await patchCalendarListColour('cal-9', '#1463F3', token, {
+    fetchFn: a.fetchFn,
+    sleep: noSleep,
+  });
+  expect(r).toEqual(ok(undefined));
+  expect(a.calls.length).toBe(2);
+  const bare = fakeFetch([{ status: 403 }, { status: 200, json: { id: 'ev-1' } }]);
+  const r2 = await insertRestEvent('cal-9', timed, token, {
+    fetchFn: bare.fetchFn,
+    sleep: noSleep,
+  });
+  expect(r2).toEqual(ok('ev-1'));
+  expect(bare.calls.length).toBe(2);
 });

@@ -77,7 +77,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Gameday adds your followed teams' fixtures to your calendar and keeps them up to date."
+          "calendarPermission": "KickOffCal adds your followed teams' fixtures to your calendar and keeps them up to date."
         }
       ],
       "expo-notifications",

@@ -544,6 +544,8 @@ export const fr: Catalog = {
   'settings.calendar.googleReconnectA11y':
     'KickOffCal dans Google Agenda. Se reconnecter à Google',
   'settings.calendar.googleReconnected': 'Google Agenda reconnecté',
+  'settings.calendar.googleConnectedCaption': 'Dans votre Google Agenda',
+  'settings.calendar.googleConnectedA11y': 'KickOffCal dans Google Agenda',
   'settings.calendar.disconnectGoogle': 'Déconnecter Google Agenda',
   'settings.calendar.disconnectCaption':
     'Votre calendrier et ses événements restent intacts',
@@ -551,6 +553,8 @@ export const fr: Catalog = {
   'settings.calendar.connectGoogle': 'Connecter Google Agenda',
   'settings.calendar.connectCaption':
     'Les matchs restent dans l’application d’ici là',
+  'settings.calendar.connectLegacyCaption':
+    'Les matchs déjà dans votre calendrier restent où ils sont',
   'settings.calendar.choose': 'Choisir un calendrier',
   'settings.calendar.autoPickedCaption':
     'Choisi automatiquement à la connexion de votre calendrier',
@@ -567,6 +571,8 @@ export const fr: Catalog = {
     'La couleur du calendrier est maintenant {colour}',
   'settings.calendar.colourSaved':
     'Couleur enregistrée — appliquée à la connexion de votre calendrier',
+  'settings.calendar.colourRefused':
+    'Google Agenda n’a pas accepté la couleur — vous pouvez la régler dans l’app Google Agenda',
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'votre calendrier',
 
@@ -684,7 +690,7 @@ export const fr: Catalog = {
   'settings.target.moved_other': '{n} matchs déplacés vers {calendar}',
   'settings.target.nowGoTo': 'Les matchs vont désormais dans {calendar}',
   'settings.target.scopePromise':
-    'Quel que soit votre choix, KickOffCal se contente d’ajouter, modifier ou retirer les matchs qu’il y a placés. Changer déplace tout — rien n’est laissé derrière.',
+    'Quel que soit votre choix, KickOffCal se contente d’ajouter, modifier ou retirer les matchs qu’il y a placés. Passer d’un de ces calendriers à l’autre déplace ces matchs avec vous.',
 
   // ── CreditsScreen ──────────────────────────────────────────────────
   'settings.credits.intro':

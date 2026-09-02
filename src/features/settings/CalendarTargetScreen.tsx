@@ -35,7 +35,8 @@ import {
   CalendarTarget,
   storedTarget,
 } from '../calendar-sync/data/calendarTargetStore';
-import { calendarChoice } from '../calendar-sync/data/calendarChoice';
+import { calendarConnected } from '../calendar-sync/data/calendarConnection';
+import { canPickCalendarTarget } from '../calendar-sync/data/driver';
 import { loadLedger } from '../calendar-sync/data/ledger';
 import { MoveProgress, switchCalendarTarget } from '../calendar-sync/syncEngine';
 
@@ -48,15 +49,22 @@ export default function CalendarTargetScreen({ navigation }: Props) {
   const [target, setTarget] = useState<CalendarTarget | null>(storedTarget);
   const [progress, setProgress] = useState<MoveProgress | null>(null);
   const [busy, setBusy] = useState(false);
-  const connected = calendarChoice() === 'enabled';
+  // Connected THROUGH A WRITE PATH (B4 item 5): a legacy Android install
+  // whose stored choice still says enabled is sent to the Connect flow
+  // like anyone else.
+  const connected = calendarConnected();
+  // Under REST there is exactly one calendar and it is ours — no choice
+  // to make. Both routes into this screen are hidden then (B4 item 6);
+  // this is the belt: the current target, and no rows to pick from.
+  const pickable = canPickCalendarTarget();
 
   const load = useCallback(() => {
-    if (!connected) return;
+    if (!connected || !pickable) return;
     void listTargetOptions().then((r) => {
       if (r.ok) setOptions(r.value);
       else setError(messageOf(r.error));
     });
-  }, [connected]);
+  }, [connected, pickable]);
 
   useEffect(load, [load]);
   // The target can change under this screen: any sync resolves it, and
@@ -109,28 +117,30 @@ export default function CalendarTargetScreen({ navigation }: Props) {
   }
 
   const currentId = target?.calendarId ?? null;
-  const groups = options ? groupForPicker(options.calendars) : [];
+  const groups = options && pickable ? groupForPicker(options.calendars) : [];
   // iOS can create a dedicated calendar inside any writable source;
   // Android cannot create inside a Google account at all, so its only
   // create option is the device-local fallback.
   const createRows: Array<{ key: string; title: string; req: TargetRequest }> =
-    Platform.OS === 'ios'
-      ? (options?.sources ?? [])
-          .filter((s) => s.sourceId !== options?.ourSourceId)
-          .map((s) => ({
-            key: s.sourceId,
-            title: tr('settings.target.newInSource', { source: s.name }),
-            req: { kind: 'create', sourceId: s.sourceId },
-          }))
-      : options && options.ourCalendarId === null
-        ? [
-            {
-              key: 'local',
-              title: tr('settings.target.newOnDevice'),
-              req: { kind: 'create' },
-            },
-          ]
-        : [];
+    !pickable
+      ? []
+      : Platform.OS === 'ios'
+        ? (options?.sources ?? [])
+            .filter((s) => s.sourceId !== options?.ourSourceId)
+            .map((s) => ({
+              key: s.sourceId,
+              title: tr('settings.target.newInSource', { source: s.name }),
+              req: { kind: 'create', sourceId: s.sourceId },
+            }))
+        : options && options.ourCalendarId === null
+          ? [
+              {
+                key: 'local',
+                title: tr('settings.target.newOnDevice'),
+                req: { kind: 'create' },
+              },
+            ]
+          : [];
 
   const rowFor = (c: CalendarLike) => {
     const ours = c.id === options?.ourCalendarId;
@@ -203,7 +213,7 @@ export default function CalendarTargetScreen({ navigation }: Props) {
         </Text>
       ) : null}
 
-      {options === null && error === null ? (
+      {pickable && options === null && error === null ? (
         <Text
           style={[type.secondary, { color: t.textSecondary, padding: spacing.l }]}
         >
@@ -234,7 +244,7 @@ export default function CalendarTargetScreen({ navigation }: Props) {
         </View>
       ) : null}
 
-      {options !== null ? (
+      {pickable && options !== null ? (
         <Text
           style={[
             type.caption,

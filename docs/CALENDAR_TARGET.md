@@ -8,6 +8,32 @@ checks remain and are listed at the end — the simulator cannot do them.
 Everything below the verdict was verified against real devices and the
 installed SDK on 2026-07-30, not assumed.
 
+**Status update 2026-09-02 (Round 4 B4) — READ FIRST.** This document
+describes the PROVIDER path, which is now iOS-only. Android writes
+through Google's Calendar REST API into a calendar the app creates,
+under the `calendar.app.created` scope (Prompt 28, "REST-always") —
+see docs/ARCHITECTURE.md → *Calendar write paths*. Consequences for
+what follows:
+
+- The Android rows below ("write into the primary Google calendar",
+  "LOCAL fallback") are the PRE-P28 behaviour, kept as the record of
+  what legacy installs did. A legacy Android install is now
+  auto-downgraded to *needs Google Connect*: the engine stops writing
+  through the provider path, the calendar-off banner and the Connect
+  row appear, and the events the old path wrote stay in the user's own
+  calendar — the REST scope cannot reach them (design-accepted; the
+  Connect row says so).
+- "No OAuth is required on either platform" is true for iOS only.
+  Android requires a Google sign-in; declining it leaves the in-app
+  calendar working as the whole product.
+- The picker (this document's Preferences row and the priming screen's
+  "Use a different calendar") is unreachable under REST: one calendar,
+  ours by construction, nothing to pick.
+- The persisted target (`calendarTarget.v1`) is written by BOTH paths
+  now — the REST driver records `{ label: 'KickOffCal', kind: 'ours',
+  accountLabel: 'Google Calendar' }` on every resolve, and connect /
+  disconnect clear whatever the other path left there.
+
 ## Why this exists
 
 The product promise is: *your fixtures land in the calendar you already
@@ -39,7 +65,8 @@ to also mean *isolation from the user's account*. Those are separable.
 
 **One feature: the calendar target.** Not "dedicated vs cloud" — a
 dedicated calendar CAN be cloud-synced. No OAuth is required on either
-platform.
+platform. *(Superseded for Android on 2026-09-02 — see the status
+update above; iOS remains OAuth-free.)*
 
 - **iOS**: EventKit can create a calendar in any writable source,
   including iCloud. So we create a dedicated **KickOffCal** calendar in
@@ -127,7 +154,8 @@ in the target calendar is never touched by prune or recovery.
 - `src/core/navigation.ts`, `App.tsx` — register the screen.
 - `docs/DECISIONS.md` — supersede the M4 "dedicated calendar only"
   line; record that isolation-from-data and isolation-from-account are
-  separate, and that no OAuth is used.
+  separate, and that no OAuth is used *(iOS; Android signs in to Google
+  since Prompt 28 — status update above)*.
 - `docs/PLAN.md` — M4 "Calendar choice" entry is no longer "satisfied
   by decision".
 

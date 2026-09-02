@@ -33,7 +33,7 @@ import { ExpandingHero } from '../ExpandingHero';
 // Namespace import: `t` is this component's theme binding, so the
 // catalog rides `i18n.t` here (and in every screen with a theme).
 import * as i18n from '../../../core/i18n';
-import { calendarChoice } from '../../calendar-sync/data/calendarChoice';
+import { calendarConnected } from '../../calendar-sync/data/calendarConnection';
 import { isExcluded, loadExclusions } from '../../calendar-sync/data/exclusionStore';
 import { TabScreenProps } from '../../../core/navigation';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
@@ -293,7 +293,10 @@ export default function HomeScreen({ navigation }: Props) {
         </Text>
       </Pressable>
 
-      {followCount > 0 && calendarChoice() !== 'enabled' ? (
+      {/* Connected through a WRITE PATH, not merely opted in (B4 item
+          5): a legacy Android install still waiting to connect Google
+          sees the banner, not silence over a calendar nothing reaches. */}
+      {followCount > 0 && !calendarConnected() ? (
         <CalendarOffBanner
           fixtureCount={fixtures.length}
           onEnable={() => navigation.navigate('CalendarPriming')}

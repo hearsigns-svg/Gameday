@@ -519,6 +519,8 @@ export const it: Catalog = {
   'settings.calendar.googleReconnectA11y':
     'KickOffCal in Google Calendar. Ricollega l’accesso Google',
   'settings.calendar.googleReconnected': 'Google Calendar ricollegato',
+  'settings.calendar.googleConnectedCaption': 'Nel tuo Google Calendar',
+  'settings.calendar.googleConnectedA11y': 'KickOffCal in Google Calendar',
   'settings.calendar.disconnectGoogle': 'Scollega Google Calendar',
   'settings.calendar.disconnectCaption':
     'Il tuo calendario e i suoi eventi restano intatti',
@@ -526,6 +528,8 @@ export const it: Catalog = {
   'settings.calendar.connectGoogle': 'Collega Google Calendar',
   'settings.calendar.connectCaption':
     'Fino ad allora le partite vivono nell’app',
+  'settings.calendar.connectLegacyCaption':
+    'Le partite già nel tuo calendario restano dove sono',
   'settings.calendar.choose': 'Scegli un calendario',
   'settings.calendar.autoPickedCaption':
     'Scelto in automatico quando colleghi il calendario',
@@ -541,6 +545,8 @@ export const it: Catalog = {
   'settings.calendar.colourApplied': 'Il colore del calendario ora è {colour}',
   'settings.calendar.colourSaved':
     'Colore salvato — si applica quando colleghi il calendario',
+  'settings.calendar.colourRefused':
+    'Google Calendar non ha accettato il colore — puoi impostarlo nell’app Google Calendar',
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'il tuo calendario',
 
@@ -661,7 +667,7 @@ export const it: Catalog = {
   'settings.target.moved_other': '{n} partite spostate in {calendar}',
   'settings.target.nowGoTo': 'Le partite ora vanno in {calendar}',
   'settings.target.scopePromise':
-    'Qualunque tu scelga, KickOffCal aggiunge, modifica o rimuove solo le partite che ha messo lì. Se cambi, si sposta tutto — niente resta indietro.',
+    'Qualunque tu scelga, KickOffCal aggiunge, modifica o rimuove solo le partite che ha messo lì. Passando da uno di questi calendari all’altro, quelle partite si spostano con te.',
 
   // ── CreditsScreen ──────────────────────────────────────────────────
   'settings.credits.intro':

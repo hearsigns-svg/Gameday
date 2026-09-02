@@ -3,7 +3,7 @@
 // sync killed mid-run converges on the next run. One run at a time.
 
 import { currentLanguage, LANGUAGE_NAMES, t } from '../../core/i18n';
-import { err, messageOf, ok, Result } from '../../core/result';
+import { AppError, err, messageOf, ok, Result } from '../../core/result';
 import { showToast } from '../../core/toast';
 import { readJson, writeJson } from '../../core/storage';
 import { Fixture } from '../fixtures/domain/fixture';
@@ -15,7 +15,10 @@ import {
   seriesScopesFrom,
   tournamentTierOverridesFrom,
 } from '../follows/domain/followScopes';
+import { activeBackend } from './data/calendarBackend';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
+import { calendarConnection } from './data/calendarConnection';
+import { grantMayLatch } from './domain/calendarConnection';
 import {
   loadEventSettings,
   pruneEventSettingsStore,
@@ -44,6 +47,7 @@ import {
   EventInput,
   getCalendarObject,
   listTaggedEvents,
+  nativeSyncRoute,
   ResolvedTarget,
   TargetRequest,
   updateFixtureEvent,
@@ -116,10 +120,16 @@ export interface SyncState {
   running: boolean;
   last: SyncOutcome | null;
   lastError: string | null;
+  // The KIND behind lastError (null after success). A screen that must
+  // act differently on ONE failure class reads this, never the message:
+  // the Google-connected row offers a reconnect only on 'auth-expired'
+  // (Round 4 B4 item 2).
+  lastErrorKind: AppError['kind'] | null;
 }
 type SyncListener = (state: SyncState) => void;
 const listeners = new Set<SyncListener>();
 let lastErrorMessage: string | null = null;
+let lastErrorKindValue: AppError['kind'] | null = null;
 
 export function subscribeSync(fn: SyncListener): () => void {
   listeners.add(fn);
@@ -130,11 +140,16 @@ export function lastSyncError(): string | null {
   return lastErrorMessage;
 }
 
+export function lastSyncErrorKind(): AppError['kind'] | null {
+  return lastErrorKindValue;
+}
+
 function emit(running: boolean): void {
   const state: SyncState = {
     running,
     last: lastSync(),
     lastError: lastErrorMessage,
+    lastErrorKind: lastErrorKindValue,
   };
   for (const fn of listeners) fn(state);
 }
@@ -239,6 +254,7 @@ async function withSyncLock<T>(
   try {
     const result = await run();
     lastErrorMessage = result.ok ? null : messageOf(result.error);
+    lastErrorKindValue = result.ok ? null : result.error.kind;
     // Logcat is the only instrument a hardware session has. A wedged
     // sync aborted invisibly for forty minutes on a physical Pixel
     // because every failure exit was silent: the UI string above is
@@ -254,6 +270,7 @@ async function withSyncLock<T>(
   } catch (e) {
     // Nothing inside may leak an uncaught rejection to the UI.
     lastErrorMessage = 'Sync failed — will retry';
+    lastErrorKindValue = 'unknown';
     // Same lesson as the Result branch above, for the THROW exit: this
     // was the one failure path with no logcat line, which made "a run
     // threw" indistinguishable from "no run happened" on a device.
@@ -487,8 +504,9 @@ export async function switchCalendarTarget(
   return withSyncLock(async () => {
     // The OS dialog may only ever follow the primed explainer, so this
     // path never gets to be the thing that raises it. The picker routes
-    // an unconnected user to priming instead of calling us.
-    if (calendarChoice() !== 'enabled') {
+    // an unconnected user to priming instead of calling us. Connected
+    // means THROUGH A WRITE PATH (B4 item 5), not merely opted in.
+    if (calendarConnection() !== 'connected') {
       return err({ kind: 'unknown', message: 'Connect your calendar first.' });
     }
     const perm = await ensureCalendarPermission();
@@ -522,13 +540,27 @@ export async function switchCalendarTarget(
 }
 
 async function runSyncInner(): Promise<Result<SyncOutcome>> {
-  if (calendarChoice() !== 'enabled') {
+  // THE GATE (Round 4 B4 item 5): connected means opted in AND a write
+  // path exists. The choice alone used to decide here, and a legacy
+  // Android install — choice latched 'enabled' by its ledger, backend
+  // still 'provider' after Prompt 28 — sailed through and resumed
+  // writing into the user's own Google calendar through the retired
+  // provider path, including after a Disconnect. 'needs-google-connect'
+  // now runs fixtures-only like 'off': the app's view stays fresh, the
+  // calendar is never touched, and every surface shows the Connect path.
+  if (calendarConnection() !== 'connected') {
     // Reinstall healing: storage loss wipes ledger AND choice together,
-    // but an existing OS grant is durable evidence of a prior opt-in
-    // through the primed flow. The probe never prompts; when it finds a
-    // grant we latch enabled and fall through so recovery + prune run —
-    // otherwise events left in the calendar would silently rot.
-    if (calendarChoice() === 'unset' && (await hasCalendarGrant())) {
+    // but durable evidence of a prior opt-in — an OS grant on the
+    // provider route, the stored Google connection under REST — may
+    // re-latch enabled so recovery + prune run, otherwise events left in
+    // the calendar would silently rot. The probe never prompts. It
+    // latches ONLY where enabled would actually connect: a reinstalled
+    // legacy Android phone still holds an OS grant, and latching from it
+    // would hide the Connect path behind a choice that reaches nothing.
+    if (
+      grantMayLatch(calendarChoice(), nativeSyncRoute(), activeBackend()) &&
+      (await hasCalendarGrant())
+    ) {
       setCalendarChoice('enabled');
     } else {
       return runFixturesOnlyInner();

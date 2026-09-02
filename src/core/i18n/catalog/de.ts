@@ -527,6 +527,8 @@ export const de: Catalog = {
   'settings.calendar.googleReconnectA11y':
     'KickOffCal im Google Kalender. Google-Anmeldung neu verbinden',
   'settings.calendar.googleReconnected': 'Google Kalender neu verbunden',
+  'settings.calendar.googleConnectedCaption': 'In deinem Google Kalender',
+  'settings.calendar.googleConnectedA11y': 'KickOffCal im Google Kalender',
   'settings.calendar.disconnectGoogle': 'Google Kalender trennen',
   'settings.calendar.disconnectCaption':
     'Dein Kalender und seine Einträge bleiben unberührt',
@@ -534,6 +536,8 @@ export const de: Catalog = {
   'settings.calendar.connectGoogle': 'Google Kalender verbinden',
   'settings.calendar.connectCaption':
     'Bis dahin bleiben deine Spiele in der App',
+  'settings.calendar.connectLegacyCaption':
+    'Spiele, die schon in deinem Kalender stehen, bleiben, wo sie sind',
   'settings.calendar.choose': 'Kalender auswählen',
   'settings.calendar.autoPickedCaption':
     'Wird automatisch gewählt, sobald dein Kalender verbunden ist',
@@ -549,6 +553,8 @@ export const de: Catalog = {
   'settings.calendar.colourApplied': 'Kalenderfarbe ist jetzt {colour}',
   'settings.calendar.colourSaved':
     'Farbe gespeichert — gilt, sobald dein Kalender verbunden ist',
+  'settings.calendar.colourRefused':
+    'Google Kalender hat die Farbe nicht übernommen — du kannst sie in der Google Kalender-App einstellen',
   // The calendar-name fallback when no target is stored yet — dative,
   // because every {calendar} slot reads "von/zu/in {calendar}".
   'settings.words.yourCalendar': 'deinem Kalender',
@@ -666,7 +672,7 @@ export const de: Catalog = {
   'settings.target.moved_other': '{n} Spiele zu {calendar} verschoben',
   'settings.target.nowGoTo': 'Spiele landen jetzt in {calendar}',
   'settings.target.scopePromise':
-    'Egal, was du wählst — KickOffCal fügt nur Spiele hinzu, ändert oder entfernt nur Spiele, die es selbst dort angelegt hat. Ein Wechsel nimmt alles mit — nichts bleibt zurück.',
+    'Egal, was du wählst — KickOffCal fügt nur Spiele hinzu, ändert oder entfernt nur Spiele, die es selbst dort angelegt hat. Ein Wechsel zwischen diesen Kalendern nimmt diese Spiele mit.',
 
   // ── CreditsScreen ──────────────────────────────────────────────────
   'settings.credits.intro':

@@ -525,6 +525,8 @@ export const pt: Catalog = {
   'settings.calendar.googleReconnectA11y':
     'KickOffCal no Google Agenda. Reconectar login do Google',
   'settings.calendar.googleReconnected': 'Google Agenda reconectado',
+  'settings.calendar.googleConnectedCaption': 'No seu Google Agenda',
+  'settings.calendar.googleConnectedA11y': 'KickOffCal no Google Agenda',
   'settings.calendar.disconnectGoogle': 'Desconectar Google Agenda',
   'settings.calendar.disconnectCaption':
     'Seu calendário e os eventos dele ficam intactos',
@@ -532,6 +534,8 @@ export const pt: Catalog = {
   'settings.calendar.connectGoogle': 'Conectar Google Agenda',
   'settings.calendar.connectCaption':
     'Os jogos ficam no app até você conectar',
+  'settings.calendar.connectLegacyCaption':
+    'Os jogos que já estão no seu calendário ficam onde estão',
   'settings.calendar.choose': 'Escolher um calendário',
   'settings.calendar.autoPickedCaption':
     'Escolhido automaticamente quando seu calendário conectar',
@@ -547,6 +551,8 @@ export const pt: Catalog = {
   'settings.calendar.colourApplied': 'A cor do calendário agora é {colour}',
   'settings.calendar.colourSaved':
     'Cor salva — vale quando seu calendário conectar',
+  'settings.calendar.colourRefused':
+    'O Google Agenda não aceitou a cor — você pode definir no app Google Agenda',
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'seu calendário',
 
@@ -663,7 +669,7 @@ export const pt: Catalog = {
   'settings.target.moved_other': '{n} jogos movidos para {calendar}',
   'settings.target.nowGoTo': 'Os jogos agora vão para {calendar}',
   'settings.target.scopePromise':
-    'Seja qual for a escolha, o KickOffCal só adiciona, altera ou remove os jogos que ele mesmo colocou lá. Trocar move tudo junto — nada fica para trás.',
+    'Seja qual for a escolha, o KickOffCal só adiciona, altera ou remove os jogos que ele mesmo colocou lá. Ao trocar entre esses calendários, esses jogos vão junto.',
 
   // ── CreditsScreen ──────────────────────────────────────────────────
   'settings.credits.intro':

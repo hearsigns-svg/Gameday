@@ -27,12 +27,13 @@ import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
 import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs } from '../calendar-sync/domain/prefs';
 import { ReminderSlotsRow } from './ReminderSlots';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
-import {
-  calendarColour,
-  setCalendarColour,
-} from '../calendar-sync/data/calendarDriver';
 import { lastRegistryError } from '../calendar-sync/data/deviceRegistry';
-import { syncStalenessHours } from '../calendar-sync/syncEngine';
+import {
+  lastSyncErrorKind,
+  runSync,
+  subscribeSync,
+  syncStalenessHours,
+} from '../calendar-sync/syncEngine';
 import { dataStaleness } from '../fixtures/data/freshnessRepo';
 import { loadFollowables } from '../follows/data/followStore';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
@@ -42,9 +43,22 @@ import {
   disconnectGoogleCalendar,
 } from '../calendar-sync/data/googleCalendarAuth';
 import { DataPrivacyRows } from './DataPrivacy';
-import { nativeSyncRoute } from '../calendar-sync/data/driver';
+// The colour verbs come through the FACADE, which routes by backend
+// (Round 4 B4 item 3): the provider function answered 'not-ours' under
+// REST and toasted "saves when your calendar connects" beside a
+// connected calendar.
+import {
+  calendarColour,
+  nativeSyncRoute,
+  setCalendarColour,
+} from '../calendar-sync/data/driver';
+import { restColourState } from '../calendar-sync/data/restCalendarDriver';
+import { legacyCalendarEventsRemain } from '../calendar-sync/data/calendarConnection';
+import {
+  ownsCalendarColour,
+  restRowMode,
+} from '../calendar-sync/domain/calendarConnection';
 import { consequenceForTarget } from '../calendar-sync/domain/calendarTarget';
-import { runSync } from '../calendar-sync/syncEngine';
 import { showToast } from '../../core/toast';
 import { REGIONS, RegionKey, regionLabel } from '../../core/region';
 import {
@@ -247,27 +261,25 @@ function OptionRow(props: {
   );
 }
 
-// A row whose right side is its current value; tapping navigates.
+// A row whose right side is its current value; tapping navigates. With
+// no onPress it is a STATEMENT, not a control — the connected Google
+// row (B4 item 2) says where fixtures are and offers no verb.
 function ValueRow(props: {
   label: string;
   value?: string;
   caption?: string;
-  onPress: () => void;
+  onPress?: () => void;
   accessibilityLabel: string;
   last?: boolean;
 }) {
   const t = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel}
-      onPress={props.onPress}
-      style={[
-        styles.row,
-        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
-        { borderColor: t.border, minHeight: 56 },
-      ]}
-    >
+  const rowStyle = [
+    styles.row,
+    !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
+    { borderColor: t.border, minHeight: 56 },
+  ];
+  const body = (
+    <>
       <View style={{ flex: 1 }}>
         <Text style={[type.body, { color: t.textPrimary }]}>{props.label}</Text>
         {props.caption ? (
@@ -281,6 +293,23 @@ function ValueRow(props: {
           {props.value}
         </Text>
       ) : null}
+    </>
+  );
+  if (!props.onPress) {
+    return (
+      <View accessible accessibilityLabel={props.accessibilityLabel} style={rowStyle}>
+        {body}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
+      onPress={props.onPress}
+      style={rowStyle}
+    >
+      {body}
     </Pressable>
   );
 }
@@ -325,7 +354,27 @@ export default function PreferencesScreen({
       setRegion(regionOverride());
     }, []),
   );
-  const ownCalendar = target === null || target.kind === 'ours';
+  // A sync landing while this screen is open changes what the Calendar
+  // card must say — an expired grant (the reconnect row), the REST
+  // target record being written, a colour painted or refused.
+  useEffect(
+    () =>
+      subscribeSync(() => {
+        setTarget(storedTarget());
+        forceRepaint((n) => n + 1);
+      }),
+    [],
+  );
+  // Backend-aware (B4 item 1): the stale pre-P28 provider record can no
+  // longer call a REST-created KickOffCal calendar "Social".
+  const ownCalendar = ownsCalendarColour(
+    activeBackend(),
+    nativeSyncRoute(),
+    target,
+  );
+  // Under REST the swatch must not claim a colour Google refused.
+  const colourRefused =
+    activeBackend() === 'rest' && restColourState()?.status === 'refused';
 
   const pickColour = async (hex: string, name: string) => {
     setColour(hex);
@@ -336,8 +385,11 @@ export default function PreferencesScreen({
           ? tr('settings.calendar.colourApplied', {
               colour: name.toLowerCase(),
             })
-          : tr('settings.calendar.colourSaved'),
+          : outcome === 'refused'
+            ? tr('settings.calendar.colourRefused')
+            : tr('settings.calendar.colourSaved'),
     });
+    forceRepaint((n) => n + 1);
   };
 
   const apply = (next: CalendarPrefs) => {
@@ -367,28 +419,42 @@ export default function PreferencesScreen({
       >
         {activeBackend() === 'rest' ? (
           // Google-connected: one calendar, ours by construction —
-          // nothing to pick. The first row is the reconnect surface
-          // (how a weekly-expired Testing grant heals); the second is
-          // its other half (Stage 7B): Connect ⇄ Disconnect as a
-          // proper state pair. Disconnect ends the grant and halts
-          // calendar writes — the calendar and its events are left
-          // exactly as they are.
+          // nothing to pick. The first row states where fixtures are,
+          // and becomes the reconnect surface ONLY when the last sync
+          // died of an expired grant (B4 item 2 — it used to read "tap
+          // to reconnect" whenever the backend was REST, i.e. always;
+          // the real signal is the sync engine's error kind, the same
+          // one the Schedule chip renders). The second row is its
+          // other half (Stage 7B): Connect ⇄ Disconnect as a proper
+          // state pair. Disconnect ends the grant and halts calendar
+          // writes — the calendar and its events are left exactly as
+          // they are.
           <>
-            <ValueRow
-              label="KickOffCal"
-              caption={tr('settings.calendar.googleReconnectCaption')}
-              accessibilityLabel={tr('settings.calendar.googleReconnectA11y')}
-              onPress={() =>
-                void connectGoogleCalendar().then((r) => {
-                  if (r.ok) {
-                    showToast({
-                      message: tr('settings.calendar.googleReconnected'),
-                    });
-                    void runSync();
-                  }
-                })
-              }
-            />
+            {restRowMode(lastSyncErrorKind()) === 'reconnect' ? (
+              <ValueRow
+                label="KickOffCal"
+                caption={tr('settings.calendar.googleReconnectCaption')}
+                accessibilityLabel={tr('settings.calendar.googleReconnectA11y')}
+                onPress={() =>
+                  void connectGoogleCalendar().then((r) => {
+                    if (r.ok) {
+                      showToast({
+                        message: tr('settings.calendar.googleReconnected'),
+                      });
+                      setTarget(storedTarget());
+                      forceRepaint((n) => n + 1);
+                      void runSync();
+                    }
+                  })
+                }
+              />
+            ) : (
+              <ValueRow
+                label="KickOffCal"
+                caption={tr('settings.calendar.googleConnectedCaption')}
+                accessibilityLabel={tr('settings.calendar.googleConnectedA11y')}
+              />
+            )}
             <ValueRow
               label={tr('settings.calendar.disconnectGoogle')}
               caption={tr('settings.calendar.disconnectCaption')}
@@ -405,11 +471,19 @@ export default function PreferencesScreen({
             />
           </>
         ) : nativeSyncRoute() === 'google-connect' ? (
-          // Android, not yet connected: settings is the later door into
-          // the same priming flow onboarding offers.
+          // Android, not connected: settings is the later door into the
+          // same priming flow onboarding offers. An install that already
+          // holds ledgered events — a legacy provider-path install, or a
+          // disconnected REST one — is told those stay where they are:
+          // the REST scope cannot move what another path wrote (B4
+          // item 7).
           <ValueRow
             label={tr('settings.calendar.connectGoogle')}
-            caption={tr('settings.calendar.connectCaption')}
+            caption={
+              legacyCalendarEventsRemain()
+                ? tr('settings.calendar.connectLegacyCaption')
+                : tr('settings.calendar.connectCaption')
+            }
             accessibilityLabel={tr('settings.calendar.connectGoogle')}
             onPress={() => navigation.navigate('CalendarPriming', {})}
           />
@@ -464,7 +538,9 @@ export default function PreferencesScreen({
               ))}
             </View>
             <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-              {tr('settings.calendar.colourCaption')}
+              {colourRefused
+                ? tr('settings.calendar.colourRefused')
+                : tr('settings.calendar.colourCaption')}
             </Text>
           </View>
         ) : (

@@ -536,6 +536,8 @@ export const es: Catalog = {
   'settings.calendar.googleReconnectA11y':
     'KickOffCal en Google Calendar. Reconectar la sesión de Google',
   'settings.calendar.googleReconnected': 'Google Calendar reconectado',
+  'settings.calendar.googleConnectedCaption': 'En tu Google Calendar',
+  'settings.calendar.googleConnectedA11y': 'KickOffCal en Google Calendar',
   'settings.calendar.disconnectGoogle': 'Desconectar Google Calendar',
   'settings.calendar.disconnectCaption':
     'Tu calendario y sus eventos quedan intactos',
@@ -543,6 +545,8 @@ export const es: Catalog = {
   'settings.calendar.connectGoogle': 'Conectar Google Calendar',
   'settings.calendar.connectCaption':
     'Hasta entonces, tus partidos viven en la app',
+  'settings.calendar.connectLegacyCaption':
+    'Los partidos que ya están en tu calendario se quedan donde están',
   'settings.calendar.choose': 'Elegir un calendario',
   'settings.calendar.autoPickedCaption':
     'Se elige automáticamente al conectar tu calendario',
@@ -558,6 +562,8 @@ export const es: Catalog = {
   'settings.calendar.colourApplied': 'El color del calendario ahora es {colour}',
   'settings.calendar.colourSaved':
     'Color guardado — se aplicará al conectar tu calendario',
+  'settings.calendar.colourRefused':
+    'Google Calendar no aceptó el color — puedes cambiarlo en la app de Google Calendar',
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'tu calendario',
 
@@ -676,7 +682,7 @@ export const es: Catalog = {
   'settings.target.moved_other': 'Se movieron {n} partidos a {calendar}',
   'settings.target.nowGoTo': 'Los partidos ahora van a {calendar}',
   'settings.target.scopePromise':
-    'Elijas lo que elijas, KickOffCal solo añade, cambia o quita los partidos que puso ahí. Al cambiar se mueve todo — no queda nada atrás.',
+    'Elijas lo que elijas, KickOffCal solo añade, cambia o quita los partidos que puso ahí. Al cambiar entre estos calendarios, esos partidos se mueven contigo.',
 
   // ── CreditsScreen ──────────────────────────────────────────────────
   'settings.credits.intro':
