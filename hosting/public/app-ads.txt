@@ -1,0 +1,3 @@
+# KickOffCal app-ads.txt (IAB Tech Lab spec). The AdMob publisher line is
+# added when the AdMob account exists (Round 5 Stage 6), in the form:
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

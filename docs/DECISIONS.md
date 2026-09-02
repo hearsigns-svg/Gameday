@@ -4251,3 +4251,22 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   keys in the client `.env`, the webhook secret in functions/.env and
   the webhook URL + header set in RevenueCat, sandbox testers, and a
   Play internal-testing install.
+
+- 2026-09-02 (Round 5 — kickoffcal.app HOSTING STOOD UP; owner addition
+  after Stage 3 acceptance). Firebase Hosting in the existing project
+  (site `gameday-fixtures`, default URL gameday-fixtures.web.app),
+  static files under `hosting/public/`, `cleanUrls` so `/terms` and
+  `/privacy` are real pages (`terms.html`, `privacy.html`), `/app-ads.txt`
+  reserved as a comment-only file until the AdMob publisher line exists
+  (Stage 6), and the future web-deletion page planned as a further route
+  of the same site (Play's account-deletion URL requirement). Policy
+  pages are DRAFTS marked for owner approval with bracketed items
+  (operator name/address, contact address, governing law, processing
+  region wording, dates); the owner supplies or approves the text before
+  DNS points the domain. DNS is owner-side: add the custom domain in the
+  Firebase console (Hosting → Add custom domain → kickoffcal.app and www)
+  and set the TXT/A records it gives at the registrar; the app's
+  TERMS_URL/PRIVACY_URL constants already point at kickoffcal.app/terms
+  and /privacy on the understanding they resolve before store review,
+  not before. Deployed by the agent (`firebase deploy --only hosting`),
+  verified by fetching every route on the default URL.
