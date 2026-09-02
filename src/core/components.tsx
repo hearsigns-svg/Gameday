@@ -1279,6 +1279,9 @@ export function BrandTitle(props: { children: string }) {
 // Sport entry card (2-per-row grid on Home). Every card NAVIGATES —
 // following always happens on a visible Follow button inside, never as
 // a hidden tap side-effect (owner ruling: no invisible affordances).
+// One height for every row on a Competitions screen (Round 6 item 2).
+export const COMPETITION_ROW_HEIGHT = 76;
+
 export function SportCard(props: {
   label: string;
   glyph: string;
@@ -1306,6 +1309,10 @@ export function SportCard(props: {
   tileFill?: string;
   // Full width in a LIST; the Home grid still wants two per row.
   fullWidth?: boolean;
+  // Round 6 item 2: a fixed row height for list rows (every row on a
+  // Competitions screen shares it); label and caption fall to one line,
+  // ellipsised, so no row grows past its neighbours.
+  rowHeight?: number;
   // A tile that is NOT yet openable — a "Coming soon" sport. The row
   // version carried this and the tile has to as well, or the sport
   // picker would have to keep one row type for eleven sports and
@@ -1344,6 +1351,7 @@ export function SportCard(props: {
         // two-across geometry; the picker's fullWidth tiles opt out.
         !props.fullWidth && styles.sportCardGridCap,
         props.disabled === true && { opacity: 0.45 },
+        props.rowHeight !== undefined && { height: props.rowHeight },
         props.fullWidth && {
           flexBasis: 0,
           flexGrow: 1,
@@ -1387,7 +1395,7 @@ export function SportCard(props: {
             one. */}
         <Text
           style={[type.secondary, { color: t.textPrimary, fontWeight: '600' }]}
-          numberOfLines={props.compact ? 1 : 2}
+          numberOfLines={props.compact || props.rowHeight !== undefined ? 1 : 2}
         >
           {props.label}
         </Text>
@@ -1401,7 +1409,8 @@ export function SportCard(props: {
             // mid-word on the Following list. Compact stays at one line:
             // that geometry exists to hold a 500-name directory to a
             // fixed height, and a caption there is a rank and a country.
-            numberOfLines={props.compact ? 1 : 2}
+            numberOfLines={props.compact || props.rowHeight !== undefined ? 1 : 2}
+            ellipsizeMode="tail"
           >
             {props.caption}
           </Text>

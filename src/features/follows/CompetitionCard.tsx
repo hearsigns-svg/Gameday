@@ -20,7 +20,12 @@
 
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { FollowButton, SportCard, TileRow } from '../../core/components';
+import {
+  COMPETITION_ROW_HEIGHT,
+  FollowButton,
+  SportCard,
+  TileRow,
+} from '../../core/components';
 import { t } from '../../core/i18n';
 import { spacing, type, useTheme } from '../../core/tokens';
 import type { TeamTheme } from '../../core/teamTheme';
@@ -58,13 +63,24 @@ export interface CompetitionCardProps {
   // (Round 3 B6: the Olympics season cards expand to [Sports | Games]).
   // Same expansion, same geometry — only the words and targets differ.
   destinations?: ReadonlyArray<{ label: string; onPress: () => void }>;
+  // ONE-OPEN (Round 6 item 3): a list that passes these owns the
+  // expansion — expanding one card collapses any other in the same list,
+  // an instant switch. Omitted, the card keeps its own state.
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 export function CompetitionCard(props: CompetitionCardProps) {
   // `ui`, not `t`: the catalog's `t()` is imported above, and a theme
   // binding named `t` would shadow it in every string below.
   const ui = useTheme();
-  const [expanded, setExpanded] = useState(false);
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const controlled = props.expanded !== undefined;
+  const expanded = controlled ? (props.expanded as boolean) : ownExpanded;
+  const setExpanded = (next: boolean) => {
+    if (controlled) props.onExpandedChange?.(next);
+    else setOwnExpanded(next);
+  };
   const expandable =
     props.onTeams !== undefined || props.destinations !== undefined;
   const destinations =
@@ -90,6 +106,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
     >
       <SportCard
         fullWidth
+        rowHeight={COMPETITION_ROW_HEIGHT}
         label={props.name}
         caption={props.caption}
         glyph={props.glyph}
@@ -106,7 +123,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
             : t('follows.card.a11yViewFixtures', { name: props.name })
         }
         {...(expandable ? { accessibilityExpanded: expanded } : {})}
-        onPress={expandable ? () => setExpanded((v) => !v) : props.onOpen}
+        onPress={expandable ? () => setExpanded(!expanded) : props.onOpen}
         expansion={
           expanded ? (
             <View style={[styles.destinations, { borderColor: ui.border }]}>

@@ -194,9 +194,67 @@ export async function fetchTournaments(): Promise<Result<TournamentRow[]>> {
 export async function fetchAthleteBrowse(
   sportKey: string,
 ): Promise<Result<AthleteBrowse>> {
-  return getJson<AthleteBrowse>(
+  const r = await getJson<AthleteBrowse>(
     `listAthletes?sport=${encodeURIComponent(sportKey)}`,
   );
+  if (r.ok) rememberAthleteCounts(sportKey, r.value);
+  return r;
+}
+
+// ── Athlete counts for the people rows (Round 6 item 2) ─────────────
+// "Tap to follow players (N)" needs N without loading a 1,400-name
+// directory on every Competitions screen: the count is remembered
+// whenever the directory IS fetched, per group so a tour or a sex can be
+// counted the same way the list screen filters, and refreshed in the
+// background at most once a day.
+interface AthleteCountEntry {
+  total: number;
+  groups: Array<{ grouping: string; groupingKey: string; count: number }>;
+  at: string;
+}
+const ATHLETE_COUNTS_KEY = 'athleteCounts.v1';
+const ATHLETE_COUNTS_TTL_MS = 24 * 3_600_000;
+const countRefreshInFlight = new Set<string>();
+
+function rememberAthleteCounts(sportKey: string, browse: AthleteBrowse): void {
+  const all = readJson<Record<string, AthleteCountEntry>>(ATHLETE_COUNTS_KEY, {});
+  const groups = browse.groups.map((g) => ({
+    grouping: g.grouping,
+    groupingKey: g.groupingKey,
+    count: g.athletes.length,
+  }));
+  all[sportKey] = {
+    total: groups.reduce((n, g) => n + g.count, 0),
+    groups,
+    at: new Date().toISOString(),
+  };
+  writeJson(ATHLETE_COUNTS_KEY, all);
+}
+
+export function cachedAthleteCount(
+  sportKey: string,
+  filter: { tour?: string; groupMatches?: (groupingKey: string) => boolean } = {},
+): number | null {
+  const entry = readJson<Record<string, AthleteCountEntry>>(ATHLETE_COUNTS_KEY, {})[sportKey];
+  if (!entry) return null;
+  let groups = entry.groups;
+  if (filter.tour) {
+    // The same narrowing the list screen applies (Prompt 19): the tour
+    // word in the group title.
+    const re = new RegExp(`\\b${filter.tour}\\b`, 'i');
+    groups = groups.filter((g) => re.test(g.grouping));
+  }
+  if (filter.groupMatches) groups = groups.filter((g) => filter.groupMatches!(g.groupingKey));
+  return groups.reduce((n, g) => n + g.count, 0);
+}
+
+// Fire-and-forget; a failure leaves the caption without its count.
+export function refreshAthleteCount(sportKey: string): void {
+  const entry = readJson<Record<string, AthleteCountEntry>>(ATHLETE_COUNTS_KEY, {})[sportKey];
+  if (entry && Date.now() - Date.parse(entry.at) < ATHLETE_COUNTS_TTL_MS) return;
+  if (countRefreshInFlight.has(sportKey)) return;
+  countRefreshInFlight.add(sportKey);
+  void fetchAthleteBrowse(sportKey).finally(() => countRefreshInFlight.delete(sportKey));
 }
 
 // Federated search — teams server-filtered to leagues we actually

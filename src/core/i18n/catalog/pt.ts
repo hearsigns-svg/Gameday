@@ -721,4 +721,8 @@ export const pt: Catalog = {
   'entitlement.manage': 'Gerir subscrição',
   'entitlement.premium': 'Premium',
   'deleteData.subscriptionNote': 'Apagar os teus dados não cancela uma subscrição.',
+
+  // ── Round 6 item 2: people rows advertise the tap ──
+  'follows.athletes.tapToFollow': 'Toca para seguir {people} ({n})',
+  'follows.athletes.tapToFollowNoCount': 'Toca para seguir {people}',
 };

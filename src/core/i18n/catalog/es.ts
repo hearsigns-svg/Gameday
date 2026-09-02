@@ -733,4 +733,8 @@ export const es: Catalog = {
   'entitlement.manage': 'Gestionar suscripción',
   'entitlement.premium': 'Premium',
   'deleteData.subscriptionNote': 'Borrar tus datos no cancela una suscripción.',
+
+  // ── Round 6 item 2: people rows advertise the tap ──
+  'follows.athletes.tapToFollow': 'Toca para seguir a {people} ({n})',
+  'follows.athletes.tapToFollowNoCount': 'Toca para seguir a {people}',
 };

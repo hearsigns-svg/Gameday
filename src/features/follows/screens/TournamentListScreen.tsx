@@ -39,6 +39,8 @@ export default function TournamentListScreen({ navigation, route }: Props) {
   const tennis = sportByKey('tennis');
   const { tour, kind } = route.params;
   const [rows, setRows] = useState<TournamentRow[] | null>(null);
+  // One open card per list (Round 6 item 3).
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [, forceRender] = useState(0);
@@ -117,6 +119,8 @@ export default function TournamentListScreen({ navigation, route }: Props) {
           // monogram honestly.
           <CompetitionCard
             name={item.name}
+            expanded={openKey === item.key}
+            onExpandedChange={(v) => setOpenKey(v ? item.key : null)}
             caption={tournamentDateRange(item.startUtc, item.endUtc)}
             theme={teamTheme(tennis?.accent ?? null, mode)}
             monogram={monogramOf(item.name)}

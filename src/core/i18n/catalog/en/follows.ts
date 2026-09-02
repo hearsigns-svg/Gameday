@@ -190,4 +190,8 @@ export const followsStrings = {
     'Card-level coverage only. Individual fighters cannot be followed: no MMA body publishes a usable roster, so a fighter directory would be guesswork — we would rather be honest than wrong.',
   'follows.coverage.olympics':
     'The next Games are Los Angeles 2028 (14–30 July) and the Milano-Cortina winter Games in 2030. Every discipline is listed and followable now, but no schedule has been published yet — the IOC releases session times closer to the Games, so a follow made today delivers its events the moment they exist. No Olympic emblems are shown: the marks are protected by dedicated legislation, so the app names the events and generates its own artwork.',
+
+  // ── Round 6 item 2: people rows advertise the tap ──
+  'follows.athletes.tapToFollow': 'Tap to follow {people} ({n})',
+  'follows.athletes.tapToFollowNoCount': 'Tap to follow {people}',
 } as const;

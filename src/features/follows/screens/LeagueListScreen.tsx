@@ -22,8 +22,7 @@ import {
   FollowButton,
   monogramOf,
   SportCard,
-  TileRow,
-} from '../../../core/components';
+  TileRow, COMPETITION_ROW_HEIGHT } from '../../../core/components';
 import {
   BrowseRow,
   SLAM_KEYS,
@@ -53,8 +52,7 @@ import {
   fetchTournaments,
   searchEntities,
   SearchTeamHit,
-  TournamentRow,
-} from '../data/directoryRepo';
+  TournamentRow, cachedAthleteCount, refreshAthleteCount } from '../data/directoryRepo';
 import { byPriorityLive, cachedPriorities, refreshPriorities, subscribePriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
@@ -67,6 +65,7 @@ import { coverageNoteFor } from '../domain/coverageNotes';
 import { expandQuery } from '../domain/searchAliases';
 import { sportByKey } from '../domain/sportsConfig';
 import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
+import { boxingGroupSex } from '../domain/boxingBrowse';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LeagueList'>;
 
@@ -75,6 +74,14 @@ const DEBOUNCE_MS = 350;
 // What the people in this sport are CALLED. "Athletes" is right for
 // athletics and wrong everywhere else — a boxing fan is looking for
 // fighters, a tennis fan for players.
+// Round 6 item 2: the standing tap-advertising caption, with the count
+// when the directory has been seen ("Tap to follow players (412)").
+function peopleCaption(peopleWord: string, count: number | null): string {
+  return count === null
+    ? i18n.t('follows.athletes.tapToFollowNoCount', { people: peopleWord })
+    : i18n.t('follows.athletes.tapToFollow', { people: peopleWord, n: String(count) });
+}
+
 function athleteRowTitle(sportKey: string): string {
   switch (sportKey) {
     case 'boxing':
@@ -105,6 +112,20 @@ function subtitleOf(item: DirectoryLeague): string {
 export default function LeagueListScreen({ navigation, route }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
+  // One open card per list (Round 6 item 3): expanding one collapses
+  // any other — an instant switch, never two open at once.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  // The people rows' count (Round 6 item 2): remembered from the last
+  // directory fetch, refreshed in the background at most daily.
+  const [, bumpCounts] = useState(0);
+  useEffect(() => {
+    if (sport?.browse.includes('athlete')) {
+      refreshAthleteCount(route.params.sportKey);
+      const id = setTimeout(() => bumpCounts((n) => n + 1), 2500);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [route.params.sportKey]);
   const sport = sportByKey(route.params.sportKey);
   const [leagues, setLeagues] = useState<DirectoryLeague[] | null>(null);
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
@@ -458,6 +479,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     const tileFill = artFills[String(item.id)] ?? artFills[item.key];
     return (
       <CompetitionCard
+        expanded={openKey === item.key}
+        onExpandedChange={(v) => setOpenKey(v ? item.key : null)}
         // Exonym where the active language genuinely has one (Phase C)
         // — browse rows only; follows, search matching and fixtures
         // keep the provider/config name.
@@ -505,6 +528,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const tournamentCard = (row: TournamentRow) => (
     <CompetitionCard
       name={row.name}
+      expanded={openKey === row.key}
+      onExpandedChange={(v) => setOpenKey(v ? row.key : null)}
       caption={tournamentDateRange(row.startUtc, row.endUtc)}
       theme={teamTheme(sport?.accent ?? null, mode)}
       monogram={monogramOf(row.name)}
@@ -731,8 +756,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           <TileRow>
             <SportCard
               fullWidth
+              rowHeight={COMPETITION_ROW_HEIGHT}
               label={r.title}
-              caption={i18n.t('follows.athletes.caption')}
+              caption={peopleCaption(
+                i18n.t('follows.athletes.players').toLowerCase(),
+                cachedAthleteCount(route.params.sportKey, { tour: r.tour }),
+              )}
               glyph={sport?.glyph ?? '🎾'}
               theme={teamTheme(sport?.accent ?? null, mode)}
               accessibilityLabel={i18n.t(
@@ -894,8 +923,14 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 <TileRow>
                   <SportCard
                     fullWidth
+                    rowHeight={COMPETITION_ROW_HEIGHT}
                     label={athleteRowTitle('boxing')}
-                    caption={i18n.t('follows.athletes.caption')}
+                    caption={peopleCaption(
+                      athleteRowTitle('boxing').toLowerCase(),
+                      cachedAthleteCount('boxing', {
+                        groupMatches: (k) => boxingGroupSex(k) === row.sex,
+                      }),
+                    )}
                     glyph={sport?.glyph ?? '🥊'}
                     theme={teamTheme(sport?.accent ?? null, mode)}
                     accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {
@@ -980,6 +1015,8 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           renderItem={({ item }) => (
             <CompetitionCard
               name={item.name}
+              expanded={openKey === `olympics-${item.season}`}
+              onExpandedChange={(v) => setOpenKey(v ? `olympics-${item.season}` : null)}
               caption={i18n.t('follows.olympics.tapForSports', {
                 edition: item.next.name,
               })}
@@ -1054,8 +1091,12 @@ export default function LeagueListScreen({ navigation, route }: Props) {
                 <TileRow>
                   <SportCard
                     fullWidth
+                    rowHeight={COMPETITION_ROW_HEIGHT}
                     label={athleteRowTitle(route.params.sportKey)}
-                    caption={i18n.t('follows.athletes.caption')}
+                    caption={peopleCaption(
+                      athleteRowTitle(route.params.sportKey).toLowerCase(),
+                      cachedAthleteCount(route.params.sportKey),
+                    )}
                     glyph={sport?.glyph ?? '🏟️'}
                     theme={teamTheme(sport?.accent ?? null, mode)}
                     accessibilityLabel={i18n.t('follows.athletes.a11yBrowse', {

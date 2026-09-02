@@ -299,7 +299,12 @@ export default function HomeScreen({ navigation }: Props) {
         onPress={() => navigation.navigate('Search')}
         style={({ pressed }) => [
           styles.searchBar,
-          { backgroundColor: t.surface, borderColor: t.border },
+          // Round 6 item 1: in light mode the bar wears the sport tiles'
+          // fill (lighter than the page); dark mode keeps the surface.
+          {
+            backgroundColor: mode === 'dark' ? t.surface : t.surfaceRaised,
+            borderColor: t.border,
+          },
           pressed && { opacity: 0.7 },
         ]}
       >

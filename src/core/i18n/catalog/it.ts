@@ -719,4 +719,8 @@ export const it: Catalog = {
   'entitlement.manage': 'Gestisci abbonamento',
   'entitlement.premium': 'Premium',
   'deleteData.subscriptionNote': 'Eliminare i tuoi dati non annulla un abbonamento.',
+
+  // ── Round 6 item 2: people rows advertise the tap ──
+  'follows.athletes.tapToFollow': 'Tocca per seguire {people} ({n})',
+  'follows.athletes.tapToFollowNoCount': 'Tocca per seguire {people}',
 };

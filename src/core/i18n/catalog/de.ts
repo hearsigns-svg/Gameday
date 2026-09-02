@@ -724,4 +724,8 @@ export const de: Catalog = {
   'entitlement.manage': 'Abo verwalten',
   'entitlement.premium': 'Premium',
   'deleteData.subscriptionNote': 'Das Löschen deiner Daten kündigt kein Abo.',
+
+  // ── Round 6 item 2: people rows advertise the tap ──
+  'follows.athletes.tapToFollow': 'Tippen, um {people} zu folgen ({n})',
+  'follows.athletes.tapToFollowNoCount': 'Tippen, um {people} zu folgen',
 };
