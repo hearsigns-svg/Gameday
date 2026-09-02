@@ -3888,3 +3888,80 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   coverage stamp refreshes every sweep again (banner basis restored).
   Open alerts at close: boxing-data quota (external, owner decision on
   the plan) and the WTA rankings 429 (weekly retry).
+- 2026-09-02 (Round 4 ACCEPTED; close-out rulings). (1) STANDING RULE
+  17 in AGENTS.md: `main` and any pushed branch are never reset,
+  rebased or force-pushed by any chain; cleanup on branches only; a
+  step that would rewrite a pushed ref aborts the chain. Pinned to the
+  incident that made it: the 2026-09-02 history-replay chain whose
+  failed `cherry-pick -q` loop let `git reset --hard replay` move main
+  to the round's base — recovered from the reflog (`main@{1}`) with
+  nothing lost because nothing had been pushed. (2) The six remaining
+  ATP vendor ids (Miami, Monte-Carlo, Madrid, Rome, Cincinnati,
+  National Bank Open) are the AGENT's job, date-gated: fill them once
+  the US Open concludes (~2026-09-14) and quota headroom is free, ~12
+  vendor requests; discovery covers them meanwhile. (3) boxing-data
+  stays on the FREE tier, re-planned to fit 100 requests per
+  subscription cycle with headroom — see the cadence entry that
+  follows; Pro is revisited when a free user base gives the spend
+  something to serve.
+- 2026-09-02 (ROUND 5 — ENTITLEMENTS & ADS: THE STANDING MODEL, owner
+  ruling; supersedes every prior trial/premium fragment, including the
+  absent "Prompt 25 brief" and the unwritten premium-channel rule).
+  FREE, forever: unlimited follows; full in-app schedule and hero cards;
+  ONE system-notification reminder slot at a fixed default; NO calendar
+  sync; banner ads after a 14-day grace window from the first follow.
+  PREMIUM (£1.99/month, ~£17.99/year; monthly carries no trial):
+  calendar sync for every follow with a full-season horizon; tournament
+  tiers (Dates only / Key rounds / All matches) as a setting; calendar
+  colour; reminder-channel choice; three configurable reminder slots;
+  no ads. TRIAL: store-managed introductory offer — 14 days free on the
+  ANNUAL plan, auto-renews; one per store account, enforced by the
+  stores. DOWNGRADE (trial cancelled or lapsed): nothing removed; placed
+  events keep receiving time changes and cancellations; no new sync;
+  reminders fall to the single slot; ads resume after the grace window;
+  the paywall shows price only. NOT IN v1: accounts, win-back offers,
+  personalised iOS ads; hard-paywall mode exists only as a flag, OFF.
+  THE PAYWALL — one gate, two ways in: (1) proactive, ONCE: welcome →
+  pick a team → fixtures render → the offer ("14 days free — every
+  fixture in your calendar, ad-free, three reminders — then £X/year,
+  cancel anytime") with a clearly visible Continue with Free; accept →
+  calendar connect; decline → basics, and the modal never fires
+  proactively again; (2) on demand thereafter: any tap on a Premium
+  action (sync, a second reminder slot, colour) opens the same paywall
+  — never in the same session as a decline: for the rest of that
+  session the Sync row shows an inline state ("Part of Premium · Start
+  14 days free") instead; the full modal returns on the next session's
+  first Premium tap. Everything else is passive pressure: the Sync-row
+  state, lock badges on schedule fixtures, "X play tomorrow — not in
+  your calendar" notifications deep-linking to the paywall, and the
+  ads. No other modals, ever. Hard-paywall dial = a flag hiding
+  Continue with Free for new installs, off at launch. ARCHITECTURE:
+  store IAP mandatory; RevenueCat (or equivalent) is the single billing
+  + entitlement layer — app user id = our anonymous uid, restore
+  re-links a fresh uid on reinstall, webhooks write entitlements/{uid}
+  server-side (which also fires the recorded tombstone: the client's
+  direct devices/{uid} delete fallback is removed, callable failure =
+  abort); enforcement is a pure, tested layer in the sync planner
+  reading the SDK's cached entitlement with offline grace; the server
+  never gates polling; Apple's intro-offer eligibility drives paywall
+  copy; the paywall shows the store's localised price string (never a
+  hard-coded value), monthly beside annual; iOS permission state
+  distinguishes never-asked from denied — denied gets a Settings
+  deep-link, never a re-prompt. ADS: AdMob banners — one beneath the
+  in-app schedule list, one on the home feed — for free-state users
+  past the grace window only; no interstitials, nothing in
+  notifications, nothing on the paywall; iOS non-personalised with no
+  tracking prompt or listing declaration (personalised = later config
+  flip); Android personalised under the Google consent form. RATIONALE:
+  conversion pressure on non-syncers, not revenue. PATHS (acceptance
+  map): P0 installs, never follows → regional first-team suggestions,
+  nothing paywalled; P1 follows, declines, never syncs → basics with
+  ads, ad-free + reminder slots as the carrots; P2 declines at
+  onboarding, later reaches for sync → on-demand paywall; P3 starts the
+  trial → connect flow, 14 days, auto-renew; P4/P5 trial cancelled or
+  lapsed → explicit downgrade screen, price-only paywall; P6 reinstall →
+  restore. STAGES 1–6 as briefed, feature-flagged until Stage 5, STOP
+  after Stage 1 (audit), Stage 3 (sandbox proof); ads with a 50/50
+  post-grace cohort split in launch month 1. EXPECTATIONS, not targets:
+  freemium ≈2% of downloads at day 35, hard paywalls ≈10.7%, a
+  dismissible onboarding paywall between; trial→paid ≈ one third.

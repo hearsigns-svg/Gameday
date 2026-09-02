@@ -303,6 +303,19 @@ These apply to every stage. They do not need restating in a brief.
     stay under the adapter's gate — see SYNCED_DELETE_CAP in
     domain/syncPlan.ts before touching the drain machinery.
 
+17. **`main` and any pushed branch are never reset, rebased or
+    force-pushed by any chain** (owner ruling 2026-09-02). History
+    cleanup happens on a separate branch only, and a step that WOULD
+    rewrite a pushed ref aborts the chain rather than running. The
+    incident: a history-replay chain to scrub two worktree gitlinks used
+    an invalid `cherry-pick -q`, its loop aborted, and the chain's tail
+    `git reset --hard replay` moved `main` to the round's base — five
+    commits and the working tree gone until `git reset --hard main@{1}`
+    recovered them from the reflog (nothing lost, everything unpushed).
+    Chains that touch refs are written so that failure stops them dead:
+    never `a && b; c` where `c` rewrites history, never a reset whose
+    target was computed by an earlier step that can fail.
+
 ## Concurrency against production
 
 A second Claude Code session (the owner's) also writes to the production
