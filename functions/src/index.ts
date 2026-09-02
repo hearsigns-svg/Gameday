@@ -2555,8 +2555,19 @@ export const pollBoxingData = onRequest(async (req, res) => {
   }
 
   const boutsFetchedAt: BoutFetchState = { ...(prior?.boutsFetchedAt ?? {}) };
-  let spend: { calls: number; remaining: number | null; bouts: number; capped: number } | null =
-    null;
+  // Boxed, not reassigned: the value is set inside servePoll's callback
+  // and TypeScript's control flow would otherwise narrow a `let` to its
+  // initial null at the marker write below.
+  const spendBox: {
+    value: {
+      calls: number;
+      remaining: number | null;
+      limit: number | null;
+      resetAt: string | null;
+      bouts: number;
+      capped: number;
+    } | null;
+  } = { value: null };
   const out = await servePoll(trigger, ctx, async (trace) => {
     trace.seasonsTried.push('current');
     const r = await fetchBoxingData(requireBoxingKey(), startedAt, {
@@ -2569,9 +2580,11 @@ export const pollBoxingData = onRequest(async (req, res) => {
     // without bound.
     const live = new Set(r.fixtures.map((f) => f.id.replace(/^boxingdata-/, '')));
     for (const k of Object.keys(boutsFetchedAt)) if (!live.has(k)) delete boutsFetchedAt[k];
-    spend = {
+    spendBox.value = {
       calls: r.callsSpent,
       remaining: r.quotaRemaining,
+      limit: r.quotaLimit,
+      resetAt: r.quotaResetAt,
       bouts: r.boutsFetchedFor.length,
       capped: r.skippedForCap,
     };
@@ -2600,6 +2613,20 @@ export const pollBoxingData = onRequest(async (req, res) => {
       {
         ...(out.status === 200 ? { lastSuccessAt: startedAt } : {}),
         boutsFetchedAt,
+        // The vendor's own metering, persisted (Round 4 item 6): the
+        // sweep's quota_low rule predicts exhaustion from this instead
+        // of the app discovering it as a week of 429s.
+        ...(spendBox.value
+          ? {
+              quota: {
+                remaining: spendBox.value.remaining,
+                limit: spendBox.value.limit,
+                resetAt: spendBox.value.resetAt,
+                callsThisRun: spendBox.value.calls,
+                at: startedAt,
+              },
+            }
+          : {}),
       },
       { merge: true },
     );
@@ -2607,7 +2634,10 @@ export const pollBoxingData = onRequest(async (req, res) => {
     // Never fail a poll over the marker. A lost write costs one extra
     // run tomorrow, not correctness.
   }
-  res.status(out.status).json({ ...out.body, ...(spend ? { quota: spend } : {}) });
+  res.status(out.status).json({
+    ...out.body,
+    ...(spendBox.value ? { quota: spendBox.value } : {}),
+  });
 });
 
 // The Tennis TV ICS is fetched ONCE DAILY by owner ruling (2026-07-31)

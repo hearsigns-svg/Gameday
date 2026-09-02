@@ -91,12 +91,64 @@ if (extra.length) {
   for (const id of extra.slice(0, 10)) console.log(`  · ${id}`);
 }
 
+// BORN-DEAD ROWS ARE HELD, NOT FORGOTTEN (Round 4 item 5). A seed entry
+// carrying disabledReason 'born_dead' is a competition whose provider
+// has published no season yet (IPL, T20 World Cup). On every run this
+// probes TheSportsDB for the season in the row's pollPath: fixtures with
+// a future date → the row is re-enabled (with --apply); still nothing →
+// a live row that is enabled gets disabled with the reason, so the
+// sweep stops paging born_dead about a season that does not exist.
+// The probe reads TSDB_KEY from functions/.env itself and never prints it.
+const bornDead = CATALOGUE_SEED.filter((e) => e.disabledReason === 'born_dead');
+const heldWrites = [];
+if (bornDead.length > 0) {
+  const { readFileSync } = await import('node:fs');
+  const envText = readFileSync(new URL('../functions/.env', import.meta.url), 'utf8');
+  const tsdbKey = envText.match(/^TSDB_KEY=(.*)$/m)?.[1]?.trim();
+  console.log(`\nborn-dead probe: ${bornDead.length} held row(s)`);
+  for (const e of bornDead) {
+    const leagueId = e.pollPath.match(/leagueId=(\d+)/)?.[1];
+    const season = e.pollPath.match(/season=([^&]+)/)?.[1];
+    const liveDoc = live.get(e.competitionId);
+    if (!tsdbKey || !leagueId || !season) {
+      console.log(`  ? ${e.competitionId}: cannot probe (missing key or path params) — left as is`);
+      continue;
+    }
+    let futureCount = null;
+    try {
+      const res = await fetch(
+        `https://www.thesportsdb.com/api/v1/json/${tsdbKey}/eventsseason.php?id=${leagueId}&s=${season}`,
+      );
+      if (!res.ok) throw new Error(`http ${res.status}`);
+      const body = await res.json();
+      const today = new Date().toISOString().slice(0, 10);
+      futureCount = (body.events ?? []).filter((ev) => (ev.dateEvent ?? '') >= today).length;
+    } catch (err) {
+      console.log(`  ! ${e.competitionId}: probe failed (${err}) — a failed read is not "no season"; left as is`);
+      continue;
+    }
+    const liveEnabled = liveDoc?.enabled === true;
+    if (futureCount > 0) {
+      console.log(`  ✓ ${e.competitionId}: ${futureCount} future event(s) published for ${season} → ${liveEnabled ? 'already enabled' : 'RE-ENABLE'}`);
+      if (!liveEnabled && liveDoc) heldWrites.push({ id: e.competitionId, patch: { enabled: true, disabledReason: admin.firestore.FieldValue.delete() } });
+    } else {
+      console.log(`  · ${e.competitionId}: no future events for ${season} → ${liveEnabled ? 'DISABLE (born dead)' : 'stays held'}`);
+      if (liveEnabled) heldWrites.push({ id: e.competitionId, patch: { enabled: false, disabledReason: 'born_dead' } });
+    }
+  }
+}
+
 if (!apply) {
+  if (heldWrites.length) console.log(`\nWOULD update ${heldWrites.length} held row(s): ${heldWrites.map((w) => w.id).join(', ')}`);
   console.log('\nDRY RUN — nothing written. Re-run with --apply.');
   process.exit(0);
 }
+for (const w of heldWrites) {
+  await db.collection('catalogue').doc(w.id).set(w.patch, { merge: true });
+  console.log(`  held-row update applied: ${w.id} → ${JSON.stringify({ ...w.patch, disabledReason: w.patch.disabledReason === undefined ? undefined : typeof w.patch.disabledReason === 'string' ? w.patch.disabledReason : '(cleared)' })}`);
+}
 if (missing.length === 0) {
-  console.log('\nNothing to do.');
+  console.log('\nNothing else to do.');
   process.exit(0);
 }
 

@@ -14,7 +14,9 @@ import { getMessaging } from 'firebase-admin/messaging';
 import {
   evaluateAlerts,
   evaluateCoverageLagAlerts,
+  evaluateQuotaAlerts,
   evaluateRosterAlerts,
+  QuotaMarker,
 } from './alerts';
 import {
   CatalogueEntry,
@@ -618,6 +620,21 @@ export async function sweepAll(): Promise<SweepResult> {
       );
     } catch (e) {
       console.error(`[kickoffcal] coverage map read failed: ${e}`);
+    }
+    // Metered-vendor runway (Round 4 item 6): predicted from the quota
+    // the poller persisted, never discovered from 429s. A marker read
+    // failure skips the rule loudly — an unreadable marker is not an
+    // exhausted one.
+    try {
+      const bd = await db.collection('status').doc('boxingData').get();
+      active.push(
+        ...evaluateQuotaAlerts(
+          'boxingdata|boxingdata-cards',
+          bd.data()?.quota as QuotaMarker | undefined,
+        ),
+      );
+    } catch (e) {
+      console.error(`[kickoffcal] boxing-data quota marker read failed: ${e}`);
     }
     // Roster staleness comes from the dedicated marker doc, never the
     // run-window join (see alerts.ts). A marker READ FAILURE skips the

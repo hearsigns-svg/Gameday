@@ -6,6 +6,8 @@ import {
   COVERAGE_LAG_HOURS,
   evaluateAlerts,
   evaluateCoverageLagAlerts,
+  evaluateQuotaAlerts,
+  QUOTA_RUNWAY_DAYS,
   NO_SUCCESS_HOURS,
   YIELD_DIED_HOURS,
 } from '../alerts';
@@ -265,5 +267,31 @@ describe('coverage_lag', () => {
   test('undemanded slices and slices without a mapped path are ignored', () => {
     expect(evaluateCoverageLagAlerts([row()], new Set(), BY_SLICE, {}, NOW)).toEqual([]);
     expect(evaluateCoverageLagAlerts([row()], DEMANDED, new Map(), {}, NOW)).toEqual([]);
+  });
+});
+
+// quota_low (Round 4 item 6): predicted exhaustion from the vendor's own
+// headers, paged while there is still runway to act.
+describe('quota_low', () => {
+  const SLICE = 'boxingdata|boxingdata-cards';
+  test('plenty of runway raises nothing; no marker raises nothing', () => {
+    expect(evaluateQuotaAlerts(SLICE, { remaining: 60, callsThisRun: 9 })).toEqual([]);
+    expect(evaluateQuotaAlerts(SLICE, null)).toEqual([]);
+    expect(evaluateQuotaAlerts(SLICE, { remaining: null })).toEqual([]);
+  });
+  test('under the runway threshold it pages and names the numbers', () => {
+    const a = evaluateQuotaAlerts(SLICE, {
+      remaining: 9 * QUOTA_RUNWAY_DAYS - 1,
+      limit: 100,
+      callsThisRun: 9,
+      resetAt: '2026-09-29T00:00:00.000Z',
+    });
+    expect(a).toHaveLength(1);
+    expect(a[0].condition).toBe('quota_low');
+    expect(a[0].detail).toContain('of 100');
+    expect(a[0].detail).toContain('resets 2026-09-29');
+  });
+  test('exactly at the threshold is still fine — the rule is strict-below', () => {
+    expect(evaluateQuotaAlerts(SLICE, { remaining: 9 * QUOTA_RUNWAY_DAYS, callsThisRun: 9 })).toEqual([]);
   });
 });

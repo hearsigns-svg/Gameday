@@ -286,6 +286,10 @@ export interface BoxingDataFetch extends ProviderFetch {
   // Quota is 100 a MONTH, so the connector reports what it has left
   // rather than discovering the ceiling by hitting it.
   quotaRemaining: number | null;
+  // The plan's window limit and when the window resets, from the same
+  // headers — persisted by the poller so runway is predicted (item 6).
+  quotaLimit: number | null;
+  quotaResetAt: string | null;
   boutsFetchedFor: string[];
   skippedForCap: number;
   callsSpent: number;
@@ -294,12 +298,24 @@ export interface BoxingDataFetch extends ProviderFetch {
 async function get(
   key: string,
   path: string,
-): Promise<{ body: unknown; status: number; remaining: number | null }> {
+): Promise<{
+  body: unknown;
+  status: number;
+  remaining: number | null;
+  limit: number | null;
+  resetSeconds: number | null;
+}> {
   const res = await fetch(`https://${HOST}${path}`, {
     headers: { 'x-rapidapi-host': HOST, 'x-rapidapi-key': key },
   });
-  const remainingRaw = res.headers.get('x-ratelimit-requests-remaining');
-  const remaining = remainingRaw === null ? null : Number(remainingRaw);
+  // RapidAPI's metering headers: remaining requests in the window, the
+  // plan's window limit, and seconds until the window resets (Round 4
+  // item 6 — persisted so exhaustion is predicted, not discovered).
+  const num = (h: string): number | null => {
+    const raw = res.headers.get(h);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
   let body: unknown = null;
   try {
     body = await res.json();
@@ -309,7 +325,9 @@ async function get(
   return {
     body,
     status: res.status,
-    remaining: Number.isFinite(remaining) ? remaining : null,
+    remaining: num('x-ratelimit-requests-remaining'),
+    limit: num('x-ratelimit-requests-limit'),
+    resetSeconds: num('x-ratelimit-requests-reset'),
   };
 }
 
@@ -335,6 +353,8 @@ export async function fetchBoxingData(
   );
   const events = unwrapList<VendorEvent>(sched.status, sched.body, 'events/schedule');
   let remaining = sched.remaining;
+  let limit = sched.limit;
+  let resetSeconds = sched.resetSeconds;
 
   const fixtures: Fixture[] = [];
   const appearances: AppearanceDraft[] = [];
@@ -358,6 +378,8 @@ export async function fetchBoxingData(
     fetchedFor.push(vendorId);
     const r = await get(key, `/v2/fights?event_id=${encodeURIComponent(vendorId)}&page_size=100`);
     remaining = r.remaining ?? remaining;
+    limit = r.limit ?? limit;
+    resetSeconds = r.resetSeconds ?? resetSeconds;
     const fights = unwrapList<VendorFight>(r.status, r.body, 'fights');
     rawBouts += fights.length;
     appearances.push(...fightsToAppearances(card, fights, updatedAt));
@@ -368,6 +390,9 @@ export async function fetchBoxingData(
     appearances,
     rawBouts,
     quotaRemaining: remaining,
+    quotaLimit: limit,
+    quotaResetAt:
+      resetSeconds === null ? null : new Date(Date.now() + resetSeconds * 1000).toISOString(),
     boutsFetchedFor: fetchedFor,
     // NEVER A SILENT TRUNCATION. If the cap bit, the run says so.
     skippedForCap,

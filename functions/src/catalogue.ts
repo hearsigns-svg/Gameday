@@ -38,6 +38,11 @@ export interface CatalogueEntry {
   pollPath: string;
   tier: 1 | 2;
   enabled: boolean;
+  // Why a row ships disabled (Round 4 item 5). 'born_dead' = the
+  // provider has published no season yet; the seeder probes such rows
+  // on every run and re-enables the moment fixtures exist, so a
+  // disabled row is a held row, not a forgotten one.
+  disabledReason?: 'born_dead';
   // Client sport key (sportsConfig) — lets the ordering layer roll
   // priorities up into per-sport weights. Optional in the type because
   // pre-Prompt-11 live docs lack it; always set by the seed.
@@ -156,7 +161,10 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // calendar" catch-all (1,372 future meetings) and must sort LAST
   // within athletics, after every curated group below.
   T1('wa-calendar', 'World Athletics', 'athletics', 'pollAthletics'),
-  T1('tsdb-league-4460', 'Indian Premier League', 'cricket', 'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4', 52),
+  // IPL: 161 straight no_future_events across seasons 2026 and 2027 —
+  // TSDB has published nothing (born_dead open since 08-17). Held
+  // disabled; the seeder re-enables on detection (Round 4 item 5).
+  { ...T1('tsdb-league-4460', 'Indian Premier League', 'cricket', 'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4', 52), enabled: false, disabledReason: 'born_dead' as const },
   // ── Tier 2 ──────────────────────────────────────────────────────────
   T2('fdorg-comp-ELC', 'Championship', 'soccer', 'pollFdCompetition?code=ELC&season=2026', 46),
   T2('fdorg-comp-DED', 'Eredivisie', 'soccer', 'pollFdCompetition?code=DED&season=2026', 38),
@@ -187,7 +195,9 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('mlb-league-1', 'MLB', 'baseball', 'pollMlbLeague?season=2026', 70),
   T2('tsdb-league-4801', 'ODI Internationals', 'cricket', 'pollTsdbLeague?leagueId=4801&season=2026&sport=cricket&durationHours=8', 39),
   T2('tsdb-league-4979', 'T20 Internationals', 'cricket', 'pollTsdbLeague?leagueId=4979&season=2026&sport=cricket&durationHours=4', 41),
-  T2('tsdb-league-5103', 'T20 World Cup', 'cricket', 'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4', 55),
+  // T20 World Cup: same shape (45 runs, no season published; alert open
+  // since 08-18). Held disabled until the seeder detects fixtures.
+  { ...T2('tsdb-league-5103', 'T20 World Cup', 'cricket', 'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4', 55), enabled: false, disabledReason: 'born_dead' as const },
   T2('tsdb-league-4458', 'County Championship', 'cricket', 'pollTsdbLeague?leagueId=4458&season=2026&sport=cricket&durationHours=96', 34),
   T2('tsdb-league-4516', 'WNBA', 'basketball', 'pollTsdbLeague?leagueId=4516&season=2026&sport=basketball&durationHours=2.5', 36),
   T2('tsdb-league-4549', 'FIBA WC qualifiers', 'basketball', 'pollTsdbLeague?leagueId=4549&season=2027&sport=basketball&durationHours=2', 28),

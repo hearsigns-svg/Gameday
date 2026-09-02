@@ -51,7 +51,12 @@ export type AlertCondition =
   // side but outruns the sweep's fetch timeout, so status/coverage is
   // never refreshed. Ran silent for three days on the boxing-cards slice
   // (Round 4 A1) — every server signal was green and the app said stale.
-  | 'coverage_lag';
+  | 'coverage_lag'
+  // A metered vendor's remaining monthly quota has fallen below the
+  // runway the daily spend needs (Round 4 item 6): exhaustion PREDICTED
+  // from the vendor's own rate-limit headers, not discovered as a week
+  // of 429s (boxing-data, 2026-08-29 → 09-02).
+  | 'quota_low';
 
 export interface Alert {
   sliceKey: string; // `${source}|${competitionId}`
@@ -244,4 +249,41 @@ export function evaluateCoverageLagAlerts(
     });
   }
   return alerts;
+}
+
+// Quota runway (Round 4 item 6). `status/boxingData.quota` is written by
+// the poller from the vendor's rate-limit headers after every real run:
+// remaining requests, the plan's limit, when the window resets, and the
+// calls the run spent. Below this many days of runway at the current
+// daily spend, page — while there is still time to act (upgrade the
+// plan on the same key, or hold the poller) rather than after the 429s.
+export const QUOTA_RUNWAY_DAYS = 3;
+
+export interface QuotaMarker {
+  remaining: number | null;
+  limit?: number | null;
+  callsThisRun?: number;
+  resetAt?: string | null;
+  at?: string;
+}
+
+export function evaluateQuotaAlerts(
+  sliceKey: string,
+  quota: QuotaMarker | null | undefined,
+): Alert[] {
+  if (!quota || quota.remaining === null || quota.remaining === undefined) return [];
+  const perDay = Math.max(1, quota.callsThisRun ?? 1);
+  const runwayDays = quota.remaining / perDay;
+  if (runwayDays >= QUOTA_RUNWAY_DAYS) return [];
+  return [
+    {
+      sliceKey,
+      condition: 'quota_low',
+      detail:
+        `${quota.remaining} request(s) left${quota.limit ? ` of ${quota.limit}` : ''} — ` +
+        `about ${Math.floor(runwayDays)} day(s) at ${perDay}/run` +
+        (quota.resetAt ? `; window resets ${quota.resetAt}` : '; reset time unknown') +
+        ' — upgrade the plan on the same key or hold the poller before the 429s start',
+    },
+  ];
 }
