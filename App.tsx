@@ -59,6 +59,8 @@ import CreditsScreen from './src/features/settings/CreditsScreen';
 import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
 import { refreshFlags } from './src/core/flags';
 import { initAnalytics } from './src/core/analytics';
+import { installFixtureReminders } from './src/wiring/reminders';
+import { NotificationTapBridge } from './src/wiring/NotificationTapBridge';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -170,6 +172,8 @@ export default function App() {
     // Both fail-safe — an unreachable flags doc leaves the launch
     // defaults, and a missing analytics pod logs once and stays quiet.
     void refreshFlags().then(() => initAnalytics());
+    // Round 5 Stage 2: system-notification reminders (the Free channel).
+    installFixtureReminders();
     void registerBackgroundSync();
     void import('./src/features/calendar-sync/data/deviceRegistry').then(
       (m) => m.registerDevice(),
@@ -223,6 +227,7 @@ export default function App() {
       }}
     >
     <View style={{ flex: 1 }}>
+      <NotificationTapBridge />
       <NavigationContainer theme={navTheme}>
         <Stack.Navigator
           initialRouteName={initialRoute}

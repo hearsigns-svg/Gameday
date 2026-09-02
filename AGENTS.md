@@ -79,7 +79,15 @@ source of truth for build state — never chat history.
   run with the agent's half-built code failing). `.gitignore` and jest's
   `testPathIgnorePatterns` now exclude `.claude/worktrees/`; if a
   gitlink ever appears in `git ls-files .claude`, `git rm --cached -r`
-  it before pushing.
+  it before pushing. THE SAME IGNORE BLINDS A GATE RUN INSIDE A
+  WORKTREE (2026-09-02): `npm test` there finds 0 tests, because the
+  worktree's own path matches the pattern. An agent gating in its
+  worktree must run `TZ=UTC npx jest --testPathIgnorePatterns
+  /node_modules/ /functions/lib/ && TZ=America/Los_Angeles npx jest
+  --testPathIgnorePatterns /node_modules/ /functions/lib/`, and `tsc`
+  there needs `functions/node_modules` present (a second `npm ci
+  --ignore-scripts` in `functions/`) or it reports phantom
+  `@types/node` errors in functions/src.
 - **`scripts/seed-catalogue.mjs` by ABSOLUTE PATH** (`node
   /Users/lnw/Gameday/scripts/seed-catalogue.mjs`): invoked from
   `functions/` it printed a listing and exited without running the

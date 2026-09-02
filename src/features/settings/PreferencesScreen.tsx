@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
@@ -58,6 +59,11 @@ import {
   legacyCalendarEventsRemain,
 } from '../calendar-sync/data/calendarConnection';
 import { premiumLocked } from '../../core/entitlementStore';
+import { reminderChoice, setReminderChoice } from '../reminders/data/reminderChoice';
+import {
+  readNotificationPermission,
+  requestNotificationPermission,
+} from '../reminders/data/notificationScheduler';
 import { requestPaywall } from '../../core/paywall';
 import {
   ownsCalendarColour,
@@ -335,6 +341,33 @@ export default function PreferencesScreen({
   // closes whichever was open, so at most one is expanded at a time.
   // Nothing persists.
   const [openSection, setOpenSection] = useState<SectionKey | null>(null);
+  // Round 5 Stage 2: the notification channel's choice + OS state.
+  const [reminderChoiceValue, setReminderChoiceValue] = useState(reminderChoice);
+  const [notificationsDenied, setNotificationsDenied] = useState(false);
+  useEffect(() => {
+    void readNotificationPermission().then((p) =>
+      setNotificationsDenied(p.status === 'denied' && !p.canAskAgain),
+    );
+  }, []);
+  const enableReminders = async () => {
+    const current = await readNotificationPermission();
+    const state =
+      current.status === 'granted'
+        ? current
+        : current.status === 'undetermined' || current.canAskAgain
+          ? await requestNotificationPermission()
+          : current;
+    if (state.status === 'granted') {
+      setReminderChoice('enabled');
+      setReminderChoiceValue('enabled');
+      setNotificationsDenied(false);
+      void runSync(); // reconciles the notifications through the refresh hook
+      return;
+    }
+    setReminderChoice('deferred');
+    setReminderChoiceValue('deferred');
+    setNotificationsDenied(state.status === 'denied' && !state.canAskAgain);
+  };
   const toggleSection = (key: SectionKey) =>
     setOpenSection((current) => (current === key ? null : key));
   // Which reminder slot's wheels are out — one at a time, same rule as
@@ -675,6 +708,37 @@ export default function PreferencesScreen({
             }}
           />
         </View>
+        {/* Round 5 Stage 2: the system-notification channel — one row,
+            Off / On. On probes the OS first and asks only from the
+            never-asked state; a denial shows the Settings link beneath
+            (the OS will not ask again), never a re-prompt. */}
+        <SegmentedRow
+          label={tr('reminders.notify')}
+          options={[
+            {
+              label: tr('settings.reminders.off'),
+              selected: reminderChoiceValue !== 'enabled',
+              onPress: () => {
+                setReminderChoice('deferred');
+                setReminderChoiceValue('deferred');
+                void runSync();
+              },
+            },
+            {
+              label: tr('settings.reminders.on'),
+              selected: reminderChoiceValue === 'enabled',
+              onPress: () => void enableReminders(),
+            },
+          ]}
+        />
+        {notificationsDenied ? (
+          <ValueRow
+            label={tr('notifications.off')}
+            caption={tr('notifications.openSettings')}
+            accessibilityLabel={tr('notifications.openSettings')}
+            onPress={() => void Linking.openSettings()}
+          />
+        ) : null}
         <SegmentedRow
           label={tr('settings.reminders.daysWithoutDates')}
           last
