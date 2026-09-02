@@ -3858,3 +3858,23 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   Winston-Salem final was still in `next` ~4h after its 20:00Z start.
   Unchanged exposure from the sheet chain; worth a `events/last`
   read-only probe on a live match day before anyone leans on it.
+- 2026-09-02 (Round 4 close-out, main session): the men's tennis vendor
+  port (item 7) and the calendar-path truth work (B4) were built in
+  isolated worktrees and merged (a9af0e2, 10117a1). Retirement of the
+  sheet chain applied to prod: `pollSheetAtp` DELETED from the project
+  (a `--only functions` deploy refuses non-interactively while a
+  deployed function has no source — delete first, deploy second),
+  catalogue row `tennis-atp-vendor` SEEDED (T1, pollAtpVendor, 65) and
+  the live `tennis-atp-sheet` row HELD (enabled:false, disabledReason
+  'retired' — a data field, not a seed constant). The sweep resolves
+  open alerts for HELD rows (disabled in the catalogue) even though it
+  no longer demands them — a held row is evidence, a deadline-truncated
+  sweep is not; a catalogue read failure yields an empty held set so
+  nothing resolves on a failed read. The born_dead alerts for IPL and
+  the T20 World Cup resolved on that rule. Merge lore: agent worktrees
+  live inside the repo — `git add -A` staged them as gitlinks (two
+  intermediate commits carry the placeholder; the tip is clean, the
+  directory is now ignored) — and a history-replay attempt to scrub
+  them used an invalid cherry-pick flag whose chain hard-reset main to
+  the round's base; recovered from the reflog with nothing lost.
+  Rewrites of shared history are off the table from here.
