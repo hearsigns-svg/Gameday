@@ -132,7 +132,7 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // labels/priorities — correcting them is an ops edit (owner).
   T1('tsdb-league-4920', 'KHL', 'ice-hockey', 'pollTsdbLeague?leagueId=4920&season=2026-2027&sport=ice-hockey&durationHours=2.5', 28),
   T1('tsdb-league-4591', 'NPB', 'baseball', 'pollTsdbLeague?leagueId=4591&season=2026&sport=baseball&durationHours=3', 28),
-  T1('f1-series-1', 'Formula 1', 'f1', 'pollF1?season=2026', 85),
+  { ...T1('f1-series-1', 'Formula 1', 'f1', 'pollF1?season=2026', 85), priorityByRegion: { 'north-america': 30 } },
   T1('tsdb-league-4443', 'UFC', 'ufc', 'pollTsdbLeague?leagueId=4443&season=2026&sport=ufc&durationHours=4', 76),
   T1('tsdb-league-4445', 'Boxing cards', 'boxing', 'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3', 64),
   T1('pbc-cards', 'Premier Boxing Champions', 'boxing', 'pollPbc', 60),
@@ -240,9 +240,13 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   T2('tsdb-league-5430', 'PFL', 'ufc', 'pollTsdbLeague?leagueId=5430&season=2026&sport=ufc&durationHours=4', 30),
   T2('tsdb-league-4567', 'Bare Knuckle FC', 'ufc', 'pollTsdbLeague?leagueId=4567&season=2026&sport=ufc&durationHours=4', 22),
   T2('tsdb-league-4407', 'MotoGP', 'motorsport', 'pollTsdbLeague?leagueId=4407&season=2026&sport=motorsport&durationHours=2', 50),
-  T2('tsdb-league-4393', 'NASCAR Cup Series', 'motorsport', 'pollTsdbLeague?leagueId=4393&season=2026&sport=motorsport&durationHours=4', 42),
-  T2('tsdb-league-4373', 'IndyCar', 'motorsport', 'pollTsdbLeague?leagueId=4373&season=2026&sport=motorsport&durationHours=3', 37),
-  T2('tsdb-league-4486', 'Formula 2', 'motorsport', 'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5', 28),
+  { ...T2('tsdb-league-4393', 'NASCAR Cup Series', 'motorsport', 'pollTsdbLeague?leagueId=4393&season=2026&sport=motorsport&durationHours=4', 42), priorityByRegion: { 'north-america': 95 } },
+  { ...T2('tsdb-league-4373', 'IndyCar', 'motorsport', 'pollTsdbLeague?leagueId=4373&season=2026&sport=motorsport&durationHours=3', 37), priorityByRegion: { 'north-america': 94 } },
+  // Round 6 item 7: the Formula group leads in F1 regions (F1 85 > F2 >
+  // Formula E > the series); North America pins IndyCar and NASCAR first
+  // via priorityByRegion, the existing ops field.
+  { ...T2('tsdb-league-4486', 'Formula 2', 'motorsport', 'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5', 52), priorityByRegion: { 'north-america': 25 } },
+  { ...T2('tsdb-league-4371', 'Formula E', 'motorsport', 'pollTsdbLeague?leagueId=4371&season=2026&sport=motorsport&durationHours=1.5', 51), priorityByRegion: { 'north-america': 24 } },
   T2('tsdb-league-4413', 'WEC', 'motorsport', 'pollTsdbLeague?leagueId=4413&season=2026&sport=motorsport&durationHours=6', 38),
   // ── Round 3 Phase B ruling 7 — the majors additions (2026-08-29) ───
   // Curated omissions, sequenced by season proximity. Each comment

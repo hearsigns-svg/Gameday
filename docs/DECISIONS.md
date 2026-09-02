@@ -4309,3 +4309,65 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   documents that the retired start-based rule chose the childless 2027
   edition. A dev-only Preferences control toggles the sync-gate override
   for the flag-on test build.
+
+- 2026-09-02 (ROUND 6 — POLISH BATCH, least- to most-risky; owner brief,
+  queued behind the P0). (1) Home search bar: in light mode it wears the
+  sport tiles' fill (surfaceRaised), lighter than the page; dark mode
+  unchanged. (2) People rows: "Rankings, champions, who's competing" is
+  gone; Players/Fighters/Drivers rows read "Tap to follow players (N)"
+  — the standing tap-advertising language — with N remembered from the
+  last directory fetch per group (`athleteCounts.v1`, daily background
+  refresh, tour/sex filtered the way the list screen filters) and the
+  count-less form until the directory has been seen; every row on a
+  Competitions screen shares COMPETITION_ROW_HEIGHT (76) with label and
+  caption on one line, ellipsised. (3) One-open expansion: CompetitionCard
+  takes controlled `expanded`/`onExpandedChange`; the league list, the
+  tournament list and the Olympic season cards hold one `openKey`, so
+  opening one collapses any other instantly. The Preferences accordion is
+  untouched. (4) PBC MERGES INTO MAJOR FIGHT CARDS: every PBC card carries
+  the `tsdb-league-4445` key server-side (withMajorCardsKey) and the
+  ingest stamps the 4445 sex scopes on a PBC ingest too (boxingStampBases),
+  so one follow per sex unions both sources; identity dedupe is the
+  client's existing sameBout rule; fixture ids are unchanged so the ledger
+  keys hold and nothing moves in a calendar. The PBC browse row is RETIRED
+  and the launch normaliser rewrites `pbc-cards(-m|-w)` follows onto
+  `tsdb-league-4445(-m|-w)` in place (label, poll path), dropping the PBC
+  follow where the Major fight cards follow already exists. The PBC
+  catalogue row stays as a SOURCE (pollPbc); only its row and keys retire.
+  Sequence: server deployed and the PBC docs re-stamped BEFORE the client
+  migration ships in a build. (5) MMA FIGHTERS: the directory is DERIVED
+  from the cards we hold (mmaFighters.ts): every participant of an
+  upcoming card, unique by folded name, grouped by promotion, soonest
+  first, with the promotion's poll path on the card; a fighter follow is
+  the folded-name key `mma-<name>` stamped onto the CARD at ingest (MMA
+  has no appearance docs) and the client attaches the poll path so a
+  fighter-only follower keeps the source warm; marks via the standing
+  photo pipeline, monogram floor. UFC browse gains the Fighters row; its
+  coverage note now reads "Card-level times. Fighters come from announced
+  cards." ATHLETICS (audit, read-only): 200 sampled World Athletics
+  fixtures carry no entry lists (`athletes[]` absent everywhere; fields:
+  competition, title, startUtc, followKeys…) — athletes are not first-
+  class in the feed, so NO Athletes row; recorded, revisit if the feed
+  changes. (6) OLYMPICS GROUP NODE in the Following strip: followed
+  Olympic sports collapse under one "Summer Olympics" / "Winter Olympics"
+  node (season from the edition year: leap year = Summer), icon the MEDAL
+  🏅 in the emoji-tile style, never the rings (statute); a tap expands it
+  in place into the followed sports' emoji icons (the cross-sport's glyph),
+  the node's corner mark being the expand/collapse toggle; the strip keeps
+  drifting and wrapping because it renders whatever items it is given per
+  copy; a sport icon opens that sport's following fixtures. Pure module
+  `railGroups.ts` (reusable; Olympics-only for now). (7) MOTORSPORT — one
+  structure, regional presentation: a single Motorsport tile everywhere
+  (Formula 1's own tile hidden via `hiddenTile`; its follows, pages and
+  drivers directory unchanged); label "F1 & Motorsport" in F1 regions and
+  "Motorsport" in North America via the region store (OS region + user
+  override — the same source Football/Soccer uses); the tile icon
+  regionalises with it (🏎️ / 🏁, emoji-tile style, never a brand mark).
+  Inner grouping: Formula (F1 as a row that follows AS the f1 series via
+  `followAs`, F2, Formula E) then the series; pinning by the existing
+  priorities — catalogue priorityByRegion pins IndyCar/NASCAR first in
+  North America and the Formula group first elsewhere. Formula E is a new
+  catalogue row (TheSportsDB 4371; OWNER SEED: `node
+  /Users/lnw/Gameday/scripts/seed-catalogue.mjs --apply
+  --id=tsdb-league-4371`). listAthletes serves Motorsport's Drivers row
+  from Formula 1's directory.

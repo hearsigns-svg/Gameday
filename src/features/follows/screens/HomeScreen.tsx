@@ -56,10 +56,25 @@ import {
   subscribePriorities,
 } from '../data/browsePriority';
 import { followQueryKeys } from '../domain/followScopes';
-import { sportLabelFor } from '../domain/sportTerms';
+import { sportGlyphFor, sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { flagEmojiOf } from '../../../core/nationality';
 import { currentFixtures, isLive } from '../../fixtures/domain/horizon';
+import {
+  GroupNode,
+  groupOlympicItems,
+  groupSeasonOf,
+  OlympicSeason,
+} from '../domain/railGroups';
+
+// The emoji-style icon of an Olympic SPORT follow: the cross-sport's own
+// glyph where the config names one, else the medal.
+function olympicSportGlyph(followKey: string): string | null {
+  if (!/^olympics-\d{4}-/.test(followKey)) return null;
+  const entry = sportByKey('olympics')?.staticCompetitions?.find((c) => c.key === followKey);
+  const cross = (entry as { crossSport?: string } | undefined)?.crossSport;
+  return (cross ? sportByKey(cross)?.glyph : undefined) ?? '🏅';
+}
 import { t as tr } from '../../../core/i18n';
 
 type Props = TabScreenProps<'Home'>;
@@ -115,7 +130,7 @@ export default function HomeScreen({ navigation }: Props) {
   const orderedSports = useMemo(
     () =>
       byPriority(
-        SPORTS.filter((s) => s.enabled),
+        SPORTS.filter((s) => s.enabled && !s.hiddenTile),
         (s) => s.key,
         cachedPriorities().sportWeights,
       ),
@@ -148,6 +163,11 @@ export default function HomeScreen({ navigation }: Props) {
   // Everything followed, soonest first, each showing when it next plays.
   // Ordering by next fixture rather than by follow date is what makes
   // this useful at a glance instead of just a list of names.
+  // Round 6 item 6: the Olympic group nodes' open/closed state.
+  const [olympicsOpen, setOlympicsOpen] = useState<Record<OlympicSeason, boolean>>({
+    summer: false,
+    winter: false,
+  });
   const railItems = useMemo(() => {
     const next = new Map<string, UpcomingFixture>();
     for (const f of upcoming) {
@@ -165,7 +185,7 @@ export default function HomeScreen({ navigation }: Props) {
       }
       return undefined;
     };
-    return [...follows]
+    const base = [...follows]
       .sort((a, b) => {
         const sa = nextFor(a)?.startUtc;
         const sb = nextFor(b)?.startUtc;
@@ -179,13 +199,16 @@ export default function HomeScreen({ navigation }: Props) {
         const fixture = nextFor(item);
         return {
           key: item.key,
+          startUtc: fixture?.startUtc ?? null,
           label: item.label,
           caption: fixture
             ? isLive(fixture, Date.now())
               ? tr('core.when.today') // a block already under way (P0 2026-09-02)
               : whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
             : i18n.t('follows.home.nothingScheduled'),
-          glyph: sport?.glyph ?? '🏟️',
+          // An Olympic SPORT follow wears its sport's emoji (the group node
+          // above it wears the medal) — Round 6 item 6.
+          glyph: olympicSportGlyph(item.key) ?? sport?.glyph ?? '🏟️',
           // The served competition mark first, then the stored crest
           // (followMarkUrl, Round 6 order) — prepared marks live in
           // the map and must beat a crest captured at follow time.
@@ -202,7 +225,37 @@ export default function HomeScreen({ navigation }: Props) {
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
         };
       });
-  }, [follows, upcoming, mode]);
+    // Round 6 item 6: followed Olympic sports collapse under one Summer /
+    // Winter node (medal icon, never the rings); an open node lists its
+    // sports as emoji icons after it. The strip renders whatever it is
+    // given per copy, so the expansion drifts and wraps like any tile.
+    const grouped = groupOlympicItems(
+      base,
+      olympicsOpen,
+      {
+        summer: i18n.t('follows.rail.summerOlympics'),
+        winter: i18n.t('follows.rail.winterOlympics'),
+      },
+      i18n.t('follows.home.nothingScheduled'),
+    );
+    return grouped.map((entry) => {
+      if ((entry as GroupNode<(typeof base)[number]>).kind === 'group') {
+        const node = entry as GroupNode<(typeof base)[number]>;
+        return {
+          key: node.key,
+          label: node.label,
+          caption: node.caption,
+          glyph: node.glyph,
+          // The node icon is the expand/collapse toggle: its corner mark
+          // says which way it will go.
+          badge: node.expanded ? '▴' : '▾',
+          theme: teamTheme(sportByKey('olympics')?.accent ?? null, mode),
+        };
+      }
+      const { startUtc: _startUtc, ...rest } = entry as (typeof base)[number];
+      return rest;
+    });
+  }, [follows, upcoming, mode, olympicsOpen]);
 
   // A refresh can shrink the carousel under the current page (FlatList
   // clamps the offset without a momentum event) — keep the dot honest.
@@ -388,6 +441,12 @@ export default function HomeScreen({ navigation }: Props) {
           <FollowRail
             items={railItems}
             onPress={(key) => {
+              // Round 6 item 6: the group node toggles in place.
+              const season = groupSeasonOf(key);
+              if (season) {
+                setOlympicsOpen((prev) => ({ ...prev, [season]: !prev[season] }));
+                return;
+              }
               const item = follows.find((f) => f.key === key);
               if (!item) return;
               navigation.navigate('Team', {
@@ -418,7 +477,7 @@ export default function HomeScreen({ navigation }: Props) {
             <SportCard
               key={s.key}
               label={label}
-              glyph={s.glyph}
+              glyph={sportGlyphFor(s.key, s.glyph, activeRegion())}
               theme={teamTheme(s.accent, mode)}
               // Every tile reads the same word (owner ruling): no state
               // caption, and no follow-count variant for the one sport

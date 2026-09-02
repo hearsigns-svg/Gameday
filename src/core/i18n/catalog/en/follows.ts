@@ -194,4 +194,8 @@ export const followsStrings = {
   // ── Round 6 item 2: people rows advertise the tap ──
   'follows.athletes.tapToFollow': 'Tap to follow {people} ({n})',
   'follows.athletes.tapToFollowNoCount': 'Tap to follow {people}',
+
+  // ── Round 6 item 6: Olympic group nodes in the Following strip ──
+  'follows.rail.summerOlympics': 'Summer Olympics',
+  'follows.rail.winterOlympics': 'Winter Olympics',
 } as const;

@@ -63,7 +63,7 @@ import {
 } from '../domain/olympicsBrowse';
 import { coverageNoteFor } from '../domain/coverageNotes';
 import { expandQuery } from '../domain/searchAliases';
-import { sportByKey } from '../domain/sportsConfig';
+import { sportByKey, staticFollowAsFor } from '../domain/sportsConfig';
 import { fixturesWordFor, sportLabelFor } from '../domain/sportTerms';
 import { boxingGroupSex } from '../domain/boxingBrowse';
 
@@ -338,11 +338,14 @@ export default function LeagueListScreen({ navigation, route }: Props) {
 
   const toggle = useCallback(async (league: DirectoryLeague) => {
     const isSeries = league.key === sport?.seriesFollowable?.key;
+    // Round 6 item 7: a row may follow under another identity (F1 inside
+    // Motorsport follows as the f1 series).
+    const followAs = staticFollowAsFor(route.params.sportKey, league.key);
     const item = {
       key: league.key,
       label: league.followLabel ?? league.name,
-      sportKey: route.params.sportKey,
-      type: isSeries ? ('series' as const) : ('competition' as const),
+      sportKey: followAs?.sportKey ?? route.params.sportKey,
+      type: followAs?.type ?? (isSeries ? ('series' as const) : ('competition' as const)),
       ...(league.pollPath ? { pollPath: league.pollPath } : {}),
       // The card one line below already renders this logo; not putting it
       // on the follow is why a followed competition lost it everywhere

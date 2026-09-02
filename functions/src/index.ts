@@ -46,6 +46,8 @@ import {
   stampBoxingSexScopes,
   withoutScopedKeys,
 } from './boxingSexScopes';
+import { boxingStampBases, withMajorCardsKey } from './boxingMerge';
+import { deriveMmaBrowse, MMA_SPORT, stampMmaFighterKeys } from './mmaFighters';
 import {
   authorised as rcAuthorised,
   isEventForUs,
@@ -95,8 +97,7 @@ import {
   athletesCollection,
   nameKey,
   type AthleteKey,
-  type AthleteUpdate,
-} from './athletes';
+  type AthleteUpdate, accentHueOf } from './athletes';
 import {
   createAthletes,
   loadAthleteIndex,
@@ -106,7 +107,7 @@ import {
 import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
-import { CatalogueEntry, sportWeightsOf } from './catalogue';
+import { CatalogueEntry, sportWeightsOf, CATALOGUE_SEED } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
 import {
   activeWindows,
@@ -268,7 +269,10 @@ async function ingest(
   // Combat cards arrive as a title with no participants; parse the
   // fighters out and give them athlete follow keys before anything else
   // looks at the fixture.
-  const withPeople = enrichBoutParticipants(rawIncoming);
+  // Round 6 item 5: an MMA card carries its two fighters' folded-name
+  // keys — the fighter follow's only path onto a fixture (no appearance
+  // docs in MMA) and the same key the derived directory hands out.
+  const withPeople = stampMmaFighterKeys(enrichBoutParticipants(rawIncoming));
   // Stamp every provider's key for each club onto the fixture, so a
   // team followed via one provider still matches fixtures supplied by
   // another (league from football-data, cups from TSDB).
@@ -432,7 +436,11 @@ async function ingest(
   // Instrumentation-grade failure handling — a stamping error must
   // never fail the poll it rides.
   try {
-    await stampBoxingSexScopes(db, incoming, followKey, writtenIds);
+    // A PBC ingest stamps the Major fight cards sex scopes too (Round 6
+    // item 4), so `tsdb-league-4445-m/-w` followers see PBC's cards.
+    for (const base of boxingStampBases(followKey)) {
+      await stampBoxingSexScopes(db, incoming, base, writtenIds);
+    }
   } catch (e) {
     console.error(`[kickoffcal] boxing sex-scope stamping failed: ${e}`);
   }
@@ -1446,8 +1454,21 @@ export const listAthletes = onRequest(gz(async (req, res) => {
       res.status(400).json({ error: 'sport is required' });
       return;
     }
+    // Round 6 item 5: the MMA fighter directory is DERIVED from the cards
+    // we hold (no body publishes a roster) — see mmaFighters.ts.
+    if (sport === MMA_SPORT) {
+      const snap = await db.collection('fixtures').where('sport', '==', MMA_SPORT).get();
+      const cards = snap.docs.map((d) => d.data() as Fixture);
+      const pollPathOf = (f: { competitionId: string }) =>
+        CATALOGUE_SEED.find((e) => e.competitionId === f.competitionId)?.pollPath;
+      res.json(deriveMmaBrowse(cards, new Date().toISOString(), pollPathOf, accentHueOf));
+      return;
+    }
+    // Round 6 item 7: the Motorsport tile's Drivers row is Formula 1's
+    // directory — one directory, two doors.
+    const directorySport = sport === 'motorsport' ? 'f1' : sport;
     const athletes = await loadAthletes(db);
-    res.json(shapeAthleteBrowse(athletes, sport, new Date().toISOString()));
+    res.json(shapeAthleteBrowse(athletes, directorySport, new Date().toISOString()));
   } catch (e) {
     // An empty athlete list would read as "this sport has nobody".
     // Fail loudly instead so the client shows an error it can retry.
@@ -2490,7 +2511,9 @@ export const pollPbc = onRequest(
         const r = await fetchPbcCards(from);
         return {
           rawCount: r.rawCount,
-          fixtures: r.fixtures,
+          // Round 6 item 4: PBC merges into Major fight cards — every card
+          // also carries the 4445 key, so one follow unions both sources.
+          fixtures: withMajorCardsKey(r.fixtures),
           followKey: 'pbc-cards',
           seasonResolved: 'current',
           // Always attached, zero yield included: fetched-N-parsed-0 is

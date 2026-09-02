@@ -332,10 +332,13 @@ export default function AthleteListScreen({ navigation, route }: Props) {
     ...(a.careerEndYear !== undefined
       ? { careerEndYear: a.careerEndYear }
       : {}),
-    // No pollPath, deliberately: athlete follows need no poll route of
-    // their own — the catalogue keeps their sources warm, and the
-    // appearance carrying this athlete's canonical key reaches the
-    // follower through the ordinary query path.
+    // Usually no pollPath: athlete follows need no poll route of their
+    // own — the catalogue keeps their sources warm, and the appearance
+    // carrying this athlete's canonical key reaches the follower through
+    // the ordinary query path. A DERIVED MMA fighter is the exception
+    // (Round 6 item 5): the card names its promotion's path so a
+    // fighter-only follower still demands that source.
+    ...(a.pollPath ? { pollPath: a.pollPath } : {}),
   });
 
   const toggle = useCallback(

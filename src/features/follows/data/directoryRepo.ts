@@ -98,6 +98,9 @@ export interface AthleteCard {
   accentHue?: number; // generated colour identity (optional: deploy skew)
   careerStatus?: 'retired'; // recorded retirement; absent = unknown
   careerEndYear?: number;
+  // Round 6 item 5: a derived MMA fighter carries the promotion's poll
+  // path, so a fighter-only follower keeps that source warm.
+  pollPath?: string;
 }
 
 export interface AthleteBrowse {

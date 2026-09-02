@@ -725,4 +725,8 @@ export const pt: Catalog = {
   // ── Round 6 item 2: people rows advertise the tap ──
   'follows.athletes.tapToFollow': 'Toca para seguir {people} ({n})',
   'follows.athletes.tapToFollowNoCount': 'Toca para seguir {people}',
+
+  // ── Round 6 item 6: Olympic group nodes in the Following strip ──
+  'follows.rail.summerOlympics': 'Jogos Olímpicos de Verão',
+  'follows.rail.winterOlympics': 'Jogos Olímpicos de Inverno',
 };

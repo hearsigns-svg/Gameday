@@ -26,6 +26,7 @@ import { resumeGoogleCalendarAuth } from './src/features/calendar-sync/data/goog
 import { loadFollowables } from './src/features/follows/data/followStore';
 import {
   migrateBoxingSexFollows,
+  migratePbcFollows,
   migrateTournamentFinalsScope,
 } from './src/features/follows/data/followMigrations';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
@@ -172,6 +173,7 @@ export default function App() {
     // ordering keeps coverage — the base key stays on every fixture —
     // but running first avoids one fetch on the legacy key.
     migrateBoxingSexFollows();
+    migratePbcFollows(); // Round 6 item 4: after the sex split, before the first fetch
     migrateTournamentFinalsScope();
     // Round 5: the remote switchboard, then measurement under its flag.
     // Both fail-safe — an unreachable flags doc leaves the launch

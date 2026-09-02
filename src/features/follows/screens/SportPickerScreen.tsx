@@ -15,7 +15,7 @@ import { teamTheme } from '../../../core/teamTheme';
 import { useTheme } from '../../../core/tokens';
 import { byPriority, cachedPriorities, refreshPriorities } from '../data/browsePriority';
 import { SPORTS } from '../domain/sportsConfig';
-import { sportLabelFor } from '../domain/sportTerms';
+import { sportGlyphFor, sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SportPicker'>;
@@ -35,7 +35,11 @@ export default function SportPickerScreen({ navigation }: Props) {
 
   // Catalogue weight orders the sports (Prompt 11); disabled rows keep
   // config order among themselves at the tail.
-  const ordered = byPriority(SPORTS, (s) => s.key, cachedPriorities().sportWeights);
+  const ordered = byPriority(
+    SPORTS.filter((s) => !s.hiddenTile),
+    (s) => s.key,
+    cachedPriorities().sportWeights,
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -63,7 +67,7 @@ export default function SportPickerScreen({ navigation }: Props) {
                 caption={
                   item.enabled ? undefined : i18n.t('follows.sportPicker.comingSoon')
                 }
-                glyph={item.glyph}
+                glyph={sportGlyphFor(item.key, item.glyph, activeRegion())}
                 theme={teamTheme(item.accent, mode)}
                 disabled={!item.enabled}
                 accessibilityLabel={

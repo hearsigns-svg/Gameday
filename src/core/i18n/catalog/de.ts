@@ -728,4 +728,8 @@ export const de: Catalog = {
   // ── Round 6 item 2: people rows advertise the tap ──
   'follows.athletes.tapToFollow': 'Tippen, um {people} zu folgen ({n})',
   'follows.athletes.tapToFollowNoCount': 'Tippen, um {people} zu folgen',
+
+  // ── Round 6 item 6: Olympic group nodes in the Following strip ──
+  'follows.rail.summerOlympics': 'Olympische Sommerspiele',
+  'follows.rail.winterOlympics': 'Olympische Winterspiele',
 };

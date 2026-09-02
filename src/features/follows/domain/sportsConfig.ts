@@ -22,6 +22,10 @@ export interface StaticCompetition {
   // exist for the NHL/MLB routes, so a league-only follower rides the
   // device-first union of team followers' poll paths.
   pollPath?: string; // functions path polled when this follow syncs
+  // Round 6 item 7: follow under another sport/type identity (Formula 1's
+  // row inside Motorsport follows as the f1 series, keeping every existing
+  // F1 follow's key, sport and race-only rules).
+  followAs?: { sportKey: string; type: FollowableType };
   teamPollPath?: string; // path attached to team-follows made inside it
   // CROSS-LINK (Prompt 13): the existing sport this competition also
   // belongs to. Olympic athletics is athletics — and because a follow
@@ -41,6 +45,9 @@ export interface SportConfig {
   // entities without a brand colour (the median case at launch).
   accent: string;
   enabled: boolean; // false = data not yet live (M5 sport expansion)
+  // Round 6 item 7: a sport that still owns follows and pages but has
+  // no tile of its own — Formula 1 lives inside the Motorsport tile.
+  hiddenTile?: boolean;
   // Ordered drill-down levels, e.g. soccer: competitions → teams.
   browse: BrowseLevelKind[];
   // Which levels can be followed directly (competition rows get a
@@ -712,6 +719,10 @@ export const SPORTS: SportConfig[] = [
     accent: '#E10600',
     glyph: '🏎️',
     enabled: true,
+    // No tile of its own since Round 6 item 7: Formula 1 is the first row
+    // of the Motorsport tile (regional label "F1 & Motorsport"). Existing
+    // driver and series follows keep this sport key and its pages.
+    hiddenTile: true,
     // Drivers are browsable and followable (Prompt 8): a driver follow
     // yields the race weekends — every session, filtered by the same
     // race-only preference as a series follow, because driver keys ride
@@ -747,23 +758,19 @@ export const SPORTS: SportConfig[] = [
         pollPath:
           'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
       },
-      {
-        // The one promoter publishing structured data (JSON-LD
-        // SportsEvent + a sitemap). Matchroom, BOXXER and Queensberry go
-        // through the review queue instead — see docs/DECISIONS.md.
-        id: 'pbc',
-        name: 'Premier Boxing Champions',
-        country: 'USA',
-        key: 'pbc-cards',
-        followOnly: true,
-        pollPath: 'pollPbc',
-      },
+      // Premier Boxing Champions is no longer a row of its own (Round 6
+      // item 4): its cards carry the Major fight cards key server-side,
+      // so the one follow above unions both sources, deduped by identity
+      // (sameBout). The PBC source keeps polling; only the row and its
+      // follow keys retired — see docs/DECISIONS.md.
     ],
   },
   {
     key: 'ufc',
-    coverageNote:
-      'Card-level coverage only. Individual fighters cannot be followed: no MMA body publishes a usable roster, so a fighter directory would be guesswork — we would rather be honest than wrong.',
+    // Round 6 item 5: fighters ARE browsable and followable — the
+    // directory is derived from announced cards (no MMA body publishes a
+    // roster, so a fighter exists here from the moment a card names them).
+    coverageNote: 'Card-level times. Fighters come from announced cards.',
     // Was a UFC-only series row; promotions beyond the UFC carry real
     // upcoming cards, so this became a browse level. Card-follows ONLY
     // since Prompt 8: with no MMA roster source (no body publishes one;
@@ -774,8 +781,8 @@ export const SPORTS: SportConfig[] = [
     accent: '#6D28D9',
     glyph: '🥋',
     enabled: true,
-    browse: ['competition'],
-    followTypes: ['competition'],
+    browse: ['competition', 'athlete'],
+    followTypes: ['competition', 'athlete'],
     staticCompetitions: [
       {
         id: '4443',
@@ -817,15 +824,48 @@ export const SPORTS: SportConfig[] = [
   },
   {
     key: 'motorsport',
-    label: 'Motorsport',
+    label: 'Motorsport', // North America's word; elsewhere "F1 & Motorsport" (sportTerms)
     accent: '#52525B',
-    glyph: '🏍️',
+    glyph: '🏎️', // F1 regions; North America gets the chequered flag (sportGlyphFor)
     enabled: true,
-    // Formula 1 keeps its own row (per-session events + race-only
-    // preference); these series are followed whole.
-    browse: ['competition'],
-    followTypes: ['competition'],
+    // Round 6 item 7: ONE Motorsport structure everywhere. The Formula
+    // group (F1, F2, Formula E) leads, then the series; region only
+    // changes the pinning (existing priorities), the label and the icon.
+    // Drivers stay browsable here — the directory is Formula 1's.
+    browse: ['competition', 'athlete'],
+    followTypes: ['competition', 'series', 'athlete'],
     staticCompetitions: [
+      {
+        // Formula 1 as a row: following it IS the series follow (same key,
+        // same sport, same race-only session rules) — followAs keeps the
+        // follow's identity where every existing F1 follow lives.
+        id: 'f1',
+        name: 'Formula 1',
+        country: 'World',
+        key: 'f1-series-1',
+        followOnly: true,
+        pollPath: 'pollF1?season=2026',
+        followAs: { sportKey: 'f1', type: 'series' },
+      },
+      {
+        id: '4486',
+        name: 'Formula 2',
+        country: 'World',
+        key: 'tsdb-league-4486',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5',
+      },
+      {
+        // New catalogue row (owner seed): TheSportsDB league 4371.
+        id: '4371',
+        name: 'Formula E',
+        country: 'World',
+        key: 'tsdb-league-4371',
+        followOnly: true,
+        pollPath:
+          'pollTsdbLeague?leagueId=4371&season=2026&sport=motorsport&durationHours=1.5',
+      },
       {
         id: '4407',
         name: 'MotoGP',
@@ -852,15 +892,6 @@ export const SPORTS: SportConfig[] = [
         followOnly: true,
         pollPath:
           'pollTsdbLeague?leagueId=4373&season=2026&sport=motorsport&durationHours=3',
-      },
-      {
-        id: '4486',
-        name: 'Formula 2',
-        country: 'World',
-        key: 'tsdb-league-4486',
-        followOnly: true,
-        pollPath:
-          'pollTsdbLeague?leagueId=4486&season=2026&sport=motorsport&durationHours=1.5',
       },
       {
         id: '4413',
@@ -976,3 +1007,15 @@ export const FD_ROUTE_SEASON = 2026;
 export const MLB_SEASON = 2026;
 export const NHL_SEASON_ID = '20262027';
 export const F1_SEASON = 2026;
+
+// Round 6 item 7: a static competition may declare the identity its
+// follow takes (Formula 1's row inside Motorsport follows as the f1
+// series). Null = the ordinary identity.
+export function staticFollowAsFor(
+  sportKey: string,
+  competitionKey: string,
+): { sportKey: string; type: FollowableType } | null {
+  const sport = SPORTS.find((sp) => sp.key === sportKey);
+  const row = sport?.staticCompetitions?.find((c) => c.key === competitionKey);
+  return row?.followAs ?? null;
+}

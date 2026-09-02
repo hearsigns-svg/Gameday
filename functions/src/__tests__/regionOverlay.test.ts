@@ -22,11 +22,21 @@ const apply = (
   overlay: Record<string, number> | undefined,
 ) => (overlay && Object.keys(overlay).length ? { ...map, ...overlay } : map);
 
-test('THE OVERLAY IS UNSEEDED — no region reorders anything yet', () => {
-  // The owner asked to read the table before it is applied. This test
-  // is the guard on that: it fails the moment regional weights are
-  // seeded, which is the reminder to bring the table back for approval.
-  expect(invert(CATALOGUE_SEED)).toEqual({});
+test('THE OVERLAY IS EXACTLY THE APPROVED TABLE — Round 6 item 7 (owner brief 2026-09-02)', () => {
+  // The owner asked to read the table before it is applied; this guard
+  // failed the moment weights were seeded. Round 6 item 7 supplied the
+  // approval for ONE region: North America pins IndyCar and NASCAR first
+  // in the Motorsport tile and drops the Formula group below the series.
+  // Any further regional weight fails here again until it is approved.
+  expect(invert(CATALOGUE_SEED)).toEqual({
+    'north-america': {
+      'tsdb-league-4393': 95, // NASCAR Cup Series
+      'tsdb-league-4373': 94, // IndyCar
+      'f1-series-1': 30, // Formula 1
+      'tsdb-league-4486': 25, // Formula 2
+      'tsdb-league-4371': 24, // Formula E
+    },
+  });
 });
 
 test('a sparse overlay changes only what it names', () => {

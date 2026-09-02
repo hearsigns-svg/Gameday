@@ -36,6 +36,19 @@ const TERMS: Readonly<Record<string, Partial<Record<RegionKey, string>>>> = {
   // region where this is "Football", so the two never both claim the
   // word on one screen.
   nfl: { 'north-america': 'Football' },
+  // ONE Motorsport tile everywhere (Round 6 item 7): "F1 & Motorsport"
+  // where Formula 1 is the draw, plain "Motorsport" in North America
+  // (the config label). Contents are identical; only the label and the
+  // icon regionalise — see sportGlyphFor below.
+  motorsport: {
+    'uk-ie': 'F1 & Motorsport',
+    europe: 'F1 & Motorsport',
+    'south-asia': 'F1 & Motorsport',
+    latam: 'F1 & Motorsport',
+    oceania: 'F1 & Motorsport',
+    default: 'F1 & Motorsport',
+    'north-america': 'Motorsport', // owner ruling 2026-09-02; replaces "Auto racing"
+  },
   // "Track and field" is the North American term; "athletics" reads as
   // a school subject there.
   athletics: { 'north-america': 'Track and field' },
@@ -47,7 +60,6 @@ const TERMS: Readonly<Record<string, Partial<Record<RegionKey, string>>>> = {
   'ice-hockey': { 'north-america': 'Hockey' },
   // "Motorsport" is the British and Commonwealth term; North America
   // says "auto racing".
-  motorsport: { 'north-america': 'Auto racing' },
 };
 
 // Deliberately NOT translated, and why:
@@ -85,6 +97,20 @@ const SPORT_NAME_KEYS: Readonly<Record<string, CatalogKey>> = {
   olympics: 'core.sport.olympics',
 };
 
+// Regional tile ICONS, emoji-tile style, never a brand mark: the racing
+// car where F1 leads, the chequered flag in North America.
+const GLYPHS: Record<string, Partial<Record<RegionKey, string>>> = {
+  motorsport: { 'north-america': '🏁' },
+};
+
+export function sportGlyphFor(
+  sportKey: string,
+  fallbackGlyph: string,
+  region: RegionKey,
+): string {
+  return GLYPHS[sportKey]?.[region] ?? fallbackGlyph;
+}
+
 export function sportLabelFor(
   sportKey: string,
   fallbackLabel: string,
@@ -117,11 +143,22 @@ export function sportLabelFor(
 // is correct, because there it genuinely names two sports, and the two
 // rows are distinguishable precisely because they display their regional
 // names ("Soccer" and "Football") rather than the word that was typed.
+// Words that FIND a sport without ever labelling it. "Auto racing" was
+// North America's displayed word until Round 6 item 7 renamed the tile
+// "Motorsport"; the search box still answers to it, and to the Formula 1
+// names now that F1 lives inside the Motorsport tile.
+const EXTRA_SEARCH_TERMS: Record<string, string[]> = {
+  motorsport: ['Auto racing', 'Formula 1', 'F1', 'Racing'],
+};
+
 export function sportSearchTerms(
   sportKey: string,
   fallbackLabel: string,
 ): string[] {
-  const variants = Object.values(TERMS[sportKey] ?? {});
+  const variants = [
+    ...Object.values(TERMS[sportKey] ?? {}),
+    ...(EXTRA_SEARCH_TERMS[sportKey] ?? []),
+  ];
   // The ACTIVE language's word matches too (Phase C): a Spanish phone
   // typing "fútbol" arrives with the word the app itself shows. The
   // English forms stay in the set — matching never narrows by locale.

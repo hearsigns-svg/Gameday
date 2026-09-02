@@ -4,6 +4,7 @@
 // start instead of slipping past a one-time flag.
 
 import { t } from '../../../core/i18n';
+import { SPORTS } from '../domain/sportsConfig';
 import { Followable, loadFollowables, replaceFollowables } from './followStore';
 
 // B7 final shape (owner 2026-08-30): the boxing card follows are
@@ -60,4 +61,54 @@ export function migrateTournamentFinalsScope(): void {
       f.scope === 'finals' ? { ...f, scope: 'key-rounds' as const } : f,
     ),
   );
+}
+
+// Round 6 item 4: PBC follow keys migrate to the corresponding Major
+// fight cards keys. Runs AFTER the sex split above, so the keys it sees
+// are `pbc-cards-m` / `pbc-cards-w` (a bare `pbc-cards` is handled too).
+// A Major fight cards follow the user already holds wins; otherwise the
+// PBC follow is REWRITTEN in place (same object, new key/label/poll
+// path) — its exclusions and pins are fixture-id keyed and unaffected,
+// and the PBC cards it wanted still arrive under the new key, so the
+// planner sees no create and no delete: no calendar churn.
+const PBC_BASE = 'pbc-cards';
+const MAJOR_CARDS_BASE = 'tsdb-league-4445';
+const MAJOR_CARDS_POLL_PATH =
+  'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3';
+
+export function pbcTargetKey(key: string): string | null {
+  if (key === PBC_BASE) return MAJOR_CARDS_BASE;
+  const m = /^pbc-cards-(m|w)$/.exec(key);
+  return m ? `${MAJOR_CARDS_BASE}-${m[1]}` : null;
+}
+
+export function migratePbcFollows(): void {
+  const follows = loadFollowables();
+  if (!follows.some((f) => pbcTargetKey(f.key) !== null)) return;
+  const next: Followable[] = [];
+  for (const f of follows) {
+    const target = pbcTargetKey(f.key);
+    if (target === null) {
+      next.push(f);
+      continue;
+    }
+    if (follows.some((o) => o.key === target) || next.some((o) => o.key === target)) {
+      continue; // the Major fight cards follow already covers it
+    }
+    const sex = target.endsWith('-m') ? 'm' : target.endsWith('-w') ? 'w' : null;
+    const baseLabel =
+      SPORTS.find((sp) => sp.key === 'boxing')?.staticCompetitions?.find(
+        (c) => c.key === MAJOR_CARDS_BASE,
+      )?.name ?? 'Major fight cards';
+    next.push({
+      ...f,
+      key: target,
+      label:
+        sex === null
+          ? baseLabel
+          : `${baseLabel} — ${t(sex === 'm' ? 'follows.athletes.mens' : 'follows.athletes.womens')}`,
+      pollPath: MAJOR_CARDS_POLL_PATH,
+    });
+  }
+  replaceFollowables(next);
 }
