@@ -203,7 +203,12 @@ export function groupingFor(rank: number): 'atp' | 'atp-directory' {
 
 // ─── The fetch, and the guard that makes a DELETING source safe ───────
 
-const HOST = 'tennisapi1.p.rapidapi.com';
+// ONE host, ONE key (ATP_VENDOR_KEY). The men's MATCHES provider
+// (tennisApiAtpEvents.ts) shares both: the same vendor serves the weekly
+// ranking list and the live draws, and the owner's posture is a single
+// key with no rotation — quota is bought on the vendor's paid tier on
+// this key, never by stacking free ones.
+export const HOST = 'tennisapi1.p.rapidapi.com';
 
 export async function fetchAtpTop500(
   key: string,

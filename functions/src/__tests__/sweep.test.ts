@@ -24,7 +24,7 @@ describe('canonicalisePollPath — accepts real routes', () => {
   // The parameterless family — each has exactly one feed. Their
   // canonical form carries the trailing '?' (name + empty ordered
   // query); both spellings must stay accepted.
-  test.each(['pollPbc', 'pollTennis', 'pollWtaTennis', 'pollAthletics'])(
+  test.each(['pollPbc', 'pollTennis', 'pollWtaTennis', 'pollAtpVendor', 'pollAthletics'])(
     '%s canonicalises to its ?-suffixed form',
     (name) => {
       expect(canonicalisePollPath(name)).toBe(`${name}?`);
@@ -58,6 +58,10 @@ describe('canonicalisePollPath — rejects everything else', () => {
     // cannot succeed. The endpoints stay deployed; nothing routes to them.
     ['quarantined apisports team', 'pollTeam?teamId=40&season=2023'],
     ['quarantined apisports league', 'pollLeague?leagueId=39&season=2023'],
+    // RETIRED 2026-09-02 (Round 4 item 7): the review-sheet route is gone
+    // with the sheet; the vendor chain is pollAtpVendor. A device still
+    // submitting the old path is dropped, not fetched.
+    ['retired review-sheet route', 'pollSheetAtp'],
     ['absolute url', 'https://evil.example/pollF1?season=2026'],
     ['no query', 'pollF1'],
     ['empty', ''],
@@ -149,6 +153,12 @@ describe('sliceOfPollPath', () => {
       .toEqual({ source: 'nhl', sport: 'ice-hockey', competitionId: 'nhl-team-BOS' });
     expect(sliceOfPollPath('pollF1?season=2026'))
       .toEqual({ source: 'f1', sport: 'f1', competitionId: 'f1-series-1' });
+    // The men's matches (Round 4 item 7): source is the vendor, the slice
+    // is its own — its APPEARANCES land under tennis-atp-appearances,
+    // which alerts.ts reads as this slice's yield.
+    expect(sliceOfPollPath('pollAtpVendor?'))
+      .toEqual({ source: 'tennisapi1', sport: 'tennis', competitionId: 'tennis-atp-vendor' });
+    expect(sliceOfPollPath('pollSheetAtp?')).toBeNull();
   });
 
   test('an unknown route has no slice, so it records nothing', () => {

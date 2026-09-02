@@ -147,11 +147,15 @@ export const CATALOGUE_SEED: CatalogueEntry[] = [
   // age (review round).
   T1('tennis-atp', 'ATP Tour', 'tennis', 'pollTennis', 66),
   T1('tennis-wta', 'WTA Tour', 'tennis', 'pollWtaTennis', 66),
-  // The men's matches, assembled in the review sheet. Tier 1 because
-  // the cost is a Sheets read, not a vendor request — the vendor quota
-  // is spent by the Apps Script on its own 2-hourly trigger, and this
-  // route only moves what is already in the sheet into Firestore.
-  T1('tennis-atp-sheet', 'ATP matches (sheet)', 'tennis', 'pollSheetAtp', 65),
+  // The men's matches, from the vendor inside the function (Round 4
+  // item 7; replaces `tennis-atp-sheet` / pollSheetAtp, whose Apps
+  // Script half died unwatched). Tier 1 is what makes the quota model
+  // work, not what strains it: the route asks OUR store for live
+  // windows before spending anything, so three of the day's four
+  // sweeps outside a tournament cost zero vendor requests, and during
+  // one a sweep costs the events pages of the live draws (measured:
+  // 30 matches a page, 1–3 pages a draw) against a 50/day key.
+  T1('tennis-atp-vendor', 'ATP matches', 'tennis', 'pollAtpVendor', 65),
   // wa-calendar carries NO priority: it is the "Everything on the
   // calendar" catch-all (1,372 future meetings) and must sort LAST
   // within athletics, after every curated group below.

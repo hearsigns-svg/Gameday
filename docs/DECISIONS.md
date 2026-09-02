@@ -3635,3 +3635,106 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   is set by a longer neighbour chip). Canonical vocabulary: Tier 1 —
   Dates only; Tier 2 — Key rounds; Tier 3 — All matches. The calendar
   event itself never carried the word: unchanged.
+- 2026-09-02 (Round 4 item 7, owner ruling — men's tennis): **THE
+  VENDOR FETCH MOVES INTO THE FUNCTION; THE REVIEW SHEET IS RETIRED.**
+  "Repair the existing tennisapi1 chain, no new vendor." The Prompt 18
+  chain was `vendor → Apps Script → Sheet → pollSheetAtp → Firestore`;
+  its first half ran on a trigger inside a spreadsheet, outside the
+  repo, outside the sweep, outside alerting. It died on 2026-08-29.
+  Measured on 2026-09-02 (read-only prod probe): pollSheetAtp's last 13
+  runs all `sheet is stale … while a tournament is live`, the 2026 US
+  Open men's draw live since 2026-08-30, ZERO US Open men's appearance
+  docs against 145 women's. The staleness guard was loud and correct;
+  the half that could act was nobody's. Now `vendor → pollAtpVendor →
+  Firestore`: `providers/tennisApiAtpEvents.ts` holds the port of the
+  script's discovery, season and events fetch; `providers/atpMatchRules
+  .ts` (sheetAtp.ts renamed) keeps the pure publish rules unchanged,
+  because they were never about the sheet; the sheet-only code
+  (`sheets.ts`, `parseSheet`, staleness, mapping intents, `scripts/
+  atp-sheet.gs`, `docs/atp-sheet-setup.md`, the `tennis-atp-sheet`
+  catalogue row) is deleted. Slice `tennisapi1|tennis-atp-vendor`, tier
+  1 at priority 65; appearances land under `tennis-atp-appearances`
+  with the SAME per-player doc ids as before, so a stored US Open entry
+  updates in place when this chain first runs. RULE-13 WRITER AUDIT of
+  the population being replaced: `tennis-atp-appearances` had two
+  writers, pollSheetAtp (gone from source; the deploy removes the
+  function) and the Apps Script (external — the owner deletes its
+  trigger). One writer after deploy.
+- 2026-09-02: **ONE KEY, NO ROTATION** (owner posture). The script
+  rotated three free keys on one host — quota stacking, not redundancy
+  (2026-08-06 above). `ATP_VENDOR_KEY` is now the only key, shared with
+  the weekly ranking refresh; the quota model is built around it: OUR
+  store is asked for live windows before any request (idle sweeps cost
+  nothing), tournament discovery is paid once (a static map of the 13
+  slams/Masters, then `status/atpVendorTournaments`), the vendor's own
+  `x-ratelimit-requests-limit/-remaining/-reset` headers are persisted
+  in `status/atpVendor` on every answer including 429s, and each run
+  plans coverage from them — soonest tournaments first below a reserve
+  of 8, deferrals NAMED. If a slam fortnight ever fails to fit, the
+  answer is the vendor's paid tier on this key, never a second free one.
+  SIZED (`slamFortnightBudget`, against 30 events a page and 50/day, both
+  measured 2026-09-02): a 128-draw fortnight is 84 requests on the
+  round-by-round profile, peak day 15 (3 pages × 4 sweeps + 2 discovery
+  + the weekly ranking call); 172 in the no-real-draw worst case with the
+  same peak day. Fits with a margin of 35 on the peak day.
+- 2026-09-02: **PAGINATION WAS NEVER READ.** `events/next/{page}` serves
+  30 events a page with a boolean `hasNextPage`; the script fetched page
+  0 only, so a 128-draw's 64 first-round matches were published one page
+  out of three. The port reads until `hasNextPage` is false, requires
+  the flag to be a boolean (its absence is a shape change, not "last
+  page"), and stops loudly after six pages (a draw that big has changed
+  shape). Page 0 of the live US Open (30 matches; 3 rain-suspended R128
+  matches carrying rescheduled times) is the banked fixture.
+- 2026-09-02: **DISCOVERY IS TITLE FIRST, CITY SECOND, AND NAME-
+  ANCHORED.** The script searched the city first (a sponsor's title
+  finds nothing) and took the first ATP non-doubles hit. Measured
+  against the vendor's search: a slam's CITY finds nothing but
+  wheelchair juniors while its TITLE hits "US Open, Men"; a Masters'
+  title ("Rolex Shanghai Masters") misses while its city ("Shanghai")
+  hits — so title, then city-without-country, then the city verbatim.
+  And first-hit is not safe: "US Open, Mixed Doubles" is category ATP,
+  and the Australian Open search returns ATP-category "Wildcard
+  Playoff" entities — with the main draw absent from a result page,
+  first-hit publishes a playoff under a slam's key. The picker now
+  requires category ATP, a singles name, and a name equal to the term
+  (with the slams' ", Men") or prefixed by it at a comma; anything else
+  is a MISS, reported in the run record, never improvised. Seven ids
+  confirmed and pinned (`KNOWN_VENDOR_IDS`: the four slams, Indian
+  Wells, Shanghai, Paris — the last two because "Paris" also names the
+  WTA event and the Roland Garros city, which the vendor keeps as its
+  own entity); six Masters left as explicit TODOs with the exact call.
+  A DISCOVERED cache entry is trusted only for the city it was found
+  with: the National Bank Open alternates Montreal and Toronto.
+- 2026-09-02: **PLAYER MAPPING IS BY VENDOR ID, FROM OUR OWN DIRECTORY,
+  AND COSTS NOTHING.** The sheet mapped players by name against
+  `/searchEntities` and taught the directory one stamp at a time. The
+  weekly ranking refresh has since stamped `providerIds.tennisapi1` on
+  491 of 502 men, so the port looks each side up by id in the athlete
+  index (`byProvider`) and never consults a name: both sides mapped
+  publishes, anything else is `unmapped_player` with the player NAMED
+  in the run record. `create: 'never'` stands — nothing is minted from
+  the vendor.
+- 2026-09-02: **AN APPEARANCE-ONLY SLICE IS JUDGED BY ITS APPEARANCE
+  SIBLING** (`alerts.ts::APPEARANCE_ONLY_SLICES`). pollAtpVendor
+  publishes zero fixtures by design, so on its own coverage row it never
+  yields: born_dead would have paged a week after deploy, and yield_died
+  — which needs a demanded row — could never see a live slam publishing
+  nothing. That second blind spot is exactly how the sheet slice sat
+  silent while its script was dead (its 2026-08-06 staleness guard made
+  the hard failure loud; the alert layer had nothing for a slice whose
+  yield lives elsewhere). For these slices the yield questions read the
+  `tennis-atp-appearances` row; liveness and the honest-empty reason
+  stay the parent's own, and born_dead is judged only while the parent
+  is not honestly empty — its `no_future_events` is recomputed each run
+  from the live ICS parents, so a genuine off-season cannot page and
+  the World Cup pathology (a stale season parameter reading as
+  off-season for ever) cannot arise here.
+- 2026-09-02: **RESIDUAL, STATED:** retirement (`retiredAppearanceIds`)
+  cancels a stored appearance absent from the fresh yield until its end
+  plus six hours. The port reads `events/next` only, exactly as the
+  sheet did, so an in-progress or just-finished match that left `next`
+  early would be cancelled while or shortly after it was played. The
+  one data point says the vendor keeps them: the 2026-08-29
+  Winston-Salem final was still in `next` ~4h after its 20:00Z start.
+  Unchanged exposure from the sheet chain; worth a `events/last`
+  read-only probe on a live match day before anyone leans on it.

@@ -1,0 +1,678 @@
+{
+ "results": [
+  {
+   "entity": {
+    "id": 2404,
+    "name": "Paris",
+    "slug": "paris",
+    "userCount": 7021,
+    "category": {
+     "id": 3,
+     "name": "ATP",
+     "slug": "atp",
+     "flag": "atp",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس",
+      "bn": "প্যারিস",
+      "hi": "पेरिस",
+      "ru": "Париж"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 10096.777,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 334289,
+    "name": "Tom Paris",
+    "nameCode": "PAR",
+    "slug": "paris-tom",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 806,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "FR",
+     "name": "France",
+     "slug": "france"
+    },
+    "playerTeamInfo": {
+     "id": 6846
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ت. باريس",
+      "ru": "Т. Парис"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 3952.66,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 2442,
+    "name": "Paris, Doubles",
+    "slug": "paris-doubles",
+    "userCount": 276,
+    "category": {
+     "id": 3,
+     "name": "ATP",
+     "slug": "atp",
+     "flag": "atp",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس، زوجي",
+      "ru": "Париж, парный разряд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 2001.8792,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 18568,
+    "name": "Paris, France",
+    "slug": "paris-france",
+    "userCount": 241,
+    "category": {
+     "id": 871,
+     "name": "WTA 125",
+     "slug": "wta-125",
+     "flag": "wta-125",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس، فرنسا",
+      "ru": "Париж, Франция"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 1870.647,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 95923,
+    "name": "Joshua Paris",
+    "nameCode": "PAR",
+    "slug": "paris-joshua",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 140,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "GB",
+     "name": "United Kingdom",
+     "slug": "united-kingdom"
+    },
+    "playerTeamInfo": {
+     "id": 1845
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ج. باريس",
+      "ru": "Д. Пари"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 1652.1985,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 456395,
+    "name": "Ignacio Parisca Romera",
+    "nameCode": "PAR",
+    "slug": "parisca-ignacio",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 244,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "VE",
+     "name": "Venezuela",
+     "slug": "venezuela"
+    },
+    "playerTeamInfo": {
+     "id": 15443
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "إ. باريسكا",
+      "ru": "И. Ромера"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 1583.9192,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 189998,
+    "name": "Paris Corley",
+    "nameCode": "COR",
+    "slug": "corley-paris-corley",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 45,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "F",
+    "country": {
+     "alpha2": "US",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "playerTeamInfo": {
+     "id": 5077
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ب. كورلي",
+      "ru": "Корли, Пэрис"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 943.6949,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 417404,
+    "name": "Serena Paris",
+    "nameCode": "PSE",
+    "slug": "paris-serena",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 34,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "F",
+    "country": {
+     "alpha2": "IT",
+     "name": "Italy",
+     "slug": "italy"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "س. باريس",
+      "ru": "С. Пари"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 823.1646,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 413210,
+    "name": "Paris Pouatcha",
+    "nameCode": "PPA",
+    "slug": "pouatcha-paris",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 31,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "US",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ب. بواتشا",
+      "ru": "П. Пуача"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 787.09595,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 2656,
+    "name": "Paris",
+    "slug": "paris",
+    "userCount": 32,
+    "category": {
+     "id": 6,
+     "name": "WTA",
+     "slug": "wta",
+     "flag": "wta",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس",
+      "ru": "Париж"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 681.6451,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 18569,
+    "name": "Paris, France, Doubles",
+    "slug": "paris-france-doubles",
+    "userCount": 11,
+    "category": {
+     "id": 871,
+     "name": "WTA 125",
+     "slug": "wta-125",
+     "flag": "wta-125",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس، فرنسا، زوجي",
+      "ru": "Париж, Франция, парный разряд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 399.64984,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 22629,
+    "name": "Wheelchairs Juniors French Open, Paris, France Girls Singles",
+    "slug": "wheelchairs-juniors-french-open-paris-france-girls-singles",
+    "userCount": 8,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فردي البنات بطولة فرنسا المفتوحة للكراسي المتحركة للشباب، باريس، فرنسا",
+      "ru": "Wheelchairs Juniors Открытый чемпионат Франции, Париж, Франция, среди девушек"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 340.82254,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 23064,
+    "name": "Paris Gemouchidis",
+    "nameCode": "GEM",
+    "slug": "gemouchidis-paris",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 4,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "GR",
+     "name": "Greece",
+     "slug": "greece"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ب. جيموشيديس",
+      "ru": "Парис Гемучидис"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 311.12698,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 22631,
+    "name": "Wheelchairs Juniors French Open, Paris, France Boys Doubles",
+    "slug": "wheelchairs-juniors-french-open-paris-france-boys-doubles",
+    "userCount": 6,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "زوجي الأولاد بطولة فرنسا المفتوحة للكراسي المتحركة للشباب، باريس، فرنسا",
+      "ru": "Wheelchairs Juniors Открытый чемпионат Франции, Париж, Франция, парный разряд среди юношей"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 295.16098,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 22630,
+    "name": "Wheelchairs Juniors French Open, Paris, France Girls Doubles",
+    "slug": "wheelchairs-juniors-french-open-paris-france-girls-doubles",
+    "userCount": 6,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "زوجي البنات بطولة فرنسا المفتوحة للكراسي المتحركة للشباب، باريس، فرنسا",
+      "ru": "Wheelchairs Juniors Открытый чемпионат Франции, Париж, Франция, парный разряд среди девушек"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 295.16098,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 217158,
+    "name": "Paris Pentousis",
+    "nameCode": "PEN",
+    "slug": "pentousis-paris",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 3,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "GR",
+     "name": "Greece",
+     "slug": "greece"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ب. بينتوسيس",
+      "ru": "Пентоусис, Парис"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 278.28043,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 57321,
+    "name": "F. Blanco Paris",
+    "nameCode": "BLA",
+    "slug": "blanco-paris-francisco-adolfo",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 3,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "ES",
+     "name": "Spain",
+     "slug": "spain"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ف. باريس",
+      "ru": "Ф. Париж"
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 278.28043,
+   "type": "team"
+  },
+  {
+   "entity": {
+    "id": 22628,
+    "name": "Wheelchairs Juniors French Open, Paris, France Boys Singles",
+    "slug": "wheelchairs-juniors-french-open-paris-france-boys-singles",
+    "userCount": 5,
+    "category": {
+     "id": 1695,
+     "name": "Wheelchairs Juniors",
+     "slug": "wheelchairs-juniors",
+     "flag": "wheelchairs-juniors",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "فردي الأولاد بطولة فرنسا المفتوحة للكراسي المتحركة للشباب، باريس، فرنسا",
+      "ru": "Wheelchairs Juniors Открытый чемпионат Франции, Париж, Франция, среди юношей"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "M"
+   },
+   "score": 269.44388,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 2645,
+    "name": "Paris, Doubles",
+    "slug": "paris-doubles",
+    "userCount": 3,
+    "category": {
+     "id": 6,
+     "name": "WTA",
+     "slug": "wta",
+     "flag": "wta",
+     "sport": {
+      "id": 5,
+      "slug": "tennis",
+      "name": "Tennis"
+     }
+    },
+    "displayInverseHomeAwayTeams": false,
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "باريس، زوجي",
+      "ru": "Париж, парный разряд"
+     },
+     "shortNameTranslation": {}
+    },
+    "gender": "F"
+   },
+   "score": 208.71033,
+   "type": "uniqueTournament"
+  },
+  {
+   "entity": {
+    "id": 103319,
+    "name": "Preston P.",
+    "nameCode": "PRE",
+    "slug": "preston-p",
+    "national": false,
+    "sport": {
+     "id": 5,
+     "slug": "tennis",
+     "name": "Tennis"
+    },
+    "userCount": 1,
+    "teamColors": {
+     "primary": "#374df5",
+     "secondary": "#374df5",
+     "text": "#ffffff"
+    },
+    "type": 1,
+    "gender": "M",
+    "country": {
+     "alpha2": "US",
+     "name": "USA",
+     "slug": "usa"
+    },
+    "fieldTranslations": {
+     "nameTranslation": {
+      "ar": "ب. ب.",
+      "ru": "П. П."
+     },
+     "shortNameTranslation": {}
+    }
+   },
+   "score": 196.77399,
+   "type": "team"
+  }
+ ]
+}

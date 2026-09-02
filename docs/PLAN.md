@@ -2045,7 +2045,7 @@ clean. `pollTennis` + `listTournaments` DEPLOYED and verified live.
 Release simulator build verified: the four slams read "· ATP · WTA",
 2027 rows beyond the WTA horizon read dates only.
 
-### Prompt 18 — the review sheet as the ATP ingestion layer  [x] / owner setup pending
+### Prompt 18 — the review sheet as the ATP ingestion layer  [x] / RETIRED 2026-09-02 (Round 4 item 7, below)
 
 `vendor → Apps Script → Sheet → pollSheetAtp → Firestore → app`. The
 sheet is a connector, not a serving layer, so every downstream guarantee
@@ -2082,6 +2082,115 @@ enabled) rather than reading as an empty sheet.
 OWNER SETUP — `docs/atp-sheet-setup.md`: enable the Sheets API, share
 the sheet with `188261010398-compute@developer.gserviceaccount.com`,
 paste the Apps Script, set two script properties, run `install()`.
+
+### Round 4 item 7 — men's tennis: the vendor chain moves into the function  [x] built / deploy + catalogue seed pending (main session)
+
+OWNER RULING (2026-09-02): repair the existing `tennisapi1` chain, no
+new vendor — port the Apps Script fetch into a Cloud Functions provider
+(vendor → Function → Firestore; retire the unmonitored script),
+pre-populate slam/Masters vendor ids, surface status in run records.
+Key posture: ONE key, no rotation of free keys; if a slam fortnight does
+not fit one key's limit, the answer is the vendor's paid tier on the
+same key, never stacking free ones.
+
+WHY NOW, MEASURED (prod probe 2026-09-02, read-only): the Apps Script
+half of the Prompt 18 chain died on 2026-08-29. `pollSheetAtp`'s last
+13 runs were all `sheet is stale … while a tournament is live`; the
+2026 US Open men's draw has been live since 2026-08-30 and there were
+**0** US Open men's appearance docs against 145 on the WTA side. The
+staleness guard (DECISIONS 2026-08-06) did its job — the failure was
+loud — but nobody ran the half of the chain that could fix it, because
+it ran outside the repo, on a trigger in a spreadsheet.
+
+BUILT:
+- `providers/tennisApiAtpEvents.ts` — the port. `activeWindows` (the
+  live/48h logic `activeTennisWindows` and the poller now share),
+  `KNOWN_VENDOR_IDS` (13 tournaments, 7 ids confirmed from the vendor's
+  own search results, 6 TODO with the exact call to make),
+  `discoveryCandidates` (title first, then city), `pickAtpSinglesEntity`
+  (category ATP, singles, NAMED for the term — the Australian Open
+  search returns an ATP-category wildcard playoff, and "US Open, Mixed
+  Doubles" is category ATP too; first-hit was not safe), `seasonIdFor`,
+  `parseEventsPage` (events array + boolean `hasNextPage`, both required
+  — the standing invariant), `observationsFrom` → `rowsFrom` (players
+  BY VENDOR ID against our directory, no name path anywhere) →
+  `publishable` → `draftsFrom` (one doc per player, id-bearing refs,
+  round as a field, cancellations without a slot), `resolveVendorIds`
+  (static → Firestore cache → discovery; seasons paid once per
+  tournament-year; a DISCOVERED entry is trusted only for the city it
+  was found with — the National Bank Open alternates Montreal/Toronto),
+  quota from the vendor's own headers (`quotaFromHeaders`,
+  `quotaAvailable`, `forecastQuota`), `planCoverage` (the script's
+  adaptive floor, ported), `slamFortnightBudget`, `statusBody`.
+- `providers/atpMatchRules.ts` — `providers/sheetAtp.ts` renamed; the
+  pure publish rules (`publishable`, `matchTitle`, `MatchRow`) kept,
+  the sheet-only parsing/staleness/mapping-intent code deleted.
+- `index.ts::pollAtpVendor` (onRequest, same guards as the other
+  pollers) — slice `tennisapi1|tennis-atp-vendor`, appearances under
+  `tennis-atp-appearances` exactly as before, `create: 'never'`;
+  idle runs record `no_future_events` and spend nothing; a run where
+  EVERY live tournament failed throws; status (windows, discovery,
+  requests by kind and pages, quota + forecast, rows by skip reason
+  with the unmapped players NAMED) rides the run record and
+  `status/atpVendor`; discovered ids in `status/atpVendorTournaments`.
+- `alerts.ts::APPEARANCE_ONLY_SLICES` — the vendor slice publishes zero
+  fixtures by design, so its yield questions are asked of its
+  appearance sibling row: a live slam publishing nothing for 72h now
+  pages (the sheet slice never could), and born_dead is judged only
+  while the parent is not honestly empty.
+- sweep allowlist + `sliceOfPollPath`, catalogue row
+  `T1('tennis-atp-vendor', 'ATP matches', 'tennis', 'pollAtpVendor', 65)`
+  replacing `tennis-atp-sheet`.
+- DELETED: `scripts/atp-sheet.gs`, `functions/src/sheets.ts`,
+  `docs/atp-sheet-setup.md`, `pollSheetAtp`, the `tennis-atp-sheet`
+  seed row. Rule-13 writer audit for the population being replaced
+  (`tennis-atp-appearances`): its two writers were `pollSheetAtp` (gone
+  from source; the deploy removes the function) and the Apps Script
+  (external — the owner deletes its trigger). After deploy there is one
+  writer.
+
+MEASURED WITH THE OWNER'S KEY (10 read-only calls, 2026-09-02): the
+live US Open men's events page is **30 events a page** with a boolean
+`hasNextPage` (page 0: 30 + true, page 1: 6 + false — 36 upcoming
+matches on day 3); the free tier reports `x-ratelimit-requests-limit
+50` per key per day and a `-reset` in seconds; the script had only ever
+read page 0. Page 0 and two search results are banked in
+`__tests__/fixtures/tennisapi1-*.json` (no key in any file).
+
+BUDGET (a slam fortnight on one key, `slamFortnightBudget`): per sweep
+= 1 windows read (ours, free) + 0 discovery once cached + 1–3 events
+pages + 0 for player mapping (by id, from our directory). Round-by-round
+profile: 84 requests for the fortnight (peak day 15 = 3 pages × 4
+sweeps + 2 discovery + the weekly ranking call); no-real-draw worst
+case 172 (peak day still 15). Against 50/day: **fits, margin 35 on the
+peak day**. The paid tier is not needed for one slam; the RapidAPI
+pricing page is a JS-only shell to a fetch, so its tiers were not read.
+
+TESTS: 1305 → 1351 (+46; 107 → 108 suites), both timezones; functions
+build and both typechecks clean. Suites: `tennisApiAtpEvents.test.ts`
+(new, 49), `atpMatchRules.test.ts` (16, rewritten from sheetAtp.test.ts's
+27 — the sheet-only parsing/staleness/mapping-intent tests went with
+the code), `alerts.test.ts` (+6), `sweep.test.ts` (+2).
+RULE 15, run against the provider: four defects reintroduced one at a
+time — the script's first-ATP-hit entity picking, `hasNextPage` absent
+read as "last page", `?? []` on the events array, a name fallback in
+the player mapping — each made the suite fail, then the file was
+restored byte for byte and the suite passed. The first pass MISSED the
+first-hit defect: the wildcard-playoff test was passing on the
+exclusion regex, not on the name anchor, and both real searches happen
+to rank the right entity first. A test with an unrelated ATP singles
+entity ranked first now fails without the anchor.
+
+LEFT FOR THE MAIN SESSION (deploy is theirs; the worktree never
+deploys): `firebase deploy --only functions:pollAtpVendor,functions:activeTennisWindows`
+(and accept the removal of `pollSheetAtp`); seed the catalogue row
+(`node scripts/seed-catalogue.mjs --id=tennis-atp-vendor --apply` from
+functions/); ops edits that are the owner's — disable or delete the
+live `catalogue/tennis-atp-sheet` doc (it now canonicalises to nothing
+and counts as `dropped` every sweep), delete the Apps Script trigger in
+the sheet, drop `ATP_SHEET_ID` from functions/.env; then fill the six
+TODO ids in `KNOWN_VENDOR_IDS` (six more read-only searches) and verify
+the Madrid key against `listTournaments`.
 
 - **Android premium prerequisite (owner ruling 2026-08-12):** the
   Google-Calendar REST/OAuth secondary calendar must exist before Android
