@@ -53,7 +53,12 @@ import {
   setCalendarColour,
 } from '../calendar-sync/data/driver';
 import { restColourState } from '../calendar-sync/data/restCalendarDriver';
-import { legacyCalendarEventsRemain } from '../calendar-sync/data/calendarConnection';
+import {
+  calendarConnection,
+  legacyCalendarEventsRemain,
+} from '../calendar-sync/data/calendarConnection';
+import { premiumLocked } from '../../core/entitlementStore';
+import { requestPaywall } from '../../core/paywall';
 import {
   ownsCalendarColour,
   restRowMode,
@@ -417,7 +422,19 @@ export default function PreferencesScreen({
         open={openSection === 'calendar'}
         onToggle={() => toggleSection('calendar')}
       >
-        {activeBackend() === 'rest' ? (
+        {premiumLocked() && calendarConnection() !== 'connected' ? (
+          // Round 5: sync is Premium. A Free install that has not
+          // connected sees the Sync row in its Premium state — the
+          // control shows what it is, and a tap is the on-demand way
+          // into the paywall (Stage 3/4 register the presenter). Never
+          // shown to a connected install: its calendar stays connected
+          // and the planner, not the row, applies the downgrade rules.
+          <ValueRow
+            label={tr('premium.syncRow')}
+            accessibilityLabel={tr('premium.syncRow')}
+            onPress={() => requestPaywall('on_demand')}
+          />
+        ) : activeBackend() === 'rest' ? (
           // Google-connected: one calendar, ours by construction —
           // nothing to pick. The first row states where fixtures are,
           // and becomes the reconnect surface ONLY when the last sync

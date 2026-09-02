@@ -28,6 +28,7 @@ import {
   reminderMinutesFor,
 } from './eventSettings';
 import { CalendarPrefs } from './prefs';
+import { PlanEntitlement, PREMIUM_PLAN } from '../../../core/entitlement';
 import { TOURNAMENT_POINTER_NOTE } from './tournamentTiers';
 
 // Re-exported so existing consumers keep their import site; the one
@@ -72,6 +73,11 @@ export interface LedgerEntry {
   // rides IN the entry so repointing the ledger and recording the
   // leftover are one atomic write — see domain/calendarMigration.ts.
   strayEventId?: string;
+  // The per-event colour last written (Round 5 ruling 7). ABSENT MEANS
+  // NONE — before this field existed no engine ever wrote one, so an
+  // unstamped entry testifies to "calendar colour", and only a fixture
+  // with a chosen colour produces an op.
+  colour?: string;
 }
 
 export type Ledger = Record<string, LedgerEntry>; // keyed by fixture id
@@ -97,6 +103,9 @@ export interface DesiredEvent {
   // time is not settled yet WITHOUT putting it in the title, where it
   // would shout on every glance at the calendar.
   note?: string;
+  // Per-event colour (hex) from the event settings; absent = the
+  // calendar's colour. Carried as desired state so a recreate keeps it.
+  colour?: string;
 }
 
 // What a nominal time means, in the user's words. Deliberately promises
@@ -169,6 +178,8 @@ export function desiredEventFor(
   }
   const matchTitle = f.title;
   if (f.status === 'cancelled') return null;
+  const chosenColour = settings[f.id]?.colour;
+  const colour = chosenColour ? { colour: chosenColour } : {};
 
   const allDayFor = (suffix: string, days = 1): DesiredEvent => {
     const day = dayStartUtc(f.startUtc);
@@ -183,6 +194,7 @@ export function desiredEventFor(
       reminderMinutes: reminderMinutesFor(f.id, settings, prefs, true),
       extraReminders: extraRemindersFor(f.id, settings, prefs, true),
       allDayReminder: allDayReminderFor(f.id, settings, prefs, true),
+      ...colour,
     };
   };
 
@@ -255,6 +267,7 @@ export function desiredEventFor(
     // description rather than the title — the title is read at a glance
     // fifty times, the description once when it matters.
     ...(precision === 'nominal' ? { note: NOMINAL_TIME_NOTE } : {}),
+    ...colour,
   };
 }
 
@@ -287,7 +300,9 @@ function entryMatches(entry: LedgerEntry, desired: DesiredEvent): boolean {
     // produced no op and the calendar kept the stale end forever.
     entry.endUtc === desired.endUtc &&
     entry.title === desired.title &&
-    (entry.allDay ?? false) === desired.allDay
+    (entry.allDay ?? false) === desired.allDay &&
+    // Absent-means-none on both sides: only a chosen colour differs.
+    (entry.colour ?? undefined) === desired.colour
   );
 }
 
@@ -307,6 +322,21 @@ export function nowFromHorizon(horizonStartUtc: string): number {
   return Date.parse(horizonStartUtc) + HORIZON_LOOKBACK_HOURS * 3600_000;
 }
 
+// Round 5: the planner's ONE entitlement input, as an options object
+// (eleven positional arguments would be one too many). The planner
+// reasons about EFFECTS only — see entitlements/domain/entitlement.ts
+// for how store state becomes these effects.
+export interface PlanOptions {
+  entitlement?: PlanEntitlement;
+}
+
+// Downgrade removals are batched: at most this many removal ops per
+// pass, the rest next pass (their ledger entries persist, so nothing is
+// forgotten). 40 is the measured-safe burst for a synced calendar's
+// adapter (Prompt 24–26 hardware round: ~50 tripped the
+// too-many-deletions gate once in 166; 40 is the hygiene figure).
+export const DOWNGRADE_DELETE_CAP = 40;
+
 export function planSync(
   fixtures: readonly Fixture[],
   ledger: Ledger,
@@ -318,7 +348,9 @@ export function planSync(
   nowMs: number = nowFromHorizon(horizonStartUtc),
   seriesScopes?: SeriesScopeMap,
   settings: EventSettingsMap = {},
+  options: PlanOptions = {},
 ): SyncOp[] {
+  const entitlement = options.entitlement ?? PREMIUM_PLAN;
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
   for (const f of fixtures) {
@@ -347,19 +379,48 @@ export function planSync(
     wanted.set(f.id, { fixture: f, desired });
   }
 
+  // Downgrade removals (owner rulings 2026-09-02): a placed event past
+  // the trial keep-boundary, or any not-yet-started placed event once a
+  // paid lapse has run out its renew window, is removed. Judged on the
+  // LEDGER ENTRY (what is actually in the calendar), never on the fetch;
+  // past events are never touched on any path; capped per pass.
+  const downgradeRemovals: SyncOp[] = [];
+  const removedByDowngrade = new Set<string>();
+  if (entitlement.tier === 'free' && (entitlement.removeAfterUtc || entitlement.removeFuture)) {
+    for (const [fixtureId, entry] of Object.entries(ledger)) {
+      if (isEndPast(entry.endUtc, nowMs)) continue; // the past is never touched
+      const started = Date.parse(entry.startUtc) <= nowMs;
+      const beyondBoundary =
+        entitlement.removeAfterUtc !== undefined && entry.startUtc > entitlement.removeAfterUtc;
+      const futureRemoval = entitlement.removeFuture === true && !started;
+      if (beyondBoundary || futureRemoval) {
+        if (downgradeRemovals.length >= DOWNGRADE_DELETE_CAP) break;
+        downgradeRemovals.push({ op: 'delete', fixtureId, entry });
+        removedByDowngrade.add(fixtureId);
+      }
+    }
+  }
+
   for (const { fixture, desired } of wanted.values()) {
+    if (removedByDowngrade.has(fixture.id)) continue; // being removed this pass
     const entry = ledger[fixture.id];
     if (!entry) {
+      // FREE skips CREATE ONLY (ruling 1): no new sync, while everything
+      // already placed keeps receiving corrections below.
+      if (entitlement.tier === 'free') continue;
       ops.push({ op: 'create', fixture, desired });
     } else if (!entryMatches(entry, desired)) {
       ops.push({ op: 'update', fixture, desired, entry });
     }
     // else: ledger already reflects this fixture — no op (idempotency)
   }
+  ops.push(...downgradeRemovals);
 
   // Anything ledgered that we no longer want: cancelled, unfollowed, or
-  // gone from the cache.
+  // gone from the cache. REMOVAL IS NEVER GATED (ruling 2): this loop
+  // runs identically on every tier.
   for (const [fixtureId, entry] of Object.entries(ledger)) {
+    if (removedByDowngrade.has(fixtureId)) continue;
     // A frozen entry is NOT a deletion candidate, whatever the fetch did
     // or did not return. This is the whole point of keeping the freeze in
     // the ledger rather than in the query: once a fixture crosses the

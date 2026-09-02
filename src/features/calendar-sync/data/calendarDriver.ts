@@ -84,11 +84,27 @@ export async function hasCalendarGrant(): Promise<boolean> {
   }
 }
 
+// PROBE FIRST (Round 5 ruling 7). The OS dialog is shown only from the
+// never-asked state; an existing grant is simply confirmed (so a
+// connected sync no longer re-requests on every run), and a DENIED
+// state is reported as denied WITHOUT prompting — the UI answers a
+// denial with a Settings deep-link, never a re-prompt. `canAskAgain`
+// rides on the error so the surface can tell "the OS will still ask"
+// from "only Settings can change this".
 export async function ensureCalendarPermission(): Promise<Result<true>> {
   try {
-    const { status } = await Calendar.requestCalendarPermissions();
+    const current = await Calendar.getCalendarPermissions();
+    if (current.status === 'granted') return ok(true);
+    if (current.status === 'denied' || current.canAskAgain === false) {
+      return err<AppError>({
+        kind: 'permission-denied',
+        resource: 'calendar',
+        canAskAgain: current.canAskAgain,
+      });
+    }
+    const { status, canAskAgain } = await Calendar.requestCalendarPermissions();
     if (status !== 'granted') {
-      return err<AppError>({ kind: 'permission-denied', resource: 'calendar' });
+      return err<AppError>({ kind: 'permission-denied', resource: 'calendar', canAskAgain });
     }
     return ok(true);
   } catch (e) {

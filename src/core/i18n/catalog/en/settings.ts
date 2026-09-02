@@ -81,13 +81,13 @@ export const settingsStrings = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Reminders',
-  'settings.reminders.footnote':
-    'Reminder changes apply to every synced fixture on the next sync.',
+  'settings.reminders.footnote': 'Changes apply on the next sync.',
   'settings.reminders.daysWithoutDates': 'Days without dates',
   'settings.reminders.slotA11y': 'Reminder {n}, {value}',
   'settings.reminders.slotValueA11y': 'Reminder {n} value',
   'settings.reminders.slotUnitA11y': 'Reminder {n} unit',
   'settings.reminders.off': 'Off',
+  'settings.reminders.on': 'On',
   'settings.reminders.minutes': 'Minutes',
   'settings.reminders.hours': 'Hours',
 
@@ -183,4 +183,13 @@ export const settingsStrings = {
   'settings.credits.openLicenceA11y':
     'Open Wikimedia Commons licence information',
   'settings.credits.aboutLicences': 'About these licences',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Part of Premium · Start 14 days free',
+  'premium.lockA11y': 'Premium feature',
+  'notifications.off': 'Notifications are off',
+  'notifications.openSettings': 'Open Settings',
+  'reminders.notify': 'Notify me before fixtures',
+  'reminders.notification.body': 'Starts in {when}',
+  'registry.ceiling': 'Background updates paused: too many follows',
 } as const;

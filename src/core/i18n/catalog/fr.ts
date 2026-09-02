@@ -599,13 +599,13 @@ export const fr: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Rappels',
-  'settings.reminders.footnote':
-    'Les changements de rappel s’appliquent à tous les matchs synchronisés à la prochaine synchronisation.',
+  'settings.reminders.footnote': 'Les modifications s’appliquent à la prochaine synchronisation.',
   'settings.reminders.daysWithoutDates': 'Jours sans horaire',
   'settings.reminders.slotA11y': 'Rappel {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valeur du rappel {n}',
   'settings.reminders.slotUnitA11y': 'Unité du rappel {n}',
   'settings.reminders.off': 'Désactivé',
+  'settings.reminders.on': 'Activé',
   'settings.reminders.minutes': 'Minutes',
   'settings.reminders.hours': 'Heures',
 
@@ -702,4 +702,13 @@ export const fr: Catalog = {
   'settings.credits.openLicenceA11y':
     'Ouvrir les informations de licence Wikimedia Commons',
   'settings.credits.aboutLicences': 'À propos de ces licences',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Inclus dans Premium · 14 jours gratuits',
+  'premium.lockA11y': 'Fonction Premium',
+  'notifications.off': 'Les notifications sont désactivées',
+  'notifications.openSettings': 'Ouvrir les Réglages',
+  'reminders.notify': 'Me prévenir avant les matchs',
+  'reminders.notification.body': 'Commence dans {when}',
+  'registry.ceiling': 'Mises à jour en arrière-plan en pause : trop de suivis',
 };

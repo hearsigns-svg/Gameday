@@ -590,13 +590,13 @@ export const es: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Recordatorios',
-  'settings.reminders.footnote':
-    'Los cambios de recordatorio se aplican a todos los partidos sincronizados en la próxima sincronización.',
+  'settings.reminders.footnote': 'Los cambios se aplican en la próxima sincronización.',
   'settings.reminders.daysWithoutDates': 'Días sin hora',
   'settings.reminders.slotA11y': 'Recordatorio {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valor del recordatorio {n}',
   'settings.reminders.slotUnitA11y': 'Unidad del recordatorio {n}',
   'settings.reminders.off': 'No',
+  'settings.reminders.on': 'Activado',
   'settings.reminders.minutes': 'Minutos',
   'settings.reminders.hours': 'Horas',
 
@@ -694,4 +694,13 @@ export const es: Catalog = {
   'settings.credits.openLicenceA11y':
     'Abrir la información de licencias de Wikimedia Commons',
   'settings.credits.aboutLicences': 'Acerca de estas licencias',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Parte de Premium · Empieza 14 días gratis',
+  'premium.lockA11y': 'Función Premium',
+  'notifications.off': 'Las notificaciones están desactivadas',
+  'notifications.openSettings': 'Abrir Ajustes',
+  'reminders.notify': 'Avisarme antes de los partidos',
+  'reminders.notification.body': 'Empieza en {when}',
+  'registry.ceiling': 'Actualizaciones en segundo plano en pausa: demasiados seguimientos',
 };

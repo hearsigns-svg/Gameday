@@ -574,13 +574,13 @@ export const it: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Promemoria',
-  'settings.reminders.footnote':
-    'Le modifiche ai promemoria si applicano a ogni partita sincronizzata alla prossima sincronizzazione.',
+  'settings.reminders.footnote': 'Le modifiche si applicano alla prossima sincronizzazione.',
   'settings.reminders.daysWithoutDates': 'Giorni senza orario',
   'settings.reminders.slotA11y': 'Promemoria {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valore del promemoria {n}',
   'settings.reminders.slotUnitA11y': 'Unità del promemoria {n}',
   'settings.reminders.off': 'Off',
+  'settings.reminders.on': 'Attivo',
   'settings.reminders.minutes': 'Minuti',
   'settings.reminders.hours': 'Ore',
 
@@ -680,4 +680,13 @@ export const it: Catalog = {
   'settings.credits.openLicenceA11y':
     'Apri le informazioni sulle licenze di Wikimedia Commons',
   'settings.credits.aboutLicences': 'Informazioni su queste licenze',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Parte di Premium · Inizia 14 giorni gratis',
+  'premium.lockA11y': 'Funzione Premium',
+  'notifications.off': 'Le notifiche sono disattivate',
+  'notifications.openSettings': 'Apri Impostazioni',
+  'reminders.notify': 'Avvisami prima delle partite',
+  'reminders.notification.body': 'Inizia tra {when}',
+  'registry.ceiling': 'Aggiornamenti in background in pausa: troppi seguiti',
 };

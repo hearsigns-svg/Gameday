@@ -846,6 +846,8 @@ export function EventRow(props: {
   onPress?: () => void;
   // Marks the headline of a card ("Main event"), where the data says so.
   badge?: string;
+  // Spoken form of the badge for screen readers (a glyph says nothing).
+  badgeA11y?: string;
   // Corner mark on the tile — an athlete's flag.
   tileBadge?: string;
   // A row is not a card, but it IS where the card comes from on the
@@ -873,7 +875,7 @@ export function EventRow(props: {
   ];
   const bareLabel = `${props.title}, ${props.caption}, ${
     dimmed ? tr('core.row.removedFromCalendar') : props.timeText
-  }`;
+  }${props.badgeA11y ? `, ${props.badgeA11y}` : ''}`;
   const label = props.onPress
     ? tr('core.a11y.openEvent', { label: bareLabel })
     : bareLabel;
@@ -1675,6 +1677,9 @@ export function SyncStatusChip(props: {
   // device sync age and data age are different facts, and a device
   // syncing perfectly against a dead source must not show green.
   dataStaleHours?: number | null;
+  // One optional action beside the text — the Settings deep-link when
+  // the error is a permission the OS will no longer ask about.
+  action?: { label: string; onPress: () => void } | null;
 }) {
   const t = useTheme();
   const dataStale =
@@ -1723,6 +1728,19 @@ export function SyncStatusChip(props: {
       <Text style={[type.caption, { color: t.textSecondary, flexShrink: 1 }]}>
         {text}
       </Text>
+      {props.action && !props.running ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={props.action.label}
+          onPress={props.action.onPress}
+          hitSlop={8}
+          style={{ marginLeft: spacing.s }}
+        >
+          <Text style={[type.caption, { color: t.primary, fontWeight: '700' }]}>
+            {props.action.label}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

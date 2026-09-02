@@ -57,6 +57,8 @@ import RegionScreen from './src/features/settings/RegionScreen';
 import CalendarTargetScreen from './src/features/settings/CalendarTargetScreen';
 import CreditsScreen from './src/features/settings/CreditsScreen';
 import ThemeGalleryScreen from './src/features/settings/ThemeGalleryScreen';
+import { refreshFlags } from './src/core/flags';
+import { initAnalytics } from './src/core/analytics';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -164,6 +166,10 @@ export default function App() {
     // but running first avoids one fetch on the legacy key.
     migrateBoxingSexFollows();
     migrateTournamentFinalsScope();
+    // Round 5: the remote switchboard, then measurement under its flag.
+    // Both fail-safe — an unreachable flags doc leaves the launch
+    // defaults, and a missing analytics pod logs once and stays quiet.
+    void refreshFlags().then(() => initAnalytics());
     void registerBackgroundSync();
     void import('./src/features/calendar-sync/data/deviceRegistry').then(
       (m) => m.registerDevice(),

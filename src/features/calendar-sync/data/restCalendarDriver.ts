@@ -33,6 +33,7 @@ import {
 import { calendarColour } from './calendarColourStore';
 import type { EventInput, ResolvedTarget } from './calendarDriver';
 import { clearTarget, saveTarget } from './calendarTargetStore';
+import { googleColorIdFor } from '../domain/googleEventColour';
 import {
   createOwnedCalendar,
   deleteOwnedCalendar,
@@ -69,10 +70,13 @@ function toRestInput(input: EventInput): RestEventInput {
     ...(input.allDayReminder !== undefined
       ? { allDayReminder: input.allDayReminder }
       : {}),
-    // Colour: Google events take an eleven-swatch colorId, not hex.
-    // The mapping from the product colour lands with the picker work
-    // (P28-3); until then REST events wear the calendar's colour —
-    // which, since B4, is the colour the user actually chose.
+    // Colour: Google events take an eleven-swatch colorId, not hex —
+    // the chosen hex maps to the nearest swatch (Round 5 ruling 7);
+    // without a chosen colour the event wears the calendar's colour.
+    ...(() => {
+      const id = input.colour ? googleColorIdFor(input.colour) : null;
+      return id ? { colorId: id } : {};
+    })(),
     ...(input.note ? { note: input.note } : {}),
   };
 }

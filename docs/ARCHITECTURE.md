@@ -130,9 +130,16 @@ be a calendar the user owns:
 ## Auth & entitlements
 
 Firebase anonymous auth at first launch (server state, zero friction);
-account linking (Apple/Google) only when subscription requires it.
-Entitlements enforced server-side from day one. Anonymous-loss-on-
-reinstall recovers via event-embedded fixtureIds.
+no accounts in v1 — the billing layer (RevenueCat, Stage 3) keys on the
+anonymous uid and restore re-links a fresh uid on reinstall.
+ENTITLEMENTS ARE ENFORCED CLIENT-SIDE IN THE SYNC PLANNER (Round 5,
+2026-09-02): `src/core/entitlement.ts` turns the SDK's cached state into
+planner effects (free = skip `create` only; downgrade = keep-window or
+72-hour-window removals, capped per pass); the server never gates
+polling, and `entitlements/{uid}` is the webhook's server-written mirror
+(owner-readable, never client-written). Remote switches live in the
+`status/flags` doc (`src/core/flags.ts`, fail-safe defaults).
+Anonymous-loss-on-reinstall recovers via event-embedded fixtureIds.
 
 ## Error handling
 

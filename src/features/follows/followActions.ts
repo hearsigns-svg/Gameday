@@ -3,6 +3,7 @@
 
 import { err, messageOf, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
+import { logFollow } from '../../core/analytics';
 import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
 import {
   Followable,
@@ -106,6 +107,8 @@ function nextGeneration(key: string): number {
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
   setFollowed(item, true);
+  // Funnel event 1 of the Round 5 set — sport and follow type only.
+  void logFollow(item.sportKey, item.type);
   // THE FOLLOW STANDS EVEN IF THE REFRESH FAILS.
   //
   // This used to roll back on any poll failure, so that nobody was left

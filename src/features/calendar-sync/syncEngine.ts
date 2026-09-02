@@ -6,6 +6,7 @@ import { currentLanguage, LANGUAGE_NAMES, t } from '../../core/i18n';
 import { AppError, err, messageOf, ok, Result } from '../../core/result';
 import { showToast } from '../../core/toast';
 import { readJson, writeJson } from '../../core/storage';
+import { planEntitlement } from '../../core/entitlementStore';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
@@ -304,6 +305,40 @@ export function runSync(): Promise<Result<SyncOutcome>> {
   return withSyncLock(runSyncInner);
 }
 
+// Outbound channels other than the calendar (Round 5: system-notification
+// reminders) subscribe here and receive the refreshed fixture set after
+// EVERY sync path — connected or fixtures-only — with the prefs and
+// exclusions the planner used. A hook failure is logged, never fatal:
+// a notification channel must not be able to fail a sync.
+export interface FixturesRefreshed {
+  fixtures: readonly Fixture[];
+  prefs: CalendarPrefs;
+  excluded: ReadonlySet<string>;
+  calendarConnected: boolean;
+}
+type RefreshHook = (event: FixturesRefreshed) => void | Promise<void>;
+const refreshHooks = new Set<RefreshHook>();
+export function onFixturesRefreshed(hook: RefreshHook): () => void {
+  refreshHooks.add(hook);
+  return () => {
+    refreshHooks.delete(hook);
+  };
+}
+function emitFixturesRefreshed(event: FixturesRefreshed): void {
+  for (const hook of refreshHooks) {
+    try {
+      const r = hook(event);
+      if (r && typeof (r as Promise<void>).catch === 'function') {
+        (r as Promise<void>).catch((e) =>
+          console.warn(`[kickoffcal] refresh hook failed: ${e}`),
+        );
+      }
+    } catch (e) {
+      console.warn(`[kickoffcal] refresh hook failed: ${e}`);
+    }
+  }
+}
+
 // Shared by both sync paths: refresh the per-follow counts and the
 // presentation snapshot Home/Schedule render from.
 function writePresentationState(
@@ -386,13 +421,20 @@ async function runFixturesOnlyInner(): Promise<Result<SyncOutcome>> {
     pinnedIds(),
     new Set(follows),
   );
+  const excludedNow = loadExclusions();
   writePresentationState(
     deduped,
     follows,
     prefs,
     horizonStartFrom(Date.now()),
-    loadExclusions(),
+    excludedNow,
   );
+  emitFixturesRefreshed({
+    fixtures: deduped,
+    prefs,
+    excluded: excludedNow,
+    calendarConnected: false,
+  });
   const outcome: SyncOutcome = {
     created: 0,
     updated: 0,
@@ -777,6 +819,10 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       nowFromHorizon(horizonStart),
       seriesScopesFrom(loadFollowables()),
       settings,
+      // Round 5: the planner's entitlement input. Open sync gate →
+      // Premium for everyone; entitled gate → the store's cached state
+      // with offline grace and the downgrade rules (core/entitlement.ts).
+      { entitlement: planEntitlement(Date.now()) },
     );
 
     // Bounded pass: corrections first, creates after, stopping when the
@@ -817,6 +863,10 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           extraRemindersBefore: d.extraReminders,
           allDayReminder: d.allDayReminder,
           ...(d.note ? { note: d.note } : {}),
+          // Round 5 ruling 7: the chosen colour reaches the event (REST
+          // maps it to Google's nearest swatch; layers without per-event
+          // colour never rendered the control, so never see one).
+          ...(d.colour ? { colour: d.colour } : {}),
         };
         // EventKit half-applies all-day ↔ timed conversions on update
         // (flag flips, dates don't). A kind change is always delete +
@@ -853,6 +903,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           reminderMinutes: input.reminderMinutesBefore,
           extraReminders: input.extraRemindersBefore,
           allDayReminder: d.allDayReminder,
+          ...(d.colour ? { colour: d.colour } : {}),
         });
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;
@@ -895,6 +946,12 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       horizonStart,
       excluded,
     );
+    emitFixturesRefreshed({
+      fixtures: planFixtures,
+      prefs,
+      excluded,
+      calendarConnected: true,
+    });
     writeJson(LAST_SYNC_KEY, outcome);
     // Drain the remainder on the next pass. Reuses the lock's existing
     // coalescing hop rather than recursing here, so the run finishes and
