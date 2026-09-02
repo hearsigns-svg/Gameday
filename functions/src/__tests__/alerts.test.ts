@@ -293,6 +293,9 @@ describe('quota_low', () => {
   });
   test('exactly at the threshold is still fine — the rule is strict-below', () => {
     expect(evaluateQuotaAlerts(SLICE, { remaining: 9 * QUOTA_RUNWAY_DAYS, callsThisRun: 9 })).toEqual([]);
+  });
+});
+
 describe('appearance-only slices are judged by their appearance sibling (Round 4 item 7)', () => {
   // pollAtpVendor publishes zero fixtures by design: on its own row it
   // never yields, so born_dead would fire a week after deploy and
