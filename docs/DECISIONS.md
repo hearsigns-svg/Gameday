@@ -4165,3 +4165,16 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   inside the render, so every sync tick remounted every row and threw
   away its resolved photo — rows now render the module-level
   ScheduleRow directly.
+
+- 2026-09-02 (Round 5 Stage 2 addendum — SCHEDULE PAGING LANDED, ruling
+  4): the 60-fixture presentation cap is gone; the snapshot holds the
+  full upcoming set and Schedule renders it WINDOWED BY DATE AND PAGED
+  (`domain/schedulePaging.ts`, UTC-month-aligned): this month + next to
+  start, one calendar month per page, auto-load near the end with a
+  "Show more" footer as the reachable fallback (absent, never disabled,
+  once nothing remains); the month grid's dots mark the whole set; a
+  tapped day beyond the loaded window loads up to it first; the first
+  window floors to the soonest fixture so an off-season follow opens on
+  its next games. Home draws its carousel from the full set; the priming
+  screen shows the real count. Lock badges and the chip's Open Settings
+  action were applied on the merged screen.

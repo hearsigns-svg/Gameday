@@ -31,6 +31,7 @@ import {
   Text,
   View,
   ViewToken,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCardExpansion } from '../../../core/cardExpansion';
@@ -72,6 +73,7 @@ import { Followable, loadFollowables } from '../../follows/data/followStore';
 import {
   lastSync,
   lastSyncError,
+  lastSyncErrorKind,
   runSync,
   subscribeSync,
   UpcomingFixture,
@@ -92,6 +94,8 @@ import {
   pagesToReach,
 } from '../domain/schedulePaging';
 import { MonthGrid } from './MonthGrid';
+import { premiumLocked } from '../../../core/entitlementStore';
+import { loadLedger } from '../data/ledger';
 
 type Props = TabScreenProps<'Schedule'>;
 
@@ -140,6 +144,15 @@ export default function ScheduleScreen({ navigation }: Props) {
   const mode = useColorSchemeMode();
   const reduceMotion = useReduceMotion();
   const [fixtures, setFixtures] = useState<UpcomingFixture[]>(upcomingFixtures);
+  // Round 5 lock badges: a Free install under an entitled gate sees a
+  // lock on every fixture NOT already in the calendar — the ledger is
+  // the truth of "placed". Re-read on every fixture refresh.
+  const locked = premiumLocked();
+  const placedIds = useMemo(
+    () => (locked ? new Set(Object.keys(loadLedger())) : new Set<string>()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locked, fixtures],
+  );
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
   // How many month pages the list holds (≥ 1). Only ever grows while
@@ -160,6 +173,7 @@ export default function ScheduleScreen({ navigation }: Props) {
   const [running, setRunning] = useState(false);
   const [last, setLast] = useState(lastSync);
   const [syncError, setSyncError] = useState<string | null>(lastSyncError);
+  const [syncErrorKind, setSyncErrorKind] = useState(lastSyncErrorKind);
   const [dataStaleHours, setDataStaleHours] = useState<number | null>(null);
 
   const listRef = useRef<SectionList<UpcomingFixture, DaySection>>(null);
@@ -210,6 +224,7 @@ export default function ScheduleScreen({ navigation }: Props) {
       setRunning(state.running);
       setLast(state.last);
       setSyncError(state.lastError);
+      setSyncErrorKind(state.lastErrorKind);
       refresh();
     });
     // Row marks/fills paint from the priorities cache — repaint when a
@@ -544,6 +559,16 @@ export default function ScheduleScreen({ navigation }: Props) {
             error={syncError}
             calendarOff={calendarOff}
             dataStaleHours={dataStaleHours}
+            // A denied permission: the OS will not ask again, so the one
+            // useful action is Settings (Round 5 ruling 7).
+            action={
+              syncErrorKind === 'permission-denied'
+                ? {
+                    label: tr('calendar.priming.openSettings'),
+                    onPress: () => void Linking.openSettings(),
+                  }
+                : null
+            }
           />
         </View>
       ) : null}
@@ -679,6 +704,7 @@ export default function ScheduleScreen({ navigation }: Props) {
                 mode={mode}
                 excluded={excludedIds.has(item.id)}
                 onToggleExcluded={() => toggleExclude(item)}
+                locked={locked && !placedIds.has(item.id)}
               />
             )}
             ListFooterComponent={
@@ -732,6 +758,7 @@ function ScheduleRow(props: {
   mode: 'light' | 'dark';
   excluded: boolean;
   onToggleExcluded: () => void;
+  locked?: boolean;
 }) {
   const { item } = props;
   const sport = sportByKey(item.sport);
@@ -768,6 +795,7 @@ function ScheduleRow(props: {
       theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, props.mode)}
       excluded={props.excluded}
       onToggleExcluded={props.onToggleExcluded}
+      {...(props.locked ? { badge: '🔒', badgeA11y: tr('premium.lockA11y') } : {})}
     />
   );
 }
