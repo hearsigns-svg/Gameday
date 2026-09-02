@@ -73,6 +73,24 @@ source of truth for build state — never chat history.
   BEHAVIORALLY (probe the endpoint) and on failure read
   /tmp-captured output: an exit-1 deploy may already have poisoned
   the hashes.
+- **Agent worktrees live INSIDE the repo** (`.claude/worktrees/<agent>/`,
+  proven 2026-09-02): `git add -A` stages each one as an embedded-repo
+  gitlink and the root jest run collects their test files (a 214-suite
+  run with the agent's half-built code failing). `.gitignore` and jest's
+  `testPathIgnorePatterns` now exclude `.claude/worktrees/`; if a
+  gitlink ever appears in `git ls-files .claude`, `git rm --cached -r`
+  it before pushing.
+- **`scripts/seed-catalogue.mjs` by ABSOLUTE PATH** (`node
+  /Users/lnw/Gameday/scripts/seed-catalogue.mjs`): invoked from
+  `functions/` it printed a listing and exited without running the
+  born-dead pass or writing anything — the relative path resolved to
+  something else. Its output ends with `DRY RUN — nothing written` when
+  it ran the whole way.
+- **Cloud Functions deploys have a ROLLOUT RACE** (2026-09-02): a
+  function reported "Successful update operation" at 10:31:23Z and a
+  request at 10:33:27Z still hit the previous revision. Wait ≥2 minutes
+  after a deploy before the behavioural probe, or the probe judges the
+  old code and you chase a phantom.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network
