@@ -5,8 +5,10 @@ import {
   cadenceModeFor,
   DENSE_INTERVAL_MS,
   MAX_CARDS_PER_RUN,
+  currentQuota,
   planBoxingDataRun,
   projectedSpendToReset,
+  QUOTA_KNOWLEDGE_TTL_MS,
   QUOTA_RESERVE,
 } from '../providers/boxingDataCadence';
 import { BoxingDataHttpError, rejectHttp, shouldFetchBouts } from '../providers/boxingData';
@@ -102,7 +104,8 @@ describe('planBoxingDataRun', () => {
       nowMs: now,
       lastSuccessAt: iso(now - 30 * D),
       cards: [{ id: 'c1', startUtc: iso(now + 1 * D) }],
-      quota: { remaining: QUOTA_RESERVE },
+      // a figure inside its window (the marker always stamps resetAt/at)
+      quota: { remaining: QUOTA_RESERVE, resetAt: iso(now + 5 * D), at: iso(now - H) },
     });
     expect(p.action).toBe('skip');
     expect(p.reason).toBe('quota_reserve');
@@ -113,7 +116,7 @@ describe('planBoxingDataRun', () => {
       nowMs: now,
       lastSuccessAt: iso(now - 30 * D),
       cards: [],
-      quota: { remaining: QUOTA_RESERVE + 1 },
+      quota: { remaining: QUOTA_RESERVE + 1, resetAt: iso(now + 5 * D), at: iso(now - H) },
     });
     expect(edge.action).toBe('poll');
     expect(edge.boutBudget).toBe(0);
@@ -124,7 +127,7 @@ describe('planBoxingDataRun', () => {
       nowMs: now,
       lastSuccessAt: null,
       cards: [],
-      quota: { remaining: 0 },
+      quota: { remaining: 0, resetAt: iso(now + 5 * D), at: iso(now - H) },
     });
     expect(p.action).toBe('skip');
     expect(p.reason).toBe('quota_reserve');
@@ -266,5 +269,41 @@ describe('rejectHttp — the metering headers survive a non-2xx', () => {
       planBoxingDataRun({ nowMs: now, lastSuccessAt: null, cards: [], quota: { remaining: null } })
         .action,
     ).toBe('poll');
+  });
+});
+
+// Found by the live probe on deploy day: the wall had been persisted as
+// remaining=0 with the window's reset five days out. A gate that never
+// calls while it holds can never refresh that figure — so the figure
+// must expire with the window, or the poller stays shut forever.
+describe('currentQuota — the reserve gate releases when the window resets', () => {
+  it('a figure inside its window is current', () => {
+    const q = { remaining: 0, resetAt: iso(now + 5 * D), at: iso(now - 1 * H) };
+    expect(currentQuota(q, now)).toEqual(q);
+    expect(planBoxingDataRun({ nowMs: now, lastSuccessAt: null, cards: [], quota: q }).reason).toBe(
+      'quota_reserve',
+    );
+  });
+
+  it('once the reset time has passed the figure is unknown and the run goes ahead', () => {
+    const q = { remaining: 0, resetAt: iso(now - 1), at: iso(now - 5 * D) };
+    expect(currentQuota(q, now)).toBeNull();
+    const p = planBoxingDataRun({ nowMs: now, lastSuccessAt: null, cards: [], quota: q });
+    expect(p.action).toBe('poll');
+    // and the bouts budget is the full cap again, not the stale zero
+    expect(p.boutBudget).toBe(MAX_CARDS_PER_RUN);
+  });
+
+  it('without a reset time the figure expires a week after it was observed', () => {
+    const fresh = { remaining: 3, at: iso(now - (QUOTA_KNOWLEDGE_TTL_MS - H)) };
+    expect(currentQuota(fresh, now)).toEqual(fresh);
+    const stale = { remaining: 3, at: iso(now - (QUOTA_KNOWLEDGE_TTL_MS + H)) };
+    expect(currentQuota(stale, now)).toBeNull();
+  });
+
+  it('a figure with neither reset nor observation time is not trusted to hold the gate', () => {
+    expect(currentQuota({ remaining: 0 }, now)).toBeNull();
+    expect(currentQuota(null, now)).toBeNull();
+    expect(currentQuota({ remaining: null, resetAt: iso(now + D) }, now)).toBeNull();
   });
 });

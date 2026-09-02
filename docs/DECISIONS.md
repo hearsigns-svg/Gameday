@@ -4005,3 +4005,25 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   so at fight time a bout is at most ~24h stale, and a card ≥3 days out
   at most ~70h. What the September exhaustion cost — a daily schedule
   call alone was ~30 of the 100 — is what the baseline buys back.
+
+- 2026-09-02 (Round 4 close-out item 3 — LIVE PROOF + THE HOLE IT FOUND):
+  deployed 9f56dba, waited out the rollout, then two direct polls: the
+  first hit the vendor's wall (HTTP 429) and the NEW error path
+  persisted the metering headers — `quota {remaining 0, limit 100,
+  resetAt 2026-09-07T17:47Z, reserve 10, projectedSpendToReset 4}` —
+  and the second answered `skipped_boxingdata_quota_reserve` (HTTP 200)
+  without touching the vendor: the reserve gate held from the very next
+  call. The sweep then ran clean (27 paths, 27 polled, 0 poll errors,
+  2 alerts open, 2 held rows skipped). THE HOLE: a persisted
+  `remaining 0` is knowledge of THIS window only, and a gate that makes
+  no call while it holds can never refresh the figure — carried across
+  the Sept 7 reset it would have held the poller shut forever. Fixed
+  before the window turns: `currentQuota()` treats a figure whose
+  `resetAt` has passed (or, with no reset time, one observed more than
+  7 days ago) as unknown, so the next run goes ahead and learns the new
+  figure; the bouts budget returns to the full cap with it. Pinned by
+  tests (inside the window it holds; past the reset it polls; no
+  timestamps at all is not trusted to hold). The post-reset release
+  cannot be probed live until Sept 7 — the unit tests carry it, and the
+  Sept 7–8 sweep is the behavioural check (a `pollBoxingData` sourceRun
+  with a 200 and a fresh `lastSuccessAt`).

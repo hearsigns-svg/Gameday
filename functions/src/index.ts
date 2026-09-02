@@ -2540,7 +2540,7 @@ export const pollBoxingData = onRequest(async (req, res) => {
         lastSuccessAt?: string;
         boutsFetchedAt?: BoutFetchState;
         cards?: KnownCard[];
-        quota?: { remaining: number | null; resetAt?: string | null; limit?: number | null };
+        quota?: { remaining: number | null; resetAt?: string | null; limit?: number | null; at?: string | null };
       }
     | undefined;
   const lastSuccessAt = prior?.lastSuccessAt ?? null;

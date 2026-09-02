@@ -53,6 +53,8 @@ export interface QuotaSnapshot {
   remaining: number | null;
   resetAt?: string | null;
   limit?: number | null;
+  // When the figure was observed (the marker stamps it).
+  at?: string | null;
 }
 
 export type CadenceMode = 'baseline' | 'dense';
@@ -84,6 +86,27 @@ export function cadenceModeFor(
   return 'baseline';
 }
 
+// How long a persisted quota figure without a reset time stays trusted.
+export const QUOTA_KNOWLEDGE_TTL_MS = 7 * 86_400_000;
+
+// A persisted quota is only knowledge of THIS window. Once the vendor's
+// reset time has passed the figure is stale — and since the gate makes
+// no call while it holds, nothing would ever refresh it: a remaining=0
+// carried across the reset would hold the poller shut forever. Past the
+// reset (or, with no reset time, a week after it was observed) the
+// quota is unknown again and the run goes ahead to learn the new figure.
+export function currentQuota(
+  quota: QuotaSnapshot | null | undefined,
+  nowMs: number,
+): QuotaSnapshot | null {
+  if (!quota || quota.remaining === null || quota.remaining === undefined) return null;
+  const resetMs = Date.parse(quota.resetAt ?? '');
+  if (Number.isFinite(resetMs)) return nowMs < resetMs ? quota : null;
+  const atMs = Date.parse(quota.at ?? '');
+  if (Number.isFinite(atMs)) return nowMs - atMs < QUOTA_KNOWLEDGE_TTL_MS ? quota : null;
+  return null;
+}
+
 export function boutBudgetFor(
   quota: QuotaSnapshot | null | undefined,
   maxCards: number = MAX_CARDS_PER_RUN,
@@ -104,15 +127,16 @@ export function planBoxingDataRun(input: {
   const intervalMs = mode === 'dense' ? DENSE_INTERVAL_MS : BASELINE_INTERVAL_MS;
   const lastMs = Date.parse(input.lastSuccessAt ?? '');
   const nextEligibleMs = Number.isFinite(lastMs) ? lastMs + intervalMs : input.nowMs;
+  const quota = currentQuota(input.quota, input.nowMs);
   const base = {
     mode,
     intervalMs,
     nextEligibleAt: Number.isFinite(lastMs) ? new Date(nextEligibleMs).toISOString() : null,
-    boutBudget: boutBudgetFor(input.quota),
+    boutBudget: boutBudgetFor(quota),
   };
   // The reserve is inviolable: with the schedule call itself the run
   // would dip below it, so the run does not happen.
-  const remaining = input.quota?.remaining;
+  const remaining = quota?.remaining;
   if (remaining !== null && remaining !== undefined && remaining - 1 < QUOTA_RESERVE) {
     return { ...base, action: 'skip', reason: 'quota_reserve' };
   }
