@@ -21,7 +21,6 @@ export const followsStrings = {
   'follows.home.nothingScheduled': 'Nothing scheduled',
   'follows.home.addSports': 'Add sports',
   'follows.home.chooseSport': 'Choose a sport',
-  'follows.home.oneFollow': 'One follow',
   'follows.home.browse': 'Browse',
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
@@ -29,7 +28,6 @@ export const followsStrings = {
   'follows.sports.a11yComingSoon': '{name}, coming soon',
 
   // ── Sport picker ──────────────────────────────────────────────────
-  'follows.sportPicker.allEventsOneFollow': 'All events · one follow',
   'follows.sportPicker.comingSoon': 'Coming soon',
   'follows.scope.tennisKeyNote':
     'Finals, semi-finals and quarter-finals, where the data names rounds. The WTA draw names them; most men\u2019s matches carry no round marker yet, so a men-only tournament may deliver just its start and end notes.',

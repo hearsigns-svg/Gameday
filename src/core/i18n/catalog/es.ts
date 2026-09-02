@@ -140,14 +140,11 @@ export const es: Catalog = {
   'follows.home.nothingScheduled': 'Nada programado',
   'follows.home.addSports': 'Añadir deportes',
   'follows.home.chooseSport': 'Elige un deporte',
-  'follows.home.oneFollow': 'Un solo seguimiento',
   'follows.home.browse': 'Explorar',
   'follows.following': 'Siguiendo',
   'follows.sports.a11yComingSoon': '{name}, próximamente',
 
   // ── Sport picker ──────────────────────────────────────────────────
-  'follows.sportPicker.allEventsOneFollow':
-    'Todos los eventos · un solo seguimiento',
   'follows.sportPicker.comingSoon': 'Próximamente',
   'follows.scope.tennisKeyNote':
     'Finales, semifinales y cuartos, cuando los datos indican la ronda. El cuadro de la WTA la indica; la mayoría de los partidos masculinos aún no llevan ronda, así que un torneo solo masculino puede aportar únicamente sus notas de inicio y final.',

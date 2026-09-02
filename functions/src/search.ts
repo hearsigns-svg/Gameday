@@ -121,9 +121,12 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
     Object.entries(DERIVED_TEAM_LEAGUES).map(async ([id, meta]) => ({
       sportKey: meta.sportKey,
       league: meta.label,
-      teams: (await derivedLeagueTeams(`tsdb-league-${id}`)).map((t) => ({
+      // Badged by id where the provider knows the side (Round 4 B5);
+      // the client's flag fallback covers the rest.
+      teams: (await derivedLeagueTeams(`tsdb-league-${id}`, process.env.TSDB_KEY || undefined)).map((t) => ({
         name: t.name,
         key: t.key,
+        ...(t.crestUrl ? { crestUrl: t.crestUrl } : {}),
       })),
     })),
   );

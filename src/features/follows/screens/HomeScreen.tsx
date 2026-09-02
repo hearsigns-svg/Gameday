@@ -223,6 +223,16 @@ export default function HomeScreen({ navigation }: Props) {
   const n = carousel.length;
   const looping = n >= 2 && !reduceMotion;
   const heroRef = useRef<FlatList<UpcomingFixture>>(null);
+  // A TAB PRESS LANDS AT THE ENTRY STATE (Round 4 B3): the top, whether
+  // Home is already frontmost or being switched back to.
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(
+    () =>
+      navigation.addListener('tabPress', () => {
+        scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion });
+      }),
+    [navigation, reduceMotion],
+  );
   const loopIndexRef = useRef(looping ? n : 0);
   const touchingRef = useRef(false);
   const autoAdvancingRef = useRef(false);
@@ -274,6 +284,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ flex: 1, backgroundColor: t.bg }}
       contentContainerStyle={{ paddingBottom: spacing.xxl }}
       contentInsetAdjustmentBehavior="automatic"
@@ -397,16 +408,10 @@ export default function HomeScreen({ navigation }: Props) {
               label={label}
               glyph={s.glyph}
               theme={teamTheme(s.accent, mode)}
-              // What the tile IS, never the user's state: only F1 has a
-              // series follow, so a "Following" caption could only ever
-              // appear on that one tile — one card announcing state in a
-              // grid of eleven that cannot (Round 4 ruling; verified:
-              // seriesFollowable exists on exactly one sport).
-              caption={
-                s.seriesFollowable
-                  ? i18n.t('follows.home.oneFollow')
-                  : i18n.t('follows.home.browse')
-              }
+              // Every tile reads the same word (owner ruling): no state
+              // caption, and no follow-count variant for the one sport
+              // (F1) whose follow is the sport itself.
+              caption={i18n.t('follows.home.browse')}
               onPress={() =>
                 navigation.navigate('LeagueList', { sportKey: s.key })
               }

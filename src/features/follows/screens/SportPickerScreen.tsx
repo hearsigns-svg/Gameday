@@ -61,11 +61,7 @@ export default function SportPickerScreen({ navigation }: Props) {
                 // the same component (22b).
                 label={sportLabelFor(item.key, item.label, activeRegion())}
                 caption={
-                  item.enabled
-                    ? item.seriesFollowable
-                      ? i18n.t('follows.sportPicker.allEventsOneFollow')
-                      : undefined
-                    : i18n.t('follows.sportPicker.comingSoon')
+                  item.enabled ? undefined : i18n.t('follows.sportPicker.comingSoon')
                 }
                 glyph={item.glyph}
                 theme={teamTheme(item.accent, mode)}

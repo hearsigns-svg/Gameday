@@ -132,13 +132,11 @@ export const de: Catalog = {
   'follows.home.nothingScheduled': 'Nichts angesetzt',
   'follows.home.addSports': 'Sportarten hinzufügen',
   'follows.home.chooseSport': 'Wähle eine Sportart',
-  'follows.home.oneFollow': 'Einmal folgen',
   'follows.home.browse': 'Entdecken',
   'follows.following': 'Du folgst',
   'follows.sports.a11yComingSoon': '{name}, bald verfügbar',
 
   // ── Sport picker ──────────────────────────────────────────────────
-  'follows.sportPicker.allEventsOneFollow': 'Alle Events · einmal folgen',
   'follows.sportPicker.comingSoon': 'Bald verfügbar',
   'follows.scope.tennisKeyNote':
     'Finale, Halbfinale und Viertelfinale, sofern die Daten Runden benennen. Die WTA-Auslosung tut das; die meisten Herren-Matches tragen noch keine Rundenangabe, sodass ein reines Herrenturnier ggf. nur Start- und Endnotiz liefert.',

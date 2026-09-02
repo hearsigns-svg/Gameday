@@ -35,7 +35,7 @@ export interface DirectoryTeam {
 // and relegated clubs never appeared or disappeared, and the alias table
 // built from these documents could never improve.
 import { enrichBurstColours } from './crestColours';
-import { deriveTeamsFromFixtures } from './fixtureTeams';
+import { DERIVED_TEAM_LEAGUES, deriveTeamsFromFixtures, joinBadgesById } from './fixtureTeams';
 import { Fixture } from './fixture';
 
 export const DIRECTORY_TTL_MS = 24 * 3_600_000;
@@ -70,7 +70,7 @@ export const derivedTeamsDocId = (competitionKey: string): string =>
 // before it, so the next request repopulates from the provider —
 // SELF-HEALING, and no production document has to be deleted by hand.
 // Bump it whenever a field is added to DirectoryTeam or its providers.
-export const DIRECTORY_SCHEMA_EPOCH = Date.parse('2026-08-28T15:00:00.000Z'); // burstColours joined the shape (Round 3)
+export const DIRECTORY_SCHEMA_EPOCH = Date.parse('2026-09-02T12:00:00.000Z'); // derived rows gained badges by id (Round 4 B5)
 
 export function isDirectoryFresh(
   cachedAt: string | undefined,
@@ -124,18 +124,58 @@ async function cachedTeams(
 // subtitles, the Teams expansion and burst-colour enrichment all work
 // unchanged. Partial early-season lists are accepted behaviour; the
 // list grows as fixtures land.
+//
+// BADGES BY ID (Round 4 B5): the derived rows are then joined against
+// TSDB's own team list for the league (its exact strLeague from
+// DERIVED_TEAM_LEAGUES) — a national side keeps one team id across
+// every league, so the badge lands wherever the side appears. Rows the
+// provider cannot badge fall through to the curated team marks
+// (directoryArt/curated, the standing manual-drop chain — keyed by the
+// tsdb-team key) and, failing both, to the client's flag fallback. Both
+// enrichments are decorative: a provider or curated read failure logs
+// and serves the derived list unbadged, never empty.
 export async function derivedLeagueTeams(
   competitionKey: string,
+  tsdbApiKey?: string,
 ): Promise<DirectoryTeam[]> {
   return cachedTeams(derivedTeamsDocId(competitionKey), async () => {
-    const snap = await getFirestore()
+    const db = getFirestore();
+    const snap = await db
       .collection('fixtures')
       .where('followKeys', 'array-contains', competitionKey)
       .limit(800)
       .get();
-    return deriveTeamsFromFixtures(
+    let rows: DirectoryTeam[] = deriveTeamsFromFixtures(
       snap.docs.map((d) => d.data() as Fixture),
     ).map((t) => ({ id: t.id, name: t.name, key: t.key }));
+    const leagueId = competitionKey.replace(/^tsdb-league-/, '');
+    const meta = DERIVED_TEAM_LEAGUES[leagueId];
+    if (tsdbApiKey && meta) {
+      try {
+        const badges = new Map(
+          (await fetchTsdbLeagueTeams(tsdbApiKey, meta.tsdbName))
+            .filter((t) => t.crestUrl)
+            .map((t) => [t.id, t.crestUrl as string]),
+        );
+        rows = joinBadgesById(rows, badges);
+      } catch (e) {
+        console.warn(`[kickoffcal] derived badge join failed for ${competitionKey}: ${e}`);
+      }
+    }
+    if (rows.some((r) => !r.crestUrl)) {
+      try {
+        const curated = (await db.collection('directoryArt').doc('curated').get()).data()
+          ?.marks as Record<string, string> | undefined;
+        if (curated) {
+          rows = rows.map((r) =>
+            !r.crestUrl && curated[r.key] ? { ...r, crestUrl: curated[r.key] } : r,
+          );
+        }
+      } catch (e) {
+        console.warn(`[kickoffcal] curated team marks unavailable: ${e}`);
+      }
+    }
+    return rows;
   });
 }
 

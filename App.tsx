@@ -99,6 +99,9 @@ function Tabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        // Centred titles on both platforms (Round 4 B2): Android's
+        // native default is left-aligned, iOS's centred — one header.
+        headerTitleAlign: 'center',
         tabBarIcon: ({ focused, color, size }) => (
           <Ionicons
             name={TAB_ICONS[route.name][focused ? 'active' : 'idle']}
@@ -217,7 +220,10 @@ export default function App() {
       <NavigationContainer theme={navTheme}>
         <Stack.Navigator
           initialRouteName={initialRoute}
-          screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}
+          screenOptions={{
+            headerBackButtonDisplayMode: 'minimal',
+            headerTitleAlign: 'center',
+          }}
         >
         <Stack.Screen
           name="Welcome"

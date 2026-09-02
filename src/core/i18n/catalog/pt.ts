@@ -133,7 +133,6 @@ export const pt: Catalog = {
   'follows.home.nothingScheduled': 'Nada agendado',
   'follows.home.addSports': 'Adicionar esportes',
   'follows.home.chooseSport': 'Escolha um esporte',
-  'follows.home.oneFollow': 'Siga uma vez',
   'follows.home.browse': 'Explorar',
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
@@ -141,7 +140,6 @@ export const pt: Catalog = {
   'follows.sports.a11yComingSoon': '{name}, em breve',
 
   // ── Sport picker ──────────────────────────────────────────────────
-  'follows.sportPicker.allEventsOneFollow': 'Todos os eventos · siga uma vez',
   'follows.sportPicker.comingSoon': 'Em breve',
   'follows.scope.tennisKeyNote':
     'Finais, semifinais e quartas, quando os dados indicam a fase. O chaveamento da WTA indica; a maioria dos jogos masculinos ainda não traz fase, então um torneio só masculino pode entregar apenas as notas de início e fim.',

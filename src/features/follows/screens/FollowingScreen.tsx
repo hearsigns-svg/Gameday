@@ -1,7 +1,7 @@
 // Following: manage what Gameday tracks. Follow/unfollow is the primary
 // gesture HERE (it's the manage surface); Home stays free of it.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { monogramOf,
   EmptyState,
@@ -18,6 +18,7 @@ import {
   subscribePriorities,
 } from '../data/browsePriority';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
+import { useReduceMotion } from '../../../core/useReduceMotion';
 import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
 import { flagEmojiOf } from '../../../core/nationality';
@@ -56,6 +57,17 @@ export default function FollowingScreen({ navigation }: Props) {
   const [undoItem, setUndoItem] = useState<Followable | null>(null);
   const [upcoming, setUpcoming] = useState<Record<string, number>>(
     upcomingByFollow,
+  );
+  const reduceMotion = useReduceMotion();
+  // A TAB PRESS LANDS AT THE ENTRY STATE (Round 4 B3): the top, whether
+  // this tab is already frontmost or being switched back to.
+  const listRef = useRef<FlatList<Followable>>(null);
+  useEffect(
+    () =>
+      navigation.addListener('tabPress', () => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion });
+      }),
+    [navigation, reduceMotion],
   );
 
   useEffect(() => {
@@ -146,6 +158,7 @@ export default function FollowingScreen({ navigation }: Props) {
         />
       ) : (
         <FlatList
+          ref={listRef}
           data={follows}
           keyExtractor={(f) => f.key}
           renderItem={({ item }) => {

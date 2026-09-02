@@ -30,19 +30,53 @@ import { Fixture } from './fixture';
 // browsable but invisible to search, which is how South Africa Rugby
 // hid while Wales (a directory league) was findable. Labels are pinned
 // to the client competition rows by searchRoutes.test.ts.
+//
+// `tsdbName` is TSDB's exact strLeague (lookupleague, probed 2026-09-02):
+// the BADGE JOIN (Round 4 B5) fetches the provider's team list under it
+// and attaches badges to the derived rows BY TEAM ID — a national side
+// keeps one id across every league it plays in, so South Africa Rugby
+// gets the badge the Six Nations doc never could give it. Note 5479 is
+// TSDB's "International Friendlies" slice — the 2026-08-28 probe that
+// found its team list "literally null" queried the catalogue LABEL.
 export const DERIVED_TEAM_LEAGUES: Record<
   string,
-  { sportKey: string; label: string }
+  { sportKey: string; label: string; tsdbName: string }
 > = {
-  '4501': { sportKey: 'soccer', label: 'Copa Libertadores' },
-  '5103': { sportKey: 'cricket', label: 'T20 World Cup' },
-  '4458': { sportKey: 'cricket', label: 'County Championship' },
-  '4549': { sportKey: 'basketball', label: 'FIBA World Cup qualifiers' },
-  '5852': { sportKey: 'rugby', label: 'Nations Championship' },
-  '5806': { sportKey: 'rugby', label: 'Rugby League World Cup' },
-  '5479': { sportKey: 'rugby', label: 'Rugby Championship' },
-  '4574': { sportKey: 'rugby', label: 'Rugby World Cup' },
+  '4501': { sportKey: 'soccer', label: 'Copa Libertadores', tsdbName: 'Copa Libertadores' },
+  '5103': { sportKey: 'cricket', label: 'T20 World Cup', tsdbName: 'ICC Mens T20 World Cup' },
+  '4458': {
+    sportKey: 'cricket',
+    label: 'County Championship',
+    tsdbName: 'English County Championship Division 1',
+  },
+  '4549': {
+    sportKey: 'basketball',
+    label: 'FIBA World Cup qualifiers',
+    tsdbName: 'FIBA Basketball World Cup',
+  },
+  '5852': { sportKey: 'rugby', label: 'Nations Championship', tsdbName: 'Nations Championship' },
+  '5806': { sportKey: 'rugby', label: 'Rugby League World Cup', tsdbName: 'Rugby League World Cup' },
+  '5479': {
+    sportKey: 'rugby',
+    label: 'Rugby Championship',
+    tsdbName: 'Rugby Union International Friendlies',
+  },
+  '4574': { sportKey: 'rugby', label: 'Rugby World Cup', tsdbName: 'Rugby World Cup' },
 };
+
+// PURE: attach provider badges to fixture-derived rows by team id.
+// Rows without a match keep their shape (the flag fallback stays
+// correct for them); a badge never overrides one already present.
+export function joinBadgesById<T extends { id: number | string; crestUrl?: string }>(
+  rows: readonly T[],
+  badges: ReadonlyMap<string, string>,
+): T[] {
+  return rows.map((r) => {
+    if (r.crestUrl) return r;
+    const badge = badges.get(String(r.id));
+    return badge ? { ...r, crestUrl: badge } : r;
+  });
+}
 
 export const DERIVED_TEAM_LEAGUE_IDS: ReadonlySet<string> = new Set(
   Object.keys(DERIVED_TEAM_LEAGUES),

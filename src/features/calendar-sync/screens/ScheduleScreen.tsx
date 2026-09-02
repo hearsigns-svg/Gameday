@@ -193,6 +193,29 @@ export default function ScheduleScreen({ navigation }: Props) {
     };
   }, [navigation]);
 
+  // A TAB PRESS LANDS AT THE ENTRY STATE (Round 4 B3), whether the tab
+  // is already frontmost or being switched back to: split open, today
+  // selected in its month, the list at its top — which IS the nearest
+  // upcoming section.
+  useEffect(
+    () =>
+      navigation.addListener('tabPress', () => {
+        const today = todayKey();
+        settleRef.current(true);
+        setSelectedDay(today);
+        selectedDayRef.current = today;
+        const m = monthOfDay(today);
+        shownMonthRef.current = m;
+        setShownMonth(m);
+        syncFromScroll.current = false;
+        pendingJump.current = null;
+        listRef.current
+          ?.getScrollResponder()
+          ?.scrollTo({ y: 0, animated: !reduceMotion });
+      }),
+    [navigation, reduceMotion],
+  );
+
   // First focus per app session: say when the calendar was last checked,
   // then get out of the way. A focus listener rather than a mount effect,
   // so the toast can never fire while another tab is frontmost.

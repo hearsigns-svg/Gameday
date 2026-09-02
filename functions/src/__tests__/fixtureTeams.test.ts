@@ -70,3 +70,32 @@ describe('deriveTeamsFromFixtures', () => {
     ).toEqual([]);
   });
 });
+
+// Round 4 B5: badges join fixture-derived rows BY TEAM ID.
+import { DERIVED_TEAM_LEAGUES, joinBadgesById } from '../fixtureTeams';
+
+test('joinBadgesById attaches a badge where the id matches and never overrides one', () => {
+  const rows = [
+    { id: '137137', name: 'South Africa Rugby', key: 'tsdb-team-137137' },
+    { id: 137133, name: 'New Zealand Rugby', key: 'tsdb-team-137133' },
+    { id: '999', name: 'Barbarians', key: 'tsdb-team-999' },
+    { id: '137123', name: 'England Rugby', key: 'tsdb-team-137123', crestUrl: 'https://kept/england.png' },
+  ];
+  const badges = new Map([
+    ['137137', 'https://tsdb/sa.png'],
+    ['137133', 'https://tsdb/nz.png'],
+    ['137123', 'https://tsdb/eng-other.png'],
+  ]);
+  const out = joinBadgesById(rows, badges);
+  expect(out[0].crestUrl).toBe('https://tsdb/sa.png');
+  expect(out[1].crestUrl).toBe('https://tsdb/nz.png'); // numeric id joins too
+  expect(out[2].crestUrl).toBeUndefined(); // no badge → flag fallback territory
+  expect(out[3].crestUrl).toBe('https://kept/england.png'); // existing wins
+});
+
+test('every derived league names TSDB\'s exact strLeague for the badge fetch', () => {
+  for (const meta of Object.values(DERIVED_TEAM_LEAGUES)) {
+    expect(meta.tsdbName.length).toBeGreaterThan(0);
+  }
+  expect(DERIVED_TEAM_LEAGUES['5479'].tsdbName).toBe('Rugby Union International Friendlies');
+});

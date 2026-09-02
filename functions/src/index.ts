@@ -1458,7 +1458,7 @@ export const listTeams = onRequest(gz(async (req, res) => {
       const teams =
         provided.length > 0
           ? provided
-          : await derivedLeagueTeams(`tsdb-league-${leagueKey}`);
+          : await derivedLeagueTeams(`tsdb-league-${leagueKey}`, optionalTsdbKey());
       res.json({ teams: policed(teams) });
       return;
     }
@@ -1469,7 +1469,7 @@ export const listTeams = onRequest(gz(async (req, res) => {
     if (DERIVED_TEAM_LEAGUE_IDS.has(leagueKey)) {
       res.json({
         teams: policed(
-          await derivedLeagueTeams(`tsdb-league-${leagueKey}`),
+          await derivedLeagueTeams(`tsdb-league-${leagueKey}`, optionalTsdbKey()),
         ),
       });
       return;

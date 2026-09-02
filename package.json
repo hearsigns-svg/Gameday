@@ -50,7 +50,8 @@
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/functions/lib/"
+      "/functions/lib/",
+      "/.claude/worktrees/"
     ]
   }
 }

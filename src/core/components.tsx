@@ -38,6 +38,18 @@ import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
 // reserved column so tile right-edges cannot drift from button rows.
 const FOLLOW_HIT_MIN_WIDTH = 90;
 
+// Every image request carries a descriptive User-Agent (Round 4 B6).
+// Wikimedia serves HTTP 403 to the default `okhttp/x.y` agent Android's
+// image loader sends — so every Commons-hosted venue, host-city and
+// pool photo failed on Android while crests (other hosts) loaded, and
+// the hero read as crests-only. iOS's CFNetwork agent passed, which is
+// why parity broke silently. One header, both platforms, all hosts.
+export const IMAGE_USER_AGENT = 'KickOffCal/1.0 (fixtures calendar app)';
+export const imageSource = (uri: string) => ({
+  uri,
+  headers: { 'User-Agent': IMAGE_USER_AGENT },
+});
+
 export const usableImage = (url: string | undefined): string | undefined =>
   url && !url.toLowerCase().split('?')[0].endsWith('.svg') ? url : undefined;
 
@@ -106,7 +118,7 @@ export function GlyphTile(props: {
     >
       {image ? (
         <Image
-          source={{ uri: image }}
+          source={imageSource(image)}
           resizeMode="contain"
           onError={() => setImageFailed(true)} // broken art → mark, never a blank tile
           style={{ width: size * 0.72, height: size * 0.72 }}
@@ -541,7 +553,7 @@ export function PosterSurface(props: {
     <View style={[{ borderRadius: radius, overflow: 'hidden' }, props.style]}>
       {photo ? (
         <Image
-          source={{ uri: photo }}
+          source={imageSource(photo)}
           resizeMode="cover"
           onError={() => setPhotoFailed(true)}
           onLoad={() => setPhotoPainted(true)}
@@ -594,7 +606,7 @@ function PairCrest(props: { url: string }) {
   if (failed) return null;
   return (
     <Image
-      source={{ uri: props.url }}
+      source={imageSource(props.url)}
       resizeMode="contain"
       onError={() => setFailed(true)}
       style={styles.heroCrest}
@@ -652,7 +664,7 @@ export function PosterFace(props: {
         >
           <Image
             accessible={false}
-            source={{ uri: mark }}
+            source={imageSource(mark)}
             style={[
               styles.heroWatermarkCrest,
               props.hasPhoto ? styles.heroWatermarkCrestOnPhoto : null,

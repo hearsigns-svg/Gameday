@@ -141,7 +141,6 @@ export const fr: Catalog = {
   'follows.home.nothingScheduled': 'Rien de programmé',
   'follows.home.addSports': 'Ajouter des sports',
   'follows.home.chooseSport': 'Choisir un sport',
-  'follows.home.oneFollow': 'Un seul suivi',
   'follows.home.browse': 'Parcourir',
   // The word: Home's section header, Home's sport-card caption and the
   // sport picker's caption (one key — same string on every surface).
@@ -149,8 +148,6 @@ export const fr: Catalog = {
   'follows.sports.a11yComingSoon': '{name}, bientôt disponible',
 
   // ── Sport picker ──────────────────────────────────────────────────
-  'follows.sportPicker.allEventsOneFollow':
-    'Toutes les épreuves · un seul suivi',
   'follows.sportPicker.comingSoon': 'Prochainement',
   'follows.scope.tennisKeyNote':
     'Finales, demi-finales et quarts, lorsque les données nomment les tours. Le tableau WTA les nomme\u00a0; la plupart des matchs masculins n\u2019ont pas encore de tour indiqué, un tournoi masculin peut donc ne livrer que ses notes de début et de fin.',
