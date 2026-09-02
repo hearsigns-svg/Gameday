@@ -2,7 +2,10 @@
 // so canonicalisePollPath is a security boundary: it must accept exactly
 // our own poll routes and nothing else.
 
-import { canonicalisePollPath } from '../sweep';
+import {
+  canonicalisePollPath,
+  heldSliceKeys,
+} from '../sweep';
 
 describe('canonicalisePollPath — accepts real routes', () => {
   const real = [
@@ -154,5 +157,19 @@ describe('sliceOfPollPath', () => {
   test('an unknown route has no slice, so it records nothing', () => {
     expect(sliceOfPollPath('pollEverything?season=2026')).toBeNull();
     expect(sliceOfPollPath('pollTeam?teamId=40&season=2023')).toBeNull();
+  });
+});
+
+// Round 4 item 5: a disabled (held) catalogue row resolves its alerts
+// even though the sweep no longer demands it.
+describe('heldSliceKeys', () => {
+  test('maps disabled pollable rows to their slice keys; enabled and rank-only rows are not held', () => {
+    const held = heldSliceKeys([
+      { enabled: false, pollPath: 'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4' },
+      { enabled: false, pollPath: 'pollTsdbLeague?leagueId=5103&season=2026&sport=cricket&durationHours=4' },
+      { enabled: true, pollPath: 'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3' },
+      { enabled: false, pollPath: '', rankOnly: true },
+    ]);
+    expect([...held].sort()).toEqual(['tsdb|tsdb-league-4460', 'tsdb|tsdb-league-5103']);
   });
 });

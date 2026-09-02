@@ -95,6 +95,22 @@ const isSlowRoute = (p: string): boolean =>
 const FCM_BATCH = 450; // sendEachForMulticast hard-caps at 500
 const DEADLINE_MS = 480_000; // leave headroom inside the 540s timeout
 
+// Slices whose catalogue row is deliberately OFF (Round 4 item 5: the
+// born-dead hold). Their open alerts resolve on the strength of the row
+// being held — the one case where "not demanded this sweep" IS evidence
+// rather than absence of it.
+export function heldSliceKeys(
+  entries: readonly { enabled: boolean; pollPath: string; rankOnly?: boolean }[],
+): Set<string> {
+  const held = new Set<string>();
+  for (const e of entries) {
+    if (e.enabled || e.rankOnly || !e.pollPath) continue;
+    const slice = sliceOfPollPath(canonicalisePollPath(e.pollPath) ?? e.pollPath);
+    if (slice) held.add(`${slice.source}|${slice.competitionId}`);
+  }
+  return held;
+}
+
 // Canonicalise so equivalent routes dedupe to one fetch regardless of
 // param order, and reject anything not exactly matching a known route.
 export function canonicalisePollPath(path: string): string | null {
@@ -683,6 +699,18 @@ export async function sweepAll(): Promise<SweepResult> {
         ),
       );
     }
+    // Held rows (disabled in the catalogue) resolve their alerts even
+    // though they are no longer demanded. A catalogue read failure
+    // yields an EMPTY held set — nothing resolves on a failed read.
+    let held = new Set<string>();
+    try {
+      const catSnap = await db.collection('catalogue').get();
+      held = heldSliceKeys(
+        catSnap.docs.map((d) => d.data() as CatalogueEntry),
+      );
+    } catch (e) {
+      console.error(`[kickoffcal] catalogue read for held rows failed: ${e}`);
+    }
     const openSnap = await db
       .collection('opsAlerts')
       .where('resolvedAt', '==', null)
@@ -699,10 +727,17 @@ export async function sweepAll(): Promise<SweepResult> {
       const sliceKey = String(doc.data().sliceKey ?? '');
       const rosterSlice = sliceKey.split('|')[1]?.startsWith('roster-');
       if (rosterSlice && !rosterEvaluated) continue;
-      if (!rosterSlice && !demanded.has(sliceKey)) continue;
-      await doc.ref.set({ resolvedAt: startedAt }, { merge: true });
+      const isHeld = held.has(sliceKey);
+      if (!rosterSlice && !demanded.has(sliceKey) && !isHeld) continue;
+      await doc.ref.set(
+        {
+          resolvedAt: startedAt,
+          ...(isHeld ? { resolution: 'row held (disabled in catalogue)' } : {}),
+        },
+        { merge: true },
+      );
       console.log(
-        `[kickoffcal-alert] RESOLVED ${doc.data().condition} ${doc.data().sliceKey}`,
+        `[kickoffcal-alert] RESOLVED ${doc.data().condition} ${doc.data().sliceKey}${isHeld ? ' (row held)' : ''}`,
       );
     }
   } catch (e) {
