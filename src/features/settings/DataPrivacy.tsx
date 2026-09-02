@@ -17,10 +17,12 @@ import {
   Switch,
   Text,
   View,
+  Linking,
 } from 'react-native';
 import { t as tr, tn } from '../../core/i18n';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
 import { showToast } from '../../core/toast';
+import { manageSubscriptionUrl } from '../../core/billing';
 import {
   deleteAllDataAndReset,
   eraseSyncedEvents,
@@ -191,6 +193,21 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
             <Text style={[type.caption, { color: t.textSecondary }]}>
               {tr('settings.privacy.deleteBody')}
             </Text>
+            {/* Round 5 Stage 3: deletion removes our data, not a store
+                subscription — say so, and hand over the store's page. */}
+            <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
+              {tr('deleteData.subscriptionNote')}
+            </Text>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={tr('entitlement.manage')}
+              onPress={() => void manageSubscriptionUrl().then((u) => Linking.openURL(u))}
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
+              <Text style={[type.secondary, { color: t.primary, fontWeight: '600' }]}>
+                {tr('entitlement.manage')}
+              </Text>
+            </Pressable>
             <View style={styles.toggleRow}>
               <Text
                 style={[

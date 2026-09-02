@@ -4178,3 +4178,76 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   its next games. Home draws its carousel from the full set; the priming
   screen shows the real count. Lock badges and the chip's Open Settings
   action were applied on the merged screen.
+
+- 2026-09-02 (ROUND 5 STAGE 2 ACCEPTED; two confirmations carried into
+  Stage 3). (1) THE ONE-SLOT CAP UNDER FREE is enforced by the reminders
+  CHANNEL (the reconcile schedules exactly one notification per fixture,
+  at the FIXED default when locked, at slot one when Premium) AND shown
+  by PREFERENCES: when locked, slot one displays the fixed default and
+  is not editable, slots two and three render in the Premium state
+  (locked; a tap is an on-demand paywall request). Placed calendar
+  alarms are untouched on downgrade (ruling 3). (2) CONSENT SCOPE: in
+  the UK/EU analytics identifiers sit in consent territory, so the
+  Stage 6 consent form covers ANALYTICS AS WELL AS ADS (Google's form
+  supports both) — launch ships ONE consent surface, not two. Until the
+  form exists analytics defaults ON (test builds); the consent store
+  (`src/core/consent.ts`) is the single switch both SDKs read, and
+  PRE_CONSENT_ANALYTICS flips to false in the SAME change that ships the
+  form. Stage 3 code starts now behind the flag; its sandbox proof
+  waits on store setup.
+
+- 2026-09-02 (ROUND 5 STAGE 3 — BILLING, CODE COMPLETE BEHIND THE FLAG;
+  sandbox proof WAITS ON STORE SETUP → STOP after it). LAYER: RevenueCat
+  (`react-native-purchases` 10.x) is the single billing + entitlement
+  layer. `src/core/billing.ts` configures ONLY when the platform's PUBLIC
+  SDK key is present (`EXPO_PUBLIC_RC_IOS_KEY` / `EXPO_PUBLIC_RC_ANDROID_
+  KEY`, Expo-inlined, public identifiers) with our anonymous uid as the
+  app user id; restore re-links a fresh uid on reinstall. The paywall
+  presenter (`core/paywall.ts`) registers only once billing is
+  configured, so a build without keys keeps every locked surface INERT
+  (rule 10: nothing explains the absence). `src/core/billingState.ts`
+  (pure, tested) maps the SDK's CustomerInfo to the planner's
+  EntitlementState: active → premium with the period end and the
+  receipt's trial start; inactive-with-record → a TRIAL or PAID lapse
+  ended at the expiry (RevenueCat keeps access through the store's
+  billing grace, so inactive = the store declared the end — ruling 3's
+  72-hour window opens there); no record → free, never a lapse. Funnel
+  events come from STATE TRANSITIONS, not taps (trial_started,
+  trial_converted, subscription lapsed by kind, restored) so a purchase
+  completed in the store's own sheet counts exactly once; the wiring
+  lives in `src/wiring/billing.ts`. THE PAYWALL (`features/billing/
+  PaywallScreen.tsx`, modal route `Paywall {entry}`): headline, the three
+  locks (sync, three reminder slots, calendar colour), annual beside
+  monthly with the STORE'S localised price strings verbatim, the trial
+  badge only when Apple's intro-offer check (or a Google free phase)
+  says eligible, Start free trial / Subscribe, the disclosures both
+  stores require (price, term, auto-renewal, cancel any time; the trial
+  line names the post-trial price), Restore, Terms and Privacy links
+  (kickoffcal.app/terms and /privacy — URLs to confirm), and Continue
+  with Free — hidden only by the hard-paywall flag for a PROACTIVE
+  showing; an on-demand showing is always dismissible. Purchase
+  outcomes: pending (Ask to Buy) and cancelled are quiet, failure is a
+  toast. MANAGE: the store's own management URL from the SDK
+  (platform page as fallback) — a Preferences row for Premium accounts
+  and a link in the delete-data flow, whose copy now says deletion does
+  not cancel a subscription. THE TOMBSTONE: the client's direct
+  devices/{uid} delete fallback is REMOVED; deleteAccountData (which
+  removes devices AND entitlements) is the only path and its failure
+  aborts the flow with a retryable message. WEBHOOK: `revenuecatWebhook`
+  (functions/src/revenuecat.ts pure mapping + tests) writes the
+  server-side MIRROR `entitlements/{app_user_id}` — never a gate;
+  Authorization header must equal `RC_WEBHOOK_SECRET` (functions/.env,
+  owner's), FAILS CLOSED without it; EXPIRATION ends access,
+  CANCELLATION alone does not (the paid period stands), a late-delivered
+  grant whose period has ended is free. Unchanged rules: `entitlements/
+  {uid}` owner-read, never client-written. FREE ONE-SLOT CAP (owner
+  confirmation): Preferences now shows slot one FIXED at the default and
+  slots two and three LOCKED (Premium state, on-demand paywall request)
+  whenever the planner would gate. CONSENT: `src/core/consent.ts` is the
+  one switch; PRE_CONSENT_ANALYTICS = true until the Stage 6 form, which
+  covers analytics AND ads. SANDBOX PROOF (the STOP gate) needs from the
+  owner: the RevenueCat project with entitlement id `premium`, the two
+  products (annual with the 14-day intro trial, monthly), the public SDK
+  keys in the client `.env`, the webhook secret in functions/.env and
+  the webhook URL + header set in RevenueCat, sandbox testers, and a
+  Play internal-testing install.

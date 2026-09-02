@@ -10,8 +10,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteUser, signOut } from 'firebase/auth';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { auth, db, functionsBaseUrl } from '../../../core/firebase';
+import { auth, functionsBaseUrl } from '../../../core/firebase';
 import { err, ok, Result } from '../../../core/result';
 import { wipeAllLocalData } from '../../../core/storage';
 import { activeBackend } from './calendarBackend';
@@ -89,12 +88,13 @@ export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
 }
 
 // The server-side wipe: the deleteAccountData callable removes
-// devices/{uid} and entitlements/{uid} for the caller. The direct
-// Firestore delete of devices/{uid} (which rules allow the owner) is
-// the fallback so the flow does not strand on a cold or undeployed
-// function — entitlements are server-written and empty today, and the
-// callable remains the canonical path (and the core of any future web
-// deletion endpoint).
+// devices/{uid} AND entitlements/{uid} for the caller — the recorded
+// tombstone. Round 5 (Stage 3): the client's direct devices/{uid}
+// delete FALLBACK IS GONE. entitlements/{uid} is server-written by the
+// billing webhook and a client cannot delete it, so a fallback that
+// removed only the device doc would leave the entitlement mirror behind
+// while telling the user their data was gone. Callable failure = abort,
+// and the user is told; the next attempt retries.
 async function wipeServerData(): Promise<Result<void>> {
   const user = auth.currentUser;
   if (!user) return ok(undefined); // nothing was ever registered
@@ -105,13 +105,10 @@ async function wipeServerData(): Promise<Result<void>> {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) return ok(undefined);
-    console.warn(`[gameday] deleteAccountData ${res.status} — falling back`);
-  } catch (e) {
-    console.warn(`[gameday] deleteAccountData unreachable: ${e} — falling back`);
-  }
-  try {
-    await deleteDoc(doc(db, 'devices', user.uid));
-    return ok(undefined);
+    return err({
+      kind: 'unknown',
+      message: `Couldn’t remove server data (HTTP ${res.status}). Try again in a moment.`,
+    });
   } catch (e) {
     // A failed server wipe ABORTS the flow: deleting the identity first
     // would orphan the registration with no credential left to remove it.

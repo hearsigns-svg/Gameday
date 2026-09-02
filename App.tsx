@@ -4,6 +4,7 @@ import {
   DefaultTheme,
   NavigationContainer,
   useNavigation,
+  createNavigationContainerRef,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -61,8 +62,12 @@ import { refreshFlags } from './src/core/flags';
 import { initAnalytics } from './src/core/analytics';
 import { installFixtureReminders } from './src/wiring/reminders';
 import { NotificationTapBridge } from './src/wiring/NotificationTapBridge';
+import { PaywallScreen } from './src/features/billing/PaywallScreen';
+import { installBilling } from './src/wiring/billing';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+// Lets non-screen code (the paywall presenter) navigate.
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const TAB_ICONS: Record<
@@ -174,6 +179,10 @@ export default function App() {
     void refreshFlags().then(() => initAnalytics());
     // Round 5 Stage 2: system-notification reminders (the Free channel).
     installFixtureReminders();
+    // Round 5 Stage 3: billing (RevenueCat) — configured only when the
+    // public SDK key for this platform is present; the paywall presenter
+    // registers only then, so a locked surface stays inert otherwise.
+    void installBilling((entry) => navigationRef.current?.navigate('Paywall', { entry }));
     void registerBackgroundSync();
     void import('./src/features/calendar-sync/data/deviceRegistry').then(
       (m) => m.registerDevice(),
@@ -228,7 +237,7 @@ export default function App() {
     >
     <View style={{ flex: 1 }}>
       <NotificationTapBridge />
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer ref={navigationRef} theme={navTheme}>
         <Stack.Navigator
           initialRouteName={initialRoute}
           screenOptions={{
@@ -247,6 +256,11 @@ export default function App() {
             reached later from a banner or a follow. The header stays on
             in both: nothing in this app carries its own safe-area
             inset, so removing it puts the title under the status bar. */}
+        <Stack.Screen
+          name="Paywall"
+          component={PaywallScreen}
+          options={{ presentation: 'modal', headerShown: false }}
+        />
         <Stack.Screen
           name="CalendarPriming"
           component={CalendarPrimingScreen}

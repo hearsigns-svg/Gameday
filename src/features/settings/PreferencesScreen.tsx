@@ -25,7 +25,9 @@ import { t as tr, type CatalogKey } from '../../core/i18n';
 import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
-import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs } from '../calendar-sync/domain/prefs';
+import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs,
+  DEFAULT_PREFS,
+} from '../calendar-sync/domain/prefs';
 import { ReminderSlotsRow } from './ReminderSlots';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import { lastRegistryError } from '../calendar-sync/data/deviceRegistry';
@@ -58,7 +60,8 @@ import {
   calendarConnection,
   legacyCalendarEventsRemain,
 } from '../calendar-sync/data/calendarConnection';
-import { premiumLocked } from '../../core/entitlementStore';
+import { entitlementState, premiumLocked } from '../../core/entitlementStore';
+import { manageSubscriptionUrl } from '../../core/billing';
 import { reminderChoice, setReminderChoice } from '../reminders/data/reminderChoice';
 import {
   readNotificationPermission,
@@ -688,11 +691,24 @@ export default function PreferencesScreen({
           }}
         >
           <ReminderSlotsRow
-            slots={[
-              prefs.reminderMinutes,
-              prefs.extraReminders[0] ?? null,
-              prefs.extraReminders[1] ?? null,
-            ]}
+            // Free (Round 5): ONE slot at the fixed default, shown not
+            // editable; two and three locked in the Premium state.
+            slots={
+              premiumLocked()
+                ? [DEFAULT_PREFS.reminderMinutes, null, null]
+                : [
+                    prefs.reminderMinutes,
+                    prefs.extraReminders[0] ?? null,
+                    prefs.extraReminders[1] ?? null,
+                  ]
+            }
+            {...(premiumLocked()
+              ? {
+                  fixedSlots: new Set([0]),
+                  lockedSlots: new Set([1, 2]),
+                  onLockedPress: () => requestPaywall('on_demand'),
+                }
+              : {})}
             openSlot={openReminderSlot}
             onToggleSlot={(slot) =>
               setOpenReminderSlot((s) => (s === slot ? null : slot))
@@ -757,6 +773,14 @@ export default function PreferencesScreen({
         open={openSection === 'app'}
         onToggle={() => toggleSection('app')}
       >
+        {entitlementState().tier === 'premium' ? (
+          <ValueRow
+            label={tr('entitlement.manage')}
+            caption={tr('entitlement.premium')}
+            accessibilityLabel={tr('entitlement.manage')}
+            onPress={() => void manageSubscriptionUrl().then((u) => Linking.openURL(u))}
+          />
+        ) : null}
         <SegmentedRow
           label={tr('settings.app.appearance')}
           options={[

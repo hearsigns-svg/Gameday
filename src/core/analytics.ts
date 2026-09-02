@@ -16,6 +16,7 @@
 // build without the pod (jest, a stale sim build) logs once and moves
 // on — measurement must never be able to crash the product.
 
+import { consentState, effectiveConsent, recordConsent } from './consent';
 import { flags } from './flags';
 
 export type PaywallEntry = 'proactive' | 'on_demand';
@@ -64,7 +65,11 @@ export function consentMapFor(c: AnalyticsConsent): Record<string, boolean> {
   };
 }
 
-export async function initAnalytics(consent: AnalyticsConsent = DEFAULT_CONSENT): Promise<void> {
+// Reads the ONE consent store (core/consent.ts) — the Stage 6 form
+// writes it for analytics AND ads, so launch has one consent surface.
+export async function initAnalytics(
+  consent: AnalyticsConsent = effectiveConsent(consentState()),
+): Promise<void> {
   const a = analytics();
   if (!a) return;
   try {
@@ -73,6 +78,13 @@ export async function initAnalytics(consent: AnalyticsConsent = DEFAULT_CONSENT)
   } catch (e) {
     console.warn(`[kickoffcal] analytics init failed: ${e}`);
   }
+}
+
+// Stage 6 calls this with the form's answer; the store is written first
+// so a relaunch resolves the same way without the form.
+export async function applyConsentChoice(choice: AnalyticsConsent): Promise<void> {
+  recordConsent(choice);
+  await initAnalytics(choice);
 }
 
 async function log(name: string, params?: Record<string, string | number | boolean>): Promise<void> {

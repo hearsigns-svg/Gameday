@@ -47,6 +47,12 @@ import {
   withoutScopedKeys,
 } from './boxingSexScopes';
 import {
+  authorised as rcAuthorised,
+  isEventForUs,
+  mirrorFromEvent,
+  RevenueCatEvent,
+} from './revenuecat';
+import {
   cadenceModeFor,
   KnownCard,
   planBoxingDataRun,
@@ -3518,6 +3524,47 @@ export const pollAtpVendor = onRequest(
 // deletion endpoint that real account linking will require. Idempotent:
 // deleting absent docs succeeds, so a retry after a half-applied run
 // converges.
+// RevenueCat webhook (Round 5 Stage 3): writes the server-side MIRROR
+// entitlements/{app_user_id}. NOT a gate — the client planner enforces
+// from the SDK's cached state; this document serves support, the
+// deletion tombstone (deleteAccountData removes it) and any later web
+// surface. FAILS CLOSED: no RC_WEBHOOK_SECRET in the environment, or a
+// header that does not match it, and every request is refused. The
+// Authorization header value is set verbatim in the RevenueCat webhook
+// configuration by the owner.
+export const revenuecatWebhook = onRequest(async (req, res) => {
+  if (!rcAuthorised(req.get('authorization'), process.env.RC_WEBHOOK_SECRET)) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method not allowed' });
+    return;
+  }
+  const event = (req.body as { event?: RevenueCatEvent } | undefined)?.event;
+  if (!event || typeof event.type !== 'string') {
+    res.status(400).json({ error: 'no event' });
+    return;
+  }
+  if (!isEventForUs(event, RC_ENTITLEMENT_ID)) {
+    res.status(200).json({ ignored: true, type: event.type });
+    return;
+  }
+  const mapped = mirrorFromEvent(event, Date.now());
+  if (!mapped) {
+    res.status(200).json({ ignored: true, reason: 'no app_user_id' });
+    return;
+  }
+  try {
+    await db.collection('entitlements').doc(mapped.uid).set(mapped.mirror, { merge: true });
+    res.status(200).json({ ok: true, uid: mapped.uid, tier: mapped.mirror.tier, type: event.type });
+  } catch (e) {
+    console.error(`[kickoffcal] revenuecat webhook write failed: ${e}`);
+    res.status(500).json({ error: String(e) });
+  }
+});
+const RC_ENTITLEMENT_ID = 'premium';
+
 export const deleteAccountData = onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' });

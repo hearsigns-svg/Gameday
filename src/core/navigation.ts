@@ -17,6 +17,8 @@ export type RootStackParamList = {
   // in the first run (welcome → calendar → pick teams) rather than the
   // in-context modal; it is still skippable either way.
   CalendarPriming: { onboarding?: boolean } | undefined;
+  // Round 5: the one paywall, entered proactively (once) or on demand.
+  Paywall: { entry: 'proactive' | 'on_demand' };
   Tabs: NavigatorScreenParams<TabParamList>;
   Search: undefined;
   SportPicker: undefined;

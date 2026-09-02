@@ -185,7 +185,15 @@ export function ReminderSlotsRow(props: {
   openSlot: number | null;
   onToggleSlot: (slot: number) => void;
   onChange: (slot: number, minutes: number | null) => void;
+  // Round 5 (Free tier): slot one is FIXED at the default (shown, not
+  // editable) and slots two and three are LOCKED — the Premium state;
+  // a tap on a locked slot is an on-demand paywall request.
+  fixedSlots?: ReadonlySet<number>;
+  lockedSlots?: ReadonlySet<number>;
+  onLockedPress?: () => void;
 }) {
+  const fixed = props.fixedSlots ?? new Set<number>();
+  const lockedSet = props.lockedSlots ?? new Set<number>();
   const t = useTheme();
   const open = props.openSlot;
   const minutes = open === null ? null : (props.slots[open] ?? null);
@@ -215,12 +223,22 @@ export function ReminderSlotsRow(props: {
               </Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={tr('settings.reminders.slotA11y', {
-                  n: slot + 1,
-                  value: offsetLabel(m ?? null),
-                })}
-                accessibilityState={{ expanded: open === slot }}
-                onPress={() => props.onToggleSlot(slot)}
+                accessibilityLabel={
+                  lockedSet.has(slot)
+                    ? tr('premium.lockA11y')
+                    : tr('settings.reminders.slotA11y', {
+                        n: slot + 1,
+                        value: offsetLabel(m ?? null),
+                      })
+                }
+                accessibilityState={{
+                  expanded: open === slot,
+                  disabled: fixed.has(slot),
+                }}
+                onPress={() => {
+                  if (lockedSet.has(slot)) props.onLockedPress?.();
+                  else if (!fixed.has(slot)) props.onToggleSlot(slot);
+                }}
                 style={({ pressed }) => [
                   styles.dropdown,
                   {
@@ -228,20 +246,28 @@ export function ReminderSlotsRow(props: {
                     borderColor: open === slot ? t.primary : t.border,
                   },
                   open === slot && { borderWidth: 1 },
-                  pressed && { opacity: 0.7 },
+                  pressed && !fixed.has(slot) && { opacity: 0.7 },
                 ]}
               >
-                <Text
-                  style={[
-                    type.secondary,
-                    { color: t.textPrimary, fontWeight: '600' },
-                  ]}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={1.4}
-                >
-                  {offsetPickerLabel(m ?? null)}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={t.textSecondary} />
+                {lockedSet.has(slot) ? (
+                  <Ionicons name="lock-closed" size={14} color={t.textSecondary} />
+                ) : (
+                  <>
+                    <Text
+                      style={[
+                        type.secondary,
+                        { color: t.textPrimary, fontWeight: '600' },
+                      ]}
+                      numberOfLines={1}
+                      maxFontSizeMultiplier={1.4}
+                    >
+                      {offsetPickerLabel(m ?? null)}
+                    </Text>
+                    {fixed.has(slot) ? null : (
+                      <Ionicons name="chevron-down" size={14} color={t.textSecondary} />
+                    )}
+                  </>
+                )}
               </Pressable>
             </View>
           ))}
