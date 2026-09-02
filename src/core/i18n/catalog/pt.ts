@@ -445,6 +445,7 @@ export const pt: Catalog = {
     'Estes jogos serão adicionados ao calendário do seu celular assim que você conectá-lo.',
   'calendar.schedule.footerOn':
     'Tudo aqui está no calendário do seu celular e se atualiza sozinho — horários se confirmam, adiamentos se movem, cancelamentos somem.',
+  'calendar.schedule.showMore': 'Mostrar mais',
 
   // ── Month grid (MonthGrid.tsx) ─────────────────────────────────────
   'calendar.month.previous': 'Mês anterior',

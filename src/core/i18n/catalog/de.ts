@@ -446,6 +446,7 @@ export const de: Catalog = {
     'Diese Spiele werden deinem Handy-Kalender hinzugefügt, sobald du ihn verbindest.',
   'calendar.schedule.footerOn':
     'Alles hier steht in deinem Handy-Kalender und aktualisiert sich von selbst — Zeiten werden fix, Verschiebungen wandern mit, Absagen verschwinden.',
+  'calendar.schedule.showMore': 'Mehr anzeigen',
 
   // ── Month grid (MonthGrid.tsx) ─────────────────────────────────────
   'calendar.month.previous': 'Vorheriger Monat',

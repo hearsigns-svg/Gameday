@@ -4138,3 +4138,30 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   NOT IN THIS STAGE, by design: the paywall itself, RevenueCat, the
   downgrade screen and its single notification, ads, the proactive
   onboarding sequence — Stages 3–6.
+- 2026-09-02 (Round 5 ruling 4 — THE IN-APP SCHEDULE IS PAGED BY DATE;
+  THE 60-FIXTURE SNAPSHOT CAP IS RETIRED): "window by date, paged — the
+  full upcoming set loaded by date range, replacing the 60-fixture
+  presentation snapshot. Under this model the in-app schedule is the
+  free product." `upcomingSnapshot` lost its `cap` parameter and now
+  holds EVERY not-yet-finished fixture desiredEventFor wants, sorted by
+  start (a 40-team follow set is ~550 entries — one MMKV value, read
+  once per refresh). Windowing is pure and UTC-MONTH-ALIGNED
+  (`domain/schedulePaging.ts`): page 0 runs from the horizon start to
+  the end of NEXT month, each further page adds one calendar month;
+  `upcomingFixturesInWindow(fromUtc, toUtc)` sits beside
+  `upcomingFixtures()` in the engine, both on the one windowing rule.
+  Schedule renders the loaded window's day sections, auto-loads the
+  next page at half a viewport from the end (SectionList onEndReached)
+  with a "Show more" footer button as the a11y-reachable fallback — and
+  renders NOTHING when nothing more exists (rule 10); a load skips
+  empty months so every load reveals a row. The month grid's dots mark
+  the WHOLE upcoming set; tapping a day beyond the loaded window loads
+  the pages up to the instant that local day ENDS, then jumps — the one
+  place the local-day grid meets the UTC-month windows, resolved by
+  covering the day's end rather than its label. Home's carousel and the
+  calendar-off counts read the full set (the "60+" saturation on the
+  priming screen is gone); the tab-press entry state resets to page
+  one. Fixed in passing: Schedule's row wrapper was a component created
+  inside the render, so every sync tick remounted every row and threw
+  away its resolved photo — rows now render the module-level
+  ScheduleRow directly.

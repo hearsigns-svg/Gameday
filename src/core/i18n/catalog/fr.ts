@@ -463,6 +463,7 @@ export const fr: Catalog = {
     'Ces matchs seront ajoutés au calendrier de votre téléphone une fois celui-ci connecté.',
   'calendar.schedule.footerOn':
     'Tout ce qui est ici figure dans le calendrier de votre téléphone et se met à jour tout seul — les horaires se précisent, les reports se déplacent, les annulations disparaissent.',
+  'calendar.schedule.showMore': 'Afficher plus',
 
   // ── Month grid (MonthGrid.tsx) ─────────────────────────────────────
   'calendar.month.previous': 'Mois précédent',

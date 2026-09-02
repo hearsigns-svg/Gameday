@@ -83,6 +83,7 @@ import {
   SnapshotFixture,
   upcomingSnapshot,
 } from './domain/syncPlan';
+import { fixturesInWindow } from './domain/schedulePaging';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
 const UPCOMING_KEY = 'upcomingByFollow.v1';
@@ -91,7 +92,6 @@ const UPCOMING_FIXTURES_KEY = 'upcomingFixtures.v1';
 // compared against the device language at each pass so the deliberate
 // language-switch rewrite can announce itself exactly once.
 const CALENDAR_LANGUAGE_KEY = 'calendarLanguage.v1';
-const UPCOMING_FIXTURES_CAP = 60;
 
 // Upcoming-fixture count per followed key, refreshed every sync.
 export function upcomingByFollow(): Record<string, number> {
@@ -103,6 +103,8 @@ export function upcomingByFollow(): Record<string, number> {
 // display data — the ledger remains the only record of what's in the
 // calendar. Filtered by the CURRENT follows at read time so an
 // unfollow whose sync later failed can't keep ghost fixtures on Home.
+// UNCAPPED (Round 5 ruling 4): the FULL upcoming set, sorted by start —
+// Schedule pages it by date window, Home takes the soonest few.
 export type UpcomingFixture = SnapshotFixture;
 
 export function upcomingFixtures(): UpcomingFixture[] {
@@ -111,6 +113,17 @@ export function upcomingFixtures(): UpcomingFixture[] {
   return readJson<UpcomingFixture[]>(UPCOMING_FIXTURES_KEY, []).filter(
     (f) => pins.has(f.id) || f.followKeys.some((k) => followed.has(k)),
   );
+}
+
+// The same set windowed by start: [fromUtc, toUtc), same follow/pin
+// filter. The windowing rule is the pure one Schedule pages with
+// (domain/schedulePaging.ts), so a screen reading one month and a
+// screen reading everything can never disagree about a boundary.
+export function upcomingFixturesInWindow(
+  fromUtc: string,
+  toUtc: string,
+): UpcomingFixture[] {
+  return fixturesInWindow(upcomingFixtures(), fromUtc, toUtc);
 }
 
 // Sync status subscription — screens stay live no matter which layer
@@ -364,17 +377,17 @@ function writePresentationState(
   writeJson(UPCOMING_KEY, upcoming);
   // The snapshot KEEPS excluded fixtures — Schedule shows them greyed
   // with a restore affordance; silent disappearance reads as a bug.
+  // And it keeps EVERYTHING upcoming (Round 5 ruling 4): no display cap
+  // — the screens window it by date.
   const snapshot = upcomingSnapshot(
     fixtures,
     prefs,
     horizonStart,
-    UPCOMING_FIXTURES_CAP,
     seriesScopesFrom(loadFollowables()),
   );
   writeJson(UPCOMING_FIXTURES_KEY, snapshot);
-  // Age-based: an exclusion must survive an unfollow/re-follow cycle
-  // and the display cap — never prune merely because a fixture is
-  // absent from this fetch.
+  // Age-based: an exclusion must survive an unfollow/re-follow cycle —
+  // never prune merely because a fixture is absent from this fetch.
   pruneExclusions();
   prunePinStore();
   pruneEventSettingsStore();
