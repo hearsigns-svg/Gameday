@@ -5,6 +5,7 @@
 import {
   canonicalisePollPath,
   heldSliceKeys,
+  dropHeldPaths,
 } from '../sweep';
 
 describe('canonicalisePollPath — accepts real routes', () => {
@@ -181,5 +182,28 @@ describe('heldSliceKeys', () => {
       { enabled: false, pollPath: '', rankOnly: true },
     ]);
     expect([...held].sort()).toEqual(['tsdb|tsdb-league-4460', 'tsdb|tsdb-league-5103']);
+  });
+});
+
+describe('dropHeldPaths', () => {
+  test('device paths for held slices are not polled; everything else passes through in order', () => {
+    const held = new Set(['tsdb|tsdb-league-4460']);
+    const r = dropHeldPaths(
+      [
+        'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
+        'pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4',
+        'pollFdCompetition?code=PL&season=2026',
+      ],
+      held,
+    );
+    expect(r.kept).toEqual([
+      'pollTsdbLeague?leagueId=4445&season=2026&sport=boxing&durationHours=3',
+      'pollFdCompetition?code=PL&season=2026',
+    ]);
+    expect(r.heldSkipped).toEqual(['pollTsdbLeague?leagueId=4460&season=2026&sport=cricket&durationHours=4']);
+  });
+  test('an empty held set (catalogue read failed) changes nothing', () => {
+    const paths = ['pollFdCompetition?code=PL&season=2026'];
+    expect(dropHeldPaths(paths, new Set()).kept).toEqual(paths);
   });
 });

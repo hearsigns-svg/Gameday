@@ -170,6 +170,7 @@ export interface SweepResult {
   skippedPathsNamed: number; // how many of the skipped are listed above
   truncationReason: 'cap' | 'deadline' | 'cap+deadline' | null;
   alertsOpen: number; // coverage alerts open after this sweep
+  heldSkipped: number; // device paths not polled because their catalogue row is held
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -358,10 +359,10 @@ async function fetchWithTimeout(
 async function loadCataloguePaths(
   db: FirebaseFirestore.Firestore,
   sweepUtcHour: number,
-): Promise<{ paths: string[]; dropped: number }> {
+): Promise<{ paths: string[]; dropped: number; held: Set<string> }> {
   const snap = await db.collection('catalogue').get();
-  const entries = snap.docs
-    .map((d) => d.data() as CatalogueEntry)
+  const all = snap.docs.map((d) => d.data() as CatalogueEntry);
+  const entries = all
     // rankOnly rows are ORDERING data riding the same collection
     // (Prompt 11) — never routes; skipping them is not a drop.
     .filter((e) => !e.rankOnly)
@@ -374,7 +375,27 @@ async function loadCataloguePaths(
     if (ok) paths.push(ok);
     else dropped++;
   }
-  return { paths, dropped };
+  // HELD rows (disabled in the catalogue, Round 4 item 5): "stop asking
+  // until the provider publishes" has to bind DEVICE paths too, or two
+  // followers' stored IPL routes keep the slice polled and born_dead
+  // paging while the row sits disabled.
+  return { paths, dropped, held: heldSliceKeys(all) };
+}
+
+// PURE: device paths whose slice is held are not polled this sweep.
+export function dropHeldPaths(
+  paths: readonly string[],
+  held: ReadonlySet<string>,
+): { kept: string[]; heldSkipped: string[] } {
+  const kept: string[] = [];
+  const heldSkipped: string[] = [];
+  for (const p of paths) {
+    const slice = sliceOfPollPath(p);
+    const key = slice ? `${slice.source}|${slice.competitionId}` : '';
+    if (key && held.has(key)) heldSkipped.push(p);
+    else kept.push(p);
+  }
+  return { kept, heldSkipped };
 }
 
 // football-data.org's free tier allows 10 requests/minute. Device paths
@@ -423,7 +444,7 @@ export async function sweepAll(): Promise<SweepResult> {
   // as before, now the last tiebreak rather than the whole rule).
   // A catalogue read failure must degrade to a device-only sweep, not
   // take polling and fan-out down with it.
-  let catalogue: { paths: string[]; dropped: number };
+  let catalogue: { paths: string[]; dropped: number; held: Set<string> };
   try {
     catalogue = await loadCataloguePaths(
       db,
@@ -431,11 +452,14 @@ export async function sweepAll(): Promise<SweepResult> {
     );
   } catch (e) {
     console.error(`[kickoffcal] catalogue load failed: ${e}`);
-    catalogue = { paths: [], dropped: 0 };
+    // A failed read holds NOTHING: device paths poll as before.
+    catalogue = { paths: [], dropped: 0, held: new Set() };
   }
   dropped += catalogue.dropped;
+  const devicePaths = dropHeldPaths([...canonical], catalogue.held);
+  const heldSkipped = devicePaths.heldSkipped.length;
   const ordered = orderSweepPaths(
-    [...canonical],
+    devicePaths.kept,
     catalogue.paths,
     MAX_PATHS_PER_SWEEP,
   );
@@ -703,15 +727,7 @@ export async function sweepAll(): Promise<SweepResult> {
     // Held rows (disabled in the catalogue) resolve their alerts even
     // though they are no longer demanded. A catalogue read failure
     // yields an EMPTY held set — nothing resolves on a failed read.
-    let held = new Set<string>();
-    try {
-      const catSnap = await db.collection('catalogue').get();
-      held = heldSliceKeys(
-        catSnap.docs.map((d) => d.data() as CatalogueEntry),
-      );
-    } catch (e) {
-      console.error(`[kickoffcal] catalogue read for held rows failed: ${e}`);
-    }
+    const held = catalogue.held;
     const openSnap = await db
       .collection('opsAlerts')
       .where('resolvedAt', '==', null)
@@ -757,6 +773,7 @@ export async function sweepAll(): Promise<SweepResult> {
     truncated,
     pathsSeen: allPaths.length,
     alertsOpen,
+    heldSkipped,
     ...skipped,
   };
   await db.collection('sweeps').doc(startedAt).set({
