@@ -96,6 +96,7 @@ import {
 import { MonthGrid } from './MonthGrid';
 import { premiumLocked } from '../../../core/entitlementStore';
 import { loadLedger } from '../data/ledger';
+import { currentFixtures, isLive } from '../../fixtures/domain/horizon';
 
 type Props = TabScreenProps<'Schedule'>;
 
@@ -107,19 +108,25 @@ interface DaySection {
   data: UpcomingFixture[];
 }
 
-function sectionsFrom(fixtures: UpcomingFixture[]): DaySection[] {
-  const byDay = new Map<string, UpcomingFixture[]>();
+function sectionsFrom(fixtures: UpcomingFixture[], nowMs: number = Date.now()): DaySection[] {
+  const byDay = new Map<string, { anchorIso: string; dateOnly: boolean; data: UpcomingFixture[] }>();
+  const nowIso = new Date(nowMs).toISOString();
   for (const f of fixtures) {
-    const key = dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision));
+    // A block that has BEGUN sits under today, not under the day it
+    // started (P0 2026-09-02) — the section a reader looks at first.
+    const live = isLive(f, nowMs);
+    const anchorIso = live ? nowIso : f.startUtc;
+    const dateOnly = live ? false : isDateOnly(f.status, f.timePrecision);
+    const key = dayKey(anchorIso, dateOnly);
     const bucket = byDay.get(key);
-    if (bucket) bucket.push(f);
-    else byDay.set(key, [f]);
+    if (bucket) bucket.data.push(f);
+    else byDay.set(key, { anchorIso, dateOnly, data: [f] });
   }
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, data]) => ({
+    .map(([key, { anchorIso, dateOnly, data }]) => ({
       key,
-      title: dayHeading(data[0].startUtc, isDateOnly(data[0].status, data[0].timePrecision)),
+      title: dayHeading(anchorIso, dateOnly),
       data,
     }));
 }
@@ -288,9 +295,9 @@ export default function ScheduleScreen({ navigation }: Props) {
     const now = Date.now();
     return {
       nowMs: now,
-      ahead: fixtures.filter(
-        (f) => new Date(f.startUtc).getTime() > now - 3_600_000,
-      ),
+      // Not yet FINISHED (P0 2026-09-02): a live multi-day block stays
+      // in the list, under today.
+      ahead: currentFixtures(fixtures, now),
     };
   }, [fixtures]);
   // The pages actually shown: what has been loaded, floored so the first
@@ -308,14 +315,22 @@ export default function ScheduleScreen({ navigation }: Props) {
     [nowMs, pages],
   );
   const loaded = useMemo(
-    () => fixturesInWindow(ahead, loadedRange.fromUtc, loadedRange.toUtc),
-    [ahead, loadedRange],
+    () => [
+      // Live blocks began before the window opens; they belong to today.
+      ...ahead.filter((f) => isLive(f, nowMs)),
+      ...fixturesInWindow(
+        ahead.filter((f) => !isLive(f, nowMs)),
+        loadedRange.fromUtc,
+        loadedRange.toUtc,
+      ),
+    ],
+    [ahead, loadedRange, nowMs],
   );
   const hasMore = useMemo(
     () => nextPageAvailable(ahead, loadedRange.toUtc),
     [ahead, loadedRange],
   );
-  const sections = useMemo(() => sectionsFrom(loaded), [loaded]);
+  const sections = useMemo(() => sectionsFrom(loaded, nowMs), [loaded]);
   // Display order across every day heading — what the expanded card
   // pages through, so a swipe follows the list exactly.
   const listIds = useMemo(

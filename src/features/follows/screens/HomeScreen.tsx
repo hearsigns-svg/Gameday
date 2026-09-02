@@ -59,6 +59,8 @@ import { followQueryKeys } from '../domain/followScopes';
 import { sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { flagEmojiOf } from '../../../core/nationality';
+import { currentFixtures, isLive } from '../../fixtures/domain/horizon';
+import { t as tr } from '../../../core/i18n';
 
 type Props = TabScreenProps<'Home'>;
 
@@ -132,9 +134,9 @@ export default function HomeScreen({ navigation }: Props) {
 
   const upcoming = useMemo(
     () =>
-      fixtures.filter(
-        (f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000,
-      ),
+      // Not yet FINISHED — an in-progress tournament block stays current
+      // (P0 2026-09-02: the start-based rule hid the live US Open).
+      currentFixtures(fixtures, Date.now()),
     [fixtures],
   );
 
@@ -179,7 +181,9 @@ export default function HomeScreen({ navigation }: Props) {
           key: item.key,
           label: item.label,
           caption: fixture
-            ? whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
+            ? isLive(fixture, Date.now())
+              ? tr('core.when.today') // a block already under way (P0 2026-09-02)
+              : whenLabel(fixture.startUtc, isDateOnly(fixture.status, fixture.timePrecision))
             : i18n.t('follows.home.nothingScheduled'),
           glyph: sport?.glyph ?? '🏟️',
           // The served competition mark first, then the stored crest

@@ -62,6 +62,7 @@ import { deliveryGap } from '../domain/athleteDelivery';
 import { sportLabelFor } from '../domain/sportTerms';
 import { nationLabelOf } from '../../../core/nationality';
 import { activeRegion } from '../../../core/regionStore';
+import { isCurrent } from '../../fixtures/domain/horizon';
 
 type Props = RootScreenProps<'Team'>;
 
@@ -216,7 +217,10 @@ export default function TeamScreen({ navigation, route }: Props) {
         pinnedIds(),
         new Set(keys),
       )
-        .filter((f) => new Date(f.startUtc).getTime() > Date.now() - 3_600_000)
+        // Not yet FINISHED (P0 2026-09-02): the in-progress edition of a
+        // tournament is the one whose card has matches; a start-based
+        // rule served next year's empty edition instead.
+        .filter((f) => isCurrent(f, Date.now()))
         .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
       setFixtures(upcoming);
     } else if (fixtures === null) {

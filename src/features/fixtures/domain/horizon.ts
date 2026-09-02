@@ -47,7 +47,7 @@ export function timePrecisionOf(f: {
 
 // A day sentinel, not an instant — so the event spans the day and does not
 // finish until the day does.
-export function isDateOnlyFixture(f: Fixture): boolean {
+export function isDateOnlyFixture(f: FixtureTiming): boolean {
   return timePrecisionOf(f) === 'date_only' || f.status === 'postponed';
 }
 
@@ -67,7 +67,18 @@ export function dateOnlySpanDays(durationHours?: number): number {
 // County Championship match, a 5-hour golf round and an all-day "time TBC"
 // banner are all still live long after they begin, and a postponement
 // announced mid-event still has to reach the calendar.
-export function fixtureEndUtc(f: Fixture): string {
+// The fields the end-time rule reads — structural, so the app's display
+// snapshot (SnapshotFixture) is judged by the SAME rule as a stored doc.
+export interface FixtureTiming {
+  startUtc: string;
+  durationHours?: number;
+  // `string`, not FixtureStatus: the display snapshot carries status as
+  // plain text, and it must be judged by the very same rule.
+  status: string;
+  timePrecision?: TimePrecision;
+}
+
+export function fixtureEndUtc(f: FixtureTiming): string {
   if (isDateOnlyFixture(f)) {
     const d = new Date(f.startUtc);
     const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
@@ -93,8 +104,33 @@ export function fixtureEndUtc(f: Fixture): string {
 export const PAST_GRACE_HOURS = 6;
 export const PAST_GRACE_MS = PAST_GRACE_HOURS * 3_600_000;
 
-export function isPast(f: Fixture, nowMs: number): boolean {
+export function isPast(f: FixtureTiming, nowMs: number): boolean {
   return Date.parse(fixtureEndUtc(f)) + PAST_GRACE_MS <= nowMs;
+}
+
+// CURRENT = not yet finished (P0 2026-09-02). Every display surface that
+// lists "upcoming" fixtures — Home carousel, Following rail and counts,
+// the entity page, the Schedule — judges by THIS, never by start: a
+// fifteen-day Slam that began on Sunday is the most current thing a
+// follower has, and a start-based filter hid the in-progress US Open on
+// every surface and served the 2027 edition (no draw, no children) in its
+// place — "no matches at all, men's or women's". The snapshot writer
+// already used the end-based rule; the readers did not.
+export function isCurrent(f: FixtureTiming, nowMs: number): boolean {
+  return !isPast(f, nowMs);
+}
+
+export function currentFixtures<T extends FixtureTiming>(
+  fixtures: readonly T[],
+  nowMs: number,
+): T[] {
+  return fixtures.filter((f) => isCurrent(f, nowMs));
+}
+
+// Has this fixture begun (and not yet finished)? Surfaces place a live
+// multi-day block under TODAY, not under the day it started.
+export function isLive(f: FixtureTiming, nowMs: number): boolean {
+  return Date.parse(f.startUtc) <= nowMs && isCurrent(f, nowMs);
 }
 
 // The same rule expressed over a ledger entry, which records the event's

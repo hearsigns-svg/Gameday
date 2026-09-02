@@ -61,6 +61,7 @@ import {
   legacyCalendarEventsRemain,
 } from '../calendar-sync/data/calendarConnection';
 import { entitlementState, premiumLocked } from '../../core/entitlementStore';
+import { flags, setFlagsOverrideForDev } from '../../core/flags';
 import { manageSubscriptionUrl } from '../../core/billing';
 import { reminderChoice, setReminderChoice } from '../reminders/data/reminderChoice';
 import {
@@ -891,6 +892,23 @@ export default function PreferencesScreen({
         </Text>
       ) : null}
 
+      {__DEV__ ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Toggle sync gate override (dev)"
+          onPress={() => {
+            const next = flags().syncGate === 'open' ? 'entitled' : null;
+            setFlagsOverrideForDev(next ? { syncGate: next } : null);
+            showToast({ message: `Sync gate: ${flags().syncGate} (dev override)` });
+            void runSync();
+          }}
+          style={{ marginTop: spacing.xl, minHeight: 44, justifyContent: 'center' }}
+        >
+          <Text style={[type.body, { color: t.textSecondary }]}>
+            {`Sync gate: ${flags().syncGate} (dev)`}
+          </Text>
+        </Pressable>
+      ) : null}
       {__DEV__ ? (
         <Pressable
           accessibilityRole="button"

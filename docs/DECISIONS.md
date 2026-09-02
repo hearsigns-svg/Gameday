@@ -4270,3 +4270,42 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   and /privacy on the understanding they resolve before store review,
   not before. Deployed by the agent (`firebase deploy --only hosting`),
   verified by fetching every route on the default URL.
+
+- 2026-09-02 (P0 — "US OPEN SHOWS NO MATCHES AT ALL": diagnosis, root
+  cause, fix). DISCRIMINATION: the simulator was running the RELEASE,
+  flag-OFF build (embedded bundle 16:59, no Metro, the dev-override key
+  absent from the bundle), not a flag-on debug build; the card was empty
+  there, so the entitlement layer was not the cause. DATA: intact — the
+  2026 men's parent (`tennis-28pln…`) holds 70 children (52 future, all
+  from the vendor run of 11:51, all `parentFixtureId` = that ICS parent,
+  so the union joins them), the women's parent (`wta-905-2026`) 145 (55
+  future); nothing deleted, no retirement touched them; the client SDK
+  replays of the card's queries (parentFixtureId ==, followKeys
+  array-contains `tennis-t-us-open`) return 145 / 70 / 6. CLIENT: the
+  card's own union over the real children yields 74 rows (35 men's, 39
+  women's); the Stage 2 loader does not touch children (fetched by parent
+  id at card open). ROOT CAUSE = SELECTION: every display surface filtered
+  "upcoming" by START (`startUtc > now − 1h`: Home carousel, Following
+  rail and counts, the entity page since 2026-07-30, the Schedule); once
+  the fifteen-day block began on Aug 30 the 2026 edition vanished from all
+  of them, and the only "US Open" left to open was the 2027 edition
+  (parent `tennis-7uvq…`, in the ICS since Aug 2) — a parent with no draw
+  and no children. The card's "Sun 29 Aug" gave it away: 29 August is a
+  Sunday only in 2027. The snapshot WRITER already used the end-based rule
+  (`fixtureEndUtc > horizon`); the READERS did not. ENTITLEMENT (owner
+  step 4): a device with no store state resolves to FREE_STATE (no
+  lapseKind), which the policy plans as free with NO removal effect
+  (pinned by tests: an undefined trial start never reads as a lapsed
+  trial); with the gate open it plans as Premium; the simulator's
+  KickOffCal calendar still held 414 events (404 future) with both US Open
+  banners intact — no removals. FIX: one rule, `isCurrent = !isPast`
+  (end-based with the 6h grace) over a structural `FixtureTiming`, so the
+  display snapshot is judged exactly as a stored doc: applied to the Home
+  carousel, the entity page list, the Schedule (`ahead`; a LIVE block is
+  carried into page 0 and sectioned under TODAY via `isLive`), the
+  per-follow counts in the engine, and the rail caption ("Today" for a
+  live block). REGRESSION PIN: `currentEdition.test.ts` fails if the
+  selected edition's card would render empty while children exist, and
+  documents that the retired start-based rule chose the childless 2027
+  edition. A dev-only Preferences control toggles the sync-gate override
+  for the flag-on test build.

@@ -58,7 +58,7 @@ import {
   isScanAnomaly,
   orphanEventIds,
 } from './domain/recovery';
-import { isEndPast } from '../fixtures/domain/horizon';
+import { isEndPast, isPast } from '../fixtures/domain/horizon';
 import {
   clearedStray,
   movedEntry,
@@ -359,8 +359,11 @@ function writePresentationState(
   const queryKeysByFollow = followables.map(
     (fw) => [fw.key, followQueryKeys(fw)] as const,
   );
+  const countNowMs = nowFromHorizon(horizonStart);
   for (const f of fixtures) {
-    if (f.startUtc < horizonStart) continue;
+    // Not yet FINISHED, the same rule the snapshot uses (P0 2026-09-02):
+    // a live tournament block still counts for its follow.
+    if (isPast(f, countNowMs)) continue;
     if (excluded.has(f.id)) continue; // removed events don't count
     const seen = new Set<string>();
     for (const [key, queryKeys] of queryKeysByFollow) {
