@@ -35,7 +35,7 @@ import { monogramOf,
   lastSyncLine,
   SyncStatusChip,
 } from '../../../core/components';
-import { calendarChoice } from '../data/calendarChoice';
+import { calendarConnected } from '../data/calendarConnection';
 import { loadExclusions, setExcluded } from '../data/exclusionStore';
 // Aliased: `t` is this screen's theme handle (useTheme), so the
 // catalog function travels as `tr` here.
@@ -447,7 +447,10 @@ export default function ScheduleScreen({ navigation }: Props) {
   );
 
   const changed = last ? last.created + last.updated + last.deleted : 0;
-  const calendarOff = calendarChoice() !== 'enabled';
+  // Off = not connected THROUGH A WRITE PATH (B4 item 5) — an Android
+  // install waiting to connect Google reads as off, whatever its stored
+  // choice says, so the banner and the footer tell the truth.
+  const calendarOff = !calendarConnected();
   // The chip earns its row only when something is WRONG — a sync error,
   // or sources quiet past the staleness line. The happy state is silence
   // plus the once-per-session toast (Round 4): a standing "up to date"

@@ -17,8 +17,10 @@ import { Platform } from 'react-native';
 import { ok, Result } from '../../../core/result';
 import { RecoveredEvent } from '../domain/recovery';
 import { activeBackend } from './calendarBackend';
+import { saveCalendarColour } from './calendarColourStore';
 import * as provider from './calendarDriver';
 import {
+  applyRestCalendarColour,
   ensureRestTarget,
   eraseRestCalendar,
   restCreateFixtureEvent,
@@ -33,6 +35,7 @@ export {
   applyTargetRequest,
   deleteVacatedCalendarIfOurs,
 } from './calendarDriver';
+export { calendarColour } from './calendarColourStore';
 
 // What the engine threads between getCalendarObject and the event
 // verbs. Provider needs the live native object (one per run — per-event
@@ -127,6 +130,34 @@ export async function listTaggedEvents(
 export function calendarCapabilities(): provider.CalendarCapabilities {
   if (activeBackend() === 'rest') return { perEventColour: true };
   return provider.calendarCapabilities();
+}
+
+// The calendar's colour, whichever backend paints it (Round 4 B4 item
+// 3). The preference saves FIRST on every path; what happens next is
+// the backend's business — REST patches the calendarList entry and
+// reports a refusal honestly; the provider path recolours a calendar it
+// can prove is ours; an Android install still waiting to connect has
+// nothing to paint yet, and the KickOffCal calendar to come takes the
+// colour at creation. Before this the screen called the provider
+// function directly, which under REST answered 'not-ours' and toasted
+// "saves when your calendar connects" beside a connected calendar.
+export type CalendarColourOutcome = provider.ColourOutcome | 'refused';
+
+export async function setCalendarColour(
+  hex: string,
+): Promise<CalendarColourOutcome> {
+  saveCalendarColour(hex);
+  if (activeBackend() === 'rest') return applyRestCalendarColour(hex);
+  if (nativeSyncRoute() === 'google-connect') return 'saved';
+  return provider.setCalendarColour(hex);
+}
+
+// The provider picker (CalendarTargetScreen, "Use a different calendar")
+// exists only where there is a choice to make. Under REST there is one
+// calendar and it is ours — nothing to pick (P28-3; B4 item 6 closes
+// the last route in).
+export function canPickCalendarTarget(): boolean {
+  return activeBackend() !== 'rest';
 }
 
 // How native calendar sync HAPPENS on this install — the UI asks this,

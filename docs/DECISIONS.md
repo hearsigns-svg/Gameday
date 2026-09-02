@@ -3700,3 +3700,58 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   User-Agent — Wikimedia 403s the default okhttp agent, the whole cause
   of Android's crests-only heroes; version parity sim/Pixel was
   confirmed first (same JS commit, device APK pulled and checked).
+- 2026-09-02 (Round 4 B4, owner ruling — the Android remnant): two
+  calendar write paths, one truth. ROOT CAUSE: the REST path never
+  persisted a target and connect/disconnect never cleared the old one,
+  so the pre-P28 provider record ("Social", kind 'user') sat frozen in
+  `calendarTarget.v1` under a REST-created KickOffCal calendar;
+  Preferences derived ownership from that record alone and said "Your
+  fixtures take the colour of Social" while routing colour taps to the
+  provider-only setCalendarColour ('not-ours'). RULINGS, as built:
+  (1) ensureRestTarget PERSISTS `{label:'KickOffCal', kind:'ours',
+  accountLabel:'Google Calendar', sourceKind:'cloud'}` through
+  calendarTargetStore on every resolve; connectGoogleCalendar clears
+  the record before the backend flips, disconnectGoogleCalendar and
+  eraseRestCalendar clear it after; Preferences' ownership is
+  backend-aware (`ownsCalendarColour`). (2) The engine exposes the last
+  error KIND (`lastSyncErrorKind`, `SyncState.lastErrorKind`); the
+  Google-connected row offers "tap to reconnect" ONLY on
+  'auth-expired' (`restRowMode`) and otherwise states "In your Google
+  Calendar" with no verb — it had rendered the reconnect caption
+  whenever the backend was REST. (3) The REST calendar's colour is SET:
+  `PATCH users/me/calendarList/{id}?colorRgbFormat=true
+  {backgroundColor, foregroundColor}` at creation, on every resolve
+  until applied, and on each swatch change, through the facade
+  (`driver.setCalendarColour` routes by backend; one shared
+  calendarColourStore). Google's calendarList.patch reference lists
+  calendar.app.created as an accepted scope; whether the live server
+  honours it for an app-created entry is proven only by the first
+  device PATCH, so a 403 is classified by its body reason
+  (insufficientPermissions is NOT a rate limit — surfaced at once, no
+  backoff), recorded as 'refused' in `restCalendarColour.v1`, toasted
+  and captioned honestly, and NEVER a silent success. (4) Fresh Android
+  onboarding reaches its connected confirmation (falls out of 1), and
+  "Not now" never downgrades a latched 'enabled' (`choiceAfterNotNow`).
+  (5) REST-ALWAYS ON ANDROID, ENFORCED: `calendarConnection()` =
+  connectionState(choice, route, backend) ∈ {connected,
+  needs-google-connect, off} is the ONE gate. The engine runs
+  fixtures-only unless 'connected'; reinstall healing latches from an
+  OS grant only where 'enabled' would actually connect
+  (`grantMayLatch`); Home, Schedule, the picker and switchCalendarTarget
+  read the same answer. A legacy provider-path Android install is
+  thereby auto-downgraded to needs-google-connect: writes halt, the
+  banner and the Connect row show; its old events stay in the user's
+  own calendar (design-accepted — the REST scope cannot reach them) and
+  the Connect row says so (`connectLegacyCaption`, shown only while a
+  ledger exists on an unconnected install). (6) The provider picker is
+  unreachable under REST (`canPickCalendarTarget`: "Use a different
+  calendar" hidden; the picker screen shows the current target and no
+  rows). (7) `settings.target.scopePromise` no longer promises "nothing
+  is left behind" — six languages. (8) ARCHITECTURE.md and
+  CALENDAR_TARGET.md describe the two paths; app.json's iOS calendar
+  purpose string says KickOffCal. RULE 15: the choice-only gate, the
+  grant latch, the record-only colour derivation and the unconditional
+  "Not now" are each pasted back in as the old defect in
+  domain/__tests__/calendarConnection.test.ts and shown refused; the
+  403-as-rate-limit retry and the stale record surviving a connect are
+  attacked in the data tests.

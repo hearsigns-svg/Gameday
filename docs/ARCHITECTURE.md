@@ -62,24 +62,63 @@ imports only via `src/core`.
    unacceptable: server-side Google Calendar API write (deferred
    milestone), not a redesign.
 
-## Calendar write path (v1 decision)
+## Calendar write paths (v1 provider path; Prompt 28 REST path)
 
-On-device write via expo-calendar reaches ANY calendar account the phone
-syncs (Google, Apple, Outlook) with one permission prompt and no OAuth —
-lowest possible friction, and it avoids Google's multi-week sensitive-
-scope verification. Server-side Google API write is a deferred milestone.
+Two write paths, selected per install by `data/calendarBackend.ts`
+(`'provider' | 'rest'`) behind ONE facade, `data/driver.ts`. The sync
+engine imports the facade and nothing platform-shaped; every verb
+branches on the active backend there and nowhere else.
 
-**The calendar target** (docs/CALENDAR_TARGET.md) is which calendar that
-write lands in, resolved automatically on the first sync and sticky
-afterwards: a dedicated KickOffCal calendar created in a writable cloud
-source on iOS, the primary Google calendar on Android (where an app
-cannot create inside a `com.google` account, only write into one), and a
-device-local calendar as the fallback. The user can change it in
-Preferences → Calendar; switching MOVES every ledgered event rather than
-orphaning it, converging even if interrupted.
+**iOS — the provider path.** expo-calendar over EventKit: one permission
+prompt, no OAuth. **The calendar target** (docs/CALENDAR_TARGET.md) is
+which calendar the write lands in, resolved automatically on the first
+sync and sticky afterwards: a dedicated KickOffCal calendar created in a
+writable cloud source (iCloud), a device-local calendar as the fallback,
+or a calendar of the user's own if they pick one in Preferences →
+Calendar. Switching MOVES every ledgered event rather than orphaning it,
+converging even if interrupted.
 
-Two independent gates keep that safe once the target may be a calendar
-the user owns:
+**Android — the REST path ("REST-always", Prompt 28).** Google Calendar
+API v3 under the `calendar.app.created` scope, into a KickOffCal
+calendar the app creates in the user's Google account. No
+CalendarProvider write, no sync adapter, no mass-deletion gate — and a
+scope that structurally cannot see the user's other calendars. The
+authorization is a Google sign-in (account picker, then one consent
+naming one permission), not an account system; its expiry is the typed
+`auth-expired` state, surfaced on the Schedule chip and as the
+Preferences reconnect row. The pre-P28 Android provider path (writing
+into the user's primary Google calendar) is RETIRED as a write path:
+until Google is connected an Android install is fixtures-only, and a
+legacy install is auto-downgraded to that state (Round 4 B4,
+2026-09-02). Its old events stay where the provider path wrote them —
+the REST scope cannot reach them — and the Connect row says so.
+
+**One connection truth.** `data/calendarConnection.ts` answers
+`connected | needs-google-connect | off` from the stored choice, the
+install's sync route and the armed backend (rule in
+`domain/calendarConnection.ts`). The engine's gate, the calendar-off
+banners, the Connect row and the picker all read it; reinstall healing
+latches an opt-in from durable evidence only where that opt-in would
+actually connect.
+
+**One target record.** Both paths write `calendarTarget.v1`
+(`data/calendarTargetStore.ts`) when they resolve; connect and
+disconnect clear it. Preferences, the priming confirmation and the erase
+copy read that record and nothing else.
+
+**Colour.** The saved colour (`calendarColour.v1`, one shared store) is
+painted by whichever path owns the calendar: EventKit `update({ color })`
+on the provider path; `PATCH users/me/calendarList/{id}?colorRgbFormat=
+true` on the REST path — at creation, on every resolve until applied,
+and on each change. A refusal (403/400) is recorded and shown, never
+assumed away; a scope refusal is not a rate limit and is not retried.
+
+Google's sensitive-scope verification for `calendar.app.created` is a
+launch-prep item (PLAN.md, M7); until then the consent screen runs in
+Testing status and refresh tokens expire weekly.
+
+Two independent gates keep the provider path safe once the target may
+be a calendar the user owns:
 - **Event-level.** `domain/recovery.ts` is the only thing that decides an
   event is ours (our `NOTES_TAG` plus a usable fixture id, in the target
   calendar). Recovery and prune consume that list and nothing else, so a

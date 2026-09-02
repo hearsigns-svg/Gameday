@@ -19,6 +19,7 @@
 import { err, ok, Result } from '../../../core/result';
 import { GOOGLE_WEB_CLIENT_ID } from '../../../core/googleAuthConfig';
 import { setActiveBackend } from './calendarBackend';
+import { clearTarget } from './calendarTargetStore';
 import { configureRestAuth } from './restCalendarDriver';
 
 export const CALENDAR_SCOPE =
@@ -98,6 +99,12 @@ export async function connectGoogleCalendar(): Promise<Result<{ email: string | 
       // in-app calendar remains the whole product for them.
       return err({ kind: 'unknown', message: 'Sign-in was cancelled.' });
     }
+    // The target record belongs to the path that writes it. Whatever the
+    // provider path left there (a pre-P28 Android install's "Social",
+    // kind 'user') describes a calendar the REST path will never touch —
+    // cleared BEFORE the backend flips, so the first REST resolve writes
+    // the record clean rather than beside it (Round 4 B4).
+    clearTarget();
     configureRestAuth(tokenProvider);
     setActiveBackend('rest');
     return ok({ email: res.data?.user?.email ?? null });
@@ -122,7 +129,10 @@ export function resumeGoogleCalendarAuth(): void {
 
 // Disconnect drops the authorization and falls the backend home to the
 // provider path. What happens to the synced events is the CALLER's
-// decision (P28-3 owns that flow and its copy).
+// decision (P28-3 owns that flow and its copy). On Android the provider
+// path is no longer a write path at all — the engine's connection gate
+// answers 'needs-google-connect' from here on — so the flip HALTS
+// calendar writes rather than redirecting them (Round 4 B4).
 export async function disconnectGoogleCalendar(): Promise<void> {
   const signin = configuredSignIn();
   try {
@@ -132,4 +142,7 @@ export async function disconnectGoogleCalendar(): Promise<void> {
     // writes, and a dead grant dies on its own server-side.
   }
   setActiveBackend('provider');
+  // The REST target record names a calendar nothing writes to now; an
+  // iOS-style provider resolve (should one ever run) starts clean.
+  clearTarget();
 }

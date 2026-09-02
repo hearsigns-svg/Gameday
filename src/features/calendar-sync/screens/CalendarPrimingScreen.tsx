@@ -22,11 +22,12 @@ import { showToast } from '../../../core/toast';
 import { calendarChoice, setCalendarChoice } from '../data/calendarChoice';
 import { activeBackend } from '../data/calendarBackend';
 import { connectGoogleCalendar } from '../data/googleCalendarAuth';
-import { nativeSyncRoute } from '../data/driver';
+import { canPickCalendarTarget, nativeSyncRoute } from '../data/driver';
 import {
   CalendarTarget,
   storedTarget,
 } from '../data/calendarTargetStore';
+import { choiceAfterNotNow } from '../domain/calendarConnection';
 import { targetSummary } from '../domain/calendarTarget';
 import { runSync, upcomingFixtures } from '../syncEngine';
 
@@ -195,16 +196,21 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
             {tr('calendar.priming.chooseSports')}
           </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={tr('calendar.priming.differentCalendar')}
-          onPress={() => navigation.navigate('CalendarTarget')}
-          style={styles.skip}
-        >
-          <Text style={[type.body, { color: t.textSecondary }]}>
-            {tr('calendar.priming.differentCalendar')}
-          </Text>
-        </Pressable>
+        {/* The provider picker exists only where there is a choice to
+            make; under REST the one calendar is ours by construction,
+            so the route in is simply absent (B4 item 6). */}
+        {canPickCalendarTarget() ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={tr('calendar.priming.differentCalendar')}
+            onPress={() => navigation.navigate('CalendarTarget')}
+            style={styles.skip}
+          >
+            <Text style={[type.body, { color: t.textSecondary }]}>
+              {tr('calendar.priming.differentCalendar')}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
@@ -295,7 +301,12 @@ export default function CalendarPrimingScreen({ navigation, route }: Props) {
         accessibilityRole="button"
         accessibilityLabel={tr('calendar.priming.notNow')}
         onPress={() => {
-          setCalendarChoice('deferred');
+          // A deferral — never a downgrade of a choice already latched
+          // 'enabled' (B4 item 4). The REST path used to leave this ask
+          // on screen after a successful connect (no target record, so
+          // no confirmation), and this tap switched the calendar back
+          // off.
+          setCalendarChoice(choiceAfterNotNow(calendarChoice()));
           // Skipping is allowed to cost nothing: onboarding continues to
           // the sports picker, and the app works without a calendar.
           if (onboarding) onwards();

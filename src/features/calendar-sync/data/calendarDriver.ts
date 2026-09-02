@@ -15,8 +15,8 @@
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 import { AppError, err, ok, Result } from '../../../core/result';
-import { palette } from '../../../core/tokens';
 import { readJson, writeJson, removeKey } from '../../../core/storage';
+import { calendarColour, saveCalendarColour } from './calendarColourStore';
 import {
   CalendarLike,
   CreatableSource,
@@ -152,19 +152,15 @@ export async function listTaggedEvents(
 }
 
 // The user's chosen calendar colour (how KickOffCal events appear in the
-// OS calendar). Stored even before the calendar exists — creation and
-// later changes both read it. Only ever applied to a calendar of ours:
-// recolouring a user's own calendar would be vandalism.
-const CAL_COLOUR_KEY = 'calendarColour.v1';
-
-export function calendarColour(): string {
-  return readJson<string>(CAL_COLOUR_KEY, palette.light.primary);
-}
-
+// OS calendar) lives in calendarColourStore — shared with the REST
+// driver since B4, so both write paths paint the same choice. Only ever
+// applied to a calendar of ours: recolouring a user's own calendar would
+// be vandalism. Screens reach this through the facade (data/driver.ts),
+// which routes by backend; this is the PROVIDER half.
 export type ColourOutcome = 'applied' | 'saved' | 'not-ours';
 
 export async function setCalendarColour(hex: string): Promise<ColourOutcome> {
-  writeJson(CAL_COLOUR_KEY, hex);
+  saveCalendarColour(hex);
   const target = storedTarget();
   // OWNERSHIP PROOF, not record trust (Prompt 26 §4). The old guard
   // refused only an explicit kind:'user' record; a null record fell

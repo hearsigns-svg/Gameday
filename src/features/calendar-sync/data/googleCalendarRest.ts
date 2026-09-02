@@ -118,9 +118,33 @@ function toRestBody(input: RestEventInput): Record<string, unknown> {
 }
 
 interface RequestSpec {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   body?: unknown;
+}
+
+// Google's 403s carry their reason in the body, and two very different
+// things share the status: rate limiting (retry with backoff) and a
+// scope that does not cover the call (insufficientPermissions — retrying
+// only delays the honest answer). Unknown reasons keep the rate-limit
+// assumption the transport always made.
+const RATE_LIMIT_REASONS = new Set([
+  'rateLimitExceeded',
+  'userRateLimitExceeded',
+  'quotaExceeded',
+  'dailyLimitExceeded',
+  'RESOURCE_EXHAUSTED',
+]);
+
+async function errorReason(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as {
+      error?: { errors?: Array<{ reason?: string }>; status?: string };
+    };
+    return body.error?.errors?.[0]?.reason ?? body.error?.status ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function request(
@@ -165,9 +189,22 @@ async function request(
     }
     // Rate limiting (403 rateLimitExceeded / 429) and server errors
     // retry with backoff, per Google's own guidance. Anything else
-    // 4xx is a real error and surfaces as one.
-    const retriable =
-      res.status === 429 || res.status === 403 || res.status >= 500;
+    // 4xx is a real error and surfaces as one — including the 403
+    // Google uses for "this scope does not cover that call", which
+    // must surface at once rather than spend seven seconds of backoff
+    // and then come back looking like a rate limit (B4 item 3).
+    let retriable = res.status === 429 || res.status >= 500;
+    if (res.status === 403) {
+      const reason = await errorReason(res);
+      retriable = reason === null || RATE_LIMIT_REASONS.has(reason);
+      if (!retriable) {
+        return err({
+          kind: 'provider',
+          status: 403,
+          message: `calendar API ${spec.method} ${spec.path} forbidden: ${reason}`,
+        });
+      }
+    }
     if (retriable && attempt < RETRIES) {
       await sleep(BACKOFF_MS[attempt] ?? 4000);
       continue;
@@ -198,6 +235,65 @@ export async function createOwnedCalendar(
   const id = (r.value as { id?: string }).id;
   if (!id) return err({ kind: 'unknown', message: 'calendar create returned no id' });
   return ok(id);
+}
+
+// ─── Calendar colour (B4 item 3) ──────────────────────────────────────
+//
+// A calendar's colour lives on the user's calendarList ENTRY, not on the
+// calendar resource: PATCH users/me/calendarList/{id}?colorRgbFormat=true
+// with backgroundColor/foregroundColor as hex (colorRgbFormat=true is
+// what makes the API read the hex pair instead of the eleven-swatch
+// colorId; the index then snaps to the nearest swatch on its own).
+// Google's reference for calendarList.patch lists calendar.app.created
+// among its accepted scopes; that the server honours it for an
+// app-created calendar's own entry is proven only by the first live
+// PATCH — which is why a 403 here is an honest, recorded refusal (never
+// retried as rate limiting, never a silent success) and the driver keeps
+// the app's swatch truthful from it.
+
+// Relative luminance (sRGB → linear, WCAG coefficients): white text on a
+// dark calendar colour, black on a light one.
+export function contrastForeground(hex: string): '#ffffff' | '#000000' {
+  const digits = /^#?([0-9a-f]{6})$/i.exec(hex.trim())?.[1];
+  if (!digits) return '#ffffff';
+  const channel = (i: number): number => {
+    const c = parseInt(digits.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance =
+    0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+  return luminance > 0.179 ? '#000000' : '#ffffff';
+}
+
+// The request, as data — pinned by test so the URL, the query flag and
+// the body shape cannot drift apart from the API's contract.
+export function calendarColourPatch(
+  calendarId: string,
+  hex: string,
+): {
+  path: string;
+  body: { backgroundColor: string; foregroundColor: string };
+} {
+  const h = hex.trim().toLowerCase();
+  return {
+    path: `/users/me/calendarList/${encodeURIComponent(calendarId)}?colorRgbFormat=true`,
+    body: {
+      backgroundColor: h.startsWith('#') ? h : `#${h}`,
+      foregroundColor: contrastForeground(hex),
+    },
+  };
+}
+
+export async function patchCalendarListColour(
+  calendarId: string,
+  hex: string,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<undefined>> {
+  const { path, body } = calendarColourPatch(calendarId, hex);
+  const r = await request({ method: 'PATCH', path, body }, token, deps);
+  if (!r.ok) return r;
+  return ok(undefined);
 }
 
 // Deleting an app-created calendar removes every event in it — the
