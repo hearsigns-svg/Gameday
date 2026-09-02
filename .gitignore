@@ -109,3 +109,6 @@ GoogleService-Info.plist
 scripts/curated-marks/
 scripts/curated-marks-state.json
 scripts/curated-marks-manual/
+
+# Agent worktrees (git worktree add) — never commit the embedded checkouts
+.claude/worktrees/

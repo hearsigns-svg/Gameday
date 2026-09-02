@@ -3635,3 +3635,68 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   is set by a longer neighbour chip). Canonical vocabulary: Tier 1 —
   Dates only; Tier 2 — Key rounds; Tier 3 — All matches. The calendar
   event itself never carried the word: unchanged.
+- 2026-09-02 (Round 4 item 8, owner ruling — ENTITLEMENTS: BUILD NOTHING,
+  hold every trial/tier/notification/billing item until the owner-side
+  spec lands). Recorded so that spec supersedes cleanly, from the A3
+  audit of what the written record does NOT contain: (a) the "Prompt 25
+  brief" that `WelcomeScreen.tsx` cites for "push becomes the free
+  tier's delivery channel (§6)" is not in the repository — the cited
+  document does not exist here; (b) the rule "premium chooses the
+  reminder channel" appears nowhere in PRODUCT/PLAN/DECISIONS — the
+  written record only says push becomes the free channel and calendar
+  colour is premium; (c) what EXISTS for entitlements is a scaffold
+  only: an `entitlements/{uid}` rules block (owner-readable, write
+  false) and its delete in deleteAccountData — no writer, no reader, no
+  install/trial stamp anywhere (`devices/{uid}` carries none), no tier
+  config (`clientTiers`/`freeHorizonDays`/`freeEventCap`/
+  `freeFollowLimit` absent), no feature gating, no system/local
+  notification scheduling (expo-notifications is wake-only), no
+  billing/ads SDK, no paywall route; calendar colour — the one feature
+  the record calls premium — is ungated on iOS and unapplied on
+  Android REST. Designed stages S0 (anonymous start) and S1 (calendar
+  reminders) are built for everyone, permanently; S2 (trial end, free
+  caps, push channel), S3 (premium channel choice, gated colour) and
+  S4 (server entitlements writer, billing, ads) are unbuilt. The new
+  spec should name the free/premium channels and the trial clock
+  explicitly rather than by reference to the missing brief.
+- 2026-09-02 (Round 4 Phase B, items 4/5/6 and B1/B2/B3/B5/B6 — built
+  as prescribed by Phase A). ITEM 4, self-inflicted regressions fixed
+  first: ingest's change compare now ignores the boxing stamp pass's
+  scoped -m/-w keys and carries them across real rewrites, and the
+  stamp pass considers only cards ingest actually wrote — the 08-30 loop
+  (every poll rewrote all 103 cards and re-stamped them, ~500 wasted ops
+  a run, a 1s poller at 45s past the sweep's 20s fetch timeout, its
+  coverage stamp frozen, the in-app banner tripped while every server
+  signal stayed green) is closed; proven with a direct poll after
+  deploy (stored 0 / unchanged 103 in 4s; the first post-deploy sweep
+  had hit the old revision mid-rollout). PBC's crawl stops starting
+  cards past a 95s budget so the route answers inside the sweep's 120s
+  window. pollSheetAtp's staleness guard arms only while an edition is
+  live or inside the 48h lookahead. NEW ALERT `coverage_lag`: a slice
+  green in its own runs whose sweep-side coverage stamp (what the
+  banner reads) is >18h old or missing — the divergence class that ran
+  silent for three days. ITEM 5: IPL (4460) and T20 World Cup (5103)
+  held disabled with disabledReason 'born_dead' (applied to prod,
+  owner-ruled); the seeder probes TSDB's season every run and
+  re-enables on detection, never on a failed probe. ITEM 6: boxing-data
+  = RapidAPI "Boxing Data API" (BennyG): Basic $0 / 100 requests a
+  month HARD limit (7-day window), Pro $29 / 5,000, Ultra $99 / 50,000,
+  Mega $249 / 500,000, no overage, window anchored to the subscription
+  cycle (not calendar month — why the 429s outlived Sept 1), no
+  licence/redistribution statement anywhere; the poller now persists
+  remaining/limit/reset from the vendor headers into status/boxingData
+  .quota and the sweep raises `quota_low` under three days of runway.
+  B1: the stale iPhone 17 install removed; the Pro is the only
+  simulator carrying the app (use UDIDs, never `booted`). B2: centred
+  titles on both navigators; every sport tile reads Browse (F1's
+  follow-count captions and their six-language keys removed). B3: a
+  tabPress lands Home/Following at the top and Schedule at split +
+  today + list top. B5: fixture-derived directories join TSDB badges by
+  TEAM ID under each league's exact strLeague (5479 is TSDB's
+  "International Friendlies" slice — the 2026-08-28 "null" probe used
+  the catalogue label), then fill from the curated team marks; schema
+  epoch bumped so cached derived docs refresh; flag fallback remains
+  for genuine misses. B6: every Image request carries a descriptive
+  User-Agent — Wikimedia 403s the default okhttp agent, the whole cause
+  of Android's crests-only heroes; version parity sim/Pixel was
+  confirmed first (same JS commit, device APK pulled and checked).
