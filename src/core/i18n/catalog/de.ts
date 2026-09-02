@@ -582,13 +582,13 @@ export const de: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Erinnerungen',
-  'settings.reminders.footnote':
-    'Änderungen an Erinnerungen gelten bei der nächsten Synchronisierung für jedes synchronisierte Spiel.',
+  'settings.reminders.footnote': 'Änderungen gelten ab der nächsten Synchronisierung.',
   'settings.reminders.daysWithoutDates': 'Tage ohne Uhrzeit',
   'settings.reminders.slotA11y': 'Erinnerung {n}, {value}',
   'settings.reminders.slotValueA11y': 'Wert für Erinnerung {n}',
   'settings.reminders.slotUnitA11y': 'Einheit für Erinnerung {n}',
   'settings.reminders.off': 'Aus',
+  'settings.reminders.on': 'Ein',
   'settings.reminders.minutes': 'Minuten',
   'settings.reminders.hours': 'Stunden',
 
@@ -684,4 +684,13 @@ export const de: Catalog = {
   'settings.credits.openLicenceA11y':
     'Lizenzinformationen von Wikimedia Commons öffnen',
   'settings.credits.aboutLicences': 'Über diese Lizenzen',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Teil von Premium · 14 Tage gratis starten',
+  'premium.lockA11y': 'Premium-Funktion',
+  'notifications.off': 'Mitteilungen sind aus',
+  'notifications.openSettings': 'Einstellungen öffnen',
+  'reminders.notify': 'Vor Spielen benachrichtigen',
+  'reminders.notification.body': 'Beginnt in {when}',
+  'registry.ceiling': 'Hintergrund-Updates pausiert: zu viele Follows',
 };

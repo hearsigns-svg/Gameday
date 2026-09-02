@@ -4027,3 +4027,44 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   cannot be probed live until Sept 7 — the unit tests carry it, and the
   Sept 7–8 sweep is the behavioural check (a `pollBoxingData` sourceRun
   with a 200 and a fresh `lastSuccessAt`).
+
+- 2026-09-02 (ROUND 5 STAGE 1 RULINGS — Stage 2 GO; Round 4 close-out
+  ACCEPTED with the Sept 7–8 sweep as the cadence's behavioural check).
+  (1) GATING SEAM = the planner's create branch: under Free skip
+  `create` only; `update` and the delete loop untouched; never gate at
+  the engine's connection gate; the entitlement is passed as an options
+  object. (2) REMOVAL IS NEVER GATED, on any tier: unfollow-deletes,
+  opt-in past-deletion, exclusions and erase all stay available under
+  Free. (3) DOWNGRADE RULES (supersede "nothing removed"): TRIAL NOT
+  CONVERTED → boundary = trial start + 30 days anchored to the store
+  receipt; placed events dated on/before the boundary stay, keep
+  receiving time changes and cancellations, age out naturally,
+  reminders unchanged; placed events dated after it are removed;
+  downgrade screen "Fixtures through [date] stay; later ones were
+  removed — resubscribe to restore." PAID NOT RENEWED → the store's
+  billing grace runs first; once the store declares the subscription
+  ended a 72-hour renew window opens (downgrade screen + ONE
+  notification "Renew within 3 days to keep your fixtures"; nothing
+  added or removed meanwhile); at 72h every FUTURE placed event is
+  removed. Past events are never touched on any path. RESTORE:
+  resubscribing at any point re-syncs everything in one pass.
+  MECHANICS: removals run ledger-scoped through the erase machinery,
+  batched under the delete cap, the ledger clearing per event. PATHS:
+  P4 trial cancelled → keep-window, removal beyond it, price-only
+  paywall; P5 paid then lapsed → 72h window, full removal, price-only
+  paywall. (4) IN-APP SCHEDULE: windowed by date and PAGED — the full
+  upcoming set loaded by date range, replacing the 60-fixture
+  presentation snapshot; the in-app schedule is the free product.
+  (5) FLAG CARRIER = `status/flags` with fail-safe defaults when absent
+  or unreadable: ads OFF, paywall dismissible, sync gate OPEN.
+  (6) ANALYTICS = Firebase Analytics, the brief's funnel events only,
+  consent signals from the same form the ads use. (7) FIX IN STAGE 2:
+  the dead per-event colour path under REST (capability true, value
+  never mapped); calendar permission state — read undetermined /
+  canAskAgain before any prompt, stop re-requesting on every connected
+  sync, Settings deep-link on denied. (8) FOLD IN: AGENTS rule 16's
+  phantom delete-cap constant; PRODUCT + ARCHITECTURE corrected to the
+  client-planner enforcement model; the Preferences reminder footnote
+  reworded; the 200-key push-registry ceiling gets a VISIBLE notice at
+  the ceiling instead of silent push loss. (9) STRING SET approved as
+  listed in the Stage 1 report, all six languages via the parity gate.

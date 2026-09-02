@@ -11,6 +11,8 @@ import { Platform } from 'react-native';
 import { db, ensureSignedIn } from '../../../core/firebase';
 import { rnfbMessagingAvailable } from '../rnfbPresence';
 import { readJson, writeJson } from '../../../core/storage';
+import { showToast } from '../../../core/toast';
+import { t } from '../../../core/i18n';
 import { collectFollowState } from '../../follows/followActions';
 import {
   registryOverflow,
@@ -24,6 +26,7 @@ const REGISTRY_ERROR_KEY = 'deviceRegistry.lastError.v1';
 const STEP_TIMEOUT_MS = 15_000;
 
 let tokenRefreshSubscribed = false;
+let ceilingToastShown = false;
 
 // Surfaced by Preferences so the failure is visible rather than logged
 // into the void. Null when the last registration succeeded.
@@ -112,6 +115,12 @@ export async function registerDevice(): Promise<void> {
         'Unfollow something and this will clear.';
       console.error(`[kickoffcal] device registration blocked: ${message}`);
       setRegistryError(message);
+      // VISIBLE at the ceiling (Round 5 ruling 8): once per app session,
+      // a toast — the Preferences line stays as the standing record.
+      if (!ceilingToastShown) {
+        ceilingToastShown = true;
+        showToast({ message: t('registry.ceiling') });
+      }
       return;
     }
     await withTimeout(

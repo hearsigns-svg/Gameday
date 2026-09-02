@@ -579,13 +579,13 @@ export const pt: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Lembretes',
-  'settings.reminders.footnote':
-    'Mudanças de lembrete valem para todos os jogos sincronizados na próxima sincronização.',
+  'settings.reminders.footnote': 'As alterações aplicam-se na próxima sincronização.',
   'settings.reminders.daysWithoutDates': 'Dias sem horário',
   'settings.reminders.slotA11y': 'Lembrete {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valor do lembrete {n}',
   'settings.reminders.slotUnitA11y': 'Unidade do lembrete {n}',
   'settings.reminders.off': 'Desativado',
+  'settings.reminders.on': 'Ligado',
   'settings.reminders.minutes': 'Minutos',
   'settings.reminders.hours': 'Horas',
 
@@ -681,4 +681,13 @@ export const pt: Catalog = {
   'settings.credits.openLicenceA11y':
     'Abrir informações de licença do Wikimedia Commons',
   'settings.credits.aboutLicences': 'Sobre estas licenças',
+
+  // ── Round 5 Stage 2: premium states, notification reminders, registry notice ──
+  'premium.syncRow': 'Parte do Premium · Começa 14 dias grátis',
+  'premium.lockA11y': 'Função Premium',
+  'notifications.off': 'As notificações estão desativadas',
+  'notifications.openSettings': 'Abrir configurações',
+  'reminders.notify': 'Avisar-me antes dos jogos',
+  'reminders.notification.body': 'Começa em {when}',
+  'registry.ceiling': 'Atualizações em segundo plano pausadas: demasiados seguimentos',
 };

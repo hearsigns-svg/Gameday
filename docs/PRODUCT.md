@@ -75,9 +75,20 @@ write, Outlook/web, monetisation UI.
 
 ## Monetisation (architecture-relevant only)
 
-Planned: free first month → ads or subscription. Entitlements are enforced
-server-side from day one so gating never needs a client update. No
-monetisation UI in v1.
+Round 5 model (owner ruling 2026-09-02, full text in DECISIONS): Free
+forever = unlimited follows, the full in-app schedule (windowed by date,
+paged), one system-notification reminder slot, no calendar sync, banner
+ads after a 14-day grace from the first follow. Premium = calendar sync
+with a full-season horizon, tournament tiers, calendar colour, three
+reminder slots, no ads; 14-day store-managed trial on the annual plan.
+ENFORCEMENT IS CLIENT-SIDE, in the sync planner: a pure, tested layer
+reads the billing SDK's cached entitlement (offline grace) and gates
+`create` only — placed events keep receiving corrections, removal is
+never gated, downgrade removals follow the recorded keep-window rules.
+The server never gates polling; `entitlements/{uid}` is a server-written
+mirror from the billing webhook, not the enforcement point. Feature-
+flagged (`status/flags`, fail-safe defaults: sync gate open, ads off,
+paywall dismissible) until Stage 5.
 
 ## Non-goals
 

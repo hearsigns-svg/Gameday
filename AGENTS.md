@@ -300,8 +300,11 @@ These apply to every stage. They do not need restating in a brief.
     "deleted" event. Verification on hardware means the app on the
     phone or the calendar app on the phone; queries generate leads.
     Corollary: bursts of provider deletions into a synced calendar must
-    stay under the adapter's gate — see SYNCED_DELETE_CAP in
-    domain/syncPlan.ts before touching the drain machinery.
+    stay under the adapter's gate. The chunked SYNCED_DELETE_CAP this
+    rule once named was retired with the REST swap (its machinery is
+    gone); the surviving cap is DOWNGRADE_DELETE_CAP in
+    domain/syncPlan.ts (40 per pass, Round 5) — check it before
+    touching any removal machinery.
 
 17. **`main` and any pushed branch are never reset, rebased or
     force-pushed by any chain** (owner ruling 2026-09-02). History

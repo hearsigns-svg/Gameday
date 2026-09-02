@@ -6,7 +6,14 @@ export type Result<T, E extends AppError = AppError> =
 
 export type AppError =
   | { kind: 'offline' }
-  | { kind: 'permission-denied'; resource: 'calendar' | 'notifications' }
+  // `canAskAgain`: whether the OS would still show its dialog. False
+  // means only Settings can change the answer — the surface offers the
+  // deep-link and never re-prompts (Round 5 ruling 7).
+  | {
+      kind: 'permission-denied';
+      resource: 'calendar' | 'notifications';
+      canAskAgain?: boolean;
+    }
   | { kind: 'provider'; status: number; message: string }
   | { kind: 'not-found'; what: string }
   | { kind: 'sync-in-progress' }
