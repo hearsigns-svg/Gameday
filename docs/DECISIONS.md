@@ -4591,3 +4591,44 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   light one (owner). GlyphTile detects a symbol badge (♂ ♀ ⚥) and
   colours it `primary`, bold; emoji badges (flags) keep their own
   colour. Gate 140/1662 both zones; tsc clean.
+
+- 2026-09-03 — **Tournament tiers resolve per follow; the page and the
+  card read the planner's pass; every card row is a live toggle.** Owner
+  report from the Pixel: the tournament page's three chips changed
+  nothing in its list (one block row reading "Time TBC" while the hero
+  card listed every match), and under "All matches" the card still
+  offered "Add" on rows already in the calendar. Three causes, one
+  mechanism:
+  1. The tier pass resolved ONE tier per parent off whichever held key
+     it found first, so a chip on the men's page governed the women's
+     matches and vice versa — and because the planner and the card can
+     anchor on different parents of a joint tournament, the calendar
+     held one answer while the card showed another. Now each match copy
+     is judged by the tier of the follow it rides (a draw's own page
+     beats a whole-tour follow for that draw), and the parent takes the
+     most permissive tier among the follows its matches ride; with no
+     matches to judge, the owning key's tier decides as before. Pinned
+     by tests for both anchors, both directions, and mixed key/all.
+  2. The entity page listed the fetch (parents only — children share no
+     keys with their parent by design). It now lists each block-shaped
+     tournament as a dated span ("Sun 30 Aug – Sun 13 Sep · 15 days",
+     never "Time TBC"; the Schedule row says "15 days" too) followed by
+     the matches the tier delivers for THIS follow — `tierChildrenOf`,
+     the planner's own pass over the card's one-row-per-match set —
+     recomputed every render, so a chip tap moves the list before the
+     sync makes it true. Not yet followed, the page previews the global
+     tier. Rows carry the same Remove/Restore (exclusions) and pin
+     controls as any fixture; the planner honours them by id on the
+     tier's copies.
+  3. A covered card row rendered a dead "Added". Every row is now one
+     two-state toggle whatever put it there (pure `cardRowState.ts`): on
+     → remove (an exclusion for a covered row, the pin for a pinned
+     one; undo in the toast), off → add (clear the exclusion, else pin).
+     "Remove all"/"Add all" write each visible row only what it needs.
+  GENERIC BY CONSTRUCTION: the block shape is structural
+  (`isBlockParent`), the pass is sport-blind, and the tier chips now
+  appear on any competition whose fixtures include a block-shaped
+  tournament (`scopesFor(f, { hasTournaments })`), so the mechanism
+  reaches every tournament-shaped competition in every sport without
+  naming them. Golf tours and F1 keep their bespoke option sets.
+  Gate 141 suites / 1677 tests both zones; tsc clean.

@@ -117,6 +117,21 @@ export interface TournamentChildren {
   byParent: ReadonlyMap<string, readonly Fixture[]>;
 }
 
+// Tier order, for the one place two follows meet on one parent: follows
+// are a union of wants, so the more permissive tier shapes the parent.
+const TIER_RANK: Record<TournamentTier, number> = { block: 0, key: 1, all: 2 };
+
+export function mostPermissiveTier(
+  tiers: readonly TournamentTier[],
+  fallback: TournamentTier,
+): TournamentTier {
+  let best: TournamentTier | undefined;
+  for (const tier of tiers) {
+    if (best === undefined || TIER_RANK[tier] > TIER_RANK[best]) best = tier;
+  }
+  return best ?? fallback;
+}
+
 // The tier pass. Takes the planner's fixture list, returns the list the
 // planner should actually see. `followedKeys` decides which parents the
 // pass may touch at all — an unfollowed tournament in the fetch (a
@@ -124,6 +139,16 @@ export interface TournamentChildren {
 // `overrides` (Round 7) is the per-tournament choice from the follow's
 // own page: an explicit override on the owning follow key beats the
 // global tier, the F1 seriesSessions pattern.
+//
+// THE TIER IS RESOLVED PER FOLLOW, NOT PER PARENT (owner, 2026-09-03).
+// A joint tournament is two draws under two follows, each with its own
+// chip on its own page. Resolving one tier off one "owner" key let the
+// men's page's choice govern the women's matches — and, because the
+// planner and the card can anchor on different parents, the calendar
+// held one answer while the card showed another. Now each match copy
+// is judged by the tier of the follow it rides, and the PARENT takes
+// the most permissive tier any held follow asks for (bookends if any
+// draw wants matches; the block only when every follow says so).
 export function applyTournamentTiers(
   fixtures: readonly Fixture[],
   globalTier: TournamentTier,
@@ -132,6 +157,7 @@ export function applyTournamentTiers(
   overrides: ReadonlyMap<string, TournamentTier> = new Map(),
 ): Fixture[] {
   const followed = new Set(followedKeys);
+  const tierOf = (key: string): TournamentTier => overrides.get(key) ?? globalTier;
   const out: Fixture[] = [];
   for (const f of fixtures) {
     const followKey = ownerFollowKey(f.followKeys, followed, overrides);
@@ -139,8 +165,21 @@ export function applyTournamentTiers(
       out.push(f);
       continue;
     }
-    const tier = overrides.get(followKey) ?? globalTier;
     const kids = children.byParent.get(f.id) ?? [];
+    // Which follow each child would ride, and so which tier judges it.
+    // Decided BEFORE the parent's shape: with matches on the card, the
+    // parent takes the most permissive tier among the follows its
+    // matches ride (a draw's own page beats a whole-tour follow for
+    // that draw, because childFollowKey prefers the draw key); with no
+    // matches to judge, the owning key's tier decides, as it always did.
+    const rides = kids
+      .filter((child) => child.status !== 'cancelled')
+      .map((child) => ({ child, stamp: childFollowKey(child, f, followed, followKey) }))
+      .filter((r): r is { child: Fixture; stamp: string } => r.stamp !== null);
+    const tier =
+      rides.length > 0
+        ? mostPermissiveTier(rides.map((r) => tierOf(r.stamp)), globalTier)
+        : tierOf(followKey);
     if (tier === 'block') {
       // The pointer is only honest where the card actually OFFERS
       // matches — a Test match's five-day block has none to add.
@@ -167,14 +206,15 @@ export function applyTournamentTiers(
         durationHours: 24,
       });
     }
-    for (const child of kids) {
-      if (tier === 'key' && !isKeyRound(child)) continue;
-      if (child.status === 'cancelled') continue;
-      const stamp = childFollowKey(child, f, followed, followKey);
+    for (const { child, stamp } of rides) {
       // A draw nobody follows (the women's matches under a men's-only
       // follow) is not this follow's business — the union hands the
-      // pass every sibling's children; the follow set decides.
-      if (stamp === null) continue;
+      // pass every sibling's children; the follow set decides (a null
+      // stamp was dropped above). The tier that judges THIS copy is the
+      // one on the follow it rides.
+      const childTier = tierOf(stamp);
+      if (childTier === 'block') continue;
+      if (childTier === 'key' && !isKeyRound(child)) continue;
       out.push({
         ...child,
         // The copy rides the follow that carried its tournament, so

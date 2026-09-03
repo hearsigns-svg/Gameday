@@ -65,6 +65,8 @@ export const es: Catalog = {
   'core.when.tomorrowHeading': 'Mañana · {date}',
   'core.when.postponed': 'Aplazado',
   'core.when.timeTbc': 'Por confirmar',
+  'core.when.spanDays_one': '{n} día',
+  'core.when.spanDays_other': '{n} días',
   // Countdown chips stay urgency-caps, with proper Spanish accents.
   'core.when.countdownToday': 'HOY',
   'core.when.countdownTomorrow': 'MAÑANA',

@@ -38,8 +38,16 @@ Rules:
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule
-  mirrors whatever the calendar holds. F1 creates per-session events
-  (practice/quali/race) with a "race only" preference.
+  mirrors whatever the calendar holds. The tier is a property of the
+  FOLLOW: the global preference is the default, and any competition
+  whose fixtures include a block-shaped tournament offers the same three
+  chips on its own page as a per-tournament override — resolved per
+  follow, so on a joint tournament the men's and women's draws each
+  keep their own answer. The tournament's page lists the span and the
+  matches its tier delivers; the expanded card's rows toggle each match
+  in or out of the calendar whatever put it there. F1 creates
+  per-session events (practice/quali/race) with a "race only"
+  preference.
 - Late-scheduling sports (tennis order-of-play, UFC cards) create
   placeholder events ("Gauff vs Day — National Bank Open", day known,
   time TBC) that sharpen in place as data confirms. The example used to

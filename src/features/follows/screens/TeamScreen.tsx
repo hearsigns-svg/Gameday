@@ -27,30 +27,48 @@ import { messageOf } from '../../../core/result';
 import { teamTheme } from '../../../core/teamTheme';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
-import { isDateOnly, timeLabel, whenLabel } from '../../../core/when';
+import {
+  isDateOnly,
+  spanDaysLabel,
+  spanLabel,
+  timeLabel,
+  whenLabel,
+} from '../../../core/when';
 import {
   loadExclusions,
   setExcluded,
 } from '../../calendar-sync/data/exclusionStore';
 import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
+import { tierChildrenOf } from '../../calendar-sync/domain/cardCoverage';
+import { isBlockParent } from '../../calendar-sync/domain/tournamentTiers';
 import {
   competitionMarkFor,
   competitionTileFillFor,
   subscribePriorities,
 } from '../data/browsePriority';
-import { fetchFixturesForFollows } from '../../fixtures/data/fixturesRepo';
+import {
+  fetchEventCard,
+  fetchFixturesForFollows,
+} from '../../fixtures/data/fixturesRepo';
+import { cardEntries, childDisplayTitle } from '../../fixtures/domain/card';
 import { dedupeSameEvent } from '../../fixtures/domain/sameBout';
 import { Fixture } from '../../fixtures/domain/fixture';
 import { loadPrefs } from '../../calendar-sync/data/prefsStore';
 import { ensurePolled, follow, setScope, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
-import { isFollowed, loadFollowables, Followable } from '../data/followStore';
+import {
+  isFollowed,
+  loadFollowables,
+  loadFollowKeys,
+  Followable,
+} from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import {
   followQueryKeys,
   FollowScope,
   scopesFor,
+  tournamentTierOverridesFrom,
 } from '../domain/followScopes';
 import { sportByKey } from '../domain/sportsConfig';
 import { olympicSportGlyph } from '../domain/olympicGlyphs';
@@ -97,6 +115,13 @@ export default function TeamScreen({ navigation, route }: Props) {
     : colourFromKitText(colours);
   const theme = teamTheme(brandColour ?? sport?.accent ?? null, mode);
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null);
+  // The matches under each block-shaped tournament in `fixtures` (owner,
+  // 2026-09-03): the page lists what the tier DELIVERS, not just the
+  // block — so a chip tap visibly changes the list, and the list agrees
+  // with the calendar because both read the planner's own pass.
+  const [childrenByParent, setChildrenByParent] = useState<Map<string, Fixture[]>>(
+    () => new Map(),
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
@@ -224,6 +249,19 @@ export default function TeamScreen({ navigation, route }: Props) {
         .filter((f) => isCurrent(f, Date.now()))
         .sort((a, b) => a.startUtc.localeCompare(b.startUtc));
       setFixtures(upcoming);
+      // The children of every block-shaped tournament here — the same
+      // read the expanded card makes. A failed read is SAID, not shown
+      // as "no matches" (standing invariant): the block row stays, the
+      // error line names the failure, and nothing is claimed.
+      const parents = upcoming.filter(isBlockParent);
+      const next = new Map<string, Fixture[]>();
+      for (const parent of parents) {
+        const kids = await fetchEventCard(parent.id);
+        if (!mounted.current) return;
+        if (kids.ok) next.set(parent.id, kids.value);
+        else setError(messageOf(kids.error));
+      }
+      setChildrenByParent(next);
     } else if (fixtures === null) {
       setError(messageOf(r.error));
     }
@@ -263,10 +301,18 @@ export default function TeamScreen({ navigation, route }: Props) {
   // re-follow on this same mount drops the scope with the follow, and
   // the selector must say so rather than remember a dead choice
   // (review round).
-  const scopeOptions = following ? scopesFor({ ...item, key: teamKey }) : [];
+  // The tier chips reach every competition whose fixtures include a
+  // block-shaped tournament (owner, 2026-09-03: "through all tennis
+  // tournaments and similar competitions in other sports") — the same
+  // structural test the tier pass itself applies.
+  const hasTournaments = (fixtures ?? []).some(isBlockParent);
+  const scopeOptions = following
+    ? scopesFor({ ...item, key: teamKey }, { hasTournaments })
+    : [];
+  const tierChips = scopeOptions.some((o) => o.scope === 'block');
   const storedScope =
     loadFollowables().find((f) => f.key === teamKey)?.scope ?? null;
-  // F1 and tennis tournaments have no null option: the global
+  // F1 and tournament competitions have no null option: the global
   // preference is the default, and the selected chip reflects the
   // EFFECTIVE value until overridden (Round 7 — the tournament chips
   // are the Preferences tier vocabulary, per tournament).
@@ -275,12 +321,44 @@ export default function TeamScreen({ navigation, route }: Props) {
       ? loadPrefs().seriesSessions === 'race-only'
         ? 'race-only'
         : 'all-sessions'
-      : item.type === 'competition' && teamKey.startsWith('tennis-t-')
+      : tierChips
         ? ((
             { block: 'block', key: 'key-rounds', all: 'all-matches' } as const
           )[loadPrefs().tournamentTier] as FollowScope)
         : null;
   const effectiveScope: FollowScope | null = storedScope ?? globalDefault;
+
+  // THE ROWS: each fixture, and under a block-shaped tournament the
+  // matches the tier delivers for THIS follow — the planner's own pass
+  // (calendar-sync/domain/cardCoverage.ts), over the same one-row-per-
+  // match set the expanded card lists. Not yet followed, the page
+  // previews what following would deliver under the global tier.
+  // Derived every render: a chip tap changes the stored scope and this
+  // list moves with it, before the sync that makes it true has run.
+  const rows: Fixture[] = (() => {
+    if (!fixtures) return [];
+    const followedKeys = loadFollowKeys();
+    const previewKeys = following ? followedKeys : [...followedKeys, teamKey];
+    const overrides = tournamentTierOverridesFrom(loadFollowables());
+    const tier = loadPrefs().tournamentTier;
+    const out: Fixture[] = [];
+    for (const f of fixtures) {
+      out.push(f);
+      const kids = childrenByParent.get(f.id);
+      if (!kids || !isBlockParent(f)) continue;
+      const keep = new Set(cardEntries(f, kids).map((e) => e.id));
+      out.push(
+        ...tierChildrenOf(
+          f,
+          kids.filter((c) => keep.has(c.id)),
+          previewKeys,
+          tier,
+          overrides,
+        ).sort((a, b) => a.startUtc.localeCompare(b.startUtc)),
+      );
+    }
+    return out;
+  })();
 
   const selectScope = async (next: FollowScope | null) => {
     // Tapping the chip that equals the global default CLEARS a stored
@@ -386,7 +464,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               sport
                 ? sportLabelFor(sport.key, sport.label, activeRegion())
                 : sportKey,
-              fixtures ? i18n.tn('follows.team.upcoming', fixtures.length) : null,
+              fixtures ? i18n.tn('follows.team.upcoming', rows.length) : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -476,7 +554,7 @@ export default function TeamScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <FlatList
-          data={fixtures}
+          data={rows}
           keyExtractor={(f) => f.id}
           ListHeaderComponent={
             <SectionHeader title={i18n.t('follows.team.upcomingHeader')} />
@@ -484,7 +562,7 @@ export default function TeamScreen({ navigation, route }: Props) {
           renderItem={({ item: f }) => (
             <TeamFixtureRow
               fixture={f}
-              pagerIds={fixtures.map((x) => x.id)}
+              pagerIds={rows.map((x) => x.id)}
               name={name}
               glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
               {...(olympicGlyph ? { emojiTile: true } : {})}
@@ -544,12 +622,24 @@ function TeamFixtureRow(props: {
   const f = props.fixture;
   const ref = useRef<View | null>(null);
   const expansion = useCardExpansion();
-  const when = whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision));
+  // A block-shaped tournament is a SPAN: its row says the dates it runs
+  // and how long, never "Time TBC" (owner, 2026-09-03).
+  const block = isBlockParent(f);
+  const when = block
+    ? spanLabel(f.startUtc, f.durationHours)
+    : whenLabel(f.startUtc, isDateOnly(f.status, f.timePrecision));
   return (
     <EventRow
       innerRef={ref}
       hidden={expansion.liftedKey === f.id}
-      title={f.title}
+      // A match under its tournament drops the tournament suffix the
+      // appearance title carries — the page's header already names it
+      // (the same trim the expanded card makes).
+      title={
+        f.parentFixtureId
+          ? childDisplayTitle(f.title, [f.competition, props.name])
+          : f.title
+      }
       caption={
         props.competitionInCaption
           ? i18n.t('follows.team.whenCompetition', {
@@ -558,8 +648,12 @@ function TeamFixtureRow(props: {
             })
           : when
       }
-      timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
-      tbc={isDateOnly(f.status, f.timePrecision)}
+      timeText={
+        block
+          ? spanDaysLabel(f.durationHours)
+          : timeLabel(f.startUtc, f.status, f.timePrecision)
+      }
+      tbc={!block && isDateOnly(f.status, f.timePrecision)}
       glyph={props.glyph}
       {...(props.emojiTile ? {} : { monogram: monogramOf(f.homeTeam ?? props.name) })}
       {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}

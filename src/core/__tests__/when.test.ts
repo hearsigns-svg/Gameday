@@ -9,9 +9,37 @@ import {
   dayHeading,
   dayKey,
   isDateOnly,
+  spanDays,
+  spanDaysLabel,
+  spanLabel,
   timeLabel,
   whenLabel,
 } from '../when';
+
+describe('a tournament block is a SPAN, not a day missing its time (2026-09-03)', () => {
+  it('counts whole days from the duration, never below one', () => {
+    expect(spanDays(360)).toBe(15);
+    expect(spanDays(36)).toBe(2);
+    expect(spanDays(24)).toBe(1);
+    expect(spanDays(undefined)).toBe(1);
+  });
+
+  it('names the first and last UTC day of the span, in any zone', () => {
+    // 2026-08-31T00:00Z for 15 days ends in Sep 14 — in Los Angeles the
+    // start instant is still Aug 30 evening; the label must say 31.
+    const label = spanLabel('2026-08-31T00:00:00.000Z', 360);
+    expect(label).toMatch(/31/);
+    expect(label).toMatch(/14/);
+    expect(label).toContain(' – ');
+    // A one-day span is one date, no dash.
+    expect(spanLabel('2026-08-31T00:00:00.000Z', 24)).not.toContain(' – ');
+  });
+
+  it('the running-time text pluralises', () => {
+    expect(spanDaysLabel(360)).toBe('15 days');
+    expect(spanDaysLabel(24)).toBe('1 day');
+  });
+});
 
 // A Saturday fixture whose fd.org noon sentinel is 2026-08-23T12:00Z.
 // In Los Angeles that instant is Sunday 05:00 *minus* a day — Aug 22.

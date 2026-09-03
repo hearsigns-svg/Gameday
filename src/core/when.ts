@@ -9,7 +9,7 @@
 // the sentinel, anchored at local noon so weekday/date formatting is
 // DST-safe in every zone.
 
-import { t as tr } from './i18n';
+import { t as tr, tn } from './i18n';
 
 const DAY_MS = 86_400_000;
 
@@ -112,6 +112,30 @@ export function dayHeading(
   if (ahead === 0) return tr('core.when.todayHeading', { date: base });
   if (ahead === 1) return tr('core.when.tomorrowHeading', { date: base });
   return base;
+}
+
+// A multi-day all-day entry — a tournament block — is a SPAN, not a day
+// with a missing time. Printing "Time TBC" beside it (owner, 2026-09-03:
+// "all it says is TBC") invented a question the data had answered. The
+// span is the UTC day of the start to the UTC day the span ENDS in (a
+// span ending at midnight belongs to the day before), anchored at local
+// noon like every other date-only label here.
+export function spanDays(durationHours: number | undefined): number {
+  return Math.max(1, Math.round((durationHours ?? 24) / 24));
+}
+
+export function spanLabel(startIso: string, durationHours: number | undefined): string {
+  const days = spanDays(durationHours);
+  const first = dayAnchor(startIso, true);
+  const last = new Date(first.getTime() + (days - 1) * DAY_MS);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return days === 1 ? fmt(first) : `${fmt(first)} – ${fmt(last)}`;
+}
+
+// The row's right-hand text for a span: how long it runs, in days.
+export function spanDaysLabel(durationHours: number | undefined): string {
+  return tn('core.when.spanDays', spanDays(durationHours), { n: spanDays(durationHours) });
 }
 
 // Fixtures whose start is a day sentinel, not an instant. Same rule as

@@ -69,6 +69,8 @@ export const coreStrings = {
   'core.when.tomorrowHeading': 'Tomorrow · {date}',
   'core.when.postponed': 'Postponed',
   'core.when.timeTbc': 'Time TBC',
+  'core.when.spanDays_one': '{n} day',
+  'core.when.spanDays_other': '{n} days',
   // The countdown chip is set in caps AS COPY (a translator decides
   // what urgency-caps look like in their language).
   'core.when.countdownToday': 'TODAY',

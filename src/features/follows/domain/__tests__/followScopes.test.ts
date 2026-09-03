@@ -82,6 +82,35 @@ describe('scopesFor', () => {
     expect(scopesFor(follow({ key: 'athlete_000001', type: 'athlete' }))).toEqual([]);
   });
 
+  test('any competition whose fixtures include a block-shaped tournament gets the tier chips (2026-09-03) — bespoke option sets keep their own', () => {
+    const tiers = ['block', 'key-rounds', 'all-matches'];
+    // A competition that is not tennis: chips appear once the page has a
+    // block parent in view, and not before.
+    expect(scopesFor(follow({ key: 'tsdb-league-4479', sportKey: 'athletics' }))).toEqual([]);
+    expect(
+      scopesFor(follow({ key: 'tsdb-league-4479', sportKey: 'athletics' }), {
+        hasTournaments: true,
+      }).map((o) => o.scope),
+    ).toEqual(tiers);
+    expect(
+      scopesFor(follow({ key: 'tennis-wta' }), { hasTournaments: true }).map((o) => o.scope),
+    ).toEqual(tiers);
+    // Golf tours and the F1 series keep their bespoke options.
+    expect(
+      scopesFor(follow({ key: 'tsdb-league-4425', sportKey: 'golf' }), {
+        hasTournaments: true,
+      }).map((o) => o.scope),
+    ).toEqual([null, 'final-round']);
+    expect(
+      scopesFor(follow({ key: 'f1-series-1', type: 'series' }), { hasTournaments: true }).map(
+        (o) => o.scope,
+      ),
+    ).toEqual(['all-sessions', 'race-only']);
+    // Teams and athletes never grow the selector, tournaments in view or not.
+    expect(scopesFor(follow({ key: 'fdorg-team-64', type: 'team' }), { hasTournaments: true })).toEqual([]);
+    expect(scopesFor(follow({ key: 'athlete_000001', type: 'athlete' }), { hasTournaments: true })).toEqual([]);
+  });
+
   test('the key-rounds option says the round-marker asymmetry out loud', () => {
     const key = scopesFor(follow({ key: 'tennis-t-wimbledon' })).find(
       (o) => o.scope === 'key-rounds',

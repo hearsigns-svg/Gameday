@@ -1,5 +1,5 @@
 import { Fixture } from '../../../fixtures/domain/fixture';
-import { tierCoveredChildIds } from '../cardCoverage';
+import { tierChildrenOf, tierCoveredChildIds } from '../cardCoverage';
 
 const parent: Fixture = {
   id: 'wta-905-2026',
@@ -50,4 +50,21 @@ test('the per-tournament override beats the global tier, as it does in the plann
   const kids = [w1, wFinal];
   const overrides = new Map<string, 'block' | 'key' | 'all'>([['tennis-t-us-open-w', 'block']]);
   expect(tierCoveredChildIds(parent, kids, ['tennis-t-us-open-w'], 'all', overrides).size).toBe(0);
+});
+
+test('the entity page reads the same copies the planner sees — stamped with the follow they ride (2026-09-03)', () => {
+  const rows = tierChildrenOf(parent, [w1, wFinal, m1], ['tennis-t-us-open-m', 'tennis-t-us-open-w'], 'all');
+  expect(rows.map((f) => f.id).sort()).toEqual(['m1', 'w1', 'wf']);
+  expect(rows.find((f) => f.id === 'w1')!.followKeys).toContain('tennis-t-us-open-w');
+  expect(rows.find((f) => f.id === 'm1')!.followKeys).toContain('tennis-t-us-open-m');
+  // Each draw judged by ITS OWN follow's tier: the women's page says
+  // every match, the men's follow says nothing beyond the global default.
+  const perDraw = tierChildrenOf(
+    parent,
+    [w1, wFinal, m1],
+    ['tennis-t-us-open-m', 'tennis-t-us-open-w'],
+    'block',
+    new Map([['tennis-t-us-open-w', 'all']]),
+  );
+  expect(perDraw.map((f) => f.id).sort()).toEqual(['w1', 'wf']);
 });

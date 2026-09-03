@@ -129,7 +129,7 @@ function collectEntries(
       // ("A vs B — National Bank Open"). The screen's header already
       // names the tournament, and a one-line row truncated the matchup
       // to make room for the repetition.
-      title: child.title.split(' — ')[0],
+      title: childDisplayTitle(child.title, [child.competition]),
       startUtc: child.startUtc,
       status: child.status,
       competitionId: child.competitionId,
@@ -185,6 +185,26 @@ export function jointCardEntries(
   return finishEntries(
     sides.flatMap((s) => collectEntries(s.parent, s.children, nowMs, seen)),
   );
+}
+
+// A child's row title under its own tournament: the tournament-name
+// SUFFIX an appearance title carries ("A vs B — US Open") is dropped,
+// because the surface already names the tournament. Only a trailing
+// segment that IS one of the tournament's names goes — a title whose
+// tournament comes first ("US Open — Final", the final slot) keeps
+// every word, where the old first-segment cut left it reading as just
+// the tournament (found on the entity page, 2026-09-03).
+export function childDisplayTitle(
+  title: string,
+  tournamentNames: readonly (string | undefined)[],
+): string {
+  const segments = title.split(' — ');
+  if (segments.length < 2) return title;
+  const last = segments[segments.length - 1].trim().toLowerCase();
+  const names = tournamentNames
+    .filter((n): n is string => Boolean(n))
+    .map((n) => n.trim().toLowerCase());
+  return names.includes(last) ? segments.slice(0, -1).join(' — ') : title;
 }
 
 // The tournament key that joins a tennis parent to its other-tour

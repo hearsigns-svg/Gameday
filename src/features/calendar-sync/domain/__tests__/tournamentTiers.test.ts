@@ -284,6 +284,74 @@ describe('Round 7 item 8 — one follow per draw', () => {
     expect(kept[0].followKeys).toContain('tennis-wta');
   });
 
+  test('the tier is resolved PER DRAW: one page\'s chip governs its own matches only (2026-09-03)', () => {
+    // Global says Dates only; the women's page says All matches; the
+    // men's follow says nothing. Whichever parent survives the dedupe,
+    // the answer is the same: bookends, every women's match, no men's.
+    const overrides = new Map([['tennis-t-us-open-w', 'all' as const]]);
+    for (const anchor of [wtaParent, atpParent]) {
+      const out = applyTournamentTiers(
+        [anchor],
+        'block',
+        ['tennis-t-us-open-m', 'tennis-t-us-open-w'],
+        union,
+        overrides,
+      );
+      expect(out.map((f) => f.id)).toEqual([
+        anchor.id,
+        `${anchor.id}${CLOSE_ID_SUFFIX}`,
+        'm-women',
+      ]);
+      expect(out[0].tournamentNote).toBe('open');
+    }
+  });
+
+  test('a men\'s "Dates only" override cannot silence the women\'s "All matches" — and vice versa', () => {
+    const out = applyTournamentTiers(
+      [atpParent],
+      'all',
+      ['tennis-t-us-open-m', 'tennis-t-us-open-w'],
+      union,
+      new Map([['tennis-t-us-open-m', 'block' as const]]),
+    );
+    const kept = out.filter((f) => f.parentFixtureId).map((f) => f.id);
+    expect(kept).toEqual(['m-women']);
+    // Both draws on Dates only: the block itself, pointer on, no notes.
+    const both = applyTournamentTiers(
+      [atpParent],
+      'all',
+      ['tennis-t-us-open-m', 'tennis-t-us-open-w'],
+      union,
+      new Map([
+        ['tennis-t-us-open-m', 'block' as const],
+        ['tennis-t-us-open-w', 'block' as const],
+      ]),
+    );
+    expect(both).toHaveLength(1);
+    expect(both[0].tournamentPointer).toBe(true);
+  });
+
+  test('key rounds on one draw, every match on the other: each copy keeps its own draw\'s rule', () => {
+    const mensR1 = { ...mens, id: 'm-men-r1', title: 'A vs B — Round of 64' };
+    const mensFinal = { ...mens, id: 'm-men-f', title: 'A vs B — Final' };
+    const womensR1 = { ...womens, id: 'm-women-r1', title: 'C vs D — Round of 64' };
+    const kids = { byParent: new Map([[atpParent.id, [mensR1, mensFinal, womensR1]]]) };
+    const out = applyTournamentTiers(
+      [atpParent],
+      'block',
+      ['tennis-t-us-open-m', 'tennis-t-us-open-w'],
+      kids,
+      new Map([
+        ['tennis-t-us-open-m', 'key' as const],
+        ['tennis-t-us-open-w', 'all' as const],
+      ]),
+    );
+    expect(out.filter((f) => f.parentFixtureId).map((f) => f.id).sort()).toEqual([
+      'm-men-f',
+      'm-women-r1',
+    ]);
+  });
+
   test('the per-tournament override is read off the key that carries it, whichever key the parent lists first', () => {
     // A WTA Tour follower who set "Dates only" on the US Open page: the
     // parent lists 'tennis-wta' first, and the old first-key rule made

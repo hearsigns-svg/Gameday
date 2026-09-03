@@ -9,6 +9,7 @@ import {
   boutTimingCaption,
   cardEntries,
   cardSectionTitle,
+  childDisplayTitle,
   entrySexOf,
   jointCardEntries,
   jointTournamentKeyOf,
@@ -327,5 +328,22 @@ describe('jointTournamentKeyOf', () => {
       jointTournamentKeyOf(['tennis-wta', 'tennis-t-us-open']),
     ).toBe('tennis-t-us-open');
     expect(jointTournamentKeyOf(['pbc-cards'])).toBeNull();
+  });
+});
+
+describe('childDisplayTitle (2026-09-03)', () => {
+  test('drops only a TRAILING tournament name; a title that leads with the tournament keeps every word', () => {
+    expect(childDisplayTitle('Anna Bondar vs Madison Keys — US Open', ['US Open'])).toBe(
+      'Anna Bondar vs Madison Keys',
+    );
+    expect(childDisplayTitle('Iga Swiatek — US Open', ['US Open'])).toBe('Iga Swiatek');
+    // The final slot: the old first-segment cut left this reading "US Open".
+    expect(childDisplayTitle('US Open — Final', ['US Open'])).toBe('US Open — Final');
+    // Case-insensitive, and any of the surface's names for the tournament will do.
+    expect(childDisplayTitle('A vs B — us open', ['WTA Tour', 'US Open'])).toBe('A vs B');
+    // No dash, or a suffix that is not the tournament: untouched.
+    expect(childDisplayTitle('A vs B', ['US Open'])).toBe('A vs B');
+    expect(childDisplayTitle('A vs B — Quarter-final', ['US Open'])).toBe('A vs B — Quarter-final');
+    expect(childDisplayTitle('A vs B — US Open', [undefined])).toBe('A vs B — US Open');
   });
 });

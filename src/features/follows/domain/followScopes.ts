@@ -55,14 +55,33 @@ const GOLF_FINAL_NOTE =
   'Only rounds the provider publishes as “Final Round” — a tournament ' +
   'without one delivers nothing under this setting.';
 
+// What the page knows about the follow's fixtures that the follow record
+// alone cannot say: whether any of them is a block-shaped tournament
+// (a multi-day all-day parent — domain/tournamentTiers.ts:isBlockParent).
+// The tier chips are offered wherever the tier pass would act, so the
+// mechanism reaches every tournament-shaped competition in every sport
+// without naming them one by one (owner, 2026-09-03).
+export interface ScopeContext {
+  hasTournaments?: boolean;
+}
+
 // The options a follow's page offers. Empty = no selector rendered.
-export function scopesFor(f: Followable): ScopeOption[] {
-  if (f.type === 'competition' && f.key.startsWith('tennis-t-')) {
+export function scopesFor(f: Followable, ctx: ScopeContext = {}): ScopeOption[] {
+  const bespoke =
+    (f.type === 'competition' && GOLF_LEAGUES.has(f.key)) ||
+    (f.type === 'series' && f.key === 'f1-series-1');
+  if (
+    f.type === 'competition' &&
+    !bespoke &&
+    (f.key.startsWith('tennis-t-') || ctx.hasTournaments === true)
+  ) {
     // The SAME three modes Preferences offers, as a per-tournament
     // override (Round 7 — replacing the Tournament / Tournament+final
     // pills, which predate the tier model). No null option: like F1,
     // the selected chip reflects the EFFECTIVE value, and tapping the
-    // global default clears any stored override.
+    // global default clears any stored override. Tennis tournaments
+    // offer them unconditionally (their shape is known before any
+    // fixture loads); everything else, once a block parent is in view.
     return [
       { scope: 'block', label: t('settings.events.block') },
       {

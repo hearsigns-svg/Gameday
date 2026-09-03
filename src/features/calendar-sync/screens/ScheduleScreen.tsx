@@ -55,7 +55,14 @@ import { useReduceMotion } from '../../../core/useReduceMotion';
 import { teamTheme } from '../../../core/teamTheme';
 import { motion, radius, spacing, type, useTheme } from '../../../core/tokens';
 import { showToast } from '../../../core/toast';
-import { dayHeading, dayKey, isDateOnly, timeLabel } from '../../../core/when';
+import {
+  dayHeading,
+  dayKey,
+  isDateOnly,
+  spanDays,
+  spanDaysLabel,
+  timeLabel,
+} from '../../../core/when';
 import {
   dataStaleness,
   refreshDataFreshness,
@@ -788,6 +795,11 @@ function ScheduleRow(props: {
   const olympicGlyph = olympicGlyphForKeys(item.followKeys);
   const ref = useRef<View | null>(null);
   const expansion = useCardExpansion();
+  const block =
+    !item.parentFixtureId &&
+    isDateOnly(item.status, item.timePrecision) &&
+    item.status !== 'postponed' &&
+    spanDays(item.durationHours) > 1;
   return (
     <EventRow
       innerRef={ref}
@@ -807,8 +819,14 @@ function ScheduleRow(props: {
       }}
       title={item.title}
       caption={item.competition}
-      timeText={timeLabel(item.startUtc, item.status, item.timePrecision)}
-      tbc={isDateOnly(item.status, item.timePrecision)}
+      // A multi-day all-day block (a tournament) runs for N days — it is
+      // not a day missing its time (owner, 2026-09-03).
+      timeText={
+        block
+          ? spanDaysLabel(item.durationHours)
+          : timeLabel(item.startUtc, item.status, item.timePrecision)
+      }
+      tbc={!block && isDateOnly(item.status, item.timePrecision)}
       glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
       {...(olympicGlyph
         ? {}

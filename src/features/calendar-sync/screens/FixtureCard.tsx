@@ -56,6 +56,13 @@ import { followedTennisSexes, TennisSex } from '../../fixtures/domain/tennisKeys
 import { olympicGlyphForKeys } from '../../follows/domain/olympicGlyphs';
 import { tournamentTierOverridesFrom } from '../../follows/domain/followScopes';
 import { tierCoveredChildIds } from '../domain/cardCoverage';
+import {
+  RowCalendarState,
+  RowToggleOps,
+  rowOn,
+  setRowsOps,
+  toggleRowOps,
+} from '../domain/cardRowState';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
 import { followMarkUrl, hasServedMark } from '../../follows/data/browsePriority';
 import { identityFollow } from '../../follows/domain/followIdentity';
@@ -484,17 +491,6 @@ export function FixtureCardBody(props: {
     void runSync();
   };
 
-  const toggleBout = (e: CardEntry) => {
-    const was = isPinned(e.id);
-    setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), !was);
-    repaint();
-    void runSync();
-  };
-
-  // B2: the master acts on the VISIBLE (filtered) set only. Covered
-  // entries are already in the calendar through a follow — Add all
-  // skips them, Remove all leaves them (their per-row toggle is
-  // disabled for the same reason). One sync for the whole batch.
   // COVERED BY THE TIER TOO (Round 7 item 7): under "All matches" or
   // "Key rounds" the tournament follow has already placed these rows,
   // judged by the very pass the planner runs (domain/cardCoverage.ts).
@@ -511,23 +507,55 @@ export function FixtureCardBody(props: {
       : new Set<string>();
   const entryCovered = (e: CardEntry) =>
     e.followKeys.some((k) => followedKeys.has(k)) || tierCovered.has(e.id);
-  const entryOn = (e: CardEntry) => entryCovered(e) || isPinned(e.id);
+  // EVERY ROW IS ONE TWO-STATE TOGGLE (owner, 2026-09-03), whatever put
+  // it in the calendar: a covered row removes through a per-event
+  // exclusion — the planner honours it by id on the tier's copies, and
+  // the Schedule shows it greyed and restorable — and comes back by
+  // clearing it; a pinned row removes by dropping its pin; an uncovered
+  // row adds by pinning. Pure in domain/cardRowState.ts.
+  const rowState = (e: CardEntry): RowCalendarState => ({
+    covered: entryCovered(e),
+    excluded: isExcluded(e.id),
+    pinned: isPinned(e.id),
+  });
+  const applyRowOps = (e: CardEntry, ops: RowToggleOps) => {
+    if (ops.exclude !== undefined) setExcluded(e.id, ops.exclude);
+    if (ops.pin !== undefined) {
+      setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), ops.pin);
+    }
+  };
+  const entryOn = (e: CardEntry) => rowOn(rowState(e));
+  const toggleBout = (e: CardEntry) => {
+    const wasOn = entryOn(e);
+    applyRowOps(e, toggleRowOps(rowState(e)));
+    if (wasOn) {
+      // A removal is undoable from the toast, like every other removal.
+      showToast({
+        message: t('calendar.toast.removed'),
+        action: {
+          label: t('calendar.toast.undo'),
+          onPress: () => {
+            applyRowOps(e, toggleRowOps(rowState(e)));
+            repaint();
+            void runSync();
+          },
+        },
+      });
+    }
+    repaint();
+    void runSync();
+  };
+
+  // B2: the master acts on the VISIBLE (filtered) set only, and writes
+  // each row only what it needs. One sync for the whole batch.
   const allOn =
     visibleEntries.length > 0 && visibleEntries.every((e) => entryOn(e));
   const toggleAll = () => {
-    if (allOn) {
-      for (const e of visibleEntries) {
-        if (isPinned(e.id)) {
-          setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), false);
-        }
-      }
-    } else {
-      for (const e of visibleEntries) {
-        if (!entryOn(e)) {
-          setPinned(pinPayload(e.id, e.title, e.startUtc, e.competitionId), true);
-        }
-      }
-    }
+    const ops = setRowsOps(visibleEntries.map(rowState), !allOn);
+    visibleEntries.forEach((e, i) => applyRowOps(e, ops[i]));
+    showToast({
+      message: allOn ? t('calendar.toast.removed') : t('calendar.toast.added'),
+    });
     repaint();
     void runSync();
   };
@@ -788,7 +816,7 @@ export function FixtureCardBody(props: {
                   entry={e}
                   theme={theme}
                   sportKey={fixture.sport}
-                  covered={entryCovered(e)}
+                  on={entryOn(e)}
                   onToggle={() => toggleBout(e)}
                 />
               ))}
@@ -1077,13 +1105,13 @@ function BoutRow(props: {
   entry: CardEntry;
   theme: TeamTheme;
   sportKey: string;
-  // Already in the calendar through a follow — by the entry's own keys
-  // or by the tournament tier (the card decides; one rule, one place).
-  covered: boolean;
+  // In the calendar right now — through a follow, the tournament tier
+  // or a pin (the card decides; one rule, one place). The pill is a
+  // live toggle either way: "Added" removes, "Add" adds.
+  on: boolean;
   onToggle: () => void;
 }) {
-  const { entry, theme, covered } = props;
-  const on = covered || isPinned(entry.id);
+  const { entry, theme, on } = props;
   return (
     <View style={styles.bout}>
       <View style={{ flex: 1, gap: 2 }}>
@@ -1110,15 +1138,12 @@ function BoutRow(props: {
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityState={{ selected: on, disabled: covered }}
+        accessibilityState={{ selected: on }}
         accessibilityLabel={
-          covered
-            ? t('calendar.card.alreadyInCalendar', { title: entry.title })
-            : on
-              ? t('calendar.card.removeTitleA11y', { title: entry.title })
-              : t('calendar.card.addTitleA11y', { title: entry.title })
+          on
+            ? t('calendar.card.removeTitleA11y', { title: entry.title })
+            : t('calendar.card.addTitleA11y', { title: entry.title })
         }
-        disabled={covered}
         onPress={props.onToggle}
         hitSlop={8}
         style={[
@@ -1126,7 +1151,6 @@ function BoutRow(props: {
           {
             borderColor: theme.onGradient,
             backgroundColor: on ? theme.onGradient : 'transparent',
-            opacity: covered ? 0.45 : 1,
           },
         ]}
       >

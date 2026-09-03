@@ -59,6 +59,8 @@ export const de: Catalog = {
   'core.when.tomorrowHeading': 'Morgen · {date}',
   'core.when.postponed': 'Verschoben',
   'core.when.timeTbc': 'Uhrzeit offen',
+  'core.when.spanDays_one': '{n} Tag',
+  'core.when.spanDays_other': '{n} Tage',
   'core.when.countdownToday': 'HEUTE',
   'core.when.countdownTomorrow': 'MORGEN',
   'core.when.countdownInDays': 'IN {n} TAGEN',

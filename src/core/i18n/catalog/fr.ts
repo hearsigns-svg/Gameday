@@ -67,6 +67,8 @@ export const fr: Catalog = {
   'core.when.tomorrowHeading': 'Demain · {date}',
   'core.when.postponed': 'Reporté',
   'core.when.timeTbc': 'Heure à confirmer',
+  'core.when.spanDays_one': '{n} jour',
+  'core.when.spanDays_other': '{n} jours',
   // The countdown chip is set in caps AS COPY (caps keep accents).
   'core.when.countdownToday': 'AUJOURD’HUI',
   'core.when.countdownTomorrow': 'DEMAIN',
