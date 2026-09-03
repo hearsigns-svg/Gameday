@@ -34,14 +34,17 @@ import { followFeedback } from '../followFeedback';
 import {
   DirectoryLeague,
   cachedLeagues,
+  cachedSearchIndex,
   cachedTournaments,
   fetchLeagues,
   fetchTournaments,
+  refreshSearchIndex,
   searchEntities,
   SearchAthleteHit,
   SearchTeamHit,
   TournamentRow,
 } from '../data/directoryRepo';
+import { localAthleteHits, localTeamHits, mergeHits } from '../domain/searchIndex';
 import { byPriority, byPriorityLive, cachedPriorities, refreshPriorities, subscribePriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed, Followable } from '../data/followStore';
 import { isRetired, retiredCaption } from '../domain/careerStatus';
@@ -201,9 +204,13 @@ export default function SearchScreen({ navigation }: Props) {
   const [tournaments, setTournaments] = useState<TournamentRow[]>(
     () => cachedTournaments() ?? [],
   );
-  const [teams, setTeams] = useState<SearchTeamHit[]>([]);
-  const [athletes, setAthletes] = useState<SearchAthleteHit[]>([]);
+  // The SERVER's answer for the current query — null until it lands.
+  // The on-device index answers first (2026-09-03 search audit) and the
+  // two merge in `sections`; server rows win on a shared key.
+  const [teams, setTeams] = useState<SearchTeamHit[] | null>(null);
+  const [athletes, setAthletes] = useState<SearchAthleteHit[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [indexVersion, bumpIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [, forceRender] = useState(0);
@@ -239,18 +246,25 @@ export default function SearchScreen({ navigation }: Props) {
       if (r.ok) setSoccerLeagues(r.value);
       if (t.ok) setTournaments(t.value);
     })();
+    // The on-device index (2026-09-03): refreshed at most daily; a
+    // landing refresh repaints whatever is typed.
+    void refreshSearchIndex().then(() => bumpIndex((n) => n + 1));
   }, []);
 
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) {
       requestSeq.current++; // invalidate any in-flight search
-      setTeams([]);
-      setAthletes([]);
+      setTeams(null);
+      setAthletes(null);
       setSearching(false);
       setError(null);
       return;
     }
+    // The device answers now (see `sections`); the server's fuller answer
+    // is fetched behind and merges in when it lands.
+    setTeams(null);
+    setAthletes(null);
     setSearching(true);
     const seq = ++requestSeq.current;
     const timer = setTimeout(() => {
@@ -269,8 +283,9 @@ export default function SearchScreen({ navigation }: Props) {
           ]);
           setError(null);
         } else {
-          setTeams([]);
-          setAthletes([]);
+          // The device's rows stay on screen; the failure is SAID beside
+          // them rather than replacing them (a slow backend must never
+          // read as "nothing matches").
           setError(messageOf(r.error));
         }
       })();
@@ -281,6 +296,11 @@ export default function SearchScreen({ navigation }: Props) {
   const sections = useMemo(() => {
     const { sports, comps } = localMatches(query);
     const needle = query.trim().toLowerCase();
+    // Device first, server merged in (2026-09-03): one row per key, the
+    // server's row winning where both know it.
+    const index = cachedSearchIndex();
+    const teamHitsMerged = mergeHits(localTeamHits(index, query), teams);
+    const athleteHitsMerged = mergeHits(localAthleteHits(index, query), athletes);
     const soccerRows: Row[] =
       needle.length >= 2
         ? soccerLeagues
@@ -311,7 +331,7 @@ export default function SearchScreen({ navigation }: Props) {
               },
             }))
         : [];
-    const teamRows: Row[] = teams.map((hit) => {
+    const teamRows: Row[] = teamHitsMerged.map((hit) => {
       // A national side with no served badge wears its flag (Round 5
       // ruling: no official logo → the national flag) — derived from
       // the name alone, the athlete nationality treatment.
@@ -343,7 +363,7 @@ export default function SearchScreen({ navigation }: Props) {
         },
       };
     });
-    const athleteRows: Row[] = athletes.map((hit) => ({
+    const athleteRows: Row[] = athleteHitsMerged.map((hit) => ({
       kind: 'athlete',
       key: hit.key,
       title: hit.name,
@@ -453,7 +473,8 @@ export default function SearchScreen({ navigation }: Props) {
         data: byPriority(sports, (r) => r.sportKey ?? r.key, pr.sportWeights),
       },
     ].filter((s) => s.data.length > 0);
-  }, [query, teams, athletes, soccerLeagues, tournaments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, teams, athletes, soccerLeagues, tournaments, indexVersion]);
 
   const toggle = useCallback(
     async (row: Row) => {
@@ -486,7 +507,13 @@ export default function SearchScreen({ navigation }: Props) {
         accessibilityLabel={i18n.t('follows.search.a11y')}
         placeholder={i18n.t('follows.search.placeholder')}
         placeholderTextColor={t.textSecondary}
-        value={query}
+        // UNCONTROLLED (2026-09-03 search audit). A controlled input on
+        // Android re-asserts the JS value after every keystroke; when the
+        // JS thread is busy re-ranking results between two fast
+        // keystrokes, the native field is reset to the stale value and
+        // letters are dropped or reordered — reproduced as "ilivv" for
+        // "liverpool". The native field owns the text; state follows it.
+        defaultValue=""
         onChangeText={setQuery}
         autoCorrect={false}
         style={[
@@ -630,7 +657,7 @@ export default function SearchScreen({ navigation }: Props) {
             );
           }}
           ListFooterComponent={
-            searching && teams.length === 0 && q.length >= 2 ? (
+            searching && sections.length === 0 && q.length >= 2 ? (
               <View style={styles.empty}>
                 <ActivityIndicator color={t.primary} />
               </View>

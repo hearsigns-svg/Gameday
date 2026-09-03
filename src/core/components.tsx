@@ -601,7 +601,16 @@ export function PosterSurface(props: {
         <Image
           source={imageSource(photo)}
           resizeMode="cover"
-          onError={() => setPhotoFailed(true)}
+          onError={(e) => {
+            // The one line that told the Android story (2026-09-03): the
+            // native view reports WHY an image failed only through this
+            // event, never to the device log — so a refused photograph
+            // is named here, where a device log can show it.
+            console.warn(
+              `[kickoffcal] hero photo failed: ${e.nativeEvent?.error ?? 'unknown'} ${photo}`,
+            );
+            setPhotoFailed(true);
+          }}
           onLoad={() => setPhotoPainted(true)}
           style={[styles.heroPhoto, { borderRadius: radius }]}
           accessible={false}

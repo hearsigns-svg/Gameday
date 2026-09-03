@@ -131,7 +131,13 @@ import {
 } from './rosterStore';
 import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
-import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
+import {
+  buildSearchIndex,
+  searchAthletes,
+  searchTeams,
+  shapeAthleteBrowse,
+  warmSearchCaches,
+} from './search';
 import { CatalogueEntry, foldMotorsportWeight, sportWeightsOf, CATALOGUE_SEED } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
 import {
@@ -879,7 +885,7 @@ async function soccerLeagueBadges(): Promise<TsdbLeagueArt> {
   return art;
 }
 
-export const listLeagues = onRequest(gz(async (_req, res) => {
+const listLeaguesHandler: Handler = async (_req, res) => {
   try {
     const seasons = await loadFdSeasons(db, requireFdKey());
     const leagues = listSoccerLeagues(seasons);
@@ -933,12 +939,15 @@ export const listLeagues = onRequest(gz(async (_req, res) => {
     // Fail loudly instead so the client shows an error it can retry.
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const listLeagues = onRequest(gz(listLeaguesHandler));
 
 // Federated search across everything followable (cached directories +
 // live TSDB filtered to served leagues, plus the athlete directory the
-// appearance ingest maintains).
-export const searchEntities = onRequest(gz(async (req, res) => {
+// appearance ingest maintains). Teams and athletes are searched IN
+// PARALLEL (2026-09-03 audit: serial awaits paid two full latencies on
+// every keystroke).
+const searchEntitiesHandler: Handler = async (req, res) => {
   try {
     const q = String(req.query.q ?? '').trim();
     if (q.length < 2) {
@@ -946,14 +955,36 @@ export const searchEntities = onRequest(gz(async (req, res) => {
       return;
     }
     const store = getFirestore();
-    res.json({
-      teams: await searchTeams(store, requireTsdbKey(), q),
-      athletes: await searchAthletes(store, q),
-    });
+    const [teams, athletes] = await Promise.all([
+      searchTeams(store, requireTsdbKey(), q),
+      searchAthletes(store, q),
+    ]);
+    res.json({ teams, athletes });
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const searchEntities = onRequest(gz(searchEntitiesHandler));
+
+// The compact search index the client keeps on the device (2026-09-03
+// audit): every served team and every directory athlete, folded by the
+// client itself, so typing answers without a round trip and the server
+// search becomes the second, fuller answer rather than the only one.
+const INDEX_CACHE_MS = 10 * 60_000;
+let indexCache: { at: number; body: unknown } | null = null;
+const searchIndexHandler: Handler = async (_req, res) => {
+  try {
+    if (indexCache && Date.now() - indexCache.at < INDEX_CACHE_MS) {
+      res.json(indexCache.body);
+      return;
+    }
+    const body = await buildSearchIndex(getFirestore());
+    indexCache = { at: Date.now(), body };
+    res.json(body);
+  } catch (e) {
+    res.status(502).json({ error: String(e) });
+  }
+};
 
 // Tennis tournaments as followable competitions (Prompt 9): one row
 // per canonical tournament — a joint ATP+WTA event is ONE row carrying
@@ -1362,7 +1393,7 @@ async function competitionArt(): Promise<CompetitionArtDoc> {
   return { art: merged, colours, tiles };
 }
 
-export const listPriorities = onRequest(gz(async (req, res) => {
+const listPrioritiesHandler: Handler = async (req, res) => {
   try {
     const { map, sportWeights, dormant, byRegion } = await loadPriorityData();
     // REGIONAL OVERLAY (Prompt 15). A sparse per-region layer over the
@@ -1441,9 +1472,10 @@ export const listPriorities = onRequest(gz(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const listPriorities = onRequest(gz(listPrioritiesHandler));
 
-export const listTournaments = onRequest(gz(async (_req, res) => {
+const listTournamentsHandler: Handler = async (_req, res) => {
   try {
     if (tournamentCache && Date.now() - tournamentCache.at < TOURNAMENT_CACHE_MS) {
       res.json(tournamentCache.body);
@@ -1478,13 +1510,14 @@ export const listTournaments = onRequest(gz(async (_req, res) => {
     // An empty tournament list would read as "tennis has no events".
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const listTournaments = onRequest(gz(listTournamentsHandler));
 
 // Individual-sport browse: curated entry points from the canonical
 // directory — champions and rated fighters by weight class, tennis by
 // ranking, the F1 grid — plus the "competing soon" row. Search-first is
 // the client's job; this is what keeps the screen from ever being empty.
-export const listAthletes = onRequest(gz(async (req, res) => {
+const listAthletesHandler: Handler = async (req, res) => {
   try {
     const sport = String(req.query.sport ?? '');
     if (!sport) {
@@ -1523,9 +1556,10 @@ export const listAthletes = onRequest(gz(async (req, res) => {
     // Fail loudly instead so the client shows an error it can retry.
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const listAthletes = onRequest(gz(listAthletesHandler));
 
-export const listTeams = onRequest(gz(async (req, res) => {
+const listTeamsHandler: Handler = async (req, res) => {
   try {
     const sport = String(req.query.sport ?? 'soccer');
     // Generic TSDB team-league branch: any league in the shared table
@@ -1633,7 +1667,54 @@ export const listTeams = onRequest(gz(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: String(e) });
   }
-}));
+};
+export const listTeams = onRequest(gz(listTeamsHandler));
+
+// ─── ONE DOOR FOR BROWSE AND SEARCH (2026-09-03 audit) ─────────────────
+//
+// Measured from the client's side: every browse and search endpoint was
+// its own Cloud Run service at 256 MiB, and each paid its own cold
+// start — 4–5 s on searchEntities, listLeagues, listTournaments and
+// listTeams, 3 s on listAthletes and listPriorities, against ~0.3 s
+// warm. A user opening Search paid three of them at once (leagues,
+// tournaments, priorities) and a fourth on the first keystroke; a user
+// browsing a sport paid one per screen type. On a phone that reads as
+// "broken", not "slow".
+//
+// This is the same handlers behind ONE function: a single warm instance
+// serves every route, so a session pays at most one cold start — and a
+// smaller one, at twice the CPU. The legacy per-route functions stay
+// exported for clients that predate this build (deploy skew is
+// harmless in both directions). `ping` exists so the client can warm the
+// instance the moment the app opens, before anyone has typed a letter.
+const DIRECTORY_ROUTES: Record<string, Handler> = {
+  leagues: listLeaguesHandler,
+  tournaments: listTournamentsHandler,
+  teams: listTeamsHandler,
+  athletes: listAthletesHandler,
+  priorities: listPrioritiesHandler,
+  search: searchEntitiesHandler,
+  index: searchIndexHandler,
+  ping: async (_req, res) => {
+    // Answer at once; load the search caches behind the answer so the
+    // first keystroke finds them warm.
+    warmSearchCaches(getFirestore());
+    res.json({ ok: true, at: new Date().toISOString() });
+  },
+};
+
+export const directory = onRequest(
+  { memory: '512MiB', cpu: 1, timeoutSeconds: 30, concurrency: 80 },
+  gz(async (req, res) => {
+    const route = req.path.replace(/^\/+|\/+$/g, '').split('/').pop() ?? '';
+    const handler = DIRECTORY_ROUTES[route];
+    if (!handler) {
+      res.status(404).json({ error: `unknown directory route: ${route}` });
+      return;
+    }
+    await handler(req, res);
+  }),
+);
 
 // Badge enrichment is best-effort — a missing TSDB key must not take
 // the official-team directory down with it.

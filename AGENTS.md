@@ -106,6 +106,42 @@ source of truth for build state — never chat history.
   the stamping code, re-poll every source that writes the docs, verify
   in Firestore that every current doc carries the new keys, and only
   then build the client. The migration's own comment names this rule.
+- **The emulator can hold a STALE DEBUG INSTALL that a release APK
+  cannot replace** (2026-09-03): `adb install -r` of the upload-signed
+  release over a July debug build fails with
+  INSTALL_FAILED_UPDATE_INCOMPATIBLE, and `| tail -1` of that output is
+  an EMPTY line — the failure was swallowed and the "installed" app was
+  the old one (a RedBox about a missing native module was its Metro
+  bundle, not ours). Check `dumpsys package … | grep flags` for
+  DEBUGGABLE and `lastUpdateTime` before trusting an emulator screenshot;
+  `adb uninstall` first when the signer changed. Sequence installs on a
+  named device with `adb -s <serial>` when the Pixel and the emulator are
+  both attached.
+- **`expo prebuild --clean` + `--rerun-tasks` is a FULL NDK rebuild** —
+  clang++ for every ABI, 20–30 minutes on this Mac — and the first gradle
+  invocation right after a clean prebuild can fail inside a minute for
+  no reason the second run reproduces. Re-run once before diagnosing.
+- **Android drops keystrokes in a CONTROLLED TextInput** (2026-09-03,
+  emulator: "ilivv" for "liverpool"): with `value={state}` the JS value
+  is re-asserted after every keystroke, and when the JS thread is busy
+  between two the native field is reset to the stale value. Search
+  fields are `defaultValue=""` + `onChangeText`; the native field owns
+  the text. The emulator's own log line "VirtualizedList: You have a
+  large list that is slow to update … dt: 7075" says its JS thread runs
+  ~100× slower than a phone — never time anything there.
+- **Wikimedia refuses OkHttp's default User-Agent with 403** on both the
+  Special:FilePath redirect and upload.wikimedia.org, while accepting a
+  named agent (curl-measured 2026-09-03). Every Android request now
+  carries `KickOffCal/1.0 (fixtures calendar app)` through the OkHttp
+  client factory `plugins/withNetworkUserAgent.js` installs; the plugin
+  must survive every prebuild (it is in app.json). A blank Android hero
+  with a photo CREDIT visible on the expanded card is this failure.
+- **Browse/search reads go through the `directory` door** (2026-09-03):
+  one Cloud Function, 512 MiB, routes `leagues|tournaments|teams|
+  athletes|priorities|search|index|ping`; the per-route functions stay
+  deployed for older clients. Deploy `functions:directory` (and the
+  legacy route you changed) — the client falls back to the legacy path
+  only on a 404. Measure cold starts with curl before blaming a device.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network

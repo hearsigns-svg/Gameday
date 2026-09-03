@@ -4632,3 +4632,60 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   reaches every tournament-shaped competition in every sport without
   naming them. Golf tours and F1 keep their bespoke option sets.
   Gate 141 suites / 1677 tests both zones; tsc clean.
+
+- 2026-09-03 — **Android hero photographs: a native default User-Agent.**
+  Owner report from the Pixel: no hero card ever showed its photograph.
+  Reproduced on the emulator with the release build — the expanded card
+  printed the photographer's credit (so the Wikidata/Commons lookup,
+  which goes through fetch with an explicit User-Agent, succeeded) and
+  painted no image. Measured with curl: Wikimedia answers HTTP 403 to
+  OkHttp's default `okhttp/x.y` agent on BOTH hops a Commons photo takes
+  (the Special:FilePath redirect and upload.wikimedia.org), and 200 under
+  a named agent; iOS passes because CFNetwork's default is accepted. The
+  fix is `plugins/withNetworkUserAgent.js`, an Expo config plugin (android/
+  is generated) that installs an OkHttp client factory in
+  MainApplication.kt adding `User-Agent: KickOffCal/1.0 (fixtures calendar
+  app)` to every request lacking one — fetch and the Fresco image pipeline
+  share `OkHttpClientProvider`, so nothing the app requests is anonymous
+  again. PosterSurface now names a failed photo in the device log, the one
+  channel the Android image view reports through.
+
+- 2026-09-03 — **Search and browse: one warm door, an on-device index,
+  uncontrolled inputs.** Owner report: entering a sport's Teams or
+  Competitions, or typing a name, sat on a spinner long enough to read as
+  broken; "Liverpool FC" and "Moses Itauma" seemed unfindable. Measured
+  from the client's side: every browse/search endpoint was its own Cloud
+  Run service at 256 MiB paying its own cold start — searchEntities 5.05 s
+  cold vs 0.27 s warm; listLeagues 4.9 s; listTournaments 4.3 s; listTeams
+  4.2 s; listAthletes 3.2 s; listPriorities 2.9 s. Opening Search paid
+  three at once and a fourth on the first keystroke. Both names WERE
+  served: "Liverpool" ranked below "Liverpool FC Women" for "liverpool fc"
+  (a prefix beat an exact alias), and "Moses Itauma" answered in 0.4 s
+  warm — the wait was the whole failure. The emulator also reproduced
+  DROPPED AND REORDERED KEYSTROKES ("ilivv" for "liverpool"): a controlled
+  TextInput on Android re-asserts the JS value after each keystroke, and
+  when the JS thread is busy between two the native field is reset.
+  1. Server: one `directory` function (512 MiB, 1 vCPU) routes every
+     browse/search read — leagues, tournaments, teams, athletes,
+     priorities, search, index, ping — through the same handlers as the
+     legacy functions, which stay exported for older clients. A session
+     pays at most one cold start, a smaller one. Teams and athletes search
+     in parallel; the live TSDB hop gets a 1.2 s budget rather than the
+     response; ranking is exact → prefix → contained (`rankTeamHits`,
+     `rankAthletes`), and the "nothing scheduled" sentinel now sorts LAST —
+     `localeCompare` put '~' before digits, so athletes with no event
+     outranked those with one (latent since Prompt 8; found by the device
+     index's test).
+  2. Client: an on-device search index (`directory/index`: every served
+     team with its aliases, every directory athlete; refreshed at most
+     daily, stale-while-revalidate) answers each keystroke from the device
+     with the same fold and ranking (`domain/searchIndex.ts`); the server's
+     answer merges in behind it, its rows winning on a shared key. Home
+     pings the door on mount so the first keystroke lands warm. Requests
+     time out at 15 s into a distinct 'timeout' error ("Taking longer than
+     usual") rather than "offline"; cached rows stay on screen. Team and
+     athlete directories persist per league/sport and paint cached-first.
+     Both search fields are uncontrolled (`defaultValue` + onChangeText).
+  Verified: emulator (release build) — "liverpool" painted results 0.8 s
+  after the last keystroke against a warm door; see the report for the
+  device pass. Gate per the report.

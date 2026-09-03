@@ -55,6 +55,7 @@ import {
   refreshPriorities,
   subscribePriorities,
 } from '../data/browsePriority';
+import { refreshSearchIndex, warmDirectory } from '../data/directoryRepo';
 import { followQueryKeys } from '../domain/followScopes';
 import { sportGlyphFor, sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
@@ -113,6 +114,12 @@ export default function HomeScreen({ navigation }: Props) {
     // Ordering weights are data (Prompt 11): refresh the cache in the
     // background; this render uses whatever is already cached.
     void refreshPriorities();
+    // Warm the browse/search door and refresh the on-device search index
+    // while the user is still looking at Home (2026-09-03 search audit):
+    // the first keystroke then lands on a running instance and answers
+    // from the device.
+    warmDirectory();
+    void refreshSearchIndex();
     return () => {
       unsub();
       unsubArt();

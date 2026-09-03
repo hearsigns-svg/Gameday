@@ -135,6 +135,59 @@ async function loadDirectory(db: Firestore): Promise<LoadedDoc[]> {
   return docs;
 }
 
+// A bounded wait — PURE. The live provider hop is a per-keystroke
+// path; when the provider is slow the cached answer must still arrive
+// on time, so the hop gets a budget and the fallback otherwise. The
+// underlying promise is left to settle on its own.
+export function withTimeout<T>(
+  p: Promise<T>,
+  ms: number,
+  fallback: T,
+): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(fallback);
+      },
+    );
+  });
+}
+
+// The live provider's budget on a keystroke. Cached directory hits
+// answer in microseconds; the provider adds names the cache lacks and
+// is worth waiting for only briefly.
+export const LIVE_SEARCH_BUDGET_MS = 1200;
+
+// Rank — PURE. Exact name-or-alias match first (typing "liverpool fc"
+// must put Liverpool above Liverpool FC Women, whose name merely
+// STARTS with the query — found 2026-09-03), then a prefix match, then
+// a contained match; shorter names first within a rung. Stable.
+export function rankTeamHits<T extends { name: string }>(
+  hits: readonly T[],
+  namesOf: (hit: T) => readonly string[],
+  q: string,
+): T[] {
+  const rung = (hit: T): number => {
+    const names = namesOf(hit).map(normaliseName);
+    if (names.some((n) => n === q)) return 0;
+    if (names.some((n) => n.startsWith(q))) return 1;
+    return 2;
+  };
+  return hits
+    .map((hit, i) => ({ hit, i, rung: rung(hit) }))
+    .sort(
+      (a, b) =>
+        a.rung - b.rung || a.hit.name.length - b.hit.name.length || a.i - b.i,
+    )
+    .map((x) => x.hit);
+}
+
 export async function searchTeams(
   db: Firestore,
   tsdbKey: string,
@@ -145,8 +198,16 @@ export async function searchTeams(
   if (q.length < 2) return [];
 
   // 1. Cached directories — instant, alias-aware. Key-level dedup:
-  // one club, one hit, domestic label preferred (doc order).
+  // one club, one hit, domestic label preferred (doc order). The live
+  // provider hop below starts NOW, alongside the cache walk, and is
+  // given a budget rather than the whole response (2026-09-03 audit).
+  const live = withTimeout(
+    searchTsdbTeams(tsdbKey, rawQuery),
+    LIVE_SEARCH_BUDGET_MS,
+    [] as Awaited<ReturnType<typeof searchTsdbTeams>>,
+  );
   const hits: SearchTeamHit[] = [];
+  const namesByKey = new Map<string, string[]>();
   const seenKeys = new Set<string>();
   const seenNames = new Set<string>();
   for (const doc of await loadDirectory(db)) {
@@ -156,6 +217,7 @@ export async function searchTeams(
       if (!names.some((n) => normaliseName(n).includes(q))) continue;
       if (seenKeys.has(t.key)) continue;
       seenKeys.add(t.key);
+      namesByKey.set(t.key, names);
       for (const n of names) seenNames.add(normaliseName(n));
       hits.push({
         key: t.key,
@@ -172,38 +234,136 @@ export async function searchTeams(
 
   // 2. Live TSDB search for served team-followable leagues the cache
   // hasn't met yet. Key AND name dedup drops cross-provider doubles
-  // (a club already found via fdorg must not reappear as tsdb).
-  try {
-    for (const hit of await searchTsdbTeams(tsdbKey, rawQuery)) {
-      const served = TSDB_LEAGUES[hit.leagueId];
-      // A staged league's teams are findable the day its catalogue row
-      // flips — offering them earlier would mint device poll paths for
-      // a route the owner has deliberately not enabled.
-      if (!served || served.staged) continue;
-      const key = `tsdb-team-${hit.id}`;
-      if (seenKeys.has(key) || seenNames.has(normaliseName(hit.name))) continue;
-      seenKeys.add(key);
-      hits.push({
-        key,
-        name: hit.name,
-        sportKey: served.sportKey,
-        league: served.label,
-        pollPath: served.pollPath,
-        ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
-      });
-    }
-  } catch {
-    // Search stays useful on cached data when the provider hiccups.
+  // (a club already found via fdorg must not reappear as tsdb). A slow
+  // or failed provider contributes nothing and costs nothing — search
+  // stays useful on cached data.
+  for (const hit of await live) {
+    const served = TSDB_LEAGUES[hit.leagueId];
+    // A staged league's teams are findable the day its catalogue row
+    // flips — offering them earlier would mint device poll paths for
+    // a route the owner has deliberately not enabled.
+    if (!served || served.staged) continue;
+    const key = `tsdb-team-${hit.id}`;
+    if (seenKeys.has(key) || seenNames.has(normaliseName(hit.name))) continue;
+    seenKeys.add(key);
+    namesByKey.set(key, [hit.name]);
+    hits.push({
+      key,
+      name: hit.name,
+      sportKey: served.sportKey,
+      league: served.label,
+      pollPath: served.pollPath,
+      ...(hit.crestUrl ? { crestUrl: hit.crestUrl } : {}),
+    });
   }
 
-  // Rank: prefix matches first, then shorter names; stable slice.
-  return hits
-    .sort((a, b) => {
-      const ap = normaliseName(a.name).startsWith(q) ? 0 : 1;
-      const bp = normaliseName(b.name).startsWith(q) ? 0 : 1;
-      return ap - bp || a.name.length - b.name.length;
-    })
-    .slice(0, cap);
+  return rankTeamHits(hits, (h) => namesByKey.get(h.key) ?? [h.name], q).slice(
+    0,
+    cap,
+  );
+}
+
+// ─── The on-device search index (2026-09-03 audit) ───────────────────
+//
+// Everything the served directories can answer for a NAME, in a shape
+// the client can keep and fold itself: every team of every served
+// league (with the aliases the providers publish, so "Liverpool FC"
+// finds "Liverpool" on the device exactly as it does here) and every
+// directory athlete, active or not. Field names are one letter because
+// the payload rides in the app's storage and re-downloads daily; the
+// client's SearchIndex type names them. Teams from the live provider
+// hop are deliberately NOT here — the index is what we serve, the live
+// search is what the provider knows.
+
+export interface IndexedTeam {
+  k: string; // follow key
+  n: string; // display name
+  s: string; // client sport key
+  l: string; // league label
+  a?: string[]; // aliases (provider-published)
+  c?: string; // crest url
+  o?: string; // colours text
+  b?: string[]; // burst colours
+  p?: string; // poll path (tsdb leagues only)
+}
+
+export interface IndexedAthlete {
+  k: string; // canonical athlete id
+  n: string; // display name
+  s: string; // sport
+  a?: string[]; // aliases (normalised)
+  g?: string; // grouping title
+  c?: string; // country code
+  x?: string; // next start utc
+  h: number; // accent hue
+  r?: 'retired';
+  y?: number; // career end year
+  i?: 1; // inactive (ranks below active on the device, as here)
+}
+
+export interface SearchIndex {
+  teams: IndexedTeam[];
+  athletes: IndexedAthlete[];
+  at: string;
+}
+
+export function compactTeams(docs: readonly LoadedDoc[]): IndexedTeam[] {
+  const out: IndexedTeam[] = [];
+  const seen = new Set<string>();
+  for (const doc of docs) {
+    for (const t of doc.teams) {
+      if (!t.key || !t.name || seen.has(t.key)) continue;
+      seen.add(t.key);
+      out.push({
+        k: t.key,
+        n: t.name,
+        s: doc.sportKey,
+        l: doc.league,
+        ...(t.aliases && t.aliases.length > 0 ? { a: t.aliases } : {}),
+        ...(t.crestUrl ? { c: t.crestUrl } : {}),
+        ...(t.colours ? { o: t.colours } : {}),
+        ...(t.burstColours ? { b: t.burstColours } : {}),
+        ...(doc.tsdbPollPath ? { p: doc.tsdbPollPath } : {}),
+      });
+    }
+  }
+  return out;
+}
+
+export function compactAthletes(athletes: readonly Athlete[]): IndexedAthlete[] {
+  return athletes.map((a) => ({
+    k: a.id,
+    n: a.displayName,
+    s: a.sport,
+    ...(a.aliases.length > 0 ? { a: [...a.aliases] } : {}),
+    ...(groupTitleOf(a.groupingKey, a.grouping)
+      ? { g: groupTitleOf(a.groupingKey, a.grouping)! }
+      : {}),
+    ...(a.countryCode ? { c: a.countryCode } : {}),
+    ...(a.nextStartUtc ? { x: a.nextStartUtc } : {}),
+    h: a.accentHue ?? accentHueOf(a.id),
+    ...(a.careerStatus ? { r: a.careerStatus } : {}),
+    ...(a.careerEndYear !== undefined ? { y: a.careerEndYear } : {}),
+    ...(a.active ? {} : { i: 1 as const }),
+  }));
+}
+
+// Pre-load the two per-instance caches a search needs (the served
+// directories and the athlete collection) without waiting for them —
+// the door's `ping` calls this so the first real keystroke after Home
+// finds the data already in memory (measured 2026-09-03: a warm
+// container still spent ~3 s on its first search loading them).
+export function warmSearchCaches(db: Firestore): void {
+  void Promise.all([loadDirectory(db), loadAthletes(db)]).catch(() => undefined);
+}
+
+export async function buildSearchIndex(db: Firestore): Promise<SearchIndex> {
+  const [docs, athletes] = await Promise.all([loadDirectory(db), loadAthletes(db)]);
+  return {
+    teams: compactTeams(docs),
+    athletes: compactAthletes(athletes),
+    at: new Date().toISOString(),
+  };
 }
 
 // ─── Athletes ─────────────────────────────────────────────────────────
@@ -264,6 +424,37 @@ const athleteHit = (a: Athlete): SearchAthleteHit => ({
 // search, so "nurmagomedov" finds "Usman Nurmagomedov" and "Teófimo"
 // finds "Teofimo Lopez". Inactive athletes stay findable — their page
 // shows the honest empty state — they just rank below active ones.
+// The athlete ranking — PURE, shared with the compact index's consumer
+// on the device by rule: exact name-or-alias match, then prefix, then
+// contained; active before inactive; sooner events first with "nothing
+// scheduled" LAST — in code-unit order, not localeCompare, whose ICU
+// collation sorts the '~' sentinel before digits and so put athletes
+// with no event above those with one (found 2026-09-03 by the device
+// index's test, latent here since Prompt 8); then the better-ranked.
+export function rankAthletes(
+  athletes: readonly Athlete[],
+  q: string,
+): Athlete[] {
+  const rung = (a: Athlete): number => {
+    const names = [a.searchName, ...a.aliases] as readonly string[];
+    if (names.some((n) => n === q)) return 0;
+    if (names.some((n) => n.startsWith(q))) return 1;
+    return 2;
+  };
+  return [...athletes].sort((a, b) => {
+    const ar = rung(a);
+    const br = rung(b);
+    if (ar !== br) return ar - br;
+    const aa = a.active ? 0 : 1;
+    const ba = b.active ? 0 : 1;
+    if (aa !== ba) return aa - ba;
+    const an = a.nextStartUtc ?? '~';
+    const bn = b.nextStartUtc ?? '~';
+    if (an !== bn) return an < bn ? -1 : 1;
+    return (a.rank ?? 9999) - (b.rank ?? 9999);
+  });
+}
+
 export async function searchAthletes(
   db: Firestore,
   rawQuery: string,
@@ -272,21 +463,10 @@ export async function searchAthletes(
   const q = normaliseName(rawQuery);
   if (q.length < 2) return [];
   const athletes = await loadAthletes(db);
-  return athletes
-    .filter((a) => [a.searchName, ...a.aliases].some((n) => n.includes(q)))
-    .sort((a, b) => {
-      const ap = a.searchName.startsWith(q) ? 0 : 1;
-      const bp = b.searchName.startsWith(q) ? 0 : 1;
-      if (ap !== bp) return ap - bp;
-      const aa = a.active ? 0 : 1;
-      const ba = b.active ? 0 : 1;
-      if (aa !== ba) return aa - ba;
-      // Sooner events first, then the better-ranked.
-      const an = a.nextStartUtc ?? '~';
-      const bn = b.nextStartUtc ?? '~';
-      if (an !== bn) return an.localeCompare(bn);
-      return (a.rank ?? 9999) - (b.rank ?? 9999);
-    })
+  return rankAthletes(
+    athletes.filter((a) => [a.searchName, ...a.aliases].some((n) => n.includes(q))),
+    q,
+  )
     .slice(0, cap)
     .map(athleteHit);
 }

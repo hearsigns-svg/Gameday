@@ -61,6 +61,21 @@ imports only via `src/core`.
    tracked metric from the proving slice onward. Escalation path if
    unacceptable: server-side Google Calendar API write (deferred
    milestone), not a redesign.
+6. **Browse and search reads** (2026-09-03) go through ONE Cloud
+   Function, `directory` (512 MiB, 1 vCPU), routing `leagues |
+   tournaments | teams | athletes | priorities | search | index | ping`
+   to the same handlers the legacy per-route functions still export —
+   one warm instance for every read, so a session pays at most one cold
+   start (measured 4–5 s per route at 256 MiB before). The client
+   (`features/follows/data/directoryRepo.ts`) falls back to the legacy
+   route only on a 404, times out at 15 s into a distinct 'timeout'
+   error, and keeps stale-while-revalidate caches for leagues,
+   tournaments, team lists per league, athlete browse per sport, and the
+   SEARCH INDEX: every served team with its provider aliases and every
+   directory athlete, compact, refreshed at most daily. Typing answers
+   from the device (`features/follows/domain/searchIndex.ts`, same fold
+   and ranking as the server); the server's answer merges in behind it,
+   its rows winning on a shared key. Home pings the door on mount.
 
 ## Calendar write paths (v1 provider path; Prompt 28 REST path)
 

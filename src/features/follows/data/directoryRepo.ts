@@ -117,16 +117,78 @@ export interface SearchHits {
   athletes: SearchAthleteHit[];
 }
 
-async function getJson<T>(path: string): Promise<Result<T>> {
+// ONE DOOR (2026-09-03 search audit). Every browse and search read goes
+// through the consolidated `directory` function — one warm instance for
+// all of them, so a session pays at most one cold start instead of one
+// per screen type (measured 4–5 s each at 256 MiB). The legacy per-route
+// function is the fallback when the door is not deployed yet (a 404 on
+// the route, never on a real answer) — deploy skew in either direction
+// stays harmless.
+const DIRECTORY_ROUTES: Record<string, string> = {
+  listLeagues: 'leagues',
+  listTournaments: 'tournaments',
+  listTeams: 'teams',
+  listAthletes: 'athletes',
+  listPriorities: 'priorities',
+  searchEntities: 'search',
+  searchIndex: 'index',
+  ping: 'ping',
+};
+
+// A request that has not answered in this long is reported as slow,
+// not as offline — and the caller's stale-while-revalidate cache, where
+// it has one, stays on screen. Long enough for a cold start on a slow
+// network; short enough that a screen never sits on a spinner forever.
+export const DIRECTORY_TIMEOUT_MS = 15_000;
+
+function directoryUrl(path: string): { primary: string; legacy: string } {
+  const [name, query] = path.split('?');
+  const route = DIRECTORY_ROUTES[name];
+  const suffix = query ? `?${query}` : '';
+  return {
+    primary: route
+      ? `${functionsBaseUrl}/directory/${route}${suffix}`
+      : `${functionsBaseUrl}/${path}`,
+    legacy: `${functionsBaseUrl}/${path}`,
+  };
+}
+
+async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(`${functionsBaseUrl}/${path}`);
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function getJson<T>(path: string): Promise<Result<T>> {
+  const { primary, legacy } = directoryUrl(path);
+  try {
+    let res = await fetchWithTimeout(primary, DIRECTORY_TIMEOUT_MS);
+    // The door is not deployed (yet): the legacy route answers.
+    if (res.status === 404 && primary !== legacy) {
+      res = await fetchWithTimeout(legacy, DIRECTORY_TIMEOUT_MS);
+    }
     if (!res.ok) {
       return err({ kind: 'provider', status: res.status, message: await res.text() });
     }
     return ok((await res.json()) as T);
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') return err({ kind: 'timeout' });
     return err({ kind: 'offline' });
   }
+}
+
+// Warm the door the moment the app is on screen (Home mount), so the
+// first Search keystroke or browse tap lands on a running instance. One
+// tiny request per session; a failure is nobody's business.
+let warmedThisSession = false;
+export function warmDirectory(): void {
+  if (warmedThisSession) return;
+  warmedThisSession = true;
+  void getJson<{ ok: boolean }>('ping');
 }
 
 // STALE-WHILE-REVALIDATE (Round 2 perf ruling, free tier): the browse
@@ -151,6 +213,19 @@ export async function fetchLeagues(): Promise<Result<DirectoryLeague[]>> {
   return r.ok ? ok(r.value.leagues) : r;
 }
 
+// Team directories persist per league (2026-09-03): the Teams screen
+// paints the last answer instantly and refreshes behind it, like the
+// league list already did. Bounded: only leagues actually browsed.
+const TEAMS_CACHE_KEY = 'browseTeams.v1';
+type TeamsCache = Record<string, DirectoryTeam[]>;
+
+export function cachedTeams(
+  sportKey: string,
+  leagueId: number | string,
+): DirectoryTeam[] | null {
+  return readJson<TeamsCache>(TEAMS_CACHE_KEY, {})[`${sportKey}:${leagueId}`] ?? null;
+}
+
 export async function fetchTeams(
   sportKey: string,
   leagueId: number | string,
@@ -158,6 +233,11 @@ export async function fetchTeams(
   const r = await getJson<{ teams: DirectoryTeam[] }>(
     `listTeams?sport=${encodeURIComponent(sportKey)}&leagueId=${leagueId}`,
   );
+  if (r.ok) {
+    const all = readJson<TeamsCache>(TEAMS_CACHE_KEY, {});
+    all[`${sportKey}:${leagueId}`] = r.value.teams;
+    writeJson(TEAMS_CACHE_KEY, all);
+  }
   return r.ok ? ok(r.value.teams) : r;
 }
 
@@ -194,14 +274,62 @@ export async function fetchTournaments(): Promise<Result<TournamentRow[]>> {
 // The curated athlete lists for a sport's browse screen. A failure is a
 // failure — an empty directory rendered from an error would read as
 // "this sport has nobody", the standing invariant's failure mode.
+// The athlete browse persists per sport too (2026-09-03) — the boxing
+// directory is 80 KB and 500 names, and re-entering the screen used to
+// wait on the network every time.
+const ATHLETE_BROWSE_CACHE_KEY = 'browseAthletes.v1';
+
+export function cachedAthleteBrowse(sportKey: string): AthleteBrowse | null {
+  return readJson<Record<string, AthleteBrowse>>(ATHLETE_BROWSE_CACHE_KEY, {})[sportKey] ?? null;
+}
+
 export async function fetchAthleteBrowse(
   sportKey: string,
 ): Promise<Result<AthleteBrowse>> {
   const r = await getJson<AthleteBrowse>(
     `listAthletes?sport=${encodeURIComponent(sportKey)}`,
   );
-  if (r.ok) rememberAthleteCounts(sportKey, r.value);
+  if (r.ok) {
+    rememberAthleteCounts(sportKey, r.value);
+    const all = readJson<Record<string, AthleteBrowse>>(ATHLETE_BROWSE_CACHE_KEY, {});
+    all[sportKey] = r.value;
+    writeJson(ATHLETE_BROWSE_CACHE_KEY, all);
+  }
   return r;
+}
+
+// ── The on-device search index (2026-09-03 search audit) ─────────────
+// Every served team and every directory athlete, compact, refreshed at
+// most daily and served stale-while-revalidating: typing answers from
+// the device, and the server search is the fuller second answer.
+import { SearchIndex } from '../domain/searchIndex';
+
+const SEARCH_INDEX_KEY = 'searchIndex.v1';
+const SEARCH_INDEX_TTL_MS = 24 * 3_600_000;
+let indexRefreshInFlight: Promise<void> | null = null;
+
+export function cachedSearchIndex(): SearchIndex | null {
+  return readJson<SearchIndex | null>(SEARCH_INDEX_KEY, null);
+}
+
+export function refreshSearchIndex(force = false): Promise<void> {
+  const cached = cachedSearchIndex();
+  if (!force && cached && Date.now() - Date.parse(cached.at) < SEARCH_INDEX_TTL_MS) {
+    return Promise.resolve();
+  }
+  if (indexRefreshInFlight) return indexRefreshInFlight;
+  indexRefreshInFlight = getJson<SearchIndex>('searchIndex')
+    .then((r) => {
+      // A 404 is a server that predates the index: nothing to store, the
+      // server search carries the screen as before.
+      if (r.ok && Array.isArray(r.value.teams) && Array.isArray(r.value.athletes)) {
+        writeJson(SEARCH_INDEX_KEY, r.value);
+      }
+    })
+    .finally(() => {
+      indexRefreshInFlight = null;
+    });
+  return indexRefreshInFlight;
 }
 
 // ── Athlete counts for the people rows (Round 6 item 2) ─────────────

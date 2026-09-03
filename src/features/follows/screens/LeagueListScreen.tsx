@@ -52,6 +52,7 @@ import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import {
   cachedLeagues,
+  cachedSearchIndex,
   cachedTournaments,
   DirectoryLeague,
   fetchLeagues,
@@ -59,6 +60,7 @@ import {
   searchEntities,
   SearchTeamHit,
   TournamentRow, cachedAthleteCount, refreshAthleteCount } from '../data/directoryRepo';
+import { localTeamHits, mergeHits } from '../domain/searchIndex';
 import { byPriorityLive, cachedPriorities, refreshPriorities, subscribePriorities } from '../data/browsePriority';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
@@ -279,6 +281,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       setSearchError(null);
       return;
     }
+    // The device answers first (2026-09-03 search audit): the on-device
+    // index, filtered to this sport, paints now; the server's fuller
+    // answer merges in behind it, its rows winning on a shared key.
+    const local = localTeamHits(cachedSearchIndex(), q, route.params.sportKey);
+    setTeamHits(local);
     setSearching(true);
     const seq = ++requestSeq.current;
     const timer = setTimeout(() => {
@@ -287,16 +294,17 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         if (seq !== requestSeq.current) return; // stale response
         setSearching(false);
         if (r.ok) {
-          const hits = r.value.teams.filter(
-            (h) => h.sportKey === route.params.sportKey,
+          const hits = mergeHits(
+            local,
+            r.value.teams.filter((h) => h.sportKey === route.params.sportKey),
           );
           setTeamHits(hits);
           hydrateFollowArt(hits);
           setSearchError(null);
         } else {
           // A failed team search must not read as "no teams" — the
-          // competitions half keeps working, the failure says so.
-          setTeamHits([]);
+          // device's rows stay, the competitions half keeps working, and
+          // the failure says so.
           setSearchError(messageOf(r.error));
         }
       })();
@@ -653,7 +661,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           : i18n.t('follows.league.searchComps')
       }
       placeholderTextColor={t.textSecondary}
-      value={queryText}
+      // Uncontrolled, like the Search screen's field (2026-09-03): a
+      // controlled input drops keystrokes on Android when the JS thread
+      // is busy between them. The native field owns the text.
+      defaultValue=""
       onChangeText={setQueryText}
       autoCorrect={false}
       style={[

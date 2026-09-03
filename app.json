@@ -92,6 +92,7 @@
         }
       ],
       "./plugins/withUploadSigning",
+      "./plugins/withNetworkUserAgent",
       "@react-native-google-signin/google-signin",
       "expo-localization"
     ]

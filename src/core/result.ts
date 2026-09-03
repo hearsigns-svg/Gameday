@@ -6,6 +6,11 @@ export type Result<T, E extends AppError = AppError> =
 
 export type AppError =
   | { kind: 'offline' }
+  // The request was sent and nothing came back within the budget — a
+  // cold backend or a slow network, not an outage. Distinct from
+  // 'offline' so the screen can say "slow" rather than accuse the
+  // connection (2026-09-03 search audit).
+  | { kind: 'timeout' }
   // `canAskAgain`: whether the OS would still show its dialog. False
   // means only Settings can change the answer — the surface offers the
   // deep-link and never re-prompts (Round 5 ruling 7).
@@ -37,6 +42,8 @@ export function messageOf(e: AppError): string {
   switch (e.kind) {
     case 'offline':
       return 'You appear to be offline.';
+    case 'timeout':
+      return 'Taking longer than usual — still trying.';
     case 'permission-denied':
       return e.resource === 'calendar'
         ? 'Calendar access is needed to add fixtures.'

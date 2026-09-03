@@ -53,10 +53,14 @@ import { flagEmojiOf } from '../../../core/nationality';
 const followControlFor = (a: { key: string } & Parameters<typeof isRetired>[0]) =>
   !isRetired(a) || isFollowed(a.key);
 import {
+  AthleteBrowse,
   AthleteCard,
+  cachedAthleteBrowse,
+  cachedSearchIndex,
   fetchAthleteBrowse,
   searchEntities,
 } from '../data/directoryRepo';
+import { localAthleteHits, mergeHits } from '../domain/searchIndex';
 import { Followable, hydrateFollowArt, isFollowed } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 
@@ -154,12 +158,11 @@ export default function AthleteListScreen({ navigation, route }: Props) {
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
-    void (async () => {
-      const r = await fetchAthleteBrowse(route.params.sportKey);
-      if (!r.ok) {
-        setError(messageOf(r.error));
-        return;
-      }
+    // Cached-first (2026-09-03 search audit): the last served directory
+    // for this sport shapes the screen at once; the fetch reshapes it
+    // behind. A refresh failure over a painted cache stays quiet.
+    const applyBrowse = (value: AthleteBrowse) => {
+      const r = { value };
       // Athletes followed before their nationality was captured get it
       // here — the same repair the crest work needed, for the same
       // reason: a follow is a snapshot and nothing else revisits it.
@@ -259,6 +262,16 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         if (wanted(g.grouping)) sections.push({ title: g.grouping, data: g.athletes });
       }
       setBrowse(sections);
+    };
+    const cached = cachedAthleteBrowse(route.params.sportKey);
+    if (cached) applyBrowse(cached);
+    void (async () => {
+      const r = await fetchAthleteBrowse(route.params.sportKey);
+      if (!r.ok) {
+        if (!cached) setError(messageOf(r.error));
+        return;
+      }
+      applyBrowse(r.value);
     })();
   }, [route.params.sportKey, route.params.tour, route.params.sex]);
 
@@ -274,6 +287,38 @@ export default function AthleteListScreen({ navigation, route }: Props) {
       setSearching(false);
       return;
     }
+    // A search hit as a browse card. The retirement marker MUST survive
+    // this hop (review round). This screen's own search box is the only
+    // route to the 1,484 ATP men who carry no browse group at all —
+    // exactly the population the marker was added for — and dropping it
+    // here left three consumers below (caption, navigation params, the
+    // stored follow) unreachable for them: code that typechecks and
+    // never runs, which is how the dead iOS push import shipped.
+    const toCard = (h: {
+      key: string;
+      name: string;
+      sportKey: string;
+      grouping?: string;
+      nextStartUtc?: string;
+      accentHue?: number;
+      countryCode?: string;
+      careerStatus?: 'retired';
+      careerEndYear?: number;
+    }): AthleteCard => ({
+      key: h.key,
+      name: h.name,
+      sportKey: h.sportKey,
+      ...(h.grouping ? { grouping: h.grouping } : {}),
+      ...(h.nextStartUtc ? { nextStartUtc: h.nextStartUtc } : {}),
+      ...(h.accentHue !== undefined ? { accentHue: h.accentHue } : {}),
+      ...(h.countryCode ? { countryCode: h.countryCode } : {}),
+      ...(h.careerStatus ? { careerStatus: h.careerStatus } : {}),
+      ...(h.careerEndYear !== undefined ? { careerEndYear: h.careerEndYear } : {}),
+    });
+    // The device answers first (2026-09-03 search audit); the server's
+    // fuller answer merges in behind it.
+    const local = localAthleteHits(cachedSearchIndex(), q, route.params.sportKey);
+    setResults(local.map(toCard));
     setSearching(true);
     const seq = ++requestSeq.current;
     const timer = setTimeout(() => {
@@ -282,33 +327,16 @@ export default function AthleteListScreen({ navigation, route }: Props) {
         if (seq !== requestSeq.current) return;
         setSearching(false);
         if (!r.ok) {
+          // The device's rows stay; the failure is said beside them.
           setError(messageOf(r.error));
           return;
         }
         setError(null);
         setResults(
-          r.value.athletes
-            .filter((h) => h.sportKey === route.params.sportKey)
-            .map((h) => ({
-              key: h.key,
-              name: h.name,
-              sportKey: h.sportKey,
-              ...(h.grouping ? { grouping: h.grouping } : {}),
-              ...(h.nextStartUtc ? { nextStartUtc: h.nextStartUtc } : {}),
-              ...(h.accentHue !== undefined ? { accentHue: h.accentHue } : {}),
-              // The retirement marker MUST survive this hop (review
-              // round). This screen's own search box is the only route
-              // to the 1,484 ATP men who carry no browse group at all
-              // — exactly the population the marker was added for —
-              // and dropping it here left three consumers below
-              // (caption, navigation params, the stored follow)
-              // unreachable for them: code that typechecks and never
-              // runs, which is how the dead iOS push import shipped.
-              ...(h.careerStatus ? { careerStatus: h.careerStatus } : {}),
-              ...(h.careerEndYear !== undefined
-                ? { careerEndYear: h.careerEndYear }
-                : {}),
-            })),
+          mergeHits(
+            local,
+            r.value.athletes.filter((h) => h.sportKey === route.params.sportKey),
+          ).map(toCard),
         );
       })();
     }, DEBOUNCE_MS);

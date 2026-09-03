@@ -39,7 +39,7 @@ function teamPollPathFor(template: string, teamId: number | string): string {
 import { codeFromTeamName, flagEmojiOf } from '../../../core/nationality';
 import { follow, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
-import { DirectoryTeam, fetchTeams } from '../data/directoryRepo';
+import { cachedTeams, DirectoryTeam, fetchTeams } from '../data/directoryRepo';
 import { hydrateFollowArt, isFollowed } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
 import { sportByKey } from '../domain/sportsConfig';
@@ -60,6 +60,12 @@ export default function TeamListScreen({ navigation, route }: Props) {
   useEffect(() => subscribeSync(() => forceRender((n) => n + 1)), []);
 
   useEffect(() => {
+    // Cached-first (2026-09-03 search audit): the last served directory
+    // for this league paints at once; the fetch refreshes it behind. A
+    // refresh failure over a painted cache stays quiet — the rows on
+    // screen are real; the error surfaces only when there is nothing.
+    const cached = cachedTeams(route.params.sportKey, route.params.leagueId);
+    if (cached) setTeams(cached);
     void (async () => {
       const r = await fetchTeams(route.params.sportKey, route.params.leagueId);
       if (r.ok) {
