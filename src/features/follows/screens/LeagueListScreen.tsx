@@ -585,6 +585,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           country: '',
           key: draw.key,
           followOnly: true,
+          // The event's mark rides the follow (Round 7 follow-up).
+          ...(cachedPriorities().competitionArt[row.key]
+            ? { crestUrl: cachedPriorities().competitionArt[row.key] }
+            : {}),
         })
       }
       busy={busyKey === draw.key}

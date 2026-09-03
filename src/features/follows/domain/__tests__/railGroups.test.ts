@@ -32,27 +32,24 @@ describe('groupOlympicItems', () => {
   const curl = item('olympics-2030-curling', 'Curling', null, '🥌');
   const ufc = item('tsdb-league-4443', 'UFC', '2026-09-06T02:00:00.000Z');
 
-  it('collapses Olympic sports into one node per season, in the first member’s place', () => {
-    const out = groupOlympicItems([pl, ath, swim, ufc, curl], { summer: false, winter: false }, labels, 'Nothing scheduled');
+  it('collapses Olympic sports into one node per season, in the first member’s place, members kept — never inlined', () => {
+    const out = groupOlympicItems([pl, ath, swim, ufc, curl], labels, 'Nothing scheduled');
     expect(out.map((o) => o.key)).toEqual(['tsdb-league-4328', 'olympics:summer', 'tsdb-league-4443', 'olympics:winter']);
-    const summer = out[1] as { kind: string; glyph: string; caption: string; members: unknown[] };
+    const summer = out[1] as { kind: string; season: string; glyph: string; caption: string; members: Array<{ key: string }> };
     expect(summer.kind).toBe('group');
+    expect(summer.season).toBe('summer');
     expect(summer.glyph).toBe('🏅'); // the medal, never the rings
-    expect(summer.members).toHaveLength(2);
+    // The count the node wears, and the page it opens, are these members.
+    expect(summer.members.map((m) => m.key)).toEqual(['olympics-2028-athletics', 'olympics-2028-swimming']);
     // the node speaks for its soonest member
     expect(summer.caption).toBe('on 2028-07-22');
-    const winter = out[3] as { caption: string };
+    const winter = out[3] as { caption: string; members: unknown[] };
     expect(winter.caption).toBe('Nothing scheduled');
-  });
-
-  it('an expanded node is followed by its members, as sport icons', () => {
-    const out = groupOlympicItems([pl, ath, swim], { summer: true, winter: false }, labels, 'Nothing scheduled');
-    expect(out.map((o) => o.key)).toEqual(['tsdb-league-4328', 'olympics:summer', 'olympics-2028-athletics', 'olympics-2028-swimming']);
-    expect((out[2] as { glyph: string }).glyph).toBe('🏃');
+    expect(winter.members).toHaveLength(1);
   });
 
   it('no Olympic follows → the list passes through unchanged', () => {
-    const out = groupOlympicItems([pl, ufc], { summer: true, winter: true }, labels, 'Nothing scheduled');
+    const out = groupOlympicItems([pl, ufc], labels, 'Nothing scheduled');
     expect(out).toEqual([pl, ufc]);
   });
 

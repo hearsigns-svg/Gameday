@@ -4549,3 +4549,38 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   hold verification; taps on the drifting strip do not register through
   simctl — standing lore). Gate: 138 suites / 1657 tests, both zones; tsc
   clean; functions build clean.
+
+- 2026-09-03 (Round 7 follow-up — two owner corrections after the report).
+  **The Olympic node's in-strip expansion is WITHDRAWN** ("just looks bad,
+  I don't think I can salvage it under the current mechanism"). The node
+  keeps the medal and now wears the COUNT of followed sports in a small
+  filled pill bottom-right; tapping it opens a following page for that
+  season (route OlympicFollows) — the followed Olympic sports as rows in
+  the Following list's language (emoji tile, "N upcoming", the Following
+  control with undo), each opening that sport's fixtures. The spread,
+  the swing, the plus/minus states and the per-member animation are
+  deleted outright (railGroups no longer expands; FollowRail is back to
+  its Round 3 drift contract) — dead machinery gets resurrected by a
+  future session that does not know why it exists.
+  **The majors' logos had gone** from the strip, the entity page and
+  the hero the moment follows became sexed: every mark lookup went by
+  FOLLOW key, and the served art map is keyed by the EVENT
+  (`tennis-t-us-open`, '4445'). domain/markKeys.ts walks from the follow
+  to its event — key, sexless base, the base's TSDB id — and every mark
+  and tile-fill lookup uses it (competitionMarkFor, competitionTileFillFor);
+  identityFollow accepts a served-mark predicate (browsePriority.
+  hasServedMark) so a tournament follow with no stored crest can own a
+  hero, a card and a Schedule row; the tournament lists now stamp the
+  event's mark onto the follow at follow time like every other list.
+  Audit of every surface a follow's mark reaches — strip, Home hero,
+  expanded card, Schedule rows, Following list, entity page header and
+  rows, search, competition and tournament lists, MMA/boxing sexed rows —
+  all read through the same walk.
+  VERIFIED (Release build 13:24, iPhone 17 Pro): the strip draws the
+  Australian Open, Roland Garros, Wimbledon and US Open marks on the sexed
+  follows with their ♂/♀; the Summer Olympics node wears the medal with a
+  "2" pill and opens "Summer Olympics" — Athletics 🏃 and Basketball 🏀 as
+  Following rows — and a row opens the sport's page with its emoji header;
+  the Schedule shows the US Open mark on the block row and on every match
+  row; the "US Open — Women’s" page header and its row carry the mark.
+  Gate 140 suites / 1662 tests, both zones; tsc clean.

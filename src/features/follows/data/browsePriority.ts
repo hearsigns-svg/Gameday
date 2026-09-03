@@ -12,6 +12,7 @@ import { readJson, writeJson } from '../../../core/storage';
 import { PoolPhoto } from '../domain/poolPhotos';
 import { activeRegion } from '../../../core/regionStore';
 import { functionsBaseUrl } from '../../../core/firebase';
+import { lookupByMarkKeys } from '../domain/markKeys';
 export { byPriority, byPriorityLive } from '../domain/browseOrder';
 
 // Keyed BY REGION (Prompt 15): a device that switches region must not
@@ -159,20 +160,24 @@ export async function refreshPriorities(): Promise<void> {
 // follows stored before their mark existed: the strip should not wait
 // for a browse-screen visit to heal the record before showing what the
 // server already serves.
+// A follow's mark keys walk from the follow to its EVENT (Round 7
+// follow-up): a sexed draw key reads the tournament's mark, a sexed
+// boxing key its league's — domain/markKeys.ts.
 export function competitionMarkFor(key: string): string | undefined {
-  const art = cachedPriorities().competitionArt;
-  if (art[key]) return art[key];
-  const m = /^tsdb-league-(\d+)$/.exec(key);
-  return m ? art[m[1]] : undefined;
+  return lookupByMarkKeys(cachedPriorities().competitionArt, key);
 }
 
-// The tile fill behind that mark (Round 6 tile prep), same key
-// aliasing as the mark itself. Undefined = the theme container.
+// The tile fill behind that mark (Round 6 tile prep), same key walk as
+// the mark itself. Undefined = the theme container.
 export function competitionTileFillFor(key: string): string | undefined {
-  const fills = cachedPriorities().competitionArtTileFills;
-  if (fills[key]) return fills[key];
-  const m = /^tsdb-league-(\d+)$/.exec(key);
-  return m ? fills[m[1]] : undefined;
+  return lookupByMarkKeys(cachedPriorities().competitionArtTileFills, key);
+}
+
+// The follow-identity predicate (domain/followIdentity.ts): a follow
+// with a SERVED mark can own a hero or a row even when it stored no
+// crest — a tournament follow never carries one of its own.
+export function hasServedMark(key: string): boolean {
+  return competitionMarkFor(key) !== undefined;
 }
 
 // The DISPLAY mark for a follow. THE SERVED MAP WINS for competition

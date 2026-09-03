@@ -66,7 +66,6 @@ import {
   GroupNode,
   groupOlympicItems,
   groupSeasonOf,
-  OlympicSeason,
 } from '../domain/railGroups';
 // The emoji-style icon of an Olympic SPORT follow (Round 7 item 5): the
 // sport's own emoji from the one table every surface reads.
@@ -164,11 +163,6 @@ export default function HomeScreen({ navigation }: Props) {
   // Everything followed, soonest first, each showing when it next plays.
   // Ordering by next fixture rather than by follow date is what makes
   // this useful at a glance instead of just a list of names.
-  // Round 6 item 6: the Olympic group nodes' open/closed state.
-  const [olympicsOpen, setOlympicsOpen] = useState<Record<OlympicSeason, boolean>>({
-    summer: false,
-    winter: false,
-  });
   const railItems = useMemo(() => {
     const next = new Map<string, UpcomingFixture>();
     for (const f of upcoming) {
@@ -229,60 +223,37 @@ export default function HomeScreen({ navigation }: Props) {
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
         };
       });
-    // Round 6 item 6: followed Olympic sports collapse under one Summer /
-    // Winter node (medal icon, never the rings); an open node lists its
-    // sports as emoji icons after it. The strip renders whatever it is
-    // given per copy, so the expansion drifts and wraps like any tile.
+    // Followed Olympic sports collapse under one Summer / Winter node
+    // (medal icon, never the rings) wearing the COUNT of followed sports;
+    // tapping it opens the season's own following page (owner reshape
+    // 2026-09-03 — the in-strip expansion was withdrawn).
     const grouped = groupOlympicItems(
       base,
-      olympicsOpen,
       {
         summer: i18n.t('follows.rail.summerOlympics'),
         winter: i18n.t('follows.rail.winterOlympics'),
       },
       i18n.t('follows.home.nothingScheduled'),
     );
-    // Round 7 item 6: the node is a GROUP tile (plus closed, dimmed
-    // minus open) and each member knows the node it spreads from and
-    // its slot, so the strip can run the coin-stack spread.
     type RailBase = (typeof base)[number];
-    const items: Array<
-      Omit<RailBase, 'startUtc'> & {
-        emoji?: boolean;
-        group?: { expanded: boolean };
-        spreadFrom?: string;
-        spreadIndex?: number;
-      }
-    > = [];
-    let openNode: { key: string; members: number } | null = null;
-    for (const entry of grouped) {
+    return grouped.map((entry) => {
       if ((entry as GroupNode<RailBase>).kind === 'group') {
         const node = entry as GroupNode<RailBase>;
-        openNode = node.expanded ? { key: node.key, members: 0 } : null;
-        items.push({
+        return {
           key: node.key,
           label: node.label,
           caption: node.caption,
           glyph: node.glyph,
           theme: teamTheme(sportByKey('olympics')?.accent ?? null, mode),
           emoji: true, // the medal IS the icon — never a monogram, never the rings
-          group: { expanded: node.expanded },
-        });
-        continue;
+          badge: String(node.members.length),
+          badgePill: true,
+        };
       }
       const { startUtc: _startUtc, ...rest } = entry as RailBase;
-      if (olympicSportGlyph(rest.key) && openNode) {
-        // An Olympic SPORT under its node wears its emoji, not a
-        // monogram, and emerges from the node.
-        items.push({ ...rest, emoji: true, spreadFrom: openNode.key, spreadIndex: openNode.members });
-        openNode.members++;
-        continue;
-      }
-      openNode = null;
-      items.push(rest);
-    }
-    return items;
-  }, [follows, upcoming, mode, olympicsOpen]);
+      return rest;
+    });
+  }, [follows, upcoming, mode]);
 
   // A refresh can shrink the carousel under the current page (FlatList
   // clamps the offset without a momentum event) — keep the dot honest.
@@ -468,10 +439,17 @@ export default function HomeScreen({ navigation }: Props) {
           <FollowRail
             items={railItems}
             onPress={(key) => {
-              // Round 6 item 6: the group node toggles in place.
+              // The Olympic node opens its season's following page.
               const season = groupSeasonOf(key);
               if (season) {
-                setOlympicsOpen((prev) => ({ ...prev, [season]: !prev[season] }));
+                navigation.navigate('OlympicFollows', {
+                  season,
+                  title: i18n.t(
+                    season === 'summer'
+                      ? 'follows.rail.summerOlympics'
+                      : 'follows.rail.winterOlympics',
+                  ),
+                });
                 return;
               }
               const item = follows.find((f) => f.key === key);

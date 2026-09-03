@@ -99,16 +99,14 @@ export function GlyphTile(props: {
   // the IMAGE is actually showing — a failed image falls back to the
   // monogram on the theme container, exactly as before.
   fillColour?: string;
-  // Round 7 item 6: a group node that is OPEN reads as spent — its mark
-  // dims and a minus sits through its middle (the collapse control);
-  // closed, the corner badge is the plus.
-  dimmed?: boolean;
-  overlay?: string;
+  // Round 7 (owner reshape): a COUNT badge — the number of followed
+  // sports under a group node — sits in a small filled pill so a digit
+  // reads against any tile; an emoji badge (a flag) needs no pill.
+  badgePill?: boolean;
 }) {
   const size = props.size ?? 40;
   const [imageFailed, setImageFailed] = useState(false);
   const image = imageFailed ? undefined : usableImage(props.imageUrl);
-  const markOpacity = props.dimmed ? 0.4 : 1;
   return (
     <View
       accessible={false}
@@ -127,7 +125,7 @@ export function GlyphTile(props: {
           source={imageSource(image)}
           resizeMode="contain"
           onError={() => setImageFailed(true)} // broken art → mark, never a blank tile
-          style={{ width: size * 0.72, height: size * 0.72, opacity: markOpacity }}
+          style={{ width: size * 0.72, height: size * 0.72 }}
           accessible={false}
         />
       ) : props.monogram ? (
@@ -137,32 +135,44 @@ export function GlyphTile(props: {
             fontWeight: '700',
             letterSpacing: 0.5,
             color: props.theme.onContainer,
-            opacity: markOpacity,
           }}
           accessible={false}
         >
           {props.monogram}
         </Text>
       ) : (
-        <Text style={{ fontSize: size * 0.5, opacity: markOpacity }} accessible={false}>
+        <Text style={{ fontSize: size * 0.5 }} accessible={false}>
           {props.glyph}
         </Text>
       )}
-      {props.overlay ? (
-        <Text
+      {props.badge && props.badgePill ? (
+        <View
           accessible={false}
           style={{
             position: 'absolute',
-            fontSize: size * 0.62,
-            fontWeight: '800',
-            lineHeight: size * 0.72,
-            color: props.theme.onContainer,
+            right: -3,
+            bottom: -3,
+            minWidth: size * 0.36,
+            height: size * 0.36,
+            paddingHorizontal: size * 0.08,
+            borderRadius: size * 0.18,
+            backgroundColor: props.theme.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {props.overlay}
-        </Text>
-      ) : null}
-      {props.badge ? (
+          <Text
+            accessible={false}
+            style={{
+              fontSize: size * 0.22,
+              fontWeight: '700',
+              color: props.theme.onAccent,
+            }}
+          >
+            {props.badge}
+          </Text>
+        </View>
+      ) : props.badge ? (
         <Text
           accessible={false}
           style={{
@@ -206,23 +216,10 @@ export interface FollowRailItem {
   // Round 6 item 6: an EMOJI-STYLE tile — the glyph itself is the icon,
   // no monogram (the Olympic group node's medal, its sports' emoji).
   emoji?: boolean;
-  // Round 7 item 6: a GROUP NODE — the tile that opens into its members.
-  // Closed it wears a plus; open it dims with a minus through it, and
-  // the strip has first swung it to the left edge so the members it
-  // spreads out have room to be seen.
-  group?: { expanded: boolean };
-  // A MEMBER of an open node: it emerges from under the node, sliding
-  // into its slot — the coin-stack spread. `spreadIndex` is its slot
-  // among the node's members, 0 nearest the node.
-  spreadFrom?: string;
-  spreadIndex?: number;
+  // Round 7 (owner reshape): the badge is a COUNT in a filled pill — the
+  // Olympic node's number of followed sports.
+  badgePill?: boolean;
 }
-
-const RAIL_ITEM_W = 76; // styles.railItem width — the slot a tile occupies
-const RAIL_PAD = spacing.l; // styles.rail paddingHorizontal
-const SPREAD_MS = 320;
-const SPREAD_STAGGER_MS = 45;
-const FOCUS_SCROLL_MS = 280;
 
 // LOOPING DRIFT (Round 2 items 5/6; rebuilt native in Round 3; touch
 // contract per Round 3 B1). When the strip overflows its viewport it
@@ -381,127 +378,13 @@ export function FollowRail(props: {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [looping, singleW, copies]);
-  // ── The coin-stack spread (Round 7 item 6) ──────────────────────────
-  //
-  // Members of an open node are drawn from the strip's items like any
-  // tile, but they ARRIVE: each starts stacked under its node
-  // (translated back by its slot count), then slides into place with a
-  // stagger, nearest first — a stack of coins spread across the table.
-  // Collapse runs the same motion backwards: the members leaving the
-  // props are kept on screen (`exiting`) until they have slid back
-  // under the node. One progress value per member key drives every
-  // copy of it, so the copies move as one. Reduced motion: no motion —
-  // members appear and vanish in place.
-  const spread = useRef(new Map<string, Animated.Value>()).current;
-  const progressOf = (key: string): Animated.Value => {
-    let v = spread.get(key);
-    if (!v) {
-      v = new Animated.Value(1);
-      spread.set(key, v);
-    }
-    return v;
-  };
-  const [exiting, setExiting] = useState<FollowRailItem[]>([]);
-  const prevItems = useRef<FollowRailItem[]>([]);
-  useEffect(() => {
-    const before = prevItems.current;
-    const now = new Set(props.items.map((i) => i.key));
-    const wasThere = new Set(before.map((i) => i.key));
-    const arriving = props.items.filter((i) => i.spreadFrom && !wasThere.has(i.key));
-    const leaving = before.filter((i) => i.spreadFrom && !now.has(i.key));
-    prevItems.current = props.items;
-    if (reduceMotion) {
-      for (const m of arriving) progressOf(m.key).setValue(1);
-      setExiting([]);
-      return;
-    }
-    for (const m of arriving) {
-      const v = progressOf(m.key);
-      v.setValue(0);
-      Animated.timing(v, {
-        toValue: 1,
-        duration: SPREAD_MS,
-        delay: (m.spreadIndex ?? 0) * SPREAD_STAGGER_MS,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-    if (leaving.length === 0) return;
-    setExiting(leaving);
-    const last = Math.max(...leaving.map((m) => m.spreadIndex ?? 0));
-    for (const m of leaving) {
-      Animated.timing(progressOf(m.key), {
-        toValue: 0,
-        duration: SPREAD_MS,
-        // Farthest first on the way back, so the stack re-forms in order.
-        delay: (last - (m.spreadIndex ?? 0)) * SPREAD_STAGGER_MS,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-    const timer = setTimeout(() => setExiting([]), SPREAD_MS + last * SPREAD_STAGGER_MS + 30);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey, reduceMotion]);
-  // What the strip actually draws: the items, plus any members still
-  // sliding home after their node closed — each re-inserted right after
-  // its node so the motion ends where it started.
-  const displayed = useMemo(() => {
-    if (exiting.length === 0) return props.items;
-    const out = [...props.items];
-    for (const m of exiting) {
-      if (out.some((i) => i.key === m.key)) continue;
-      const nodeAt = out.findIndex((i) => i.key === m.spreadFrom);
-      if (nodeAt < 0) continue;
-      let at = nodeAt + 1;
-      while (at < out.length && out[at].spreadFrom === m.spreadFrom) at++;
-      out.splice(at, 0, m);
-    }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey, exiting]);
-  // OPENING A NODE swings it to the left edge FIRST (owner ruling): the
-  // spread runs rightward from the node, and a node sitting near the
-  // right edge would spread its members off the strip. The drift pauses
-  // for the swing and the spread, then resumes where it was.
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const focusThenPress = (renderIndex: number, item: FollowRailItem) => {
-    const members = props.items.filter((i) => i.spreadFrom === item.key).length;
-    const settle = (driftNow: number) => {
-      // Tiles are laid out contiguously across every copy — the tile at
-      // render index i sits at PAD + i·RAIL_ITEM_W, shifted right by the
-      // drift — so a scroll offset of i·RAIL_ITEM_W + drift puts its left
-      // edge exactly one padding in from the viewport's left. (The
-      // measured copy width includes the strip's padding ONCE and is not
-      // the per-copy stride.)
-      const x = Math.max(0, renderIndex * RAIL_ITEM_W + driftNow);
-      scrollRef.current?.scrollTo({ x, animated: !reduceMotion });
-      const swing = reduceMotion ? 0 : FOCUS_SCROLL_MS;
-      setTimeout(() => props.onPress(item.key), swing);
-      if (holdTimer.current !== null) clearTimeout(holdTimer.current);
-      holdTimer.current = setTimeout(
-        resume,
-        swing + (reduceMotion ? 0 : SPREAD_MS + Math.max(1, members) * SPREAD_STAGGER_MS) + 120,
-      );
-    };
-    if (!looping) {
-      settle(0);
-      return;
-    }
-    clearGuard();
-    driftRunning.current = false;
-    drift.stopAnimation((v) => {
-      driftAt.current = v;
-      settle(v);
-    });
-  };
   const rendered = useMemo(
     () =>
       copies === 1
-        ? displayed
-        : Array.from({ length: copies }, () => displayed).flat(),
+        ? props.items
+        : Array.from({ length: copies }, () => props.items).flat(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayed, copies],
+    [itemsKey, copies],
   );
   return (
     <ScrollView
@@ -566,84 +449,50 @@ export function FollowRail(props: {
           looping ? { transform: [{ translateX: drift }] } : null,
         ]}
       >
-      {rendered.map((item, i) => {
-        const node = item.group;
-        const member = item.spreadFrom !== undefined;
-        const progress = member ? progressOf(item.key) : null;
-        const slotBack = -((item.spreadIndex ?? 0) + 1) * RAIL_ITEM_W;
-        const tile = (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={tr('core.rail.openA11y', {
-              label: item.label,
-              caption: item.caption,
-            })}
-            {...(node ? { accessibilityState: { expanded: node.expanded } } : {})}
-            // The second copy is a visual continuation, not more content.
-            accessibilityElementsHidden={i >= displayed.length}
-            onPress={() =>
-              node && !node.expanded ? focusThenPress(i, item) : props.onPress(item.key)
-            }
-            style={({ pressed }) => [styles.railItem, pressed && { opacity: 0.6 }]}
+      {rendered.map((item, i) => (
+        <Pressable
+          key={`${item.key}-${Math.floor(i / props.items.length)}`}
+          accessibilityRole="button"
+          accessibilityLabel={tr('core.rail.openA11y', {
+            label: item.label,
+            caption: item.caption,
+          })}
+          // The second copy is a visual continuation, not more content.
+          accessibilityElementsHidden={i >= props.items.length}
+          onPress={() => props.onPress(item.key)}
+          style={({ pressed }) => [styles.railItem, pressed && { opacity: 0.6 }]}
+        >
+          <GlyphTile
+            glyph={item.glyph}
+            theme={item.theme}
+            {...(item.emoji ? {} : { monogram: monogramOf(item.label) })}
+            {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
+            {...(item.badge ? { badge: item.badge } : {})}
+            {...(item.badgePill ? { badgePill: true } : {})}
+            {...(item.tileFill ? { fillColour: item.tileFill } : {})}
+            size={64}
+            round
+          />
+          <Text
+            numberOfLines={2}
+            style={[
+              type.caption,
+              { color: t.textPrimary, fontWeight: '600', textAlign: 'center' },
+            ]}
           >
-            <GlyphTile
-              glyph={item.glyph}
-              theme={item.theme}
-              {...(item.emoji ? {} : { monogram: monogramOf(item.label) })}
-              {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}
-              {...(node ? (node.expanded ? { dimmed: true, overlay: '−' } : { badge: '+' }) : {})}
-              {...(!node && item.badge ? { badge: item.badge } : {})}
-              {...(item.tileFill ? { fillColour: item.tileFill } : {})}
-              size={64}
-              round
-            />
-            <Text
-              numberOfLines={2}
-              style={[
-                type.caption,
-                { color: t.textPrimary, fontWeight: '600', textAlign: 'center' },
-              ]}
-            >
-              {item.label}
-            </Text>
-            <Text
-              numberOfLines={1}
-              style={[
-                type.caption,
-                { color: t.textSecondary, textAlign: 'center' },
-              ]}
-            >
-              {item.caption}
-            </Text>
-          </Pressable>
-        );
-        const key = `${item.key}-${Math.floor(i / Math.max(1, displayed.length))}`;
-        if (!progress) return <View key={key}>{tile}</View>;
-        return (
-          <Animated.View
-            key={key}
-            style={{
-              opacity: progress,
-              transform: [
-                {
-                  translateX: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [slotBack, 0],
-                  }),
-                },
-                {
-                  scale: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.82, 1],
-                  }),
-                },
-              ],
-            }}
+            {item.label}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              type.caption,
+              { color: t.textSecondary, textAlign: 'center' },
+            ]}
           >
-            {tile}
-          </Animated.View>
-        );
-      })}
+            {item.caption}
+          </Text>
+        </Pressable>
+      ))}
       </Animated.View>
     </ScrollView>
   );

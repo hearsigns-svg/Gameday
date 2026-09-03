@@ -66,6 +66,7 @@ import { headlineParticipant } from '../../follows/domain/participants';
 import {
   competitionTileFillFor,
   followMarkUrl,
+  hasServedMark,
   subscribePriorities,
 } from '../../follows/data/browsePriority';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
@@ -778,7 +779,7 @@ function ScheduleRow(props: {
 }) {
   const { item } = props;
   const sport = sportByKey(item.sport);
-  const owner = identityFollow(item.followKeys, props.follows);
+  const owner = identityFollow(item.followKeys, props.follows, hasServedMark);
   const photo = useAthletePhoto(
     headlineParticipant(item.title, item.sport),
     item.sport,

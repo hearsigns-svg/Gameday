@@ -92,6 +92,13 @@ export type RootStackParamList = {
     kind: 'slams' | 'others' | 'all';
     title: string;
   };
+  // The Following strip's Olympic node opens here (owner reshape
+  // 2026-09-03): the followed Olympic sports of one season, each row
+  // opening that sport's fixtures. Header follows `title`.
+  OlympicFollows: {
+    season: 'summer' | 'winter';
+    title: string;
+  };
   Preferences: undefined;
   Region: undefined;
   CalendarTarget: undefined; // which calendar fixtures are written to

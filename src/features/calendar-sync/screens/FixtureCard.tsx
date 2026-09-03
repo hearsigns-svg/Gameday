@@ -57,7 +57,7 @@ import { olympicGlyphForKeys } from '../../follows/domain/olympicGlyphs';
 import { tournamentTierOverridesFrom } from '../../follows/domain/followScopes';
 import { tierCoveredChildIds } from '../domain/cardCoverage';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
-import { followMarkUrl } from '../../follows/data/browsePriority';
+import { followMarkUrl, hasServedMark } from '../../follows/data/browsePriority';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { sportByKey } from '../../follows/domain/sportsConfig';
 import { loadFollowables, loadFollowKeys } from '../../follows/data/followStore';
@@ -183,7 +183,7 @@ export function FixtureCardBody(props: {
   const prefs = loadPrefs();
   const settings = loadEventSettings();
   const sport = fixture ? sportByKey(fixture.sport) : undefined;
-  const owner = fixture ? identityFollow(fixture.followKeys, follows) : undefined;
+  const owner = fixture ? identityFollow(fixture.followKeys, follows, hasServedMark) : undefined;
   const ownerMark = followMarkUrl(owner);
   const theme = teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode);
 

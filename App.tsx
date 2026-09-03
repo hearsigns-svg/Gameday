@@ -54,6 +54,7 @@ import TournamentListScreen from './src/features/follows/screens/TournamentListS
 import LeagueListScreen from './src/features/follows/screens/LeagueListScreen';
 import SportPickerScreen from './src/features/follows/screens/SportPickerScreen';
 import TeamListScreen from './src/features/follows/screens/TeamListScreen';
+import OlympicFollowsScreen from './src/features/follows/screens/OlympicFollowsScreen';
 import TeamScreen from './src/features/follows/screens/TeamScreen';
 import PreferencesScreen from './src/features/settings/PreferencesScreen';
 import RegionScreen from './src/features/settings/RegionScreen';
@@ -336,6 +337,14 @@ export default function App() {
           options={({ route }) => ({
             title: route.params.leagueName,
             headerTitle: () => <BrandTitle>{route.params.leagueName}</BrandTitle>,
+          })}
+        />
+        <Stack.Screen
+          name="OlympicFollows"
+          component={OlympicFollowsScreen}
+          options={({ route }) => ({
+            title: route.params.title,
+            headerTitle: () => <BrandTitle>{route.params.title}</BrandTitle>,
           })}
         />
         <Stack.Screen

@@ -77,11 +77,15 @@ export default function TournamentListScreen({ navigation, route }: Props) {
     async (row: TournamentRow) => {
       const key = tournamentFollowKey(row.key, tour);
       setBusyKey(row.key);
+      // The event's mark rides the follow (Round 7 follow-up), as every
+      // other list's follow does — the served map still wins at display.
+      const mark = cachedPriorities().competitionArt[row.key];
       const item = {
         key,
         label: tournamentFollowLabel(row.name, tour),
         sportKey: 'tennis',
         type: 'competition' as const,
+        ...(mark ? { crestUrl: mark } : {}),
       };
       const wasFollow = !isFollowed(key);
       const r = wasFollow ? await follow(item) : await unfollow(item);
