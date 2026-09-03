@@ -47,7 +47,28 @@ import {
   withoutScopedKeys,
 } from './boxingSexScopes';
 import { PBC_KEY, withMajorCardsKey } from './boxingMerge';
-import { deriveMmaBrowse, MMA_SPORT, stampMmaFighterKeys } from './mmaFighters';
+import {
+  deriveMmaBrowse,
+  mergeMmaBrowse,
+  MMA_SPORT,
+  MmaNameMatcher,
+  stampMmaAthleteIds,
+  stampMmaFighterKeys,
+} from './mmaFighters';
+import { fetchUfcRoster, UFC_ROSTER_CADENCE_DAYS, UFC_ROSTER_MIN_ENTRIES } from './providers/ufcRoster';
+import { rosterWithinCadence } from './rosterCadence';
+
+// The directory's matcher as the MMA modules see it (Round 7 item 1):
+// a full name, unique among MMA athletes, or nothing — matchAthlete's
+// own discipline, so a card can never be handed to the wrong fighter.
+function mmaMatcherFrom(index: AthleteIndex): MmaNameMatcher {
+  return {
+    match: (name) => {
+      const m = matchAthlete(index, MMA_SPORT, { name });
+      return m.kind === 'certain' || m.kind === 'confident' ? (m.athlete ?? null) : null;
+    },
+  };
+}
 import {
   authorised as rcAuthorised,
   isEventForUs,
@@ -97,7 +118,11 @@ import {
   athletesCollection,
   nameKey,
   type AthleteKey,
-  type AthleteUpdate, accentHueOf } from './athletes';
+  type AthleteUpdate, accentHueOf,
+  buildAthleteIndex,
+  matchAthlete,
+  type AthleteIndex,
+} from './athletes';
 import {
   createAthletes,
   loadAthleteIndex,
@@ -107,7 +132,7 @@ import {
 import { enrichBoutParticipants, namesPeople } from './participants';
 import { reapCandidates, REAPER_HOLD_SLICES } from './reaper';
 import { searchAthletes, searchTeams, shapeAthleteBrowse } from './search';
-import { CatalogueEntry, sportWeightsOf, CATALOGUE_SEED } from './catalogue';
+import { CatalogueEntry, foldMotorsportWeight, sportWeightsOf, CATALOGUE_SEED } from './catalogue';
 import { shapeTournamentRows } from './tennisTournaments';
 import {
   activeWindows,
@@ -272,7 +297,14 @@ async function ingest(
   // Round 6 item 5: an MMA card carries its two fighters' folded-name
   // keys — the fighter follow's only path onto a fixture (no appearance
   // docs in MMA) and the same key the derived directory hands out.
-  const withPeople = stampMmaFighterKeys(enrichBoutParticipants(rawIncoming));
+  // Round 7 item 1: beside them, the canonical athlete id of any side
+  // the UFC roster resolves (full name, unique in the sport — the
+  // directory's own matcher), so a roster fighter's follow reaches the
+  // card through the ordinary query path.
+  const folded = stampMmaFighterKeys(enrichBoutParticipants(rawIncoming));
+  const withPeople = folded.some((f) => f.sport === MMA_SPORT)
+    ? stampMmaAthleteIds(folded, mmaMatcherFrom(await loadAthleteIndex(db)))
+    : folded;
   // Stamp every provider's key for each club onto the fixture, so a
   // team followed via one provider still matches fixtures supplied by
   // another (league from football-data, cups from TSDB).
@@ -1103,12 +1135,16 @@ async function loadImageryOff(): Promise<ReadonlySet<string>> {
 function sportWeightsOf2(
   overlaid: Record<string, number>,
   base: Record<string, number>,
+  region?: string,
 ): Record<string, number> {
   const out = { ...base };
   for (const [key, weight] of Object.entries(overlaid)) {
     if (key.startsWith('sport:')) out[key.slice('sport:'.length)] = weight;
   }
-  return out;
+  // The Motorsport tile ranks as F1 where F1 leads (Round 7 item 2) —
+  // applied AFTER the regional overlay so a region's own sport-row
+  // weights are what gets folded.
+  return foldMotorsportWeight(out, region);
 }
 
 // Competition logos for the client's STATIC competitions, cached in
@@ -1381,7 +1417,7 @@ export const listPriorities = onRequest(gz(async (req, res) => {
       // are ordinary catalogue entries, so a region reorders SPORTS by
       // giving those rows a regional weight — which is what "cricket
       // leads in South Asia" actually is.
-      sportWeights: sportWeightsOf2(regionalMap, sportWeights),
+      sportWeights: sportWeightsOf2(regionalMap, sportWeights, region || undefined),
       dormant,
       photoPools,
       competitionArt: competitionArtOut,
@@ -1455,14 +1491,26 @@ export const listAthletes = onRequest(gz(async (req, res) => {
       res.status(400).json({ error: 'sport is required' });
       return;
     }
-    // Round 6 item 5: the MMA fighter directory is DERIVED from the cards
-    // we hold (no body publishes a roster) — see mmaFighters.ts.
+    // Round 6 item 5 + Round 7 item 1: the MMA directory is the UFC
+    // ROSTER (Wikipedia, quarterly — providers/ufcRoster.ts) by division,
+    // joined with the fighters DERIVED from the cards we hold for every
+    // other promotion and for "competing soon" — see mmaFighters.ts.
     if (sport === MMA_SPORT) {
+      const nowIso = new Date().toISOString();
       const snap = await db.collection('fixtures').where('sport', '==', MMA_SPORT).get();
       const cards = snap.docs.map((d) => d.data() as Fixture);
       const pollPathOf = (f: { competitionId: string }) =>
         CATALOGUE_SEED.find((e) => e.competitionId === f.competitionId)?.pollPath;
-      res.json(deriveMmaBrowse(cards, new Date().toISOString(), pollPathOf, accentHueOf));
+      const athletes = await loadAthletes(db);
+      const roster = shapeAthleteBrowse(athletes, MMA_SPORT, nowIso);
+      res.json(
+        mergeMmaBrowse(
+          roster,
+          deriveMmaBrowse(cards, nowIso, pollPathOf, accentHueOf),
+          mmaMatcherFrom(buildAthleteIndex(athletes)),
+          accentHueOf,
+        ),
+      );
       return;
     }
     // Round 6 item 7: the Motorsport tile's Drivers row is Formula 1's
@@ -2122,6 +2170,10 @@ interface StandardRosterSource {
     ownsCareerStatus?: boolean;
     sliceRoster?: boolean;
   };
+  // Refresh no more often than this (Round 7 item 1: the UFC roster is
+  // quarterly by ruling). Judged against the slice's last SUCCESS in
+  // status/rosters; absent = every scheduled run, as before.
+  cadenceDays?: number;
 }
 
 type RosterSource = StandardRosterSource | CustomRosterSource<RankedPlayer>;
@@ -2144,6 +2196,23 @@ const rosterSources = (): RosterSource[] => [
     source: 'ibf',
     sport: 'boxing',
     run: () => fetchIbfRatings(),
+  },
+  // The UFC roster (Round 7 item 1, owner ruling 2026-09-03): Wikipedia's
+  // "List of current UFC fighters", per division, QUARTERLY. Linked
+  // fighters carry their article title as the wikipedia id; unlinked
+  // ones are name-keyed and say so. The gate refuses a thin page —
+  // absence accounting would otherwise retire half the roster.
+  {
+    slice: 'roster-ufc',
+    source: 'wikipedia',
+    sport: 'ufc',
+    run: () => fetchUfcRoster(),
+    cadenceDays: UFC_ROSTER_CADENCE_DAYS,
+    gate: (entries) => {
+      if (entries.length < UFC_ROSTER_MIN_ENTRIES) {
+        throw new Error(`ufc roster: ${entries.length} entries under the floor`);
+      }
+    },
   },
   // Card participants (Part B ruling, 2026-08-17): the boxing
   // directory's backstop — everyone who actually fights on an ingested
@@ -2357,10 +2426,29 @@ async function applyAtpDirectory(
 
 async function refreshRosters(
   trigger: RunTrigger,
+  // Manual runs may name ONE slice (Round 7: the first UFC roster load
+  // must not also re-run the vendor-quota'd tennis sources).
+  only?: string,
 ): Promise<Record<string, unknown>> {
   const summary: Record<string, unknown> = {};
+  // The slices' last-success markers, read once: a cadenced source
+  // (the quarterly UFC roster) is skipped while its marker is young.
+  const markers = await db
+    .collection('status')
+    .doc('rosters')
+    .get()
+    .then((d) => (d.data()?.slices ?? {}) as Record<string, string>)
+    .catch(() => ({}) as Record<string, string>);
   for (const s of rosterSources()) {
     const startedAt = new Date().toISOString();
+    if (only !== undefined && s.slice !== only) continue;
+    if (
+      'cadenceDays' in s &&
+      rosterWithinCadence(markers[`${s.source}|${s.slice}`], s.cadenceDays, Date.now())
+    ) {
+      summary[s.slice] = { skipped: 'within-cadence', cadenceDays: s.cadenceDays };
+      continue;
+    }
     const ctx: RunContext = {
       trigger,
       source: s.source,
@@ -2480,7 +2568,8 @@ export const runRoster = onRequest(
       return;
     }
     try {
-      res.json(await refreshRosters('roster'));
+      const only = typeof req.query.slice === 'string' ? req.query.slice : undefined;
+      res.json(await refreshRosters('roster', only));
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

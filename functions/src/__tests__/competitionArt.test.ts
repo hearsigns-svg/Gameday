@@ -140,3 +140,24 @@ test('the Olympic statute holds at the curated merge, whatever was imported', ()
   );
   expect(Object.keys(merged)).toEqual(['pbc-cards']);
 });
+
+test('mergeCuratedMarks: an owner OVERRIDE beats the provider badge and retires the numeric twin (Round 7 item 3)', () => {
+  const merged = mergeCuratedMarks(
+    { '4371': 'https://tsdb/formula-e-badge.png', '4387': 'https://tsdb/nba.png' },
+    {
+      'tsdb-league-4371': { url: 'https://ours/formula-e-2022.png', override: true },
+      'tsdb-league-4387': { url: 'https://ours/nba-curated.png' }, // no flag → fills gaps only → loses
+    },
+  );
+  expect(merged['tsdb-league-4371']).toBe('https://ours/formula-e-2022.png');
+  expect(merged).not.toHaveProperty('4371'); // the client reads the id first — it must be gone
+  // The unflagged entry keeps the standing gap-fill semantics: its own
+  // key was empty so it lands there, and the provider's numeric-id badge
+  // — which the client reads FIRST — stays and still wins on screen.
+  expect(merged['4387']).toBe('https://tsdb/nba.png');
+  expect(merged['tsdb-league-4387']).toBe('https://ours/nba-curated.png');
+  // The statute still wins over any flag.
+  expect(
+    mergeCuratedMarks({}, { 'olympics-2028': { url: 'https://ours/rings.png', override: true } }),
+  ).toEqual({});
+});

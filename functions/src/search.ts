@@ -368,8 +368,21 @@ export function groupOrderKey(groupingKey: string): string {
   if (groupingKey === 'wta') return '20';
   if (groupingKey === 'atp') return '21';
   if (groupingKey === 'atp-directory') return '22';
+  // MMA (Round 7 item 1): the UFC divisions heavy → light, men then
+  // women — the same reading order as boxing's classes.
+  const mmaMen = MMA_CLASS_ORDER.indexOf(groupingKey.replace(/^mma-/, ''));
+  if (mmaMen >= 0) return `30${String(mmaMen).padStart(2, '0')}`;
+  const mmaWomen = MMA_CLASS_ORDER.indexOf(groupingKey.replace(/^mma-w-/, ''));
+  if (mmaWomen >= 0 && groupingKey.startsWith('mma-w-')) {
+    return `31${String(mmaWomen).padStart(2, '0')}`;
+  }
   return `5${groupingKey}`;
 }
+
+const MMA_CLASS_ORDER = [
+  'heavyweight', 'light-heavyweight', 'middleweight', 'welterweight',
+  'lightweight', 'featherweight', 'bantamweight', 'flyweight', 'strawweight',
+];
 
 export const GROUP_CAP = 50; // tennis top 50 — the curated cut, not the roster's
 
@@ -380,6 +393,12 @@ export const GROUP_CAP = 50; // tennis top 50 — the curated cut, not the roste
 // served whole and the CLIENT collapses it behind "Show all N", which
 // is the affordance that exists for exactly this.
 const UNCAPPED_GROUPS = new Set(['atp-directory']);
+// The UFC divisions (Round 7 item 1) are ALPHABETICAL within a division
+// — the roster carries no rank — so they are served whole too, and the
+// client collapses them behind "Show all N" exactly as the directory.
+function isUncappedGroup(groupingKey: string): boolean {
+  return UNCAPPED_GROUPS.has(groupingKey) || groupingKey.startsWith('mma-');
+}
 export const COMPETING_SOON_DAYS = 45;
 export const COMPETING_SOON_CAP = 20;
 
@@ -423,7 +442,7 @@ export function shapeAthleteBrowse(
         // happened to sort first — see GROUP_TITLES in athletes.ts.
         grouping: groupTitleOf(groupingKey, sorted[0].grouping)!,
         groupingKey,
-        athletes: (UNCAPPED_GROUPS.has(groupingKey)
+        athletes: (isUncappedGroup(groupingKey)
           ? sorted
           : sorted.slice(0, GROUP_CAP)
         ).map(card),

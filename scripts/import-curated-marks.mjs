@@ -30,6 +30,7 @@
 // candidate rasters to scripts/curated-marks/ for inspection.
 
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync, readdirSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -44,6 +45,19 @@ const SHEET = join(HERE, 'curated-marks-review.md');
 const STATE = join(HERE, 'curated-marks-state.json');
 
 const APPLY = process.argv.includes('--apply');
+// --manual-only (Round 7 item 3): skip the Wikidata sourcing pass and
+// upload ONLY the owner's manual drops — the route for an official asset
+// the owner has chosen for one competition (the Formula E 2022 mark).
+// Manual drops are written with `override: true`: an owner-chosen
+// official asset beats the provider badge (competitionArt.ts
+// mergeCuratedMarks), unlike the automated curated layer, which fills
+// gaps only.
+const MANUAL_ONLY = process.argv.includes('--manual-only');
+// --only <followKey>: restrict the manual drops to one key, so importing
+// today's asset never re-uploads yesterday's.
+const ONLY = process.argv.includes('--only')
+  ? process.argv[process.argv.indexOf('--only') + 1]
+  : null;
 const BUCKET =
   process.argv.includes('--bucket')
     ? process.argv[process.argv.indexOf('--bucket') + 1]
@@ -125,6 +139,19 @@ async function commonsInfo(fileTitle) {
 (async () => {
   mkdirSync(OUT_DIR, { recursive: true });
   mkdirSync(MANUAL_DIR, { recursive: true });
+
+  if (MANUAL_ONLY) {
+    const drops = readdirSync(MANUAL_DIR)
+      .filter((f) => f.endsWith('.png'))
+      .filter((f) => ONLY === null || f === `${ONLY}.png`);
+    console.log(`manual-only: ${drops.length} drop(s): ${drops.join(', ')}`);
+    if (!APPLY) {
+      console.log('DRY RUN — nothing uploaded, no manifest written.');
+      process.exit(0);
+    }
+    await applyUploads([], drops);
+    process.exit(0);
+  }
 
   // ── Targets: everything still monogramming after the provider layer.
   const prio = await (await fetch(
@@ -298,6 +325,17 @@ async function commonsInfo(fileTitle) {
   }
 
   // ── Apply: upload confident + manual drops, write the manifest.
+  await applyUploads(
+    confident,
+    readdirSync(MANUAL_DIR).filter((f) => f.endsWith('.png')),
+  );
+  process.exit(0);
+})().catch((e) => {
+  console.error(String(e));
+  process.exit(1);
+});
+
+async function applyUploads(confident, manualFiles) {
   admin.initializeApp({ projectId: 'gameday-fixtures', storageBucket: BUCKET });
   const bucket = admin.storage().bucket();
   const [exists] = await bucket.exists();
@@ -307,15 +345,25 @@ async function commonsInfo(fileTitle) {
   }
   const manifest = {};
   const uploads = [
-    ...confident.map((c) => ({ key: c.key, local: c.local, source: c.file, licence: c.licence })),
-    ...readdirSync(MANUAL_DIR)
-      .filter((f) => f.endsWith('.png'))
-      .map((f) => ({ key: f.replace(/\.png$/, ''), local: join(MANUAL_DIR, f), source: 'manual (official asset, owner-supplied)', licence: '' })),
+    ...confident.map((c) => ({ key: c.key, local: c.local, source: c.file, licence: c.licence, override: false })),
+    ...manualFiles.map((f) => ({
+      key: f.replace(/\.png$/, ''),
+      local: join(MANUAL_DIR, f),
+      source: 'manual (official asset, owner-supplied)',
+      licence: '',
+      override: true,
+    })),
   ];
   for (const u of uploads) {
     if (/^(?:olympics|paralympics)/.test(u.key)) continue; // statute
     if (!existsSync(u.local)) continue;
-    const dest = `marks/${u.key}.png`;
+    // Manual drops carry a CONTENT HASH in the path (Round 7): the art
+    // rebuild re-measures a mark only when its URL changes, so a
+    // replaced asset under the old path would keep the old plate and
+    // fill forever. Automated imports keep their stable path.
+    const dest = u.override
+      ? `marks/${u.key}.${createHash('sha1').update(readFileSync(u.local)).digest('hex').slice(0, 8)}.png`
+      : `marks/${u.key}.png`;
     await bucket.upload(u.local, { destination: dest, metadata: { contentType: 'image/png', cacheControl: 'public,max-age=604800' } });
     await bucket.file(dest).makePublic();
     manifest[u.key] = {
@@ -323,16 +371,13 @@ async function commonsInfo(fileTitle) {
       source: u.source,
       licence: u.licence,
       fetchedAt: new Date().toISOString(),
+      ...(u.override ? { override: true } : {}),
     };
-    console.log(`  ↑ ${u.key}`);
+    console.log(`  ↑ ${u.key}${u.override ? ' (override)' : ''}`);
   }
   await admin.firestore().doc('directoryArt/curated').set({ marks: manifest }, { merge: true });
   // Age the art cache so the next listPriorities rebuild merges the
   // curated layer immediately (keeps existing art as outage fallback).
   await admin.firestore().doc('directoryArt/competitions').update({ cachedAt: '2020-01-01T00:00:00.000Z' }).catch(() => {});
   console.log(`APPLIED: ${Object.keys(manifest).length} curated marks in the manifest; art cache aged for immediate rebuild.`);
-  process.exit(0);
-})().catch((e) => {
-  console.error(String(e));
-  process.exit(1);
-});
+}

@@ -28,6 +28,8 @@ import { refollow, unfollow } from '../followActions';
 import { Followable, loadFollowables } from '../data/followStore';
 import { sportByKey } from '../domain/sportsConfig';
 import { sportLabelFor } from '../domain/sportTerms';
+import { olympicSportGlyph } from '../domain/olympicGlyphs';
+import { tennisSexGlyph } from '../../fixtures/domain/tennisKeys';
 import { activeRegion } from '../../../core/regionStore';
 
 const UNDO_WINDOW_MS = 6000;
@@ -188,21 +190,26 @@ export default function FollowingScreen({ navigation }: Props) {
                   fullWidth
                   label={item.label}
                   caption={captionFor(item, upcoming[item.key])}
-                  glyph={sport?.glyph ?? '·'}
+                  // An Olympic sport wears its own emoji (Round 7 item 5).
+                  glyph={olympicSportGlyph(item.key) ?? sport?.glyph ?? '·'}
                   theme={teamTheme(
                     item.brandColour ?? sport?.accent ?? null,
                     mode,
                   )}
-                  monogram={monogramOf(item.label)}
+                  {...(olympicSportGlyph(item.key) ? {} : { monogram: monogramOf(item.label) })}
                   {...(followMarkUrl(item)
                     ? { imageUrl: followMarkUrl(item) as string }
                     : {})}
                   {...(competitionTileFillFor(item.key)
                     ? { tileFill: competitionTileFillFor(item.key) as string }
                     : {})}
+                  // The flag for an athlete; Mars/Venus for a sexed
+                  // tennis follow (Round 7 item 8).
                   {...(flagEmojiOf(item.countryCode)
                     ? { tileBadge: flagEmojiOf(item.countryCode) as string }
-                    : {})}
+                    : tennisSexGlyph(item.key)
+                      ? { tileBadge: tennisSexGlyph(item.key) as string }
+                      : {})}
                   accessibilityLabel={i18n.t('follows.following.a11yRow', {
                     name: item.label,
                     // The display word, never the raw enum — the enum

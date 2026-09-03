@@ -4402,3 +4402,150 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   listAthletes?sport=ufc derives 1 fighter today — the stored MMA cards are
   event titles ("UFC 320"), and only bout-titled cards name participants,
   so the Fighters row fills as bout-level cards land.
+
+- 2026-09-03 (Round 7 — owner's nine-item batch; rulings verbatim from
+  the brief). **Item 7, the calendar bug, diagnosed read-only first.**
+  Replaying the planner over a prod dump of the US Open (ATP parent + 47
+  future men's matches with `stage.round`, WTA parent + 16 future women's
+  matches, joint union 47 entries) showed "All matches" DOES emit the
+  matches — 49 creates, 29 timed — so the pipeline was sound and two
+  things hid it: (a) a stored per-tournament override (the retired
+  "Tournament + final" pill migrated to `key-rounds`, or a chip tapped on
+  the page) silently beat the Preferences choice — `overrides.get(key) ??
+  globalTier` — and at R64/R32 the key tier honestly has nothing to add;
+  (b) the presentation snapshot Home and Schedule render was the planner's
+  PARENTS only, so the in-app Schedule never showed a match the calendar
+  held. Fixes: changing the global tournament tier CLEARS every
+  per-tournament tier override (followStore.clearTournamentTierOverrides;
+  the chips remain a divergence FROM the preference, never a standing
+  pin); the snapshot is the plan PLUS the tier pass's match copies
+  (domain/presentation.ts) so Schedule mirrors the calendar entry for
+  entry, while the Home carousel keeps ONE card per tournament (a match
+  whose parent card is present rides that card); the tier pass now reads
+  the override off whichever followed key carries it (a WTA Tour follower
+  listed 'tennis-wta' first and the override was invisible).
+  **Item 8 — one tennis follow per DRAW.** Server: every tour parent
+  carries its draw key beside the bare joint key (`tennis-t-<slug>-m` on
+  the ATP parent, `-w` on the WTA parent; tennisTournaments.ts
+  tournamentKeysFor). The bare key stays the join for the card union and
+  the same-event dedupe (jointTournamentKeyOf / tournamentPairKey read
+  the BARE key only). Client: the ATP section's rows follow `-m`, the
+  WTA section's `-w`, label "US Open — Men’s"/"— Women’s" (the boxing
+  convention; the owner's words were Male/Female — Men's/Women's is the
+  vocabulary every other sexed surface already uses); a joint tournament
+  is two search rows and two cards in a tennis search; the strip and the
+  Following list wear ♂/♀ bottom-right of the tile; the expanded card
+  shows the M/W chips only when BOTH draws are followed (or a legacy bare
+  follow, or nobody follows — browsing), and filters to the one draw
+  otherwise. The tier pass stamps each match copy with ITS OWN draw's
+  followed key (a men's-only follow gets men's matches only; a whole-tour
+  follower gets that tour's draw only — the union used to hand a WTA Tour
+  follower the men's matches too). Launch migration
+  migrateTennisSexFollows: a bare follow → `-m` + `-w`, scope preserved,
+  in place. SERVER-FIRST BY RULE (AGENTS lore added): deploy + re-poll +
+  verify every current parent carries its sexed key BEFORE the client
+  build — a sexed follow fetching nothing would plan as an unfollow.
+  **Item 1 — the UFC roster from Wikipedia.** providers/ufcRoster.ts
+  reads "List of current UFC fighters" through the MediaWiki API
+  (descriptive User-Agent; names are facts): eleven division sections
+  (heavy → light, men then women), `{{sortname}}`/wikilink/plain name
+  cells, `{{flagicon|XXX}}` three-letter codes only, the champions table
+  marking `championOf: ['UFC']`. Linked fighters carry the article title
+  as the wikipedia id; unlinked are name-keyed and say so. All-or-nothing:
+  a missing division, a thin one (<8 rows) or fewer than 300 fighters
+  throws and last quarter's roster stands. QUARTERLY: the weekly roster
+  job skips a cadenced slice while its last-success marker is under 90
+  days (rosterCadence.ts). Cards gain the canonical athlete id of any
+  side the directory resolves (matchAthlete's full-name-unique rule)
+  beside the folded-name key; listAthletes?sport=ufc serves the roster
+  divisions, the other promotions' card-derived groups, an "UFC — on
+  announced cards" group for names the wiki has not caught up with, and
+  a card-derived Competing soon re-keyed to roster identities.
+  runRoster gained `?slice=` so a manual load never re-runs the
+  vendor-quota'd tennis sources.
+  **Item 2 — the Motorsport tile ranks by locale**: sportWeights fold the
+  f1 sport row into motorsport (max) everywhere except North America
+  (catalogue.ts foldMotorsportWeight; the region list mirrors
+  sportTerms) — "acts as F1" where F1 leads (88), plain Motorsport (54)
+  where it does not. **Items 3/4**: the Motorsport list is two runs under
+  small headers, FORMULA (F1, F2, Formula E) then MOTORSPORT, flipped in
+  North America (domain/motorsportBrowse.ts). The Formula E 2022 mark the
+  owner named is an owner-chosen OFFICIAL asset: rasterised from the
+  named SVG and imported through the curated-marks manual drop with
+  `override: true` — an override beats the provider badge and retires
+  the numeric-id twin (competitionArt.ts mergeCuratedMarks; importer
+  `--manual-only --only <key>`). Trademark posture unchanged: nominative
+  use, same as every TSDB badge. **Item 5 — Olympic sport emoji**: one
+  table (domain/olympicGlyphs.ts) gives every configured discipline its
+  sport's emoji (the test pins none falls back to the medal); the medal
+  is reserved for the Games follows and the strip's group node. Read by
+  the strip, the Sports lists (emoji tile, no monogram), the entity page,
+  the Schedule rows and the hero watermark. A few sibling disciplines
+  share a glyph deliberately (Nordic skiing 🎿, sled sports 🛷, both
+  skating disciplines ⛸️, judo/taekwondo 🥋). **Item 6 — the spread**:
+  the node wears a plus closed; open it dims with a minus through it;
+  tapping a closed node first swings it to the strip's left edge (drift
+  paused), then its members emerge from under it and slide into their
+  slots nearest-first (translate + fade + scale, 320ms, 45ms stagger);
+  collapse runs it backwards with the members kept on screen until they
+  are home. Reduced motion: no motion. **Item 9 — golf backgrounds**:
+  measured 24 upcoming venues — the raw feed name resolved 3 through the
+  Wikidata chain; venueNameVariants re-spells "St Andrews (Old Course)"
+  → "Old Course at St Andrews", "GC" → "Golf Club", "Wentworth Golf Club"
+  → "Wentworth Club" and lifts three more; below that a curated GOLF
+  photo pool (12 course-centric Commons shots, licence-verified, named
+  photographers; no golfer as subject) is the floor — every golf hero now
+  carries a course photograph, its own where Commons has one.
+
+- 2026-09-03 (Round 7 — VERIFICATION, server then device). SERVER (deployed
+  11:13Z–11:27Z; polls after the rollout window): every current ATP parent
+  (77) carries its `-m` key and every current WTA parent (45) its `-w`
+  beside the bare key — the US Open trio reads
+  `[tennis-atp, tennis-t-us-open, tennis-t-us-open-m]` / `[…, -w]`; the UFC
+  roster loaded 630 fighters across the eleven divisions (Heavyweight 46 …
+  Women's Strawweight 41), eight champions marked, marker
+  `wikipedia|roster-ufc` 11:23Z, quarterly cadence armed; listAthletes
+  serves the divisions WHOLE (a first cut capped them at the ranked-list
+  50 — alphabetical divisions now join the uncapped set) plus BKFC's
+  card-derived group and a card-derived Competing soon; NO UFC card gained
+  an athlete id yet because TSDB's UFC titles are event names ("UFC 320")
+  with no participants to match — the stamp fires the day a card names its
+  bout; sportWeights read motorsport 88 = f1 in uk-ie and default, 54 in
+  north-america; the Formula E mark serves under
+  `marks/tsdb-league-4371.<hash>.png` with a light plate — the first raster
+  (qlmanage) letterboxed the wordmark into a black square, so manual drops
+  are now rendered tight with AppKit and uploaded under a CONTENT-HASHED
+  path (a replaced asset under the old path would keep the old plate: the
+  art rebuild re-measures on URL change only); the golf photo pool holds 12
+  course-centric Commons shots. DEVICE (Release build, iPhone 17 Pro): the
+  launch migration turned the sim's four bare slam follows into eight sexed
+  ones (Following list: "US Open — Men’s ♂ · 1 upcoming", "— Women’s ♀ · 2
+  upcoming"…); Preferences → All matches put 29 US Open matches into the
+  simulator's EventKit store (55 "US Open" items incl. both bookends and the
+  final slot) AND onto the in-app Schedule under Today, mixed men's and
+  women's; the men's US Open page shows "All matches" as its effective chip;
+  the expanded card shows the Men’s/Women’s chips with both draws followed;
+  unfollowing the men's draw from the ATP majors list removed every "Round
+  of" match from the calendar (0 left) while the 18 women's matches and the
+  bookends stayed; search "US Open" returns one row per draw with ♂/♀; the
+  Motorsport list reads Drivers (32), FORMULA (Formula 1, Formula 2,
+  Formula E) then MOTORSPORT (MotoGP, NASCAR, WEC…) and the tile ranks
+  second on Home, where F1 ranked; the Summer Olympics node wears the medal
+  with a plus, opens into 🏃 Athletics and 🏀 Basketball with the medal
+  dimmed behind a minus bar, and closes back to the plus; the Summer sports
+  list draws 🏹 🏊‍♀️ 🏃 🏸 ⚾ 🏀 🏐 in emoji tiles; the MMA Fighters directory
+  lists Competing soon, then the divisions with flags and the champion
+  caption ("Carlos Ulberg · Champion · UFC"), "Show all 46" on Heavyweight.
+  TWO FINDINGS ON DEVICE, both fixed and rebuilt: (a) a men's match whose
+  ATP parent the joint dedupe drops filled a Home carousel card of its own —
+  carouselFixtures now treats a match as represented when ANY parent of its
+  tournament (by tennis base key) is in the set; (b) rows the tier already
+  places read "Add" — the card asks the tier pass itself
+  (domain/cardCoverage.ts) and reads "Added". Also: the rail's swing used the
+  measured copy width (padding once) as the per-copy stride — tiles are
+  contiguous at 76pt, fixed; the swing clamps to the content's end when
+  there is nothing to the node's right, by construction. The spread MOTION
+  itself is the owner's visual check (Reduce Motion was on for the tap-and-
+  hold verification; taps on the drifting strip do not register through
+  simctl — standing lore). Gate: 138 suites / 1657 tests, both zones; tsc
+  clean; functions build clean.

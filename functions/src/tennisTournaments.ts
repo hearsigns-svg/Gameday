@@ -76,6 +76,36 @@ export function canonicalDisplayName(title: string): string {
   return (slug && CANONICAL_DISPLAY[slug]) ?? title;
 }
 
+// ─── Sex-scoped tournament keys (Round 7 item 8, owner ruling 2026-09-03) ──
+//
+// The bare `tennis-t-<slug>` key stays on BOTH tours' parents — it is the
+// join the joint-card union, the same-event dedupe and every legacy
+// follow ride. Beside it each parent now carries the key of ITS OWN
+// draw: `-m` on the ATP parent, `-w` on the WTA parent (the boxing
+// `<base>-m/-w` convention). A user following the men's US Open queries
+// the `-m` key and fetches only the ATP parent; following both queries
+// both and the existing dedupe keeps one card. Appearances still carry
+// no tournament key at all — the tier pass stamps the followed sexed
+// key onto the copies it hands the planner, per side.
+
+export type TennisTour = 'atp' | 'wta';
+export const TENNIS_SEX_SUFFIX: Readonly<Record<TennisTour, 'm' | 'w'>> = {
+  atp: 'm',
+  wta: 'w',
+};
+
+export function sexedTournamentKey(baseKey: string, tour: TennisTour): string {
+  return `${baseKey}-${TENNIS_SEX_SUFFIX[tour]}`;
+}
+
+// Every tournament key a tour parent carries: the bare joint key and
+// the tour's sexed key. Empty when the title normalises to nothing.
+export function tournamentKeysFor(title: string, tour: TennisTour): string[] {
+  const base = tournamentKey(title);
+  if (base === null) return [];
+  return [base, sexedTournamentKey(base, tour)];
+}
+
 // ─── The browse list ──────────────────────────────────────────────────
 
 export interface TournamentRow {

@@ -18,6 +18,7 @@ import { useColorSchemeMode } from '../../core/useColorSchemeMode';
 import { followMarkUrl } from './data/browsePriority';
 import { Followable } from './data/followStore';
 import { identityFollow } from './domain/followIdentity';
+import { olympicGlyphForKeys } from './domain/olympicGlyphs';
 import { sportByKey } from './domain/sportsConfig';
 import {
   usePoolPhoto,
@@ -108,6 +109,9 @@ export function FixtureHero(props: {
         : {})}
       {...(item.homeCrestUrl ? { homeCrestUrl: item.homeCrestUrl } : {})}
       {...(item.awayCrestUrl ? { awayCrestUrl: item.awayCrestUrl } : {})}
+      {...(olympicGlyphForKeys(item.followKeys)
+        ? { emojiMark: olympicGlyphForKeys(item.followKeys) as string }
+        : {})}
       photoCredit={
         art
           ? [

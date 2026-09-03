@@ -52,6 +52,10 @@ import {
 } from '../../fixtures/domain/card';
 import { Fixture } from '../../fixtures/domain/fixture';
 import { isPast, timePrecisionOf } from '../../fixtures/domain/horizon';
+import { followedTennisSexes, TennisSex } from '../../fixtures/domain/tennisKeys';
+import { olympicGlyphForKeys } from '../../follows/domain/olympicGlyphs';
+import { tournamentTierOverridesFrom } from '../../follows/domain/followScopes';
+import { tierCoveredChildIds } from '../domain/cardCoverage';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
 import { followMarkUrl } from '../../follows/data/browsePriority';
 import { identityFollow } from '../../follows/domain/followIdentity';
@@ -321,7 +325,7 @@ export function FixtureCardBody(props: {
       alive = false;
     };
   }, [parentDoc?.id]);
-  const entries: CardEntry[] = useMemo(
+  const allEntries: CardEntry[] = useMemo(
     () =>
       card && cardParent
         ? jointCardEntries([
@@ -330,6 +334,28 @@ export function FixtureCardBody(props: {
           ])
         : [],
     [card, cardParent, siblingSides],
+  );
+  // ONE FOLLOW PER DRAW (Round 7 item 8): a user who follows only the
+  // men's US Open sees the men's matches and no M/W chips; both draws
+  // followed (or a legacy bare follow, or nobody following — browsing)
+  // keeps the joint card with the chips. Read from the store each
+  // render: a follow made on the card itself repaints through the sync
+  // subscription.
+  const jointKey = cardParent ? jointTournamentKeyOf(cardParent.followKeys) : null;
+  const followedSexes = jointKey
+    ? followedTennisSexes(jointKey, new Set(loadFollowKeys()))
+    : new Set<TennisSex>();
+  const soleSex: TennisSex | null =
+    followedSexes.size === 1 ? [...followedSexes][0] : null;
+  const entries = useMemo(
+    () =>
+      soleSex
+        ? allEntries.filter((e) => {
+            const sex = entrySexOf(e);
+            return sex === null || sex === soleSex;
+          })
+        : allEntries,
+    [allEntries, soleSex],
   );
   // The M/W filter applies only where the data classifies (Round 3 B4);
   // unclassified entries show under either chip, never guessed. Chips
@@ -349,6 +375,8 @@ export function FixtureCardBody(props: {
         : entries,
     [entries, mixedCard, sexOn],
   );
+  // An Olympic fixture's sport emoji as the poster watermark (Round 7 item 5).
+  const emojiMark = fixture ? olympicGlyphForKeys(fixture.followKeys) : null;
 
   if (!fixture) {
     return (
@@ -467,9 +495,23 @@ export function FixtureCardBody(props: {
   // entries are already in the calendar through a follow — Add all
   // skips them, Remove all leaves them (their per-row toggle is
   // disabled for the same reason). One sync for the whole batch.
+  // COVERED BY THE TIER TOO (Round 7 item 7): under "All matches" or
+  // "Key rounds" the tournament follow has already placed these rows,
+  // judged by the very pass the planner runs (domain/cardCoverage.ts).
   const followedKeys = new Set(loadFollowKeys());
-  const entryOn = (e: CardEntry) =>
-    e.followKeys.some((k) => followedKeys.has(k)) || isPinned(e.id);
+  const tierCovered: ReadonlySet<string> =
+    cardParent && card
+      ? tierCoveredChildIds(
+          { ...cardParent, updatedAt: '' } as Fixture,
+          [...card, ...siblingSides.flatMap((s) => s.children)],
+          [...followedKeys],
+          prefs.tournamentTier,
+          tournamentTierOverridesFrom(follows),
+        )
+      : new Set<string>();
+  const entryCovered = (e: CardEntry) =>
+    e.followKeys.some((k) => followedKeys.has(k)) || tierCovered.has(e.id);
+  const entryOn = (e: CardEntry) => entryCovered(e) || isPinned(e.id);
   const allOn =
     visibleEntries.length > 0 && visibleEntries.every((e) => entryOn(e));
   const toggleAll = () => {
@@ -579,6 +621,7 @@ export function FixtureCardBody(props: {
               }
             : {})}
           timingNote={note}
+          {...(emojiMark ? { emojiMark } : {})}
           minHeight={HERO_MIN_HEIGHT}
         />
         </Pressable>
@@ -745,6 +788,7 @@ export function FixtureCardBody(props: {
                   entry={e}
                   theme={theme}
                   sportKey={fixture.sport}
+                  covered={entryCovered(e)}
                   onToggle={() => toggleBout(e)}
                 />
               ))}
@@ -1033,11 +1077,12 @@ function BoutRow(props: {
   entry: CardEntry;
   theme: TeamTheme;
   sportKey: string;
+  // Already in the calendar through a follow — by the entry's own keys
+  // or by the tournament tier (the card decides; one rule, one place).
+  covered: boolean;
   onToggle: () => void;
 }) {
-  const { entry, theme } = props;
-  const followed = new Set(loadFollowKeys());
-  const covered = entry.followKeys.some((k) => followed.has(k));
+  const { entry, theme, covered } = props;
   const on = covered || isPinned(entry.id);
   return (
     <View style={styles.bout}>

@@ -317,7 +317,7 @@ export const fr: Catalog = {
   'follows.coverage.boxing':
     'Les horaires des cartes correspondent au début de la diffusion, pas aux montées sur le ring. Le répertoire des boxeurs couvre les champions du monde et les prétendants classés par l’IBF, plus les boxeurs des cartes annoncées.',
   'follows.coverage.ufc':
-    'Couverture au niveau des cartes uniquement. Impossible de suivre un combattant en particulier: aucune organisation de MMA ne publie d’effectif exploitable, et un répertoire de combattants relèverait de la devinette — nous préférons l’honnêteté à l’erreur.',
+    'Horaires au niveau des cartes. Le répertoire des combattants est l’effectif de l’UFC par catégorie, actualisé chaque trimestre, plus les combattants des cartes annoncées des autres organisations.',
   'follows.coverage.olympics':
     'Les prochains Jeux sont Los Angeles 2028 (14–30 juillet) et les Jeux d’hiver de Milano-Cortina en 2030. Toutes les disciplines sont listées et peuvent être suivies dès maintenant, mais aucun programme n’a encore été publié — le CIO dévoile les horaires des sessions à l’approche des Jeux, donc un suivi créé aujourd’hui livre ses épreuves dès qu’elles existent. Aucun emblème olympique n’est affiché: ces marques sont protégées par une législation dédiée, l’application nomme donc les épreuves et génère ses propres visuels.',
 
@@ -749,4 +749,5 @@ export const fr: Catalog = {
   // ── Round 6 item 6: Olympic group nodes in the Following strip ──
   'follows.rail.summerOlympics': 'Jeux olympiques d’été',
   'follows.rail.winterOlympics': 'Jeux olympiques d’hiver',
+  'follows.motorsport.formula': 'Formule',
 };

@@ -53,6 +53,7 @@ import {
   scopesFor,
 } from '../domain/followScopes';
 import { sportByKey } from '../domain/sportsConfig';
+import { olympicSportGlyph } from '../domain/olympicGlyphs';
 import {
   CareerStatusFields,
   isRetired,
@@ -253,6 +254,7 @@ export default function TeamScreen({ navigation, route }: Props) {
   }, [teamKey]);
 
   const following = isFollowed(teamKey);
+  const olympicGlyph = olympicSportGlyph(teamKey);
 
   // Per-follow granularity (Prompt 11): only rendered once followed —
   // scope is a property of the follow, and the options only exist for
@@ -361,9 +363,10 @@ export default function TeamScreen({ navigation, route }: Props) {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <View style={[styles.header, { borderColor: t.border }]}>
         <GlyphTile
-          glyph={sport?.glyph ?? '🏟️'}
+          // An Olympic sport's own emoji is its mark (Round 7 item 5).
+          glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
           theme={theme}
-          monogram={monogramOf(name)}
+          {...(olympicGlyph ? {} : { monogram: monogramOf(name) })}
           {...(storedFollowCrest ? { imageUrl: storedFollowCrest } : {})}
           {...(competitionTileFillFor(teamKey)
             ? { fillColour: competitionTileFillFor(teamKey) as string }
@@ -483,7 +486,8 @@ export default function TeamScreen({ navigation, route }: Props) {
               fixture={f}
               pagerIds={fixtures.map((x) => x.id)}
               name={name}
-              glyph={sport?.glyph ?? '🏟️'}
+              glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
+              {...(olympicGlyph ? { emojiTile: true } : {})}
               theme={theme}
               // On a competition's own page every row shares the page's
               // competition — the header already names it, so the caption
@@ -531,6 +535,7 @@ function TeamFixtureRow(props: {
   competitionInCaption: boolean;
   crestUrl?: string;
   tileFill?: string; // per-mark tile fill (Round 6 tile prep)
+  emojiTile?: boolean; // the glyph IS the mark — an Olympic sport (Round 7 item 5)
   excluded?: boolean;
   onToggleExcluded?: () => void;
   pinned?: boolean;
@@ -556,7 +561,7 @@ function TeamFixtureRow(props: {
       timeText={timeLabel(f.startUtc, f.status, f.timePrecision)}
       tbc={isDateOnly(f.status, f.timePrecision)}
       glyph={props.glyph}
-      monogram={monogramOf(f.homeTeam ?? props.name)}
+      {...(props.emojiTile ? {} : { monogram: monogramOf(f.homeTeam ?? props.name) })}
       {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
       {...(props.tileFill ? { tileFill: props.tileFill } : {})}
       theme={props.theme}

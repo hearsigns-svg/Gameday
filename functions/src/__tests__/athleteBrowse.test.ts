@@ -407,3 +407,26 @@ describe('group titles', () => {
     expect(active.athletes[0].careerStatus).toBeUndefined();
   });
 });
+
+test('a UFC division (Round 7 item 1) is alphabetical and therefore served WHOLE — never cut to the ranked-list cap', () => {
+  const fighters = Array.from({ length: 60 }, (_, i) =>
+    athlete({
+      id: `athlete_00${String(7000 + i)}`,
+      displayName: `Fighter ${String(i).padStart(2, '0')}`,
+      sport: 'ufc',
+      grouping: 'Lightweight',
+      groupingKey: 'mma-lightweight',
+      ...(i === 59 ? { championOf: ['UFC'] } : {}),
+    }),
+  );
+  const b = shapeAthleteBrowse(fighters, 'ufc', NOW);
+  expect(b.groups).toHaveLength(1);
+  expect(b.groups[0].athletes).toHaveLength(60);
+  // The champion leads the division; the rest run A–Z.
+  expect(b.groups[0].athletes[0].name).toBe('Fighter 59');
+  expect(b.groups[0].athletes[1].name).toBe('Fighter 00');
+  // Divisions read heavy → light, men then women.
+  expect(['mma-lightweight', 'mma-heavyweight', 'mma-w-strawweight', 'wta'].sort((a, c) => groupOrderKey(a).localeCompare(groupOrderKey(c)))).toEqual([
+    'wta', 'mma-heavyweight', 'mma-lightweight', 'mma-w-strawweight',
+  ]);
+});

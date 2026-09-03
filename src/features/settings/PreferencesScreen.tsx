@@ -38,7 +38,7 @@ import {
   syncStalenessHours,
 } from '../calendar-sync/syncEngine';
 import { dataStaleness } from '../fixtures/data/freshnessRepo';
-import { loadFollowables } from '../follows/data/followStore';
+import { clearTournamentTierOverrides, loadFollowables } from '../follows/data/followStore';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
 import { activeBackend } from '../calendar-sync/data/calendarBackend';
 import {
@@ -439,6 +439,13 @@ export default function PreferencesScreen({
     savePrefs(next);
     void runSync(); // re-plan immediately so the change is visible
   };
+  // The GLOBAL tier is a rule for every tournament (Round 7 item 7): a
+  // per-tournament chip set earlier — or left by the retired "Tournament
+  // + final" migration — must not keep winning over it silently.
+  const applyTournamentTier = (tier: CalendarPrefs['tournamentTier']) => {
+    clearTournamentTierOverrides();
+    apply({ ...prefs, tournamentTier: tier });
+  };
 
   const regionValue =
     region === null
@@ -656,17 +663,17 @@ export default function PreferencesScreen({
             {
               label: tr('settings.events.block'),
               selected: prefs.tournamentTier === 'block',
-              onPress: () => apply({ ...prefs, tournamentTier: 'block' }),
+              onPress: () => applyTournamentTier('block'),
             },
             {
               label: tr('settings.events.keyRounds'),
               selected: prefs.tournamentTier === 'key',
-              onPress: () => apply({ ...prefs, tournamentTier: 'key' }),
+              onPress: () => applyTournamentTier('key'),
             },
             {
               label: tr('settings.events.allMatches'),
               selected: prefs.tournamentTier === 'all',
-              onPress: () => apply({ ...prefs, tournamentTier: 'all' }),
+              onPress: () => applyTournamentTier('all'),
             },
           ]}
         />

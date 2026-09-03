@@ -53,6 +53,8 @@ import { sportLabelFor, sportMatches } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { foldedIncludes } from '../../../core/nameFold';
 import { expandQuery } from '../domain/searchAliases';
+import { sexedTournamentRows } from '../domain/tennisBrowse';
+import { olympicSportGlyph } from '../domain/olympicGlyphs';
 
 type Props = RootScreenProps<'Search'>;
 
@@ -72,6 +74,9 @@ interface Row {
   burstColours?: string[];
   tileBadge?: string; // the flag, on the tile
   tileFill?: string; // per-mark tile fill (Round 6 tile prep)
+  // Round 7 item 5: an Olympic sport row wears its sport's emoji as the
+  // mark — no monogram, never an emblem.
+  emojiGlyph?: string;
   followable?: Followable; // absent → row navigates instead
 }
 
@@ -166,6 +171,7 @@ function localMatches(q: string): { sports: Row[]; comps: Row[] } {
           ? { imageUrl: searchMarkFor(c) }
           : {}),
         ...(searchFillFor(c) ? { tileFill: searchFillFor(c) } : {}),
+        ...(olympicSportGlyph(c.key) ? { emojiGlyph: olympicSportGlyph(c.key) as string } : {}),
         followable: {
           key: c.key,
           label: c.name,
@@ -389,35 +395,44 @@ export default function SearchScreen({ navigation }: Props) {
       needle.length >= 2
         ? expandQuery(query.trim()).map((n) => n.toLowerCase())
         : [];
+    // ONE ROW PER DRAW (Round 7 item 8): a joint tournament is two
+    // followables — "US Open · Men’s" and "US Open · Women’s" — each
+    // under its sexed key; a single-tour event is one row.
     const tournamentRows: Row[] = needles.length
       ? tournaments
           .filter((tr) => needles.some((n) => foldedIncludes(tr.name, n)))
-          .map((tr) => ({
-            kind: 'competition' as const,
-            key: tr.key,
-            title: tr.name,
-            caption: i18n.t('follows.search.captionTournament', {
-              sport: sportNameOf('tennis'),
-            }),
-            sportKey: 'tennis',
-            // Tournament keys the art map carries (the aliased cups —
-            // Round 3 mark audit v2); the majors have no provider mark.
-            ...(cachedPriorities().competitionArt[tr.key]
-              ? { imageUrl: cachedPriorities().competitionArt[tr.key] }
-              : {}),
-            ...(cachedPriorities().competitionArtTileFills[tr.key]
-              ? { tileFill: cachedPriorities().competitionArtTileFills[tr.key] }
-              : {}),
-            followable: {
-              key: tr.key,
-              label: tr.name,
+          .flatMap((tr) =>
+            sexedTournamentRows(tr).map((draw) => ({
+              kind: 'competition' as const,
+              key: draw.key,
+              title: tr.name,
+              caption: [
+                i18n.t(draw.tour === 'atp' ? 'follows.athletes.mens' : 'follows.athletes.womens'),
+                i18n.t('follows.search.captionTournament', {
+                  sport: sportNameOf('tennis'),
+                }),
+              ].join(' · '),
               sportKey: 'tennis',
-              type: 'competition' as const,
+              tileBadge: draw.tour === 'atp' ? '♂' : '♀',
+              // Tournament keys the art map carries (the aliased cups —
+              // Round 3 mark audit v2); the majors have no provider mark.
               ...(cachedPriorities().competitionArt[tr.key]
-                ? { crestUrl: cachedPriorities().competitionArt[tr.key] }
+                ? { imageUrl: cachedPriorities().competitionArt[tr.key] }
                 : {}),
-            },
-          }))
+              ...(cachedPriorities().competitionArtTileFills[tr.key]
+                ? { tileFill: cachedPriorities().competitionArtTileFills[tr.key] }
+                : {}),
+              followable: {
+                key: draw.key,
+                label: draw.label,
+                sportKey: 'tennis',
+                type: 'competition' as const,
+                ...(cachedPriorities().competitionArt[tr.key]
+                  ? { crestUrl: cachedPriorities().competitionArt[tr.key] }
+                  : {}),
+              },
+            })),
+          )
       : [];
     const seen = new Set<string>();
     const pr = cachedPriorities();
@@ -590,15 +605,16 @@ export default function SearchScreen({ navigation }: Props) {
                   fullWidth
                   label={item.title}
                   caption={item.caption}
-                  glyph={sport?.glyph ?? '🏟️'}
+                  glyph={item.emojiGlyph ?? sport?.glyph ?? '🏟️'}
                   theme={teamTheme(
                     item.followable?.brandColour ?? sport?.accent ?? null,
                     mode,
                   )}
                   // A SPORT keeps its own mark. Stamping "SO" over the
                   // soccer ball would replace the one thing on the row
-                  // that already identifies it.
-                  {...(item.kind === 'sport'
+                  // that already identifies it. An Olympic sport's emoji
+                  // is its mark for the same reason (Round 7 item 5).
+                  {...(item.kind === 'sport' || item.emojiGlyph
                     ? {}
                     : { monogram: monogramOf(item.title) })}
                   {...(item.imageUrl ? { imageUrl: item.imageUrl } : {})}

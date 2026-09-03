@@ -118,14 +118,29 @@ export function narrowToServed(
 // Olympic statute is enforced at merge as well as at import and at
 // serve: no olympics-*/paralympics-* key can enter the art map from
 // the curated layer whatever the import wrote.
+//
+// OVERRIDE (Round 7 item 3, owner ruling 2026-09-03): an entry flagged
+// `override` is an official asset the OWNER chose for that competition
+// (the manual drop in scripts/import-curated-marks.mjs) — it beats the
+// provider badge, and for a `tsdb-league-<id>` key it also retires the
+// badge stored under the bare numeric id, since the client reads the
+// id first and the key second. Automated curated entries never carry
+// the flag and keep filling gaps only.
 export function mergeCuratedMarks(
   art: Record<string, string>,
-  curated: Readonly<Record<string, { url?: string }>>,
+  curated: Readonly<Record<string, { url?: string; override?: boolean }>>,
 ): Record<string, string> {
   const out = { ...art };
   for (const [key, entry] of Object.entries(curated)) {
     if (/^(?:olympics|paralympics)/.test(key)) continue;
-    if (!out[key] && entry.url) out[key] = entry.url;
+    if (!entry.url) continue;
+    if (entry.override === true) {
+      out[key] = entry.url;
+      const tsdb = TSDB_LEAGUE_KEY.exec(key);
+      if (tsdb) delete out[tsdb[1]];
+      continue;
+    }
+    if (!out[key]) out[key] = entry.url;
   }
   return out;
 }

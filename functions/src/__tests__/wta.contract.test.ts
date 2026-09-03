@@ -41,7 +41,8 @@ test('a tournament becomes a date_only span parent under the tennis-wta slice', 
     // evidenced ALIAS case: the WTA says "Mubadala DC Open", the ATP
     // ICS says "Mubadala Citi DC Open" — one Washington event, and
     // both slugs fold to tennis-t-dc-open.
-    followKeys: ['tennis-wta', 'tennis-t-dc-open'],
+    // …plus the women's draw key (Round 7 item 8): the sexed follow.
+    followKeys: ['tennis-wta', 'tennis-t-dc-open', 'tennis-t-dc-open-w'],
     // City+country from the feed — the tournament-photo disambiguator
     // (Prompt 9c), never a photo key by itself.
     venueCity: 'WASHINGTON DC USA', // verbatim feed casing

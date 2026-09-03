@@ -25,7 +25,12 @@ import { followFeedback } from '../followFeedback';
 import { cachedTournaments, fetchTournaments, TournamentRow } from '../data/directoryRepo';
 import { cachedPriorities, subscribePriorities } from '../data/browsePriority';
 import { isFollowed } from '../data/followStore';
-import { tournamentDateRange, tournamentsFor } from '../domain/tennisBrowse';
+import {
+  tournamentDateRange,
+  tournamentFollowKey,
+  tournamentFollowLabel,
+  tournamentsFor,
+} from '../domain/tennisBrowse';
 import { sportByKey } from '../domain/sportsConfig';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TournamentList'>;
@@ -64,16 +69,21 @@ export default function TournamentListScreen({ navigation, route }: Props) {
     })();
   }, [tour, kind]);
 
+  // ONE FOLLOW PER DRAW (Round 7 item 8): this list is reached from a
+  // tour's section, so its rows follow THAT tour's draw — the men's US
+  // Open from the ATP list, the women's from the WTA list — under the
+  // sexed key, with the sex on the stored label.
   const toggle = useCallback(
     async (row: TournamentRow) => {
+      const key = tournamentFollowKey(row.key, tour);
       setBusyKey(row.key);
       const item = {
-        key: row.key,
-        label: row.name,
+        key,
+        label: tournamentFollowLabel(row.name, tour),
         sportKey: 'tennis',
         type: 'competition' as const,
       };
-      const wasFollow = !isFollowed(row.key);
+      const wasFollow = !isFollowed(key);
       const r = wasFollow ? await follow(item) : await unfollow(item);
       setBusyKey(null);
       if (!r.ok) setError(messageOf(r.error));
@@ -85,7 +95,7 @@ export default function TournamentListScreen({ navigation, route }: Props) {
       }
       forceRender((n) => n + 1);
     },
-    [navigation],
+    [navigation, tour],
   );
 
   if (error) {
@@ -136,13 +146,13 @@ export default function TournamentListScreen({ navigation, route }: Props) {
             glyph={tennis?.glyph ?? '\u{1F3BE}'}
             onOpen={() =>
               navigation.navigate('Team', {
-                teamKey: item.key,
-                name: item.name,
+                teamKey: tournamentFollowKey(item.key, tour),
+                name: tournamentFollowLabel(item.name, tour),
                 sportKey: 'tennis',
                 followType: 'competition',
               })
             }
-            following={isFollowed(item.key)}
+            following={isFollowed(tournamentFollowKey(item.key, tour))}
             onFollow={() => void toggle(item)}
             busy={busyKey === item.key}
           />

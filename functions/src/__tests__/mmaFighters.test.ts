@@ -78,3 +78,43 @@ describe('deriveMmaBrowse', () => {
     expect(browse.competingSoon.map((a) => a.name)).toEqual(['Francis Ngannou', 'Renan Ferreira']);
   });
 });
+
+describe('the roster join (Round 7 item 1)', () => {
+  const { stampMmaAthleteIds, mergeMmaBrowse } = require('../mmaFighters');
+  const jones = { id: 'athlete_000900', displayName: 'Jon Jones', sport: 'ufc', countryCode: 'USA', accentHue: 12, grouping: 'Heavyweight', groupingKey: 'mma-heavyweight' };
+  const matcher = { match: (name: string) => (/^jon jones$/i.test(name.trim()) ? jones : null) };
+
+  it('stamps the canonical athlete id beside the folded-name key for a resolved side only', () => {
+    const c = card('ufc-9', 'UFC', '2026-09-20T02:00:00.000Z', 'Jon Jones', 'Tom Aspinall');
+    const once = stampMmaAthleteIds(stampMmaFighterKeys([c]), matcher);
+    expect(once[0].followKeys).toEqual(['tsdb-league-4443', 'mma-jon-jones', 'mma-tom-aspinall', 'athlete_000900']);
+    expect(stampMmaAthleteIds(once, matcher)).toEqual(once); // idempotent
+    expect(stampMmaAthleteIds([{ ...c, sport: 'boxing' }], matcher)[0].followKeys).toEqual(['tsdb-league-4443']);
+  });
+
+  it('serves the roster divisions, keeps other promotions, re-keys competing-soon to the roster identity', () => {
+    const now = '2026-09-02T12:00:00.000Z';
+    const derived = deriveMmaBrowse(
+      [
+        card('ufc-1', 'UFC', '2026-09-10T02:00:00.000Z', 'Jon Jones', 'Tom Aspinall'),
+        card('pfl-1', 'PFL', '2026-09-11T00:00:00.000Z', 'Francis Ngannou', 'Renan Ferreira'),
+      ],
+      now,
+      () => undefined,
+      () => 7,
+    );
+    const roster = {
+      groups: [{ grouping: 'Heavyweight', groupingKey: 'mma-heavyweight', athletes: [{ key: jones.id, name: 'Jon Jones', sportKey: 'ufc' as const, accentHue: 12, grouping: 'Heavyweight' }] }],
+      competingSoon: [],
+    };
+    const out = mergeMmaBrowse(roster, derived, matcher, () => 7);
+    expect(out.groups.map((g: { groupingKey: string }) => g.groupingKey)).toEqual(['mma-heavyweight', 'mma-ufc-unlisted', 'mma-pfl']);
+    // Aspinall is on a UFC card but not on the roster slice → the unlisted group, by folded key.
+    expect(out.groups[1].athletes.map((a: { key: string }) => a.key)).toEqual(['mma-tom-aspinall']);
+    // Competing soon: Jones under his ROSTER key and name; the rest as derived; nobody twice.
+    expect(out.competingSoon.map((a: { key: string }) => a.key)).toEqual([
+      'athlete_000900', 'mma-tom-aspinall', 'mma-francis-ngannou', 'mma-renan-ferreira',
+    ]);
+    expect(out.competingSoon[0]).toMatchObject({ name: 'Jon Jones', countryCode: 'USA', nextStartUtc: '2026-09-10T02:00:00.000Z' });
+  });
+});

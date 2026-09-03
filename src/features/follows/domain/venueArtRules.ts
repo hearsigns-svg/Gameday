@@ -198,6 +198,48 @@ export function pickCityCandidate(
   return shaped[0]?.id ?? null;
 }
 
+// VENUE-NAME VARIANTS (Round 7 item 9, owner ruling 2026-09-03). Golf
+// feeds publish the course as the tour writes it — "Yas Links GC",
+// "St Andrews (Old Course)", "black desert resort" — while Wikidata
+// labels the entity "Yas Links", "Old Course at St Andrews", "Black
+// Desert Resort". Measured over the 24 upcoming golf venues
+// (2026-09-03): the raw name resolved 3; the variants below lift
+// Wentworth, the Old Course and the Delhi Golf Club. Each variant is a
+// re-spelling of the SAME name, never a different place — the venue
+// walk (venueCandidateOrder) still decides what qualifies.
+export function venueNameVariants(name: string): string[] {
+  const out: string[] = [];
+  const add = (s: string) => {
+    const v = s.replace(/\s+/g, ' ').trim();
+    if (v && !out.includes(v)) out.push(v);
+  };
+  const base = name.trim();
+  add(base);
+  // "St Andrews (Old Course)" → "Old Course at St Andrews", then the
+  // venue without its qualifier.
+  const paren = /^(.*?)\s*\((.+?)\)\s*$/.exec(base);
+  if (paren) {
+    add(`${paren[2]} at ${paren[1]}`);
+    add(paren[1]);
+  }
+  // Tour abbreviations.
+  const expanded = base
+    .replace(/\bG&CC\b/i, 'Golf & Country Club')
+    .replace(/\bGC\b/, 'Golf Club')
+    .replace(/\bCC\b/, 'Country Club');
+  add(expanded);
+  // "Wentworth Golf Club" is "Wentworth Club"; "Jumeirah Golf Estate" is
+  // "Jumeirah Golf Estates"; a bare "Yas Links".
+  add(expanded.replace(/\bGolf Club\b/, 'Club'));
+  add(expanded.replace(/\bGolf Estate\b/, 'Golf Estates'));
+  add(expanded.replace(/\s+(?:Golf Club|Golf Course|Country Club|Golf Links|GC)$/i, ''));
+  // A feed that shouts or whispers ("black desert resort").
+  if (base === base.toLowerCase() || base === base.toUpperCase()) {
+    add(base.toLowerCase().replace(/(^|\s)(\p{L})/gu, (_m, sp: string, c: string) => sp + c.toUpperCase()));
+  }
+  return out;
+}
+
 export function venueCandidateOrder(
   candidates: readonly WikidataCandidate[],
   city?: string,

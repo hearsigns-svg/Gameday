@@ -299,7 +299,7 @@ export const it: Catalog = {
   'follows.coverage.boxing':
     'Gli orari delle card sono l’inizio della trasmissione, non le ring walk. L’elenco dei pugili copre i campioni del mondo e gli sfidanti classificati IBF, più i pugili delle card annunciate.',
   'follows.coverage.ufc':
-    'Copertura solo a livello di card. I singoli fighter non si possono seguire: nessuna organizzazione MMA pubblica un roster utilizzabile, quindi un elenco di fighter sarebbe tirare a indovinare — preferiamo essere onesti che sbagliare.',
+    'Orari a livello di card. L’elenco dei fighter è il roster UFC per categoria, aggiornato ogni trimestre, più i fighter delle card annunciate delle altre organizzazioni.',
   'follows.coverage.olympics':
     'I prossimi Giochi sono Los Angeles 2028 (14–30 luglio) e i Giochi invernali di Milano-Cortina nel 2030. Ogni disciplina è già elencata e si può seguire, ma nessun calendario è stato ancora pubblicato — il CIO comunica gli orari delle sessioni a ridosso dei Giochi, quindi un follow fatto oggi consegna i suoi eventi nel momento in cui esistono. Nessun emblema olimpico viene mostrato: i simboli sono protetti da una legislazione dedicata, quindi l’app nomina gli eventi e genera la propria grafica.',
 
@@ -727,4 +727,5 @@ export const it: Catalog = {
   // ── Round 6 item 6: Olympic group nodes in the Following strip ──
   'follows.rail.summerOlympics': 'Olimpiadi estive',
   'follows.rail.winterOlympics': 'Olimpiadi invernali',
+  'follows.motorsport.formula': 'Formula',
 };

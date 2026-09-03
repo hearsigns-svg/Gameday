@@ -19,6 +19,11 @@
 // points, rather than dropping them out of browse entirely.
 
 import { t } from '../../../core/i18n';
+import {
+  sexedTennisKey,
+  sexOfTour,
+  TennisTour,
+} from '../../fixtures/domain/tennisKeys';
 
 export interface TournamentLike {
   key: string;
@@ -108,6 +113,47 @@ export function tournamentDateRange(startUtc: string, endUtc: string): string {
 
 export function isSlam(key: string): boolean {
   return SLAM_KEYS.includes(key);
+}
+
+// ─── One follow per draw (Round 7 item 8, owner ruling 2026-09-03) ────
+//
+// A tournament row is the EVENT; what a user follows is a DRAW of it —
+// the men's US Open from the ATP section, the women's from the WTA
+// section — so the follow key is the tour's sexed key and the stored
+// label carries the sex (the boxing "— Men’s / — Women’s" convention),
+// while the row's display name stays the bare tournament name. The
+// draws a row offers are the tours it proves (`tours`, else what we
+// hold): a joint tournament offers two follows, a 250 offers one.
+
+export function tournamentFollowKey(baseKey: string, tour: TennisTour): string {
+  return sexedTennisKey(baseKey, sexOfTour(tour));
+}
+
+export function tournamentFollowLabel(name: string, tour: TennisTour): string {
+  return `${name} — ${t(tour === 'atp' ? 'follows.athletes.mens' : 'follows.athletes.womens')}`;
+}
+
+export function tournamentDraws(row: TournamentLike): TennisTour[] {
+  const tours = toursOf(row);
+  return tours.length > 0 ? tours : ['atp', 'wta'];
+}
+
+export interface SexedTournamentRow {
+  key: string; // the follow key — the tour's draw
+  baseKey: string; // the event's joint key (art, dates)
+  name: string; // the bare tournament name
+  label: string; // the follow's stored label
+  tour: TennisTour;
+}
+
+export function sexedTournamentRows(row: TournamentLike): SexedTournamentRow[] {
+  return tournamentDraws(row).map((tour) => ({
+    key: tournamentFollowKey(row.key, tour),
+    baseKey: row.key,
+    name: row.name,
+    label: tournamentFollowLabel(row.name, tour),
+    tour,
+  }));
 }
 
 // What a tour's tournament list actually contains, split the way a

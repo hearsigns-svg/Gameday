@@ -429,6 +429,30 @@ export function sportWeightsOf(
   return weights;
 }
 
+// ONE MOTORSPORT TILE, RANKED BY LOCALE (Round 7 item 2, owner ruling
+// 2026-09-03). Since Round 6 item 7 Formula 1 has no tile of its own —
+// it is the first row of the Motorsport tile — so the tile must RANK as
+// F1 wherever F1 is the draw ("F1 & Motorsport": the tile takes the
+// greater of the two sport weights, which is F1's 88) and as plain
+// Motorsport where it is not (North America keeps the motorsport row's
+// own weight). The region list mirrors the client's regional label
+// table (src/features/follows/domain/sportTerms.ts): "Motorsport" is
+// the North American word, "F1 & Motorsport" everywhere else. The f1
+// weight itself is left in the map for anything still keyed by it.
+export const MOTORSPORT_PLAIN_REGIONS: readonly string[] = ['north-america'];
+
+export function foldMotorsportWeight(
+  weights: Record<string, number>,
+  region: string | undefined,
+): Record<string, number> {
+  if (region !== undefined && MOTORSPORT_PLAIN_REGIONS.includes(region)) {
+    return weights;
+  }
+  const f1 = weights.f1;
+  if (f1 === undefined) return weights;
+  return { ...weights, motorsport: Math.max(weights.motorsport ?? 0, f1) };
+}
+
 // Union device and catalogue paths under the cap, DEVICE FIRST — a real
 // follower's slice must never be starved by a warming entry (the
 // owner's rule, and the fix for F10's arbitrary drop order: what

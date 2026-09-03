@@ -100,6 +100,31 @@ export function isFollowed(key: string): boolean {
   return loadFollowables().some((f) => f.key === key);
 }
 
+// A GLOBAL tournament-tier change clears every per-tournament override
+// (Round 7 item 7, owner ruling 2026-09-03). The per-tournament chips
+// are a divergence FROM the preference; a user who then changes the
+// preference has stated a rule for every tournament, and a stale
+// override quietly winning over it is how "All matches" delivered
+// nothing — the retired 'Tournament + final' migration had left
+// 'key-rounds' pinned on the follow. Returns the keys cleared.
+const TOURNAMENT_TIER_SCOPES: ReadonlySet<string> = new Set([
+  'block',
+  'key-rounds',
+  'all-matches',
+]);
+
+export function clearTournamentTierOverrides(): string[] {
+  const cleared: string[] = [];
+  const next = loadFollowables().map((f) => {
+    if (f.scope === undefined || !TOURNAMENT_TIER_SCOPES.has(f.scope)) return f;
+    cleared.push(f.key);
+    const { scope: _drop, ...rest } = f;
+    return rest;
+  });
+  if (cleared.length > 0) writeJson(KEY_V2, next);
+  return cleared;
+}
+
 // Bring stored follows' artwork up to date from freshly fetched
 // directory rows (domain/followArt.ts explains the rules, including why
 // an absence can clear a crest). Returns true when anything changed, so

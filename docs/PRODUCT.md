@@ -27,17 +27,19 @@ athlete, series. Each sport declares its browse hierarchy and offered types:
 | Sport | Browse path | Primary follow | Also followable |
 |---|---|---|---|
 | Soccer, cricket, ice hockey, basketball, baseball, NFL, rugby | sport → league → team | Team | Competition (World Cup, Six Nations, IPL) |
-| Tennis | sport → tour/competitions | Tournament | Player |
+| Tennis | sport → tour/competitions | Tournament DRAW — one follow per draw (men's from the ATP section, women's from the WTA section; both followed = one joint card) | Player |
 | Golf | sport → tour | Tournament | — (players deferred) |
-| F1 | sport | Series (season calendar) | — |
-| UFC | sport → athletes | Athlete | Event card |
+| Motorsport (one tile: "F1 & Motorsport" / "Motorsport") | sport → Formula run (F1, F2, Formula E) + series run | Series / competition | Driver (Formula 1's directory) |
+| UFC / MMA | sport → fighters (the UFC roster by division, refreshed quarterly, plus fighters on announced cards) → cards | Athlete | Event card |
 
 Rules:
 - Team-follow spans ALL competitions (league is navigation, not a filter):
   following Liverpool yields PL + UCL + cups.
-- Multi-day units (golf/tennis tournaments) render as day-span entries,
-  not per-match events. F1 creates per-session events (practice/quali/
-  race) with a "race only" preference.
+- Multi-day units (golf/tennis tournaments) render as day-span entries
+  by default; the tournament tier setting (Dates only / Key rounds / All
+  matches) adds bookend notes plus matches, and the in-app Schedule
+  mirrors whatever the calendar holds. F1 creates per-session events
+  (practice/quali/race) with a "race only" preference.
 - Late-scheduling sports (tennis order-of-play, UFC cards) create
   placeholder events ("Gauff vs Day — National Bank Open", day known,
   time TBC) that sharpen in place as data confirms. The example used to

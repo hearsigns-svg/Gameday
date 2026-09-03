@@ -99,6 +99,13 @@ source of truth for build state — never chat history.
   request at 10:33:27Z still hit the previous revision. Wait ≥2 minutes
   after a deploy before the behavioural probe, or the probe judges the
   old code and you chase a phantom.
+- **A FOLLOW-KEY MIGRATION SHIPS SERVER-FIRST** (2026-09-03, Round 7
+  item 8). When a client migration rewrites stored follows onto NEW
+  keys (bare `tennis-t-<slug>` → `-m`/`-w`), the planner reads "my key
+  fetched nothing" as an unfollow and DELETES the events. Order: deploy
+  the stamping code, re-poll every source that writes the docs, verify
+  in Firestore that every current doc carries the new keys, and only
+  then build the client. The migration's own comment names this rule.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network

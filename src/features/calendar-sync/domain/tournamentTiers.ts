@@ -35,6 +35,12 @@ import {
   timePrecisionOf,
 } from '../../fixtures/domain/horizon';
 import { TournamentTier } from './prefs';
+import {
+  isBareTennisKey,
+  isTennisTournamentKey,
+  sexedTennisKey,
+  tennisEntrySex,
+} from '../../fixtures/domain/tennisKeys';
 
 // The calendar-description pointer (Round 3 B3): rides the tier-1
 // block and the tier-2/3 opening note. Catalog-backed (Phase C) — the
@@ -128,7 +134,7 @@ export function applyTournamentTiers(
   const followed = new Set(followedKeys);
   const out: Fixture[] = [];
   for (const f of fixtures) {
-    const followKey = f.followKeys.find((k) => followed.has(k));
+    const followKey = ownerFollowKey(f.followKeys, followed, overrides);
     if (!isBlockParent(f) || followKey === undefined) {
       out.push(f);
       continue;
@@ -164,13 +170,61 @@ export function applyTournamentTiers(
     for (const child of kids) {
       if (tier === 'key' && !isKeyRound(child)) continue;
       if (child.status === 'cancelled') continue;
+      const stamp = childFollowKey(child, f, followed, followKey);
+      // A draw nobody follows (the women's matches under a men's-only
+      // follow) is not this follow's business — the union hands the
+      // pass every sibling's children; the follow set decides.
+      if (stamp === null) continue;
       out.push({
         ...child,
         // The copy rides the follow that carried its tournament, so
         // unfollowing removes matches, bookends and all in one plan.
-        followKeys: [...child.followKeys, followKey],
+        followKeys: [...child.followKeys, stamp],
       });
     }
   }
   return out;
+}
+
+// The followed key that OWNS a parent for the tier decision. A parent
+// carries several keys a user may hold at once — the tour slice
+// ('tennis-wta'), the bare joint key, its sexed draw key — and the
+// per-tournament override lives on ONE of them. Preference: a followed
+// key that carries an override, then a tournament key over a tour key,
+// then parent order. (Before Round 7 the first followed key won, so a
+// WTA Tour follower's US Open override was invisible to the pass.)
+function ownerFollowKey(
+  parentKeys: readonly string[],
+  followed: ReadonlySet<string>,
+  overrides: ReadonlyMap<string, TournamentTier>,
+): string | undefined {
+  const held = parentKeys.filter((k) => followed.has(k));
+  return (
+    held.find((k) => overrides.has(k)) ??
+    held.find(isTennisTournamentKey) ??
+    held[0]
+  );
+}
+
+// The key a match COPY rides (Round 7 item 8). A tennis match belongs to
+// ONE draw, and the joint union hands the pass both draws' matches, so
+// each copy is stamped with the followed key of ITS OWN side: the sexed
+// key where the user holds it, the bare joint key for a legacy follow,
+// the tour slice for a whole-tour follower of that draw — or nothing,
+// which drops the match. Every other sport keeps the owner key.
+function childFollowKey(
+  child: Fixture,
+  parent: Fixture,
+  followed: ReadonlySet<string>,
+  ownerKey: string,
+): string | null {
+  const joint = parent.followKeys.find(isBareTennisKey);
+  const sex = tennisEntrySex(child.competitionId);
+  if (joint === undefined || sex === null) return ownerKey;
+  const sexed = sexedTennisKey(joint, sex);
+  if (followed.has(sexed)) return sexed;
+  if (followed.has(joint)) return joint;
+  const tourSlice = sex === 'm' ? 'tennis-atp' : 'tennis-wta';
+  if (followed.has(tourSlice) && parent.followKeys.includes(tourSlice)) return tourSlice;
+  return null;
 }

@@ -187,7 +187,7 @@ export const followsStrings = {
   'follows.coverage.boxing':
     'Card times are the broadcast start, not ringwalks. The fighter directory covers world champions and IBF-rated contenders, plus fighters on announced cards.',
   'follows.coverage.ufc':
-    'Card-level coverage only. Individual fighters cannot be followed: no MMA body publishes a usable roster, so a fighter directory would be guesswork — we would rather be honest than wrong.',
+    'Card-level times. The fighter directory is the UFC roster by division, refreshed quarterly, plus fighters on announced cards across the other promotions.',
   'follows.coverage.olympics':
     'The next Games are Los Angeles 2028 (14–30 July) and the Milano-Cortina winter Games in 2030. Every discipline is listed and followable now, but no schedule has been published yet — the IOC releases session times closer to the Games, so a follow made today delivers its events the moment they exist. No Olympic emblems are shown: the marks are protected by dedicated legislation, so the app names the events and generates its own artwork.',
 
@@ -198,4 +198,7 @@ export const followsStrings = {
   // ── Round 6 item 6: Olympic group nodes in the Following strip ──
   'follows.rail.summerOlympics': 'Summer Olympics',
   'follows.rail.winterOlympics': 'Winter Olympics',
+  // The Motorsport tile's Formula run header (Round 7 item 3); the other
+  // run reads core.sport.motorsport.
+  'follows.motorsport.formula': 'Formula',
 } as const;

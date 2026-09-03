@@ -1,0 +1,1540 @@
+==Current champions, weight classes and status==
+The UFC currently uses nine different weight classes.<ref>{{Cite web|url=http://www.abcboxing.com/unified-weight-classes-mma/|title=Unified Weight Classes – MMA – Association of Boxing Commissions|website=abcboxing.com|access-date=2018-08-09}}</ref><ref>{{Cite web|url=http://www.ufc.com/discover/sport/rules-and-regulations#2|title=Rules and Regulations – Unified Rules and Other MMA Regulations|website=[[Ultimate Fighting Championship|UFC]]|access-date=2018-08-10}}</ref> This list of champions is updated as of August 22, 2026, after [[UFC Fight Night: Hernandez vs. Rodrigues]].
+
+{| class="wikitable" style="font-size: 85%; width:97%"
+!colspan="";! width=3%|WC
+!colspan=""! width=7%|Min
+!colspan=""! width=7%|Upper limit
+!rowspan=""!width=3%|G
+!rowspan=""!width=4%|Champion
+!rowspan=""!width=3%|Flag
+!rowspan=""!width=8%|Date won
+!rowspan=""!width=3%|Ref
+!rowspan=""!width=3%|Days<br />held
+!rowspan=""!width=45%|Defenses
+!rowspan=""!width=9%|Next Fight / Info
+!rowspan=""!width=3%|Ref
+
+|- style="text-align:center;"
+|[[Strawweight (MMA)|SW]]
+|SW
+|115 Ib <br /> 52.2&nbsp;kg
+| style="background:#F19CBB" |W
+| style="background:#F19CBB"| [[Mackenzie Dern]]
+|{{flagicon|BRA}}
+|[[UFC 321|October 25, 2025]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2025/10/25/ufc-321-mackenzie-dern-claims-strawweight-gold-in-rematch-with-virna-jandiroba/|title=UFC 321: Mackenzie Dern Claims Strawweight Gold in Rematch with Virna Jandiroba|publisher=cagesidepress.com|author=Jay Anderson|date=2025-10-25|access-date=2025-10-25}}</ref>
+| {{age in days|month1=10|day1=25|year1=2025}}
+| style="text-align:left;" |
+{{small|'''1.''' def. [[Gillian Robertson]] at [[UFC 330]] on Aug 15, 2026}}<br/>
+|TBD
+|
+|-style="text-align:center;"
+|rowspan=2|[[Flyweight (MMA)|FLW]]
+|rowspan=2|&gt;115 Ib <br />&gt;52.2&nbsp;kg
+|rowspan=2|125 Ib <br /> 56.7&nbsp;kg
+|style="background:#BBF; "|M
+| style="background:#BBF;|[[Joshua Van]]
+|{{flagicon|Myanmar}}
+|[[UFC 323|December 6, 2025]]
+|<ref>{{Cite web|url=https://bloodyelbow.com/2025/12/07/alexandre-pantoja-vs-joshua-van-ufc-323-result-new-flyweight-champion-crowned-after-freak-injury/|title=Alexandre Pantoja vs Joshua Van UFC 323 result: New flyweight champion crowned in 26 seconds after freak injury|publisher=bloodyelbow.com|author=Donagh Corby|date=2025-12-07|access-date=2025-12-07}}</ref>
+|{{age in days|month1=12|day1=06|year1=2025}}
+| style="text-align:left;" |
+{{small|'''1.''' def. [[Tatsuro Taira]] at [[UFC 328]] on May 9, 2026}}<br/>
+|[[UFC 331]] - [[Alexandre Pantoja]]
+|<ref>{{Cite web|title=Joshua Van - Aleksandr Pantoja revansh jangi o'tkaziladi|url=https://olamsport.com/oz/news/joshua-van-aleksandr-pantoja-revansh-jangi-otkaziladi|date=2026-07-13|access-date=2026-07-15|publisher=olamsport.com|author=OlamSport}} {{in lang|uz}}</ref>
+|- style="text-align:center;"
+| style="background:#F19CBB;|W
+| style="background:#F19CBB;|[[Valentina Shevchenko]]
+|{{flagicon|KGZ}}
+| [[UFC 306|September 14, 2024]]
+|<ref name="Valentina vs. Alexa 3">{{Cite web|url=https://cagesidepress.com/2024/09/15/ufc-306-valentina-shevchenko-wrestles-her-way-past-alexa-grasso-reclaims-title/|title=UFC 306: Valentina Shevchenko Wrestles Her Way Past Alexa Grasso, Reclaims Title|publisher=cagesidepress.com|date=2024-09-14|access-date=2024-09-14}}</ref>
+| {{age in days|month1=9|day1=14|year1=2024}}
+| style="text-align:left;" |
+{{small|'''1.''' def. [[Manon Fiorot]] at [[UFC 315]] on May 10, 2025}}<br/>{{small|'''2.''' def. [[Zhang Weili]] at [[UFC 322]] on November 15, 2025}}<br/>
+|TBD
+|
+|- style="text-align:center;"
+|rowspan=2|[[Bantamweight (MMA)|BW]]
+|rowspan=2|&gt;125 Ib <br />&gt;56.7&nbsp;kg
+|rowspan=2|135 Ib <br /> 61.2&nbsp;kg
+|style="background:#BBF;"|M
+| style="background:#BBF;"|[[Petr Yan]]
+|{{flagicon|RUS}}
+|[[UFC 323|December 6, 2025]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2025/12/07/ufc-323-petr-yan-dethrones-merab-dvalishvili-in-rematch/|title=UFC 323: Petr Yan Dethrones Merab Dvalishvili in Rematch|publisher=cagesidepress.com|author=Jay Anderson|date=2025-12-07|access-date=2025-12-07}}</ref>
+| {{age in days|month1=12|day1=06|year1=2025}}
+| style="text-align:left;" |
+|[[UFC 333]] - [[Merab Dvalishvili]]
+|<ref>{{Cite web|url=https://bloodyelbow.com/2026/08/09/alexander-volkanovski-and-petr-yan-are-reportedly-set-to-defend-their-ufc-belts-at-ufc-333/|title=Alexander Volkanovski and Petr Yan are reportedly set to defend their UFC belts at UFC 333|publisher=bloodyelbow.com|author=Jordan Ellis|date=2026-08-09|access-date=2026-08-10}}</ref>
+|- style="text-align:center;"
+| style="background:#F19CBB;|W
+| style="background:#F19CBB;| [[Kayla Harrison]]
+|{{flagicon|USA}}
+|[[UFC 316|June 7, 2025]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2025/06/08/kayla-harrison-fulfills-destiny-takes-title-via-kimura-submission/|title=Kayla Harrison Fulfills Destiny, Takes Title via Kimura Submission|publisher=cagesidepress.com|author=Eddie Law|date=2025-06-08|access-date=2025-06-08}}</ref>
+|{{age in days|month1=6|day1=07|year1=2025}}
+| style="text-align:left;" |
+|TBD
+|
+|- style="text-align:center;"
+|[[Featherweight (MMA)|FTW]]
+| &gt;135 Ib <br /> &gt;61.2&nbsp;kg
+| 145 Ib <br /> 65.8&nbsp;kg
+| style="background:#BBF;" |M
+| style="background:#BBF;"| [[Alexander Volkanovski]]
+|{{flagicon|AUS}}
+|[[UFC 314|April 12, 2025]]
+|<ref name="Volkanovski vs. Lopes">{{Cite web|url=https://cagesidepress.com/2025/04/13/alexander-volkanovski-becomes-two-time-champion-decisions-lopes/|title=Alexander Volkanovski Becomes Two-Time Champion, Decisions Lopes|publisher=cagesidepress.com|author=Eddie Law|date=2025-04-13|access-date=2025-04-13}}</ref>
+| {{age in days|month1=04|day1=12|year1=2025}}
+| style="text-align:left;" |
+{{small|'''1.''' def. [[Diego Lopes (fighter)|Diego Lopes]] at [[UFC 325]] on Feb 1, 2026}}<br/>
+|[[UFC 333]] - [[Movsar Evloev]]
+|<ref>{{Cite web|title=Александр Волкановски может подраться с Мовсаром Евлоевым на UFC 333|url=https://offside.kz/mma/34828-aleksandr-volkanovski-mozhet-podratsia-s-movsarom-evloevym-na-ufc-333|date=2026-07-25|access-date=2026-07-26|publisher=offside.kz|author=Курамыс Бектур}} {{in lang|ru}}</ref>
+|- style="text-align:center;"
+|[[Lightweight (MMA)|LW]]
+|&gt;145 Ib <br /> &gt;65.8&nbsp;kg
+|155 Ib <br /> 70.3&nbsp;kg
+|style="background:#BBF;"|M
+|style="background:#BBF;" | [[Justin Gaethje]]
+|{{flagicon|USA}}
+| [[UFC Freedom 250|June 14, 2026]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/06/15/ufc-freedom-250-justin-gaethje-breaks-ilia-topuria-to-claim-undisputed-gold/|title=UFC Freedom 250: Justin Gaethje breaks Ilia Topuria to claim undisputed gold|publisher=cagesidepress.com|author=Jay Anderson|date=2026-06-15|access-date=2026-06-15}}</ref>
+|{{age in days|month1=6|day1=14|year1=2026}}
+| style="text-align:left;" |
+|TBD
+|
+|- style="text-align:center;"
+|[[Welterweight (MMA)|WW]]
+|&gt;155 Ib <br /> &gt;70.3&nbsp;kg
+|170 Ib <br /> 77.1&nbsp;kg
+|style="background:#BBF;"|M
+| style="background:#BBF;"|[[Islam Makhachev]]
+|{{flagicon|RUS}}
+|[[UFC 322|November 15, 2025]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2025/11/16/ufc-322-islam-makhachev-captures-second-title-in-lopsided-decision-over-jack-della-maddalena/|title=UFC 322: Islam Makhachev Captures Second Title in Lopsided Decision Over Jack Della Maddalena|publisher=cagesidepress.com|author=Jay Anderson|date=2025-11-16|access-date=2025-11-16}}</ref>
+|{{age in days|month1=11|day1=16|year1=2025}}
+| style="text-align:left;" |
+{{small|'''1.''' def. [[Ian Machado Garry]] at [[UFC 330]] on Aug 15, 2026}}<br/>
+|TBD
+|
+|- style="text-align:center;"
+|[[Middleweight (MMA)|MW]]
+|&gt;170 Ib <br /> &gt;77.1&nbsp;kg
+|185 Ib <br /> 83.9&nbsp;kg
+|style="background:#BBF;"|M
+| style="background:#BBF;"|[[Sean Strickland]]
+|{{flagicon|USA}}
+|[[UFC 328|May 9, 2026]]
+|<ref name="Chimaev vs. Strickland">{{Cite web |last=Law |first=Eddie |date=2026-05-10 |title=Sean Strickland Edges Chimaev in War, Becomes Two-Time Champ |url=https://cagesidepress.com/2026/05/10/sean-strickland-edges-chimaev-in-war-becomes-two-time-champ/ |access-date=2025-05-10 |website=Cageside Press |language=en-US}}</ref>
+|{{age in days|month1=05|day1=09|year1=2026}}
+| style="text-align:left;" |
+|TBD
+|
+|- style="text-align:center;"
+|style="textalign:left"|[[Light heavyweight (MMA)|LHW]]
+|&gt;185 Ib <br /> &gt;83.9&nbsp;kg
+|205 Ib <br /> 93&nbsp;kg
+| style="background:#BBF;"|M
+| style="background:#BBF;"| [[Carlos Ulberg]]
+|{{flagicon|NZL}}
+|[[UFC 327|April 11, 2026]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/04/11/ufc-327-carlos-ulberg-suffers-nasty-leg-injury-still-finishes-prochazka-to-claim-gold/|title=UFC 327: Carlos Ulberg suffers nasty leg injury, still finishes Prochazka to claim gold|publisher=cagesidepress.com|author=Jay Anderson|date=2026-04-11|access-date=2026-04-12}}</ref>
+|{{age in days|month1=04|day1=11|year1=2026}}
+| style="text-align:left;" |
+|TBD
+|
+|- style="text-align:center;"
+|rowspan=2|[[Heavyweight (MMA)|HW]]
+|rowspan=2|&gt;205 Ib <br /> &gt;93&nbsp;kg
+|rowspan=2|265 Ib <br /> 120.2&nbsp;kg
+|rowspan=2 style="background:#BBF; "|M
+| style="background:#BBF;"|[[Tom Aspinall]]
+|{{flagicon|ENG}}
+|[[UFC on ABC: Hill vs. Rountree Jr.|June 21, 2025]]
+|<ref>{{Cite web|url=https://www.mmamania.com/2025/6/21/24453444/breaking-dana-white-jon-jones-retired-tom-aspinall-now-ufc-undisputed-heavyweight-champion|title=BREAKING: Dana White just revealed Jon Jones retired, Tom Aspinall is now UFC's undisputed Heavyweight champion|publisher=mmamania.com|author=Alexander Behunin|date=2025-06-21|access-date=2025-06-21}}</ref>
+|{{age in days|month1=06|day1=21|year1=2025}}
+| style="text-align:left;" |
+|TBD
+|
+|-
+|style="background:#BBF; text-align:center;" | [[Ciryl Gane]] (interim)
+|style="text-align:center;" | {{flagicon|FRA}}
+|style="text-align:center;" | [[UFC Freedom 250|June 14, 2026]]
+|style="text-align:center;" |<ref>{{Cite web|url=https://cagesidepress.com/2026/06/15/ufc-freedom-250-ciryl-gane-lights-up-devastates-alex-pereira-spoiling-heavyweight-debut/|title=UFC Freedom 250: Ciryl Gane lights up, devastates Alex Pereira, spoiling heavyweight debut|publisher=cagesidepress.com|author=Jay Anderson|date=2026-06-15|access-date=2026-06-15}}</ref>
+|style="text-align:center;" |{{age in days|month1=6|day1=14|year1=2026}}
+| style="text-align:left;" |
+|style="text-align:center;" |TBD
+|
+|}
+
+
+===Heavyweights (265lb, 120 kg)===
+<!--If you wish to add a fighter, please make sure you have read the "Notes/Key" section and fully understand what number to put before to the fighters records so it can correctly be sorted.-->
+
+{| class="wikitable sortable" style="text-align:center"
+!width=3%|{{small|[[ISO 3166-1 alpha-3|ISO]]}}
+!width=13%|Name
+!width=3%|Age
+!width=8%|Ht.
+!width=13%|Nickname
+!width=30%|Result / next fight / status
+!width=3%|Ref
+!width=12%|Endeavor record
+!width=12%|MMA record
+|-
+|{{flagicon|USA}}
+|{{sortname|Derrick|Lewis}}
+|{{age nts|1985|2|7}}
+|{{height|ft=6|in=3}}
+|''The Black Beast''
+|{{color|red|'''Loss'''}} – [[UFC Freedom 250]] (Washington) – [[Josh Hokit]]
+|<ref name="Lewis vs. Hokit">{{Cite web|url=https://cagesidepress.com/2026/06/14/ufc-freedom-250-josh-hokit-does-it-again-fells-derrick-lewis/|title=UFC Freedom 250: Josh Hokit does it again, fells Derrick Lewis|publisher=cagesidepress.com|author=Jay Anderson|date=2026-06-14|access-date=2026-06-15}}</ref>
+|{{ntsh|20.63}}20–12
+|{{ntsh|28.67}}28–14 (1 NC)
+|-
+|{{flagicon|USA}}
+|{{sortname|Curtis|Blaydes}}
+|{{age nts|1991|2|18}}
+|{{height|ft=6|in=4}}
+|''Razor''
+|[[UFC Fight Night 288]] (Glendale) – [[Waldo Cortes-Acosta]]
+|<ref name="Acosta vs. Blaydes">{{Cite web|url=https://heavy.com/sports/ufc/top-8-heavyweights-collide-at-noche-ufc-in-phoenix/|title=Top 8 Heavyweights collide at Noche UFC in Phoenix|publisher=heavy.com|author=Marcel Dorff|date=2026-07-14|access-date=2026-07-14}}</ref>
+|{{ntsh|14.70}}14–6 (1 NC)
+|{{ntsh|19.76}}19–6 (1 NC)
+|-
+|{{flagicon|POL}}
+|{{sortname|Marcin|Tybura}}
+|{{age nts|1985|11|9}}
+|{{height|ft=6|in=3}}
+|''Tybur''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 283]] (Belgrade) – [[Aleksandar Rakić]]
+|<ref name="Tybura vs. Rakic">{{Cite web|url=https://cagesidepress.com/2026/08/01/ufc-belgrade-aleksandar-rakic-successful-in-heavyweight-debut-out-works-marcin-tybura/|title=UFC Belgrade: Aleksandar Rakic successful in heavyweight debut, out-works Marcin Tybura|publisher=cagesidepress.com|author=Jay Anderson|date=2026-08-01|access-date=2026-08-02}}</ref>
+|{{ntsh|14.56}}14–11
+|{{ntsh|27.69}}27–12
+|-
+|{{flagicon|RUS}}
+|{{sortname|Alexander|Volkov|Alexander Volkov (fighter)}}
+|{{age nts|1988|10|24}}
+|{{height|ft=6|in=7}}
+|''Drago''
+|[[UFC 333]] (Abu Dhabi) – [[Rizvan Kuniev]]
+|<ref name="Volkov vs. Kuniev">{{Cite web|url=https://heavy.com/sports/ufc/two-massive-title-fights-ufc-333/|title=Two massive title fights headline UFC 333 in Abu Dhabi|publisher=heavy.com|author=Marcel Dorff|date=2026-08-15|access-date=2026-08-16}}</ref>
+|{{ntsh|14.74}}14–5
+|{{ntsh|40.78}}40–11
+|-
+|{{flagicon|AUS}}
+|{{sortname|Tai|Tuivasa}}
+|{{age nts|1993|3|16}}
+|{{height|ft=6|in=2}}
+|''Bam Bam''
+|[[UFC 331]] (Los Angeles) – [[Robelis Despaigne]]
+|<ref name="Tuivasa vs. Despaigne">{{Cite web|url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/08/05/ufc-331-gable-steveson-next-fight-booked/91179449007/|title=Gable Steveson books second UFC fight for UFC 331 in L.A.|publisher=mmajunkie.usatoday.com|author=Farah Hannoun|date=2026-08-05|access-date=2026-08-05}}</ref>
+|{{ntsh|8.44}}8–10
+|{{ntsh|14.58}}14–10
+|-
+|{{flagicon|AUT}}
+|{{sortname|Aleksandar|Rakić}}
+|{{age nts|1992|2|6}}
+|{{height|ft=6|in=5}}
+|''Rocket''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 283]] (Belgrade) – [[Marcin Tybura]]
+|<ref name="Tybura vs. Rakic"/>
+|{{ntsh|7.58}}7–5
+|{{ntsh|15.71}}15–6
+|-
+|{{flagicon|USA}}
+|{{sortname|Ryan|Spann}}
+|{{age nts|1991|8|24}}
+|{{height|ft=6|in=5}}
+|''Superman''
+|[[UFC Fight Night 287]] (Paris) – [[Mario Pinto|Mário Pinto]]
+|<ref name="Pinto vs. Spann"/>
+|{{ntsh|10.62}}10–6
+|{{ntsh|24.68}}24–11
+|-
+|{{flagicon|RUS}}
+|{{sortname|Sergei|Pavlovich}}
+|{{age nts|1992|5|13}}
+|{{height|ft=6|in=3}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 277]] (Macau) – [[Tallison Teixeira]]
+|<ref name="Pavlovich vs. Teixeira">{{Cite web|url=https://cagesidepress.com/2026/05/30/ufc-macau-sergei-pavlovich-scores-quick-ko-of-tallison-teixeira/|title=UFC Macau: Sergei Pavlovich scores quick KO of Tallison Teixeira|publisher=cagesidepress.com|author=Jay Anderson|date=2026-05-30|access-date=2026-05-30}}</ref>
+|{{ntsh|9.75}}9–3
+|{{ntsh|21.88}}21–3
+|-
+|{{flagicon|NGA}}
+|{{sortname|Kennedy|Nzechukwu}}
+|{{age nts|1992|06|13}}
+|{{height|ft=6|in=5}}
+|''The African Savage''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Shamil Gaziev]]
+|<ref name="Nzechukwu vs. Gaziev">{{Cite web |last=Staff |date=2026-08-22 |title=UFC Sacramento: Shamil Gaziev Floors Kennedy Nzechukwu with Single Punch |url=https://cagesidepress.com/2026/08/22/ufc-sacramento-shamil-gaziev-floors-kennedy-nzechukwu-with-single-punch/ |access-date=2026-08-22 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|8.53}}8–7–1
+|{{ntsh|14.66}}14–7–1
+|-
+|{{flagicon|MDA}}
+|{{sortname|Serghei|Spivac}}
+|{{age nts|1995|01|24}}
+|{{height|ft=6|in=3}}
+|''The Polar Bear''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Vitor Petrino]]
+|<ref name="Spivac vs. Petrino">{{Cite web |last=Law |first=Eddie |date=2026-08-22 |title=Vitor Petrino Defeats Spivac by Decision in UFC Sacramento Co-Main |url=https://cagesidepress.com/2026/08/22/vitor-petrino-defeats-spivac-by-decision-in-ufc-sacramento-co-main/ |access-date=2026-08-22 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|9.56}}9–7
+|{{ntsh|18.72}}18–7
+|-
+|{{flagicon|FRA}}
+|{{sortname|Ciryl|Gane}} (ic)
+|{{age nts|1990|05|06}}
+|{{height|ft=6|in=5}}
+|''Bon Gamin''
+|{{color|green|'''Win'''}} – [[UFC Freedom 250]] (Washington) – [[Alex Pereira]]
+|<ref name="Gane vs. Pereira">{{Cite web|url=https://cagesidepress.com/2026/06/15/ufc-freedom-250-ciryl-gane-lights-up-devastates-alex-pereira-spoiling-heavyweight-debut/|title=UFC Freedom 250: Ciryl Gane lights up, devastates Alex Pereira, spoiling heavyweight debut|publisher=cagesidepress.com|author=Jay Anderson|date=2026-06-15|access-date=2026-06-15}}</ref>
+|{{ntsh|10.83}}10–2 (1 NC)
+|{{ntsh|13.87}}13–2 (1 NC)
+|-
+|{{flagicon|CAN}}
+|{{sortname|Tanner|Boser}}
+|{{age nts|1991|08|02}}
+|{{height|ft=6|in=2}}
+|''The Bulldozer''
+|[[UFC Fight Night 291]] (Edmonton) – [[Jhonata Diniz]]
+|<ref name="Boser vs. Diniz">{{Cite web |last=Wells |first=Matthew |title=UFC Fight Night 291 adds four matchups to Edmonton event |url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/08/10/ufc-edmonton-four-new-fights-added-october-event/91249622007/ |access-date=2026-08-10 |website=MMA Junkie |language=en-US}}</ref>
+|{{ntsh|5.45}}5–6
+|{{ntsh|22.66}}22–11–1
+|-
+|{{flagicon|ENG}}
+|{{sortname|Tom|Aspinall}} (c)
+|{{age nts|1993|04|11}}
+|{{height|ft=6|in=5}}
+|
+|
+|
+|{{ntsh|8.89}}8–1 (1 NC)
+|{{ntsh|15.83}}15–3 (1 NC)
+|-
+|{{flagicon|BRA}}
+|{{sortname|Alex|Pereira}}
+|{{age nts|1987|07|07}}
+|{{height|ft=6|in=4}}
+|''Poatan''
+|{{color|red|'''Loss'''}} – [[UFC Freedom 250]] (Washington) – [[Ciryl Gane]]
+|<ref name="Gane vs. Pereira"/>
+|{{ntsh|10.77}}10–3
+|{{ntsh|13.76}}13–4
+|-
+|{{flagicon|DOM}}
+|{{sortname|Waldo|Cortes-Acosta}} 
+|{{age nts|1991|10|03}}
+|{{height|ft=6|in=4}}
+|''Salsa Boy''
+|[[UFC Fight Night 288]] (Glendale) – [[Curtis Blaydes]]
+|<ref name="Acosta vs. Blaydes"/>
+|{{ntsh|10.77}}10–3
+|{{ntsh|17.85}}17–3
+|-
+|{{flagicon|BRA}}
+|{{sortname|Vitor|Petrino}}
+|{{age nts|1997|08|28}}
+|{{height|ft=6|in=2}}
+|''Icão''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Serghei Spivac]]
+|<ref name="Spivac vs. Petrino"/>
+|{{ntsh|8.80}}8–2
+|{{ntsh|15.88}}15–2
+|-
+|{{flagicon|ENG}}
+|{{sortname|Mick|Parkin}}
+|{{age nts|1995|10|02}}
+|{{height|ft=6|in=4}}
+|
+|[[UFC 332]] (Salt Lake City) – [[Johnny Walker (fighter)|Johnny Walker]]
+|<ref name="Walker vs. Parkin"/>
+|{{ntsh|4.80}}4–1
+|{{ntsh|10.91}}10–1
+|-
+|{{flagicon|BHR}}
+|{{sortname|Shamil|Gaziev}}
+|{{age nts|1990|02|10}}
+|{{height|ft=6|in=4}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Kennedy Nzechukwu]]
+|<ref name="Nzechukwu vs. Gaziev"/>
+|{{ntsh|4.57}}4–3
+|{{ntsh|15.83}}15–3
+|-
+|{{flagicon|USA}}
+|Thomas Petersen
+|{{age nts|1995|03|30}}
+|{{height|ft=6|in=1}}
+|''The Train''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – [[Valter Walker]]
+|<ref name="Walker vs. Petersen"/>
+|{{ntsh|3.43}}3–4
+|{{ntsh|11.69}}11–5
+|-
+|{{flagicon|BRA}}
+|{{sortname|Valter|Walker}}
+|{{age nts|1997|12|14}}
+|{{height|ft=6|in=6}}
+|''The Foot Hunter''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – Thomas Petersen
+|<ref name="Walker vs. Petersen">{{Cite web|url=https://cagesidepress.com/2026/07/25/ufc-abu-dhabi-valter-walker-hits-calf-slicer-on-thomas-petersen-wants-to-avenge-poatan-and-fight-gane/|title=UFC Abu Dhabi: Valter Walker hits calf slicer on Thomas Petersen, wants to avenge "Poatan" and fight Gane|publisher=cagesidepress.com|author=Jay Anderson|date=2026-07-25|access-date=2026-07-26}}</ref>
+|{{ntsh|5.83}}5–1
+|{{ntsh|16.94}}16–1
+|-
+|{{flagicon|BRA}}
+|{{sortname|Jhonata|Diniz}}
+|{{age nts|1991|06|23}}
+|{{height|ft=6|in=4}}
+|
+|[[UFC Fight Night 291]] (Edmonton) – [[Tanner Boser]]
+|<ref name="Boser vs. Diniz"/>
+|{{ntsh|3.60}}3–2
+|{{ntsh|9.82}}9–2
+|-
+|{{flagicon|USA}}
+|Sean Sharaf
+|{{age nts|1993|07|11}}
+|{{height|ft=6|in=2}}
+|''The Smoke''
+|[[UFC 331]] (Los Angeles) – [[Gable Steveson]]
+|<ref name="Sharaf vs. Steveson">{{Cite web|url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/08/05/ufc-331-gable-steveson-next-fight-booked/91179449007/|title=Gable Steveson books second UFC fight for UFC 331 in L.A.|publisher=mmajunkie.usatoday.com|author=Farah Hannoun|date=2026-08-05|access-date=2026-08-05}}</ref>
+|{{ntsh|−2}}0–2
+|{{ntsh|4.66}}4–2
+|-
+|{{flagicon|BRA}}
+|{{sortname|Tallison|Teixeira}}
+|{{age nts|1999|12|07}}
+|{{height|ft=6|in=7}}
+|''Xicao''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 277]] (Macau) – [[Sergei Pavlovich]]
+|<ref name="Pavlovich vs. Teixeira"/>
+|{{ntsh|2.50}}2–2
+|{{ntsh|9.82}}9–2
+|-
+|{{flagicon|POR}}
+|[[Mario Pinto|Mário Pinto]]
+|{{age nts|1998|03|14}}
+|{{height|ft=6|in=5}}
+|
+|[[UFC Fight Night 287]] (Paris) – [[Ryan Spann]]
+|<ref name="Pinto vs. Spann">{{Cite web |last=Dorff |first=Marcel |date=2026-07-15 |title=UFC Announces Seven Fights for UFC Paris in September |url=https://heavy.com/sports/ufc/ufc-announces-seven-fights-ufc-paris/ |access-date=2026-07-15 |website=HEAVY |language=en-US}}</ref>
+|{{ntsh|4.0}}3–0
+|{{ntsh|11.0}}12–0
+|-
+|{{flagicon|RUS}}
+|{{sortname|Rizvan|Kuniev}}
+|{{age nts|1992|03|10}}
+|{{height|ft=6|in=4}}
+|
+|[[UFC 333]] (Abu Dhabi) – [[Alexander Volkov (fighter)|Alexander Volkov]]
+|<ref name="Volkov vs. Kuniev"/>
+|{{ntsh|2.67}}2–1
+|{{ntsh|14.81}}14–3–1 (1 NC)
+|-
+|{{flagicon|USA}}
+|Alvin Hines
+|{{age nts|1991|10|20}}
+|{{height|ft=6|in=2}}
+|''Goozie''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 281]] (Oklahoma City) – RJ Harris
+|<ref name="Hines vs. Harris">{{Cite web|url=https://cagesidepress.com/2026/07/18/ufc-oklahoma-city-rj-harris-clubs-alvin-hines-earns-quick-finish/|title=UFC Oklahoma City: RJ Harris clubs Alvin Hines, earns quick finish|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-07-18|access-date=2026-07-19}}</ref>
+|{{ntsh|-2}}0–2
+|{{ntsh|7.78}}7–2
+|-
+|{{flagicon|BRA}}
+|{{sortname|Marcus|Buchecha}}
+|{{age nts|1990|01|08}}
+|{{height|ft=6|in=3}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 274]] (Las Vegas) – [[Ryan Spann]]
+|<ref name="Buchecha vs. Spann">{{Cite web |last=Anderson |first=Jay |date=2026-04-25 |title=UFC Vegas 116: Ryan Spann Fells Marcus Buchecha Like a Tree |url=https://cagesidepress.com/2026/04/25/ufc-vegas-116-ryan-spann-fells-marcus-buchecha-like-a-tree/ |access-date=2026-04-25 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|0.16}}0–2–1
+|{{ntsh|5.61}}5–3–1
+|-
+|{{flagicon|CRO}}
+|{{sortname|Ante|Delija}}
+|{{age nts|1990|08|07}}
+|{{height|ft=6|in=5}}
+|''Walking Trouble''
+|(June 21, 2026) – Injury – Out of [[UFC Fight Night 283]] (Belgrade) – [[Johnny Walker (fighter)|Johnny Walker]]
+|<ref>{{Cite web|url=https://www.index.hr/sport/clanak/ufcovi-insajderi-ante-delija-zbog-ozljede-otkazao-borbu-u-beogradu/2805084.aspx|title=UFC-ovi insajderi: Ante Delija zbog ozljede otkazao borbu u Beogradu|publisher=index.hr|author=Index Sport|date=2026-06-21|access-date=2026-07-17}} {{in lang|hr}}</ref>
+|{{ntsh|1.33}}1–2
+|{{ntsh|26.76}}26–8
+|-
+|{{flagicon|AUS}}
+|{{sortname|Brando|Peričić}}
+|{{age nts|1994|08|03}}
+|{{height|ft=6|in=5}}
+|''The Balkan Bear'' 
+|{{color|green|'''Win'''}} – [[UFC Fight Night 275]] (Perth) – [[Shamil Gaziev]]
+|<ref>{{Cite web |last=Holt |first=Nick |date=2026-05-02 |title=Brando Pericic Stuns Gaziev, Earns Third Straight UFC Knockout |url=https://cagesidepress.com/2026/05/02/brando-pericic-stuns-gaziev-earns-third-straight-ufc-knockout/ |access-date=2026-05-02 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|4.0}}3–0
+|{{ntsh|7.87}}7–1
+|-
+|{{flagicon|USA}}
+|Elisha Ellison
+|{{age nts|1997|03|05}}
+|{{height|ft=5|in=11}}
+|''Snack Panther'' 
+|{{color|red|'''Loss'''}} – [[UFC 329]] (Las Vegas) – [[Gable Steveson]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/07/11/ufc-329-gable-steveson-vs-elisha-ellison/|title=UFC 329: Gable Steveson electrifies, lights up Elisha Ellison in anticipated debut|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-07-11|access-date=2026-07-12}}</ref>
+|{{ntsh|-2}}0–2
+|{{ntsh|5.63}}5–3
+|-
+|{{flagicon|SCO}}
+|Louie Sutherland
+|{{age nts|1994|02|08}}
+|{{height|ft=6|in=3}}
+|''The Vanilla Gorilla''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 284]] (Las Vegas) – José Luiz
+|<ref name="Sutherland vs. Luiz">{{Cite web|url=https://cagesidepress.com/2026/08/08/ufc-vegas-120-jose-montanha-forces-quick-tap-from-louie-sutherland/|title=UFC Vegas 120: Jose Montanha forces quick tap from Louie Sutherland|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-08-08|access-date=2026-08-09}}</ref>
+|{{ntsh|1.25}}1–3
+|{{ntsh|11.65}}11–6
+|-
+|{{flagicon|USA}}
+|{{sortname|Josh|Hokit}}
+|{{age nts|1997|11|12}}
+|{{height|ft=6|in=1}}
+|''The Incredible Hok''
+|{{color|green|'''Win'''}} – [[UFC Freedom 250]] (Washington) – [[Derrick Lewis]]
+|<ref name="Lewis vs. Hokit"/>
+|{{ntsh|5.0}}4–0
+|{{ntsh|11.0}}10–0
+|-
+|{{flagicon|BRA}}
+|Max Gimenis
+|{{age nts|1993|04|14}}
+|{{height|ft=6|in=0}}
+|
+|(July 23, 2026) – Undisclosed injury – Out of [[UFC Fight Night 283]] (Belgrade) – Jovan Leka
+|<ref>{{Cite web|title=Jovan Leka ima novog protivnika za UFC Beograd|url=https://sportklub.n1info.rs/sk-fight/ufc-belgrade-jovan-leka-alexander-poppeck-fight-card-borbe/|date=2026-07-23|access-date=2026-07-24|publisher=sportklub.n1info.rs|author=Nikola Novaković}} {{in lang|sr}}</ref>
+|{{ntsh|-1}}0–1
+|{{ntsh|6.75}}6–2
+|-
+|{{flagicon|USA}}
+|Denzel Freeman
+|{{age nts|1991|11|10}}
+|{{height|ft=6|in=1}}
+|''Luke Fox''
+|{{color|red|'''Loss'''}} – [[UFC 324]] (Las Vegas) – [[Josh Hokit]]
+|<ref>{{Cite web |last=Danna |first=Patrick |date=2026-01-24 |title=UFC 324: Josh Hokit's Pace Wears Down Denzel Freeman Early |url=https://cagesidepress.com/2026/01/24/ufc-324-josh-hokits-pace-wears-down-denzel-freeman-early/ |access-date=2026-01-24 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|1.50}}1–1
+|{{ntsh|7.77}}7–2
+|-
+|{{flagicon|BRA}}
+|Guilherme Pat
+|{{age nts|1994|04|20}}
+|{{height|ft=6|in=5}}
+|''Kong''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 284]] (Las Vegas) – Steven Asplund
+|<ref name="Asplund vs. Pat"/>
+|{{ntsh|1.33}}1–2
+|{{ntsh|6.75}}6–2
+|-
+|{{flagicon|USA}}
+|Allen Frye Jr.
+|{{age nts|1995|04|15}}
+|{{height|ft=6|in=4}}
+|''AJ''
+|[[UFC Fight Night 290]] (Las Vegas) – RJ Harris
+|<ref name="Harris vs. Frye Jr."/>
+|{{ntsh|-1}}0–1
+|{{ntsh|6.86}}6–1
+|-
+|{{flagicon|USA}}
+|Steven Asplund
+|{{age nts|1998|07|16}}
+|{{height|ft=6|in=5}}
+|''Concrete''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 284]] (Las Vegas) – Guilherme Pat
+|<ref name="Asplund vs. Pat">{{Cite web|url=https://cagesidepress.com/2026/08/08/ufc-vegas-120-steven-asplund-rocks-guilherme-pat-to-unanimous-decision-win/|title=UFC Vegas 120: Steven Asplund rocks Guilherme Pat to unanimous decision win|publisher=cagesidepress.com|author=Patrick Danna|date=2026-08-08|access-date=2026-08-09}}</ref>
+|{{ntsh|2.67}}2–1
+|{{ntsh|7.78}}7–2
+|-
+|{{flagicon|USA}}
+|{{sortname|Tyrell|Fortune}}
+|{{age nts|1990|07|04}}
+|{{height|ft=6|in=2}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – [[Rizvan Kuniev]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/07/25/ufc-abu-dhabi-rizvan-kuniev-crashes-through-tyrell-fortune-with-knees/|title=UFC Abu Dhabi: Rizvan Kuniev crashes through Tyrell Fortune with knees|publisher=cagesidepress.com|author=Jay Anderson|date=2026-07-25|access-date=2026-07-26}}</ref>
+|{{ntsh|1.50}}1–1
+|{{ntsh|18.82}}18–4 (2 NC)
+|-
+|{{flagicon|TUR}}
+|Gökhan Saricam
+|{{age nts|1991|02|26}}
+|{{height|ft=6|in=3}}
+|
+|(June 23, 2026) – Unknown reasons – Bout no longer happening – [[UFC Fight Night 282]] (Abu Dhabi) – Louie Sutherland
+|<ref>{{Cite web|url=https://heavy.com/sports/ufc/ranked-brazilian-women-battle-las-vegas/|title=Ranked Brazilian women battle in Las Vegas|publisher=heavy.com|author=Marcel Dorff|date=2026-06-23|access-date=2026-06-24}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|12.86}}12–2
+|-
+|{{flagicon|USA}}
+|{{sortname|Gable|Steveson}}
+|{{age nts|2000|05|31}}
+|{{height|ft=6|in=1}}
+|
+|[[UFC 331]] (Los Angeles) – Sean Sharaf
+|<ref name="Sharaf vs. Steveson"/>
+|{{ntsh|2.0}}1–0
+|{{ntsh|5.0}}4–0
+|-
+|{{flagicon|USA}}
+|RJ Harris
+|{{age nts|1998|10|01}}
+|{{height|ft=6|in=6}}
+|''The Hammer''
+|[[UFC Fight Night 290]] (Las Vegas) – Allen Frye Jr.
+|<ref name="Harris vs. Frye Jr.">{{Cite web |last=King |first=Nolan |title=Heavyweight sophomores collide at UFC Vegas 122 |url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/08/13/ufc-vegas-122-aj-frye-vs-rj-harris/91294513007/ |access-date=2026-08-15 |website=MMA Junkie |language=en-US}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|7.0}}6–0
+|-
+|{{flagicon|SRB}}
+|Jovan Leka
+|{{age nts|2002|03|15}}
+|{{height|ft=6|in=4}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 283]] (Belgrade) – Alexander Poppeck
+|<ref name="Leka vs. Poppeck">{{Cite web |last=Bitter |first=Shawn |date=2026-08-01 |title=UFC Belgrade: Jovan Leka Folds Undersized Alexander Poppeck |url=https://cagesidepress.com/2026/08/01/ufc-belgrade-jovan-leka-folds-undersized-alexander-poppeck/ |access-date=2026-08-01 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|14.87}}14–2
+|-
+|{{flagicon|GER}}
+|Alexander Poppeck
+|{{age nts|1992|04|06}}
+|{{height|ft=6|in=2}}
+|''Ironside''
+|[[UFC Fight Night 290]] (Las Vegas) – Felipe Franco / Moving to Light Heavyweight
+|<ref name="Franco vs. Poppeck"/>
+|{{ntsh|-1}}0–1
+|{{ntsh|21.77}}21–6 (1 NC)
+|-
+|{{flagicon|BRA}}
+|José Luiz
+|{{age nts|1996|08|25}}
+|{{height|ft=6|in=6}}
+|''Montanha''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 284]] (Las Vegas) – Louie Sutherland
+|<ref name="Sutherland vs. Luiz"/>
+|{{ntsh|2.0}}1–0
+|{{ntsh|7.88}}7–1
+|-
+|{{flagicon|USA}}
+|{{sortname|Anthony|Wint}}
+|{{age nts|1995|09|14}}
+|{{height|ft=5|in=11}}
+|''Bow Down''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 285]] (Sacramento) – Terrance Chatman
+|<ref name="Wint vs. Chatman">{{Cite web |last=Bitter |first=Shawn |date=2026-08-22 |title=UFC Sacramento: Quick Turnaround Pays Off, Anthony Wint Submits Terrance Chatman |url=https://cagesidepress.com/2026/08/22/ufc-sacramento-quick-turnaround-pays-off-anthony-wint-submits-terrance-chatman/ |access-date=2026-08-22 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|9.0}}8–0
+|-
+|{{flagicon|USA}}
+|Terrance Chatman
+|{{age nts|1997|05|05}}
+|{{height|ft=6|in=0}}
+|''The Answer''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Anthony Wint]]
+|<ref name="Wint vs. Chatman"/>
+|{{ntsh|-1}}0–1
+|{{ntsh|5.71}}5–2
+|-
+|}
+
+
+===Light heavyweights (205 lb, 93 kg)===<!--If you wish to add a fighter, please make sure you have read the "Notes/Key" section and fully understand what number to put before to the fighters records so it can correctly be sorted.-->
+
+{| class="wikitable sortable" style="text-align:center"
+!width=3%|{{small|[[ISO 3166-1 alpha-3|ISO]]}}
+!width=13%|Name
+!width=3%|Age
+!width=8%|Ht.
+!width=13%|Nickname
+!width=30%|Result / next fight / status
+!width=3%|Ref
+!width=12%|Endeavor record
+!width=12%|MMA record
+|-
+|{{flagicon|USA}}
+|{{sortname|Dustin|Jacoby}}
+|{{age nts|1988|4|4}}
+|{{height|ft=6|in=4}}
+|''The Hanyak''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – Muhammad Saidov
+|<ref name="Jacoby vs. Saidov">{{Cite web|url=https://cagesidepress.com/2026/07/25/ufc-abu-dhabi-dustin-jacoby-vs-muhammad-saidov/|title=UFC Abu Dhabi: Muhammad Saidov puts away Dustin Jacoby in stellar debut|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-07-25|access-date=2026-07-26}}</ref>
+|{{ntsh|10.58}}10–7–1
+|{{ntsh|22.70}}22–9–1
+|-
+|{{flagicon|AUS}}
+|{{sortname|Robert|Whittaker|Robert Whittaker (fighter)}}
+|{{age nts|1990|12|20}}
+|{{height|ft=6|in=0}}
+|''{{sort|Reaper|The Reaper}}''
+|{{color|green|'''Win'''}} – [[UFC 329]] (Las Vegas) – [[Nikita Krylov]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/07/11/robert-whittaker-scores-stunning-tko-victory-over-krylov/|title=Robert Whittaker scores stunning TKO victory over Krylov|publisher=cagesidepress.com|author=Eddie Law|date=2026-07-11|access-date=2026-07-12}}</ref>
+|{{ntsh|18.75}}18–7
+|{{ntsh|27.75}}27–9
+|-
+|{{flagicon|RUS}}
+|{{sortname|Nikita|Krylov}}
+|{{age nts|1992|3|7}}
+|{{height|ft=6|in=2}}
+|''{{sort|The Miner|The Miner}}''
+|[[UFC 333]] (Abu Dhabi) – Abdul-Rakhman Yakhyaev
+|<ref name="Krylov vs. Yakhyaev">{{Cite web|url=https://heavy.com/sports/ufc/two-massive-title-fights-ufc-333/|title=Two massive title fights headline UFC 333 in Abu Dhabi|publisher=heavy.com|author=Marcel Dorff|date=2026-08-15|access-date=2026-08-16}}</ref>
+|{{ntsh|12.55}}12–10
+|{{ntsh|31.72}}31–1v2
+|-
+|{{flagicon|POL}}
+|{{sortname|Jan|Błachowicz}}
+|{{age nts|1983|2|24}}
+|{{height|ft=6|in=2}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 283]] (Belgrade) – [[Navajo Stirling]]
+|<ref name="Stirling vs. Blachowicz"/>
+|{{ntsh|12.57}}12–9–2
+|{{ntsh|29.70}}29–12–2
+|-
+|{{flagicon|MDA}}
+|{{sortname|Ion|Cuțelaba}}
+|{{age nts|1993|12|14}}
+|{{height|ft=6|in=1}}
+|''The Hulk''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 279]] (Las Vegas) – Navajo Stirling
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/06/20/navajo-stirling-survives-scare-finishes-cutelaba-at-ufc-vegas-119/|title=Navajo Stirling survives scare, finishes Cutelaba at UFC Vegas 119|publisher=cagesidepress.com|author=Eddie Law|date=2026-06-20|access-date=2026-06-20}}</ref>
+|{{ntsh|9.45}}9–11–1
+|{{ntsh|20.62}}20–12–1 (1 NC)
+|-
+|{{flagicon|USA}}
+|{{sortname|Khalil|Rountree Jr.}}
+|{{age nts|1990|2|6}}
+|{{height|ft=6|in=1}}
+|''{{sort|War Horse|The War Horse}}''
+|(July 13, 2026) – Undisclosed injury – Out of [[UFC Fight Night 282]] (Abu Dhabi) – [[Magomed Ankalaev]]
+|<ref>{{Cite web|url=https://www.mmafighting.com/ufc/499327/magomed-ankalaev-fights-bogdan-guskov-in-new-ufc-abu-dhabi-main-event-with-khalil-rountree-out|title=Magomed Ankalaev fights Bogdan Guskov in new UFC Abu Dhabi main event|publisher=mmafighting.com|author=Alexander K. Lee|date=2026-07-14|access-date=2026-07-14}}</ref>
+|{{ntsh|10.58}}10–7 (1 NC)
+|{{ntsh|14.66}}14–7 (1 NC)
+|-
+|{{flagicon|CHE}}
+|{{sortname|Volkan|Oezdemir}}
+|{{age nts|1989|9|19}}
+|{{height|ft=6|in=2}}
+|''No Time''
+|(February 16, 2026) – Tested positive for EPO – Suspended for 16 months until June 17, 2027
+|<ref name="VolkanSuspension"/>
+|{{ntsh|9.56}}9–7
+|{{ntsh|21.72}}21–8
+|-
+|{{flagicon|BRA}}
+|{{sortname|Paulo|Costa}}
+|{{age nts|1991|4|21}}
+|{{height|ft=6|in=0}}
+|''The Eraser''
+|{{color|green|'''Win'''}} – [[UFC 327]] (Miami) – [[Azamat Murzakanov]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/04/11/paulo-costa-ends-murzakanovs-undefeated-run-with-r3-tko/|title=Paulo Costa ends Murzakanov's undefeated run with R3 TKO|publisher=cagesidepress.com|author=Eddie Law|date=2026-04-11|access-date=2026-04-12}}</ref>
+|{{ntsh|8.67}}8–4
+|{{ntsh|16.80}}16–4
+|-
+|{{flagicon|USA}}
+|{{sortname|Dominick|Reyes}}
+|{{age nts|1989|12|26}}
+|{{height|ft=6|in=4}}
+|''{{sort|Devastator|The Devastator}}''
+|[[UFC 333]] (Abu Dhabi) – [[Azamat Murzakanov]]
+|<ref name="Reyes vs. Murzakanov">{{Cite web|url=https://heavy.com/sports/ufc/two-massive-title-fights-ufc-333/|title=Two massive title fights headline UFC 333 in Abu Dhabi|publisher=heavy.com|author=Marcel Dorff|date=2026-08-15|access-date=2026-08-16}}</ref>
+|{{ntsh|10.67}}10–5
+|{{ntsh|16.76}}16–5
+|-
+|{{flagicon|RUS}}
+|{{sortname|Magomed|Ankalaev}}
+|{{age nts|1992|6|2}}
+|{{height|ft=6|in=2}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – [[Bogdan Guskov]]
+|<ref name="Ankalaev vs. Guskov">{{Cite web|url=https://cagesidepress.com/2026/07/25/ufc-abu-dhabi-magomed-ankalaev-dominates-outmatched-guskov/|title=UFC Abu Dhabi: Magomed Ankalaev dominates outmatched Guskov; secures fifth-round finish|publisher=cagesidepress.com|author=Patrick Danna|date=2026-07-25|access-date=2026-07-26}}</ref>
+|{{ntsh|13.84}}13–2–1 (1 NC)
+|{{ntsh|22.90}}22–2–1 (1 NC)
+|-
+|{{flagicon|BRA}}
+|{{sortname|Johnny|Walker|Johnny Walker (fighter)}}
+|{{age nts|1992|3|30}}
+|{{height|ft=6|in=5}}
+|
+|[[UFC 332]] (Salt Lake City) – [[Mick Parkin]] / Moving to Heavyweight
+|<ref name="Walker vs. Parkin">{{Cite web|url=https://bloodyelbow.com/2026/07/29/ufc-332-gets-first-fight-as-johnny-walker-books-heavyweight-debut-against-tom-aspinalls-teammate/|title=UFC 332 gets first fight as Johnny Walker books heavyweight debut against Tom Aspinall's teammate|publisher=bloodyelbow.com|author=Harvey Leonard|date=2026-07-29|access-date=2026-07-30}}</ref>
+|{{ntsh|8.53}}8–7 (1 NC)
+|{{ntsh|22.69}}22–10 (1 NC)
+|-
+|{{flagicon|AUS}}
+|{{sortname|Jimmy|Crute}}
+|{{age nts|1995|3|04}}
+|{{height|ft=6|in=2}}
+|''The Brute''
+|(January 14, 2026) – Torn ACL – Out of [[UFC 325]] (Sydney) – [[Dustin Jacoby]]
+|<ref>{{Cite web|url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/01/14/ufc-325-news-jimmy-crute-injured-out-vs-dustin-jacoby/88188917007/|title=UFC 325: Jimmy Crute announces ACL injury, out vs. Dustin Jacoby|publisher=mmajunkie.usatoday.com|author=Matthew Wells|date=2026-01-14|access-date=2026-01-14}}</ref>
+|{{ntsh|6.58}}6–4–2
+|{{ntsh|14.75}}14–4–2
+|-
+|{{flagicon|USA}}
+|{{sortname|Alonzo|Menifield}}
+|{{age nts|1987|10|18}}
+|{{height|ft=6|in=0}}
+|''Atomic''
+|[[UFC 331]] (Los Angeles) – [[Iwo Baraniewski]]
+|<ref name="Menifield vs. Baraniewski">{{Cite web|url=https://heavy.com/sports/ufc/light-heavyweight-contenders-clash-at-ufc-331/|title=Light Heavyweight Contenders Clash at UFC 331|publisher=heavy.com|author=Adam Martin|date=2026-07-28|access-date=2026-07-28}}</ref>
+|{{ntsh|11.64}}11–6–1
+|{{ntsh|18.74}}18–6–1
+|-
+|{{flagicon|USA}}
+|{{sortname|Jamahal|Hill}}
+|{{age nts|1991|05|19}}
+|{{height|ft=6|in=4}}
+|''Sweet Dreams''
+|
+|
+|{{ntsh|7.70}}7–3 (1 NC)
+|{{ntsh|13.81}}13–3 (1 NC)
+|-
+|{{flagicon|CZE}}
+|{{sortname|Jiří|Procházka}}
+|{{age nts|1992|10|14}}
+|{{height|ft=6|in=4}}
+|''BJP''
+|{{color|red|'''Loss'''}} – [[UFC 327]] (Miami) – [[Carlos Ulberg]]
+|<ref name="Procházka vs. Ulberg">{{Cite web|url=https://cagesidepress.com/2026/04/11/ufc-327-carlos-ulberg-suffers-nasty-leg-injury-still-finishes-prochazka-to-claim-gold/|title=UFC 327: Carlos Ulberg suffers nasty leg injury, still finishes Prochazka to claim gold|publisher=cagesidepress.com|author=Jay Anderson|date=2026-04-11|access-date=2026-04-12}}</ref>
+|{{ntsh|6.67}}6–3
+|{{ntsh|32.83}}32–6–1
+|-
+|{{flagicon|LTU}}
+|{{sortname|Modestas|Bukauskas}}
+|{{age nts|1994|02|10}}
+|{{height|ft=6|in=3}}
+|''The Baltic Gladiator''
+|[[UFC Fight Night 287]] (Paris) – Oumar Sy
+|<ref name="Sy vs. Bukauskas"/>
+|{{ntsh|8.62}}8–5
+|{{ntsh|20.74}}20–7
+|-
+|{{flagicon|GEO}}
+|{{sortname|Roman|Dolidze}}
+|{{age nts|1988|07|15}}
+|{{height|ft=6|in=3}}
+|''Bazooka''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Reinier de Ridder]]
+|<ref name="de Ridder vs. Dolidze"/>
+|{{ntsh|9.64}}9–5
+|{{ntsh|15.71}}15–6
+|-
+|{{flagicon|NZL}}
+|{{sortname|Carlos|Ulberg}} (c)
+|{{age nts|1990|11|17}}
+|{{height|ft=6|in=4}}
+|''Black Jag''
+|{{color|green|'''Win'''}} – [[UFC 327]] (Miami) – [[Jiří Procházka]]<br>(April 18, 2026) – Torn [[anterior cruciate ligament|ACL]] injury
+|<ref name="Procházka vs. Ulberg"/>
+|{{ntsh|10.91}}10–1
+|{{ntsh|14.93}}14–1
+|-
+|{{flagicon|RUS}}
+|{{sortname|Azamat|Murzakanov}}
+|{{age nts|1989|04|12}}
+|{{height|ft=5|in=10}}
+|''The Professional''
+|[[UFC 333]] (Abu Dhabi) – [[Dominick Reyes]]
+|<ref name="Reyes vs. Murzakanov"/>
+|{{ntsh|6.86}}6–1
+|{{ntsh|16.94}}16–1
+|-
+|{{flagicon|AUS}}
+|{{sortname|Junior|Tafa}}  
+|{{age nts|1996|09|21}}
+|{{height|ft=6|in=3}}
+|''The Juggernaut''
+|(August 12, 2026) – Unknown reasons – Pulled out of [[UFC Fight Night 286]] (Shanghai) – [[Liu Ce]]
+|<ref>{{Cite web|url=https://www.lowkickmma.com/ufc-shanghai-betting-breakdown-can-levi-rodrigues-jr-upset-liu-ce/|title=UFC Shanghai betting breakdown: Can Levi Rodrigues Jr. upset Liu Ce?|publisher=lowkickmma.com|author=Timothy Wheaton|date=2026-08-27|access-date=2026-08-28}}</ref>
+|{{ntsh|3.33}}3–6
+|{{ntsh|7.54}}7–6
+|-
+|{{flagicon|UZB}}
+|{{sortname|Bogdan|Guskov}}
+|{{age nts|1992|09|12}}
+|{{height|ft=6|in=3}}
+|''Czarevitch''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – [[Magomed Ankalaev]]
+|<ref name="Ankalaev vs. Guskov"/>
+|{{ntsh|4.64}}4–2–1
+|{{ntsh|18.80}}18–4–1
+|-
+|{{flagicon|BRA}}
+|Rodolfo Bellato
+|{{age nts|1996|02|05}}
+|{{height|ft=6|in=3}}
+|''Trator''
+|[[UFC Fight Night 289]] (Las Vegas) – Christian Edwards
+|<ref name="Edwards vs. Bellato">{{Cite web|url=https://mmasucka.com/news/rodolfo-bellato-set-to-face-christian-edwards-at-ufc-vegas-121/|title=Rodolfo Bellato set to face Christian Edwards at UFC Vegas 121|publisher=mmasucka.com|author=Felipe Castello Branco|date=2026-08-01|access-date=2026-08-02}}</ref>
+|{{ntsh|2.63}}2–1–1 (1 NC)
+|{{ntsh|13.79}}13–3–1 (1 NC)
+|-
+|{{flagicon|CHN}}
+|{{sortname|Zhang|Mingyang}}
+|{{age nts|1998|08|16}}
+|{{height|ft=6|in=2}}
+|''Mountain Tiger''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 277]] (Macau) – [[Alonzo Menifield]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/05/30/alonzo-menifield-silences-crowd-with-upset-tko-over-mingyang/|title=Alonzo Menifield silences crowd with upset TKO over Mingyang|publisher=cagesidepress.com|author=Eddie Law|date=2026-05-30|access-date=2026-05-30}}</ref>
+|{{ntsh|3.60}}3–2
+|{{ntsh|19.67}}19–8
+|-
+|{{flagicon|BRA}}
+|Brendson Ribeiro
+|{{age nts|1996|08|09}}
+|{{height|ft=6|in=3}}
+|''The Gorilla''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – Magomed Tuchalov
+|<ref name="Tuchalov vs. Ribeiro"/>
+|{{ntsh|2.25}}2–6
+|{{ntsh|17.60}}17–11 (1 NC)
+|-
+|{{flagicon|TUR}}
+|{{sortname|İbo|Aslan}}
+|{{age nts|1996|04|23}}
+|{{height|ft=6|in=3}}
+|''The Last Ottoman''
+|
+|
+|{{ntsh|2.40}}2–3
+|{{ntsh|14.78}}14–4
+|-
+|{{flagicon|FRA}}
+|Oumar Sy
+|{{age nts|1995|11|21}}
+|{{height|ft=6|in=4}}
+|
+|[[UFC Fight Night 287]] (Paris) – [[Modestas Bukauskas]]
+|<ref name="Sy vs. Bukauskas">{{Cite web |last=Dorff |first=Marcel |date=2026-07-15 |title=UFC Announces Seven Fights for UFC Paris in September |url=https://heavy.com/sports/ufc/ufc-announces-seven-fights-ufc-paris/ |access-date=2026-07-15 |website=HEAVY |language=en-US}}</ref>
+|{{ntsh|3.60}}3–2
+|{{ntsh|12.86}}12–2
+|-
+|{{flagicon|NED}}
+|{{sortname|Reinier|de Ridder}}
+|{{age nts|1990|09|07}}
+|{{height|ft=6|in=4}}
+|''The Dutch Knight''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Roman Dolidze]]
+|<ref name="de Ridder vs. Dolidze">{{Cite web |last=Law |first=Eddie |date=2026-08-22 |title=Reinier de Ridder Stops Dolidze, Earns First UFC Light Heavyweight Win |url=https://cagesidepress.com/2026/08/22/reinier-de-ridder-stops-dolidze-earns-first-ufc-light-heavyweight-win/ |access-date=2026-08-22 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|5.71}}5–2
+|{{ntsh|22.84}}22–4
+|-
+|{{flagicon|NZL}}
+|{{sortname|Navajo|Stirling}}
+|{{age nts|1997|11|07}}
+|{{height|ft=6|in=4}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 283]] (Belgrade) – [[Jan Błachowicz]]
+|<ref name="Stirling vs. Blachowicz">{{Cite web|url=https://cagesidepress.com/2026/08/01/ufc-belgrade-navajo-stirling-capitalizes-on-short-notice-opportunity-against-jan-blachowicz/|title=UFC Belgrade: Navajo Stirling capitalizes on short-notice opportunity against Jan Blachowicz|publisher=cagesidepress.com|author=Brett Cagle|date=2026-08-01|access-date=2026-08-02}}</ref>
+|{{ntsh|7.0}}6–0
+|{{ntsh|12.0}}11–0
+|-
+|{{flagicon|BRA}}
+|Bruno Lopes
+|{{age nts|1993|4|24}}
+|{{height|ft=6|in=2}}
+|''Brunão''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 284]] (Las Vegas) – Diyar Nurgozhay
+|<ref name="Lopes vs. Nurgozhay">{{Cite web|url=https://cagesidepress.com/2026/08/08/ufc-vegas-120-diyar-nurgozhay-demolishes-bruno-lopes/|title=UFC Vegas 120: Diyar Nurgozhay demolishes Bruno Lopes|publisher=cagesidepress.com|author=Nick Holt|date=2026-08-08|access-date=2026-08-09}}</ref>
+|{{ntsh|1.25}}1–3
+|{{ntsh|14.78}}14–4
+|-
+|{{flagicon|USA}}
+|{{sortname|Billy|Elekana}}
+|{{age nts|1995|05|28}}
+|{{height|ft=6|in=3}}
+|
+|(May 22, 2026) – Undisclosed reasons – Out of [[UFC Fight Night 278]] (Las Vegas) – [[Iwo Baraniewski]]
+|<ref>{{Cite web|title=Zle wcale nie jest, bo dostajemy… Czas! Jak mocny jest Junior Tafa, nowy rywal Iwo Baraniewskiego?|url=https://www.lowking.pl/zle-wcale-nie-jest-bo-dostajemy-czas-jak-mocny-jest-junior-tafa-nowy-rywal-iwo-baraniewskiego/|date=2026-05-22|access-date=2026-05-23|publisher=lowking.pl|author=Bartlomiej Stachura}} {{in lang|pl}}</ref>
+|{{ntsh|3.75}}3–1
+|{{ntsh|10.83}}10–2
+|-
+|{{flagicon|USA}}
+|Julius Walker
+|{{age nts|1999|07|16}}
+|{{height|ft=6|in=4}}
+|''Juice Box''
+|[[UFC Fight Night 290]] (Las Vegas) – [[Gerald Meerschaert]]
+|<ref name="Walker vs. Meerschaert"/>
+|{{ntsh|1.25}}1–3
+|{{ntsh|7.70}}7–3
+|-
+|{{flagicon|KAZ}}
+|Diyar Nurgozhay
+|{{age nts|1997|04|22}}
+|{{height|ft=6|in=2}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 284]] (Las Vegas) – Bruno Lopes
+|<ref name="Lopes vs. Nurgozhay"/>
+|{{ntsh|2.50}}2–2
+|{{ntsh|12.86}}12–2
+|-
+|{{flagicon|KGZ}}
+|Uran Satybaldiev
+|{{age nts|1994|08|10}}
+|{{height|ft=6|in=4}}
+|''Gorilla''
+|(July 8, 2026) – Unknown reasons – Pulled out of [[UFC Fight Night 282]] (Abu Dhabi) – [[Dustin Jacoby]]
+|<ref>{{Cite web |last=Dorff |first=Marcel |date=2026-07-08 |title=Dustin Jacoby Takes on Promotional Newcomer at UFC Abu Dhabi |url=https://heavy.com/sports/ufc/dustin-jacoby-newcomer-ufc-abu-dhabi/ |access-date=2026-07-09 |website=HEAVY |language=en-US}}</ref>
+|{{ntsh|1.50}}1–1
+|{{ntsh|10.90}}10–1
+|-
+|{{flagicon|BRA}}
+|Kevin Christian
+|{{age nts|1995|01|21}}
+|{{height|ft=6|in=7}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 275]] (Perth) – [[Junior Tafa]]
+|<ref>{{Cite web |last=Staff |date=2026-05-02 |title=UFC Perth: Junior Tafa Smashes Kevin Christian, Returns to Win Column |url=https://cagesidepress.com/2026/05/02/ufc-perth-junior-tafa-smashes-kevin-christian-returns-to-win-column/ |access-date=2026-05-02 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|-1}}0–2
+|{{ntsh|9.69}}9–4
+|-
+|{{flagicon|TUR}}
+|Abdul-Rakhman Yakhyaev
+|{{age nts|2001|01|03}}
+|{{height|ft=6|in=2}}
+|''Hunter''
+|[[UFC 333]] (Abu Dhabi) – [[Nikita Krylov]]
+|<ref name="Krylov vs. Yakhyaev"/>
+|{{ntsh|4.0}}3–0
+|{{ntsh|11.0}}10–0
+|-
+|{{flagicon|POL}}
+|{{sortname|Iwo|Baraniewski}}
+|{{age nts|1998|11|20}}
+|{{height|ft=6|in=0}}
+|''Rudy''
+|[[UFC 331]] (Los Angeles) – [[Alonzo Menifield]]
+|<ref name="Menifield vs. Baraniewski"/>
+|{{ntsh|4.0}}3–0
+|{{ntsh|10.0}}9–0
+|-
+|{{flagicon|USA}}
+|Luke Fernandez
+|{{age nts|1995|06|29}}
+|{{height|ft=6|in=1}}
+|
+|{{color|red|'''Loss'''}} – [[UFC 326]] (Las Vegas) – Rodolfo Bellato
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/03/07/ufc-326-rodolfo-bellato-halts-newcomer-luke-fernandez-in-his-tracks/|title=UFC 326: Rodolfo Bellato halts newcomer Luke Fernandez in his tracks|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-03-07|access-date=2026-03-08}}</ref>
+|{{ntsh|-1}}0–1
+|{{ntsh|6.86}}6–1
+|-
+|{{flagicon|BRA}}
+|Rafael Tobias
+|{{age nts|2000|03|20}}
+|{{height|ft=6|in=2}}
+|''Bipolar''
+|{{color|red|'''Loss'''}} - [[UFC 330]] (Philadelphia) – Lucas Fernando
+|<ref name="Fernando vs. Tobias"/>
+|{{ntsh|-2}}0–2
+|{{ntsh|14.82}}14–3
+|-
+|{{flagicon|BRA}}
+|Felipe Franco
+|{{age nts|2002|01|22}}
+|{{height|ft=6|in=1}}
+|''Negao''
+|[[UFC Fight Night 290]] (Las Vegas) – Alexander Poppeck
+|<ref name="Franco vs. Poppeck">{{Cite web |date=2026-08-07 |title=Veteran Fighter Books Next UFC Fight Just Days After Losing UFC Debut |url=https://www.si.com/fannation/mma/news/veteran-fighter-books-next-ufc-fight-days-after-losing-ufc-debut |access-date=2026-08-07 |website=MMA Knockout On SI |language=en-US}}</ref>
+|{{ntsh|1.50}}1–1
+|{{ntsh|11.85}}11–2
+|-
+|{{flagicon|USA}}
+|Christian Edwards
+|{{age nts|1998|11|05}}
+|{{height|ft=6|in=5}}
+|''Pain''
+|[[UFC Fight Night 289]] (Las Vegas) – Rodolfo Bellato
+|<ref name="Edwards vs. Bellato"/>
+|{{ntsh|-1}}0–1
+|{{ntsh|8.62}}8–5
+|-
+|{{flagicon|BRA}}
+|Levi Rodrigues Jr.
+|{{age nts|1995|10|16}}
+|{{height|ft=6|in=0}}
+|''Baby Monster''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 286]] (Shanghai) – [[Liu Ce]]
+|<ref name="Liu vs. Rodrigues Jr."/>
+|{{ntsh|-2}}0–2
+|{{ntsh|5.71}}5–2 (1 NC)
+|-
+|{{flagicon|RUS}}
+|Magomed Tuchalov
+|{{age nts|1999|12|30}}
+|{{height|ft=6|in=3}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – Brendson Ribeiro
+|<ref name="Tuchalov vs. Ribeiro">{{Cite web |last=Bitter |first=Shawn |date=2026-07-25 |title=UFC Abu Dhabi: Newcomer Magomed Tuchalov Tops Brendson Ribeiro |url=https://cagesidepress.com/2026/07/25/ufc-abu-dhabi-newcomer-magomed-tuchalov-tops-brendson-ribeiro/ |access-date=2026-07-25 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|7.0}}6–0
+|-
+|{{flagicon|RUS}}
+|Muhammad Saidov
+|{{age nts|1996|01|10}}
+|{{height|ft=6|in=2}}
+|''Kubik''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 282]] (Abu Dhabi) – [[Dustin Jacoby]]
+|<ref name="Jacoby vs. Saidov"/>
+|{{ntsh|2.0}}1–0
+|{{ntsh|11.0}}10–0
+|-
+|{{flagicon|BRA}}
+|Lucas Fernando
+|{{age nts|1997|01|10}}
+|{{height|ft=6|in=3}}
+|
+|{{color|green|'''Win'''}} - [[UFC 330]] (Philadelphia) – Rafael Tobias
+|<ref name="Fernando vs. Tobias">{{Cite web|url=https://cagesidepress.com/2026/08/15/ufc-330-lucas-fernando-on-point-stops-rafael-tobias-in-immensely-impressive-debut/|title=UFC 330: Lucas Fernando on point, stops Rafael Tobias in immensely impressive debut|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-08-15|access-date=2026-08-16}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|14.82}}14–3
+|-
+|{{flagicon|CHN}}
+|{{sortname|Liu|Ce}}
+|{{age nts|1996|09|04}}
+|{{height|ft=6|in=3}}
+|''The Oriental Dragon''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 286]] (Shanghai) – Levi Rodrigues Jr.
+|<ref name="Liu vs. Rodrigues Jr.">{{Cite web|url=https://cagesidepress.com/2026/08/29/ufc-shanghai-liu-ce-makes-thunderous-debut-floors-levi-rodrigues-jr/|title=UFC Shanghai: Liu Ce makes thunderous debut, floors Levi Rodrigues Jr|publisher=cagesidepress.com|author=Staff|date=2026-08-29|access-date=2026-08-29}}</ref>
+|{{ntsh|2.0}}1–0
+|{{ntsh|4.80}}4–1
+|-
+|}
+
+
+===Women's strawweights (115 lb, 52 kg)===
+<!--If you wish to add a fighter, please make sure you have read the "Notes/Key" section and fully understand what number to put before to the fighters records so it can correctly be sorted.-->
+
+{| class="wikitable sortable" style="text-align:center"
+!width=3%|{{small|[[ISO 3166-1 alpha-3|ISO]]}}
+!width=13%|Name
+!width=3%|Age
+!width=8%|Ht.
+!width=13%|Nickname
+!width=30%|Result / next fight / status
+!width=3%|Ref
+!width=12%|Endeavor record
+!width=12%|MMA record
+|-
+|{{flagicon|BRA}}
+|{{sortname|Jéssica|Andrade}}
+|{{age nts|1991|9|25}}
+|{{height|ft=5|in=2}}
+|''Bate Estaca''
+|
+|
+|{{ntsh|17.56}}17–13
+|{{ntsh|26.63}}26–15
+|-
+|{{flagicon|USA}}
+|{{sortname|Angela|Hill}}
+|{{age nts|1985|01|12}}
+|{{height|ft=5|in=3}}
+|''Overkill''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 277]] (Macau) – [[Xiong Jing Nan]]
+|<ref>{{Cite web |last=Anderson |first=Jay |date=2026-05-30 |title=UFC Macau: Angela Hill Turns Back Debuting ONE Star Xiong Jing Nan |url=https://cagesidepress.com/2026/05/30/ufc-macau-angela-hill-turns-back-debuting-one-star-xiong-jing-nan/ |access-date=2026-05-30 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|14.46}}14–16
+|{{ntsh|19.54}}19–16
+|-
+|{{flagicon|POL}}
+|{{sortname|Karolina|Kowalkiewicz}}
+|{{age nts|1985|10|15}}
+|{{height|ft=5|in=3}}
+|''Polish Princess''
+|
+|
+|{{ntsh|10.53}}10–9
+|{{ntsh|17.65}}17–9
+|-
+|{{flagicon|USA}}
+|{{sortname|Tatiana|Suarez}}
+|{{age nts|1990|12|19}}
+|{{height|ft=5|in=5}}
+|
+|{{color|green|'''Win'''}} – [[UFC 327]] (Miami) – [[Loopy Godinez]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/04/11/ufc-327-tatiana-suarez-first-to-submit-stop-loopy-godinez/|title=UFC 327: Tatiana Suarez first to submit, stop Loopy Godinez|publisher=cagesidepress.com|author=Jay Anderson|date=2026-04-11|access-date=2026-04-12}}</ref>
+|{{ntsh|9.90}}9–1
+|{{ntsh|12.92}}12–1
+|-
+|{{flagicon|BRA}}
+|{{sortname|Amanda|Lemos}}
+|{{age nts|1987|5|22}}
+|{{height|ft=5|in=4}}
+|''Amandinha''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 284]] (Las Vegas) – Alexia Thainara
+|<ref name="Lemos vs. Thainara">{{Cite web|url=https://cagesidepress.com/2026/08/08/ufc-vegas-120-alexia-thainara-bloodied-but-not-beaten-tops-amanda-lemos/|title=UFC Vegas 120: Alexia Thainara bloodied, but not beaten, tops Amanda Lemos|publisher=cagesidepress.com|author=Jay Anderson|date=2026-08-08|access-date=2026-08-09}}</ref>
+|{{ntsh|9.56}}9–7
+|{{ntsh|15.67}}15–7–1
+|-
+|{{flagicon|CHN}}
+|{{sortname|Yan|Xiaonan}}
+|{{age nts|1989|6|16}}
+|{{height|ft=5|in=5}}
+|''Nine''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 286]] (Shanghai) – [[Denise Gomes]]
+|<ref name="Yan vs. Gomes">{{Cite web|url=https://cagesidepress.com/2026/08/29/ufc-shanghai-denise-gomes-plays-spoiler-stops-yan-xiaonan-at-home/|title=UFC Shanghai: Denise Gomes plays spoiler, stops Yan Xiaonan at home|publisher=cagesidepress.com|author=Staff|date=2026-08-29|access-date=2026-08-29}}</ref>
+|{{ntsh|9.64}}9–5
+|{{ntsh|18.75}}18–6 (1 NC)
+|-
+|{{flagicon|CAN}}
+|{{sortname|Gillian|Robertson}}
+|{{age nts|1995|05|17}}
+|{{height|ft=5|in=5}}
+|''The Savage''
+|{{color|red|'''Loss'''}} - [[UFC 330]] (Philadelphia) – [[Mackenzie Dern]]
+|<ref name="Dern vs. Robertson"/>
+|{{ntsh|14.67}}14–7
+|{{ntsh|17.65}}17–9
+|-
+|{{flagicon|BRA}}
+|{{sortname|Polyana|Viana}}
+|{{age nts|1992|6|14}}
+|{{height|ft=5|in=7}}
+|''Dama de Ferro''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 276]] (Las Vegas) – Alice Ardelean
+|<ref name="Viana vs. Ardelean">{{Cite web|title=Alice Ardelean stuns with history making submission of Polyana Viana at UFC Vegas 117|url=https://cagesidepress.com/2026/05/16/alice-ardelean-stuns-with-history-making-submission-of-polyana-viana-at-ufc-vegas-117/|date=2026-05-16|access-date=2026-05-17|publisher=cagesidepress.com|author=Jay Anderson}}</ref>
+|{{ntsh|4.33}}4–8
+|{{ntsh|13.59}}13–9
+|-
+|{{flagicon|BRA}}
+|{{sortname|Mackenzie|Dern}} (c)
+|{{age nts|1993|3|24}}
+|{{height|ft=5|in=4}}
+|
+|{{color|green|'''Win'''}} - [[UFC 330]] (Philadelphia) – [[Gillian Robertson]]
+|<ref name="Dern vs. Robertson">{{Cite web|url=https://cagesidepress.com/2026/08/15/ufc-330-mackenzie-dern-out-grapples-gillian-robertson-retains-title/|title=UFC 330: Mackenzie Dern out-grapples Gillian Robertson, retains title|publisher=cagesidepress.com|author=Jay Anderson|date=2026-08-15|access-date=2026-08-16}}</ref>
+|{{ntsh|12.71}}12–5
+|{{ntsh|17.77}}17–5
+|-
+|{{flagicon|BRA}}
+|{{sortname|Virna|Jandiroba}}
+|{{age nts|1988|5|30}}
+|{{height|ft=5|in=3}}
+|''Carcará''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 272]] (Las Vegas) – [[Tabatha Ricci]]
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/04/04/ufc-vegas-115-virna-jandiroba-cruises-to-victory-over-tabatha-ricci/|title=UFC Vegas 115: Virna Jandiroba cruises to victory over Tabatha Ricci|publisher=cagesidepress.com|author=Jay Anderson|date=2026-04-04|access-date=2026-04-05}}</ref>
+|{{ntsh|9.69}}9–4
+|{{ntsh|23.85}}23–4
+|-
+|{{flagicon|BRA}}
+|{{sortname|Amanda|Ribas}}
+|{{age nts|1993|8|26}}
+|{{height|ft=5|in=4}}
+|
+|(June 17, 2026) – Dizziness – Out of [[UFC Fight Night 281]] (Oklahoma City) – [[Fatima Kline]]
+|<ref>{{Cite web|url=https://heavy.com/sports/ufc/fatima-kline-opponent-ufc-oklahoma-city/|title=Fatima Kline gets new opponent for UFC Oklahoma City|publisher=heavy.com|author=Marcel Dorff|date=2026-06-17|access-date=2026-06-19}}</ref>
+|{{ntsh|7.54}}7–6
+|{{ntsh|12.63}}12–7
+|-
+|{{flagicon|JPN}}
+|{{sortname|Mizuki|Inoue}}
+|{{age nts|1994|08|19}}
+|{{height|ft=5|in=4}}
+|
+|
+|
+|{{ntsh|3.75}}3–1
+|{{ntsh|16.73}}16–6
+|-
+|{{flagicon|THA}}
+|{{sortname|Loma|Lookboonmee}}
+|{{age nts|1996|01|18}}
+|{{height|ft=5|in=1}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 277]] (Macau) – Jacqueline Amorim
+|<ref name="Loma vs. Amorim">{{Cite web |last=Anderson |first=Jay |date=2026-05-30 |title=UFC Macau: Clash of Styles Sees Jaqueline Amorim Tap Loma Lookboonmee |url=https://cagesidepress.com/2026/05/30/ufc-macau-clash-of-styles-sees-jaqueline-amorim-tap-loma-lookboonmee/ |access-date=2026-05-30 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|7.64}}7–4
+|{{ntsh|10.66}}10–5
+|-
+|{{flagicon|USA}}
+|{{sortname|Sam|Hughes|Sam Hughes (fighter)}}
+|{{age nts|1992|06|28}}
+|{{height|ft=5|in=5}}
+|''Sampage''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 269]] (Las Vegas) – Piera Rodriguez
+|<ref name="Rodriguez vs. Hughes"/>
+|{{ntsh|6.50}}6–6
+|{{ntsh|11.61}}11–7
+|-
+|{{flagicon|MEX}}
+|{{sortname|Montserrat|Ruiz}}
+|{{age nts|1993|02|03}}
+|{{height|ft=5|in=0}}
+|''Conejo''
+|
+|
+|{{ntsh|1.20}}1–4
+|{{ntsh|10.67}}10–5
+|-
+|{{flagicon|MEX}}
+|{{sortname|Loopy|Godinez}}
+|{{age nts|1993|09|06}}
+|{{height|ft=5|in=2}}
+|''Loopy''
+|[[UFC Fight Night 290]] (Las Vegas) – [[Ketlen Souza]]
+|<ref name="Souza vs. Godinez">{{Cite web|url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/08/19/ufc-vegas-122-loopy-godinez-vs-ketlen-souza-booked/91371668007/|title=Loopy Godinez vs. Ketlen Souza joins UFC Fight Night 290 lineup|publisher=mmajunkie.usatoday.com|author=Mike Bohn and Nolan King|date=2026-08-19|access-date=2026-08-21}}</ref>
+|{{ntsh|9.60}}9–6
+|{{ntsh|14.70}}14–6
+|-
+|{{flagicon|BRA}}
+|{{sortname|Luana|Pinheiro}}
+|{{age nts|1993|11|18}}
+|{{height|ft=5|in=2}}
+|
+|
+|
+|{{ntsh|3.43}}3–4
+|{{ntsh|11.69}}11–5
+|-
+|{{flagicon|BRA}}
+|{{sortname|Tabatha|Ricci}}
+|{{age nts|1995|02|21}}
+|{{height|ft=5|in=1}}
+|''Baby Shark''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 281]] (Oklahoma City) – [[Fatima Kline]]
+|<ref name="Ricci vs. Kline"/>
+|{{ntsh|7.58}}7–5
+|{{ntsh|12.71}}12–5
+|-
+|{{flagicon|USA}}
+|{{sortname|Elise|Reed}}
+|{{age nts|1992|12|05}}
+|{{height|ft=5|in=3}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 285]] (Sacramento) – Shanelle Dyer
+|<ref name="Dyer vs. Reed"/>
+|{{ntsh|4.40}}4–6
+|{{ntsh|8.57}}8–6
+|-
+|{{flagicon|VEN}}
+|Piera Rodriguez
+|{{age nts|1992|11|11}}
+|{{height|ft=5|in=3}}
+|''La Fiera''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 269]] (Las Vegas) – [[Sam Hughes (fighter)|Sam Hughes]]
+|<ref name="Rodriguez vs. Hughes">{{Cite web|url=https://cagesidepress.com/2026/03/14/piera-rodriguez-outworks-sam-hughes-for-unanimous-decision-win/|title=Piera Rodriguez outworks Sam Hughes for unanimous decision win|publisher=cagesidepress.com|author=Eddie Law|date=2026-03-14|access-date=2026-03-15}}</ref>
+|{{ntsh|5.71}}5–2
+|{{ntsh|12.86}}12–2
+|-
+|{{flagicon|MEX}}
+|{{sortname|Yazmin|Jauregui}}
+|{{age nts|1999|02|28}}
+|{{height|ft=5|in=3}}
+|
+|[[UFC Fight Night 289]] (Las Vegas) – [[Vanessa Demopoulos]]
+|<ref name="Jauregui vs. Demopoulos">{{Cite web |last1=King |first1=Nolan |last2=Segura |first2=Danny |title=UFC adds Vanessa Demopoulos vs. Yazmin Jauregui to September Fight Night |url=https://mmajunkie.usatoday.com/story/sports/ufc/2026/07/23/ufc-fight-night-news-vanessa-demopoulos-vs-yazmin-jauregui-september-26/91031819007/ |access-date=2026-07-24 |website=MMA Junkie |language=en-US}}</ref>
+|{{ntsh|3.60}}3–2
+|{{ntsh|11.85}}11–2
+|-
+|{{flagicon|BRA}}
+|{{sortname|Iasmin|Lucindo}}
+|{{age nts|2002|01|08}}
+|{{height|ft=5|in=3}}
+|
+|
+|
+|{{ntsh|5.71}}5–2
+|{{ntsh|18.75}}18–6
+|-
+|{{flagicon|BRA}}
+|{{sortname|Denise|Gomes}}
+|{{age nts|1999|12|30}}
+|{{height|ft=5|in=5}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 286]] (Shanghai) – [[Yan Xiaonan]]
+|<ref name="Yan vs. Gomes"/>
+|{{ntsh|7.78}}7–2
+|{{ntsh|13.81}}13–3
+|-
+|{{flagicon|BRA}}
+|Jaqueline Amorim
+|{{age nts|1995|06|24}}
+|{{height|ft=5|in=3}}
+|''Jacque''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 277]] (Macau) – [[Loma Lookboonmee]]
+|<ref name="Loma vs. Amorim"/>
+|{{ntsh|5.71}}5–2
+|{{ntsh|11.84}}11–2
+|-
+|{{flagicon|BRA}}
+|{{sortname|Ketlen|Souza}}
+|{{age nts|1995|08|18}}
+|{{height|ft=5|in=3}}
+|''Esquentadinha''
+|[[UFC Fight Night 290]] (Las Vegas) – [[Loopy Godinez]]
+|<ref name="Souza vs. Godinez"/>
+|{{ntsh|4.57}}4–3
+|{{ntsh|17.74}}17–6
+|-
+|{{flagicon|IRE}}
+|Shauna Bannon
+|{{age nts|1993|10|23}}
+|{{height|ft=5|in=5}}
+|''Mama B''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 276]] (Las Vegas) – Nicolle Caliari
+|<ref name="Caliari vs. Bannon">{{Cite web|title=Nicolle Caliari snags first UFC win, subs Shauna Bannon in strawweight move|url=https://cagesidepress.com/2026/05/16/nicolle-caliari-snags-first-ufc-win-subs-shauna-bannon-in-strawweight-move/|date=2026-05-16|access-date=2026-05-17|publisher=cagesidepress.com|author=Jay Anderson}}</ref>
+|{{ntsh|2.40}}2–3
+|{{ntsh|7.70}}7–3
+|-
+|{{flagicon|BRA}}
+|{{sortname|Talita|Alencar}}
+|{{age nts|1990|10|17}}
+|{{height|ft=5|in=1}}
+|''The Problem Child''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 274]] (Las Vegas) – Julia Polastri
+|<ref>{{Cite web|url=https://cagesidepress.com/2026/04/25/talita-alencar-takes-decision-over-julia-polastri-in-ufc-vegas-116-opener/|title=Talita Alencar takes decision over Julia Polastri in UFC Vegas 116 opener|publisher=cagesidepress.com|author=Jay Anderson|date=2026-04-25|access-date=2026-04-26}}</ref>
+|{{ntsh|4.80}}4–1
+|{{ntsh|8.85}}8–1–1
+|-
+|{{flagicon|BRA}}
+|{{sortname|Rayanne|dos Santos}}
+|{{age nts|1995|06|08}}
+|{{height|ft=5|in=2}}
+|
+|
+|
+|{{ntsh|−3}}0–3
+|{{ntsh|14.64}}14–8
+|-
+|{{flagicon|IND}}
+|[[Puja Tomar]]
+|{{age nts|1993|12|05}}
+|{{height|ft=5|in=4}}
+|''The Cyclone''
+|{{color|red|'''Loss'''}} – [[Road to UFC Season 5#Road to UFC: Opening Round – Day 2|Road to UFC Season 5]] (Macau) – Shi Ming
+|<ref name="Shi vs. Tomar"/>
+|{{ntsh|1.33}}1–2
+|{{ntsh|9.60}}9–6
+|-
+|{{flagicon|BRA}}
+|Julia Polastri
+|{{age nts|1998|03|05}}
+|{{height|ft=5|in=2}}
+|''The Dragon''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 286]] (Shanghai) – [[Xiong Jingnan]]
+|<ref name="Xiong vs. Polastri">{{Cite web|url=https://cagesidepress.com/2026/08/29/ufc-shanghai-preliminary-card-results/|title=UFC Shanghai preliminary card results|publisher=cagesidepress.com|author=Staff|date=2026-08-29|access-date=2026-08-29}}</ref>
+|{{ntsh|3.50}}3–3
+|{{ntsh|15.75}}15–5
+|-
+|{{flagicon|USA}}
+|[[Fatima Kline]]
+|{{age nts|2000|07|12}}
+|{{height|ft=5|in=6}}
+|''The Archangel''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 281]] (Oklahoma City) – [[Tabatha Ricci]]
+|<ref name="Ricci vs. Kline">{{Cite web|url=https://cagesidepress.com/2026/07/18/ufc-oklahoma-city-fatima-kline-takes-tabatha-ricci-to-suplex-city/|title=UFC Oklahoma City: Fatima Kline takes Tabatha Ricci to suplex city|publisher=cagesidepress.com|author=Jay Anderson|date=2026-07-18|access-date=2026-07-19}}</ref>
+|{{ntsh|4.80}}4–1
+|{{ntsh|10.91}}10–1
+|-
+|{{flagicon|BRA}}
+|Nicolle Caliari
+|{{age nts|1996|11|04}}
+|{{height|ft=5|in=3}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 276]] (Las Vegas) – Shauna Bannon
+|<ref name="Caliari vs. Bannon"/>
+|{{ntsh|1.33}}1–2
+|{{ntsh|9.69}}9–4
+|-
+|{{flagicon|ROU}}
+|Alice Ardelean
+|{{age nts|1992|04|19}}
+|{{height|ft=5|in=3}}
+|
+|{{color|green|'''Win'''}} – [[UFC Fight Night 276]] (Las Vegas) – [[Polyana Viana]]
+|<ref name="Viana vs. Ardelean"/>
+|{{ntsh|3.60}}3–2
+|{{ntsh|12.63}}12–7
+|-
+|{{flagicon|BRA}}
+|Stephanie Luciano
+|{{age nts|1999|12|16}}
+|{{height|ft=5|in=6}}
+|''Rondinha''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 283]] (Belgrade) – Marina Spasić
+|<ref name="Spasić vs. Luciano"/>
+|{{ntsh|3.75}}3–1
+|{{ntsh|8.77}}8–2–1
+|-
+|{{flagicon|CHN}}
+|Shi Ming
+|{{age nts|1994|11|14}}
+|{{height|ft=5|in=3}}
+|''Bunny Bomb''
+|{{color|green|'''Win'''}} – [[Road to UFC Season 5#Road to UFC: Opening Round – Day 2|Road to UFC Season 5]] (Macau) – [[Puja Tomar]]
+|<ref name="Shi vs. Tomar">{{Cite web|url=https://www.lowkickmma.com/road-to-ufc-queen-shi-ming-draws-puja-tomar-for-strawweight-showcase-in-macau/|title=Road to UFC queen Shi Ming draws Puja Tomar for strawweight showcase in Macau|publisher=lowkickmma.com|author=Timothy Wheaton|date=2026-03-31|access-date=2026-03-31}}</ref>
+|{{ntsh|2.67}}2–1
+|{{ntsh|18.75}}18–6
+|-
+|{{flagicon|BRA}}
+|Alexia Thainara
+|{{age nts|1997|11|20}}
+|{{height|ft=5|in=4}}
+|''Burguesinha''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 284]] (Las Vegas) – [[Amanda Lemos]]
+|<ref name="Lemos vs. Thainara"/>
+|{{ntsh|5.0}}4–0
+|{{ntsh|15.94}}15–1
+|-
+|{{flagicon|ENG}}
+|Shanelle Dyer
+|{{age nts|2001|04|23}}
+|{{height|ft=5|in=6}}
+|''The Nightmare''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 285]] (Sacramento) – [[Elise Reed]]
+|<ref name="Dyer vs. Reed">{{Cite web |last=Anderson |first=Jay |date=2026-08-22 |title=UFC Sacramento: Shanelle Dyer Lays Beatdown on Elise Reed |url=https://cagesidepress.com/2026/08/22/ufc-sacramento-shanelle-dyer-lays-beatdown-on-elise-reed/ |access-date=2026-08-22 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|3.0}}2–0
+|{{ntsh|8.88}}8–1
+|-
+|{{flagicon|CHN}}
+|{{sortname|Xiong|Jingnan}}
+|{{age nts|1988|01|12}}
+|{{height|ft=5|in=5}}
+|''The Panda''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 286]] (Shanghai) – Julia Polastri
+|<ref name="Xiong vs. Polastri"/>
+|{{ntsh|-2}}0–2
+|{{ntsh|19.83}}19–4
+|-
+|{{flagicon|SRB}}
+|Marina Spasić
+|{{age nts|1994|07|11}}
+|{{height|ft=5|in=4}}
+|
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 283]] (Belgrade) – Stephanie Luciano
+|<ref name="Spasić vs. Luciano">{{Cite web |last=Bitter |first=Shawn |date=2026-08-01 |title=UFC Belgrade: Stephanie Luciano Silences Serbian Crowd with Sub of Marina Spasic |url=https://cagesidepress.com/2026/08/01/ufc-belgrade-stephanie-luciano-silences-serbian-crowd-with-sub-of-marina-spasic/ |access-date=2026-08-01 |website=Cageside Press |language=en-US}}</ref>
+|{{ntsh|-1}}0–1
+|{{ntsh|7.77}}7–2
+|-
+|{{flagicon|BRA}}
+|Giovanna Canuto
+|{{age nts|2002|11|16}}
+|{{height|ft=5|in=2}}
+|''GiGi / Diamond''
+|{{color|red|'''Loss'''}} – [[UFC Fight Night 284]] (Las Vegas) – Carol Foro
+|<ref name="Canuto vs. Foro">{{Cite web|url=https://cagesidepress.com/2026/08/08/ufc-vegas-120-carol-foro-edges-out-gigi-canuto-in-barnburner/|title=UFC Vegas 120: Carol Foro edges out Gigi Canuto in barnburner|publisher=cagesidepress.com|author=Shawn Bitter|date=2026-08-08|access-date=2026-08-09}}</ref>
+|{{ntsh|-1}}0–1
+|{{ntsh|7.78}}7–2
+|-
+|{{flagicon|BRA}}
+|Carol Foro
+|{{age nts|1997|03|21}}
+|{{height|ft=5|in=2}}
+|''Anabelle''
+|{{color|green|'''Win'''}} – [[UFC Fight Night 284]] (Las Vegas) – Giovanna Canuto
+|<ref name="Canuto vs. Foro"/>
+|{{ntsh|2.0}}1–0
+|{{ntsh|10.91}}10–1
+|-
+|}
+

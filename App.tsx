@@ -27,6 +27,7 @@ import { loadFollowables } from './src/features/follows/data/followStore';
 import {
   migrateBoxingSexFollows,
   migratePbcFollows,
+  migrateTennisSexFollows,
   migrateTournamentFinalsScope,
 } from './src/features/follows/data/followMigrations';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
@@ -174,6 +175,10 @@ export default function App() {
     // but running first avoids one fetch on the legacy key.
     migrateBoxingSexFollows();
     migratePbcFollows(); // Round 6 item 4: after the sex split, before the first fetch
+    // Round 7 item 8: one tennis follow per draw. Server-first by rule —
+    // the sexed keys were stamped and verified on every future parent
+    // before this build shipped (followMigrations.ts explains why).
+    migrateTennisSexFollows();
     migrateTournamentFinalsScope();
     // Round 5: the remote switchboard, then measurement under its flag.
     // Both fail-safe — an unreachable flags doc leaves the launch

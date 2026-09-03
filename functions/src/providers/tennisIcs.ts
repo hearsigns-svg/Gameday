@@ -13,7 +13,7 @@
 // one date-only, tournament level with venue.
 
 import { Fixture } from '../fixture';
-import { tournamentKey } from '../tennisTournaments';
+import { tournamentKeysFor } from '../tennisTournaments';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const FEED =
@@ -97,11 +97,9 @@ export function tournamentToFixture(
     // The tour slice plus the YEAR-AGNOSTIC canonical tournament key
     // (Prompt 9): following "Wimbledon" matches every edition, and a
     // joint event shares this key with its WTA parent. A title that
-    // normalises to nothing stamps no key.
-    followKeys: [
-      'tennis-atp',
-      ...((k) => (k ? [k] : []))(tournamentKey(e.summary)),
-    ],
+    // normalises to nothing stamps no key. Since Round 7 item 8 the
+    // men's draw key (`-m`) rides beside the bare key.
+    followKeys: ['tennis-atp', ...tournamentKeysFor(e.summary, 'atp')],
     ...(e.location?.trim() ? { venueCity: e.location.trim() } : {}),
     startUtc,
     status: 'scheduled',

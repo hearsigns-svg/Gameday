@@ -20,7 +20,7 @@ const APPLY = process.argv.includes('--apply');
 const SPORT = process.argv.includes('--sport')
   ? process.argv[process.argv.indexOf('--sport') + 1]
   : 'ufc';
-const CAP = 8;
+const CAP = { ufc: 8, golf: 12 }[SPORT] ?? 8;
 
 const SEARCHES = {
   // Sport-generic by design: an octagon is an octagon — generic MMA
@@ -33,13 +33,37 @@ const SEARCHES = {
     'UFC octagon',
     'UFC arena',
   ],
+  // Golf (Round 7 item 9, owner ruling 2026-09-03): the course IS the
+  // scene — links, fairways, greens — and Commons' Quality-images
+  // category carries landscape photography of them with named
+  // photographers. Course-centric only: no golfer in frame as the
+  // subject, no trophies, no galleries.
+  golf: [
+    'golf course incategory:Quality_images',
+    'golf links fairway incategory:Quality_images',
+    'golf course green bunker',
+    'golf links dunes',
+    'golf course aerial',
+  ],
 };
 // Cage/arena-centric only. A title or description that names people,
 // bouts or portraits is OUT even if the frame happens to include the
 // cage — the subject rule, not a composition rule.
-const WANT = /octagon|cage|arena|crowd|venue|event/i;
-const REJECT =
-  /\bvs\.?\b|portrait|weigh[- ]?in|face[- ]?off|press conference|interview|posing|headshot|champion|belt/i;
+const WANTS = {
+  ufc: /octagon|cage|arena|crowd|venue|event/i,
+  golf: /golf|fairway|green|links|course|hole|bunker|clubhouse/i,
+};
+const REJECTS = {
+  ufc: /\bvs\.?\b|portrait|weigh[- ]?in|face[- ]?off|press conference|interview|posing|headshot|champion|belt/i,
+  golf: /portrait|golfer|player|swing|putt(?:ing)? stroke|trophy|\bvs\.?\b|champion|caddie|crowd|gallery|spectator|sign\b|scorecard|cart\b|\bcar\b|\bfiat\b|vehicle|mini[- ]?golf|crazy golf|devil's golf/i,
+};
+const WANT = WANTS[SPORT] ?? WANTS.ufc;
+const REJECT = REJECTS[SPORT] ?? REJECTS.ufc;
+// Golf shots are backgrounds for a hero card: landscape orientation and
+// a real width, or the scrim has nothing to show.
+const MIN_WIDTH = SPORT === 'golf' ? 1600 : 0;
+const LANDSCAPE_ONLY = SPORT === 'golf';
+const CAP_FOR = { ufc: 8, golf: 12 };
 // Person-name shaped titles ("Firstname Lastname at UFC…"): two
 // capitalised words leading the filename is the fighter-photo shape.
 const PERSONISH =
@@ -111,15 +135,20 @@ const thumb = (title, w = 1280) =>
         continue;
       }
       const info = await getJson(
-        `${COMMONS}?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=extmetadata&format=json&origin=*`,
+        `${COMMONS}?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=extmetadata|size&format=json&origin=*`,
       );
       const page = Object.values(info.query?.pages ?? {})[0];
-      const meta = page?.imageinfo?.[0]?.extmetadata ?? {};
+      const ii = page?.imageinfo?.[0];
+      const meta = ii?.extmetadata ?? {};
       const licence = meta.LicenseShortName?.value ?? '';
       const artist = stripHtml(meta.Artist?.value);
       const desc = stripHtml(meta.ImageDescription?.value ?? '');
       if (REJECT.test(desc)) {
         rejected.push({ title, why: `subject rule (description)` });
+        continue;
+      }
+      if ((ii?.width ?? 0) < MIN_WIDTH || (LANDSCAPE_ONLY && (ii?.width ?? 0) <= (ii?.height ?? 0))) {
+        rejected.push({ title, why: `geometry (${ii?.width}x${ii?.height})` });
         continue;
       }
       if (!ALLOWED(licence) || !artist) {

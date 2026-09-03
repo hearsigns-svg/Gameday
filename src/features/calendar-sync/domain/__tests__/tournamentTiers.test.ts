@@ -237,3 +237,66 @@ test('the WTA final SLOT rides the key tier as a child — the retired finals sc
   expect(out.map((f) => f.id)).toContain('wta-905-2026-slot-final');
   expect(out.map((f) => f.id)).not.toContain('m-r1');
 });
+
+describe('Round 7 item 8 — one follow per draw', () => {
+  const atpParent: Fixture = {
+    ...parent,
+    id: 'tennis-28pln73q7br6q1565elv65bikk',
+    competitionId: 'tennis-atp',
+    followKeys: ['tennis-atp', 'tennis-t-us-open', 'tennis-t-us-open-m'],
+  };
+  const wtaParent: Fixture = {
+    ...parent,
+    followKeys: ['tennis-wta', 'tennis-t-us-open', 'tennis-t-us-open-w'],
+  };
+  const mens = { ...match('m-men', 'A vs B'), competitionId: 'tennis-atp-appearances', followKeys: ['tennis-atp-appearances'], parentFixtureId: atpParent.id };
+  const womens = { ...match('m-women', 'C vs D'), competitionId: 'tennis-wta-appearances', followKeys: ['tennis-wta-appearances'] };
+  // The children fetch hands every parent the JOINT union (both draws).
+  const union = { byParent: new Map([[wtaParent.id, [mens, womens]], [atpParent.id, [mens, womens]]]) };
+
+  test('a women\'s-only follow keeps the women\'s matches, stamped with the -w key, and drops the men\'s', () => {
+    const out = applyTournamentTiers([wtaParent], 'all', ['tennis-t-us-open-w'], union);
+    const kept = out.filter((f) => f.parentFixtureId);
+    expect(kept.map((f) => f.id)).toEqual(['m-women']);
+    expect(kept[0].followKeys).toContain('tennis-t-us-open-w');
+    expect(kept[0].followKeys).not.toContain('tennis-t-us-open');
+  });
+
+  test('both draws followed: each copy rides ITS OWN draw\'s key, so unfollowing one draw removes only its matches', () => {
+    const out = applyTournamentTiers([wtaParent], 'all', ['tennis-t-us-open-m', 'tennis-t-us-open-w'], union);
+    const byId = new Map(out.map((f) => [f.id, f]));
+    expect(byId.get('m-men')!.followKeys).toContain('tennis-t-us-open-m');
+    expect(byId.get('m-women')!.followKeys).toContain('tennis-t-us-open-w');
+  });
+
+  test('a legacy bare follow still receives both draws under the bare key', () => {
+    const out = applyTournamentTiers([wtaParent], 'all', ['tennis-t-us-open'], union);
+    expect(out.filter((f) => f.parentFixtureId).map((f) => f.followKeys.at(-1))).toEqual([
+      'tennis-t-us-open',
+      'tennis-t-us-open',
+    ]);
+  });
+
+  test('a whole-tour follower gets that tour\'s draw only — never the other tour\'s matches through the union', () => {
+    const out = applyTournamentTiers([wtaParent], 'all', ['tennis-wta'], union);
+    const kept = out.filter((f) => f.parentFixtureId);
+    expect(kept.map((f) => f.id)).toEqual(['m-women']);
+    expect(kept[0].followKeys).toContain('tennis-wta');
+  });
+
+  test('the per-tournament override is read off the key that carries it, whichever key the parent lists first', () => {
+    // A WTA Tour follower who set "Dates only" on the US Open page: the
+    // parent lists 'tennis-wta' first, and the old first-key rule made
+    // the override invisible.
+    const out = applyTournamentTiers(
+      [wtaParent],
+      'all',
+      ['tennis-wta', 'tennis-t-us-open-w'],
+      union,
+      new Map([['tennis-t-us-open-w', 'block']]),
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0].tournamentNote).toBeUndefined(); // the block, pointer on
+    expect(out[0].tournamentPointer).toBe(true);
+  });
+});

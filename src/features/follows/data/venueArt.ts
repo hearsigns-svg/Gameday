@@ -12,6 +12,7 @@ import {
   pickTournamentCandidate,
   teamCandidateOrder,
   venueCandidateOrder,
+  venueNameVariants,
   VenueArt,
   verifiedArt,
 } from '../domain/venueArtRules';
@@ -170,21 +171,30 @@ export async function resolveVenueByName(
   city?: string,
 ): Promise<VenueArtResult> {
   try {
-    const d = (await getJson(
-      `${WD}?action=wbsearchentities&search=${encodeURIComponent(venueName)}&language=en&type=item&limit=3&format=json&origin=*`,
-    )) as { search?: Array<{ id: string; description?: string }> };
-    for (const id of venueCandidateOrder(d.search ?? [], city)) {
-      const file = await claimValue(id, 'P18');
-      // A vector P18 is a diagram, not photography (Round 3 B5) —
-      // skipped before any metadata fetch; the walk continues.
-      if (file && !isPhotographFile(file)) continue;
-      if (file) {
-        const art = await artFromCommonsFile(file);
-        // The first venue-shaped P18 still ends the venue walk — but a
-        // gate refusal now falls THROUGH to the city rung instead of
-        // ending resolution (Shanghai's artist-less circuit photo).
-        if (art.status !== 'none') return art;
-        break;
+    // The feed's spelling first, then its re-spellings (Round 7 item 9:
+    // "Yas Links GC" is "Yas Links" to Wikidata) — the first variant
+    // whose venue walk finds a photograph wins; a variant whose
+    // venue-shaped candidates carry no usable photo hands over to the
+    // next, and only when every spelling is exhausted does the city
+    // rung run.
+    for (const variant of venueNameVariants(venueName)) {
+      const d = (await getJson(
+        `${WD}?action=wbsearchentities&search=${encodeURIComponent(variant)}&language=en&type=item&limit=3&format=json&origin=*`,
+      )) as { search?: Array<{ id: string; description?: string }> };
+      for (const id of venueCandidateOrder(d.search ?? [], city)) {
+        const file = await claimValue(id, 'P18');
+        // A vector P18 is a diagram, not photography (Round 3 B5) —
+        // skipped before any metadata fetch; the walk continues.
+        if (file && !isPhotographFile(file)) continue;
+        if (file) {
+          const art = await artFromCommonsFile(file);
+          // The first venue-shaped P18 still ends THIS variant's walk —
+          // a gate refusal falls through to the next spelling and, at
+          // the end, to the city rung (Shanghai's artist-less circuit
+          // photo).
+          if (art.status !== 'none') return art;
+          break;
+        }
       }
     }
     return city ? resolveCityPhoto(city) : { status: 'none' };

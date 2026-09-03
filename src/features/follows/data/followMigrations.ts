@@ -4,6 +4,7 @@
 // start instead of slipping past a one-time flag.
 
 import { t } from '../../../core/i18n';
+import { isBareTennisKey, sexedTennisKey } from '../../fixtures/domain/tennisKeys';
 import { SPORTS } from '../domain/sportsConfig';
 import { Followable, loadFollowables, replaceFollowables } from './followStore';
 
@@ -61,6 +62,43 @@ export function migrateTournamentFinalsScope(): void {
       f.scope === 'finals' ? { ...f, scope: 'key-rounds' as const } : f,
     ),
   );
+}
+
+// Round 7 item 8 (owner ruling 2026-09-03): a tennis tournament is ONE
+// FOLLOW PER DRAW now. A stored bare `tennis-t-<slug>` follow — which
+// delivered both draws — becomes the men's AND the women's follows, so
+// coverage is unchanged: the two parents the bare key fetched are the
+// two the sexed keys fetch, same fixture ids, no calendar churn. Scope
+// (a per-tournament tier) rides onto both copies. A sexed follow the
+// user already holds wins over the copy. Idempotent by construction.
+//
+// ORDER OF SHIPPING MATTERS: this runs on a device only after the
+// server has stamped the sexed keys onto every future tennis parent
+// (deployed and re-polled first, verified before the client build) —
+// a sexed follow fetching nothing would read as an unfollow.
+export function migrateTennisSexFollows(): void {
+  const follows = loadFollowables();
+  const legacy = (f: Followable) => f.type === 'competition' && isBareTennisKey(f.key);
+  if (!follows.some(legacy)) return;
+  const next: Followable[] = [];
+  for (const f of follows) {
+    if (!legacy(f)) {
+      next.push(f);
+      continue;
+    }
+    for (const sex of ['m', 'w'] as const) {
+      const key = sexedTennisKey(f.key, sex);
+      if (follows.some((o) => o.key === key) || next.some((o) => o.key === key)) continue;
+      next.push({
+        ...f,
+        key,
+        label: `${f.label} — ${t(
+          sex === 'm' ? 'follows.athletes.mens' : 'follows.athletes.womens',
+        )}`,
+      });
+    }
+  }
+  replaceFollowables(next);
 }
 
 // Round 6 item 4: PBC follow keys migrate to the corresponding Major

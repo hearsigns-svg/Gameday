@@ -19,6 +19,7 @@ import { t } from '../../../core/i18n';
 import { foldName, pairKey } from '../../../core/nameFold';
 import { Fixture } from './fixture';
 import { isPast } from './horizon';
+import { isBareTennisKey, tennisEntrySex } from './tennisKeys';
 
 // THE FOLD IS SHARED NOW (22c follow-up). This module carried a copy,
 // sameBout.ts carried an identical one, and core/nameFold.ts carried a
@@ -187,11 +188,13 @@ export function jointCardEntries(
 }
 
 // The tournament key that joins a tennis parent to its other-tour
-// sibling — the year-agnostic `tennis-t-` slug both tours stamp.
+// sibling — the year-agnostic BARE `tennis-t-` slug both tours stamp.
+// The sexed keys beside it (Round 7 item 8) name one draw each and are
+// deliberately not the join.
 export function jointTournamentKeyOf(
   followKeys: readonly string[],
 ): string | null {
-  return followKeys.find((k) => k.startsWith('tennis-t-')) ?? null;
+  return followKeys.find(isBareTennisKey) ?? null;
 }
 
 // A card entry's sex, ONLY where the data states it — the tours arrive
@@ -202,9 +205,7 @@ export function jointTournamentKeyOf(
 export function entrySexOf(entry: {
   competitionId: string;
 }): 'm' | 'w' | null {
-  if (entry.competitionId === 'tennis-atp-appearances') return 'm';
-  if (entry.competitionId === 'tennis-wta-appearances') return 'w';
-  return null;
+  return tennisEntrySex(entry.competitionId);
 }
 
 // What this list is called, per sport. The vocabulary is the only

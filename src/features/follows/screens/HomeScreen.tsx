@@ -60,21 +60,17 @@ import { sportGlyphFor, sportLabelFor } from '../domain/sportTerms';
 import { activeRegion } from '../../../core/regionStore';
 import { flagEmojiOf } from '../../../core/nationality';
 import { currentFixtures, isLive } from '../../fixtures/domain/horizon';
+import { tennisSexGlyph } from '../../fixtures/domain/tennisKeys';
+import { carouselFixtures } from '../../calendar-sync/domain/presentation';
 import {
   GroupNode,
   groupOlympicItems,
   groupSeasonOf,
   OlympicSeason,
 } from '../domain/railGroups';
-
-// The emoji-style icon of an Olympic SPORT follow: the cross-sport's own
-// glyph where the config names one, else the medal.
-function olympicSportGlyph(followKey: string): string | null {
-  if (!/^olympics-\d{4}-/.test(followKey)) return null;
-  const entry = sportByKey('olympics')?.staticCompetitions?.find((c) => c.key === followKey);
-  const cross = (entry as { crossSport?: string } | undefined)?.crossSport;
-  return (cross ? sportByKey(cross)?.glyph : undefined) ?? '🏅';
-}
+// The emoji-style icon of an Olympic SPORT follow (Round 7 item 5): the
+// sport's own emoji from the one table every surface reads.
+import { olympicSportGlyph } from '../domain/olympicGlyphs';
 import { t as tr } from '../../../core/i18n';
 
 type Props = TabScreenProps<'Home'>;
@@ -156,7 +152,12 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const carousel = useMemo(
-    () => upcoming.filter((f) => !excludedAtEntry.has(f.id)).slice(0, CAROUSEL_MAX),
+    () =>
+      // One card per tournament (Round 7 item 7): a match whose parent
+      // card is in the set is listed ON that card, never beside it.
+      carouselFixtures(upcoming)
+        .filter((f) => !excludedAtEntry.has(f.id))
+        .slice(0, CAROUSEL_MAX),
     [upcoming, excludedAtEntry],
   );
 
@@ -218,10 +219,13 @@ export default function HomeScreen({ navigation }: Props) {
           ...(competitionTileFillFor(item.key)
             ? { tileFill: competitionTileFillFor(item.key) as string }
             : {}),
-          // An athlete's flag, where the follow captured one.
+          // An athlete's flag, where the follow captured one; a sexed
+          // tennis follow's Mars/Venus (Round 7 item 8).
           ...(flagEmojiOf(item.countryCode)
             ? { badge: flagEmojiOf(item.countryCode) as string }
-            : {}),
+            : tennisSexGlyph(item.key)
+              ? { badge: tennisSexGlyph(item.key) as string }
+              : {}),
           theme: teamTheme(item.brandColour ?? sport?.accent ?? null, mode),
         };
       });
@@ -238,25 +242,46 @@ export default function HomeScreen({ navigation }: Props) {
       },
       i18n.t('follows.home.nothingScheduled'),
     );
-    return grouped.map((entry) => {
-      if ((entry as GroupNode<(typeof base)[number]>).kind === 'group') {
-        const node = entry as GroupNode<(typeof base)[number]>;
-        return {
+    // Round 7 item 6: the node is a GROUP tile (plus closed, dimmed
+    // minus open) and each member knows the node it spreads from and
+    // its slot, so the strip can run the coin-stack spread.
+    type RailBase = (typeof base)[number];
+    const items: Array<
+      Omit<RailBase, 'startUtc'> & {
+        emoji?: boolean;
+        group?: { expanded: boolean };
+        spreadFrom?: string;
+        spreadIndex?: number;
+      }
+    > = [];
+    let openNode: { key: string; members: number } | null = null;
+    for (const entry of grouped) {
+      if ((entry as GroupNode<RailBase>).kind === 'group') {
+        const node = entry as GroupNode<RailBase>;
+        openNode = node.expanded ? { key: node.key, members: 0 } : null;
+        items.push({
           key: node.key,
           label: node.label,
           caption: node.caption,
           glyph: node.glyph,
-          // The node icon is the expand/collapse toggle: its corner mark
-          // says which way it will go.
-          badge: node.expanded ? '▴' : '▾',
           theme: teamTheme(sportByKey('olympics')?.accent ?? null, mode),
           emoji: true, // the medal IS the icon — never a monogram, never the rings
-        };
+          group: { expanded: node.expanded },
+        });
+        continue;
       }
-      const { startUtc: _startUtc, ...rest } = entry as (typeof base)[number];
-      // An Olympic SPORT under its node wears its emoji, not a monogram.
-      return olympicSportGlyph(rest.key) ? { ...rest, emoji: true } : rest;
-    });
+      const { startUtc: _startUtc, ...rest } = entry as RailBase;
+      if (olympicSportGlyph(rest.key) && openNode) {
+        // An Olympic SPORT under its node wears its emoji, not a
+        // monogram, and emerges from the node.
+        items.push({ ...rest, emoji: true, spreadFrom: openNode.key, spreadIndex: openNode.members });
+        openNode.members++;
+        continue;
+      }
+      openNode = null;
+      items.push(rest);
+    }
+    return items;
   }, [follows, upcoming, mode, olympicsOpen]);
 
   // A refresh can shrink the carousel under the current page (FlatList

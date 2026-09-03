@@ -61,6 +61,7 @@ import {
   refreshDataFreshness,
 } from '../../fixtures/data/freshnessRepo';
 import { sportByKey } from '../../follows/domain/sportsConfig';
+import { olympicGlyphForKeys } from '../../follows/domain/olympicGlyphs';
 import { headlineParticipant } from '../../follows/domain/participants';
 import {
   competitionTileFillFor,
@@ -782,6 +783,8 @@ function ScheduleRow(props: {
     headlineParticipant(item.title, item.sport),
     item.sport,
   );
+  // An Olympic fixture's SPORT emoji is its mark (Round 7 item 5).
+  const olympicGlyph = olympicGlyphForKeys(item.followKeys);
   const ref = useRef<View | null>(null);
   const expansion = useCardExpansion();
   return (
@@ -805,8 +808,10 @@ function ScheduleRow(props: {
       caption={item.competition}
       timeText={timeLabel(item.startUtc, item.status, item.timePrecision)}
       tbc={isDateOnly(item.status, item.timePrecision)}
-      glyph={sport?.glyph ?? '🏟️'}
-      monogram={monogramOf(owner?.label ?? item.homeTeam ?? item.competition)}
+      glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
+      {...(olympicGlyph
+        ? {}
+        : { monogram: monogramOf(owner?.label ?? item.homeTeam ?? item.competition) })}
       theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, props.mode)}
       excluded={props.excluded}
       onToggleExcluded={props.onToggleExcluded}

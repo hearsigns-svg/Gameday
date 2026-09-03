@@ -25,11 +25,17 @@ import {
   TileRow, COMPETITION_ROW_HEIGHT } from '../../../core/components';
 import {
   BrowseRow,
+  SexedTournamentRow,
+  sexedTournamentRows,
   SLAM_KEYS,
   tennisBrowseRows,
   tournamentDateRange,
+  tournamentFollowKey,
+  tournamentFollowLabel,
   tournamentsFor,
 } from '../domain/tennisBrowse';
+import { motorsportSections } from '../domain/motorsportBrowse';
+import { olympicSportGlyph } from '../domain/olympicGlyphs';
 import { anyFoldedIncludes } from '../../../core/nameFold';
 // Namespace import: `t` is this component's theme binding.
 import * as i18n from '../../../core/i18n';
@@ -120,9 +126,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   const [, bumpCounts] = useState(0);
   useEffect(() => {
     if (sport?.browse.includes('athlete')) {
-      refreshAthleteCount(route.params.sportKey);
-      const id = setTimeout(() => bumpCounts((n) => n + 1), 2500);
-      return () => clearTimeout(id);
+      // Repaint when the directory has actually landed (Round 7): the
+      // fixed delay this replaced lost the race to a 630-fighter fetch.
+      let alive = true;
+      void refreshAthleteCount(route.params.sportKey).then(() => {
+        if (alive) bumpCounts((n) => n + 1);
+      });
+      return () => {
+        alive = false;
+      };
     }
     return undefined;
   }, [route.params.sportKey]);
@@ -297,15 +309,16 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   // body, so a hook declared after it runs on the SECOND render and not
   // the first — "Rendered more hooks than during the previous render",
   // which crashes the screen outright in Release.
+  // The majors' Follow all: one draw per row (Round 7 item 8) — the
+  // section's tour decides which, and the stored label carries it.
   const followAll = useCallback(
-    async (keys: string[], title: string) => {
+    async (items: ReadonlyArray<{ key: string; label: string }>, title: string) => {
       setBusyKey(title);
-      for (const key of keys) {
-        const row = tournaments.find((x) => x.key === key);
-        if (!row || isFollowed(key)) continue;
+      for (const item of items) {
+        if (isFollowed(item.key)) continue;
         await follow({
-          key,
-          label: row.name,
+          key: item.key,
+          label: item.label,
           sportKey: route.params.sportKey,
           type: 'competition',
         });
@@ -313,7 +326,7 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       setBusyKey(null);
       forceRender((n) => n + 1);
     },
-    [tournaments, route.params.sportKey],
+    [route.params.sportKey],
   );
 
   // EVERY ENTITY IN BROWSE OPENS ITS OWN PAGE (Prompt 19). It used to
@@ -480,6 +493,9 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     // The prepared tile fill, same dual keying (Round 6 tile prep).
     const artFills = cachedPriorities().competitionArtTileFills;
     const tileFill = artFills[String(item.id)] ?? artFills[item.key];
+    // An Olympic SPORT row wears its sport's emoji as the mark (Round 7
+    // item 5) — no monogram, and never an emblem.
+    const olympicGlyph = olympicSportGlyph(item.key);
     return (
       <CompetitionCard
         expanded={openKey === item.key}
@@ -492,9 +508,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         {...(burstColours ? { burstColours } : {})}
         theme={teamTheme(sport?.accent ?? null, mode)}
         monogram={monogramOf(item.name)}
+        {...(olympicGlyph ? { emoji: true } : {})}
         {...(item.crestUrl ? { crestUrl: item.crestUrl } : {})}
         {...(tileFill ? { tileFill } : {})}
-        glyph={sport?.glyph ?? '🏟️'}
+        glyph={olympicGlyph ?? sport?.glyph ?? '🏟️'}
         fixturesWord={fixturesWordFor(route.params.sportKey)}
         onOpen={
           tour
@@ -526,16 +543,21 @@ export default function LeagueListScreen({ navigation, route }: Props) {
     );
   };
 
-  // A tennis tournament as a card: no sub-levels, so tapping it opens
-  // its matches directly; its caption is its dates.
-  const tournamentCard = (row: TournamentRow) => (
+  // A tennis tournament DRAW as a card (Round 7 item 8): no sub-levels,
+  // so tapping it opens its matches directly; its caption is the draw
+  // and the dates. Art and dates are the EVENT's (base key); the follow
+  // is the draw's (sexed key, sexed label).
+  const tournamentCard = (draw: SexedTournamentRow, row: TournamentRow) => (
     <CompetitionCard
-      name={row.name}
-      expanded={openKey === row.key}
-      onExpandedChange={(v) => setOpenKey(v ? row.key : null)}
-      caption={tournamentDateRange(row.startUtc, row.endUtc)}
+      name={draw.name}
+      expanded={openKey === draw.key}
+      onExpandedChange={(v) => setOpenKey(v ? draw.key : null)}
+      caption={[
+        i18n.t(draw.tour === 'atp' ? 'follows.athletes.mens' : 'follows.athletes.womens'),
+        tournamentDateRange(row.startUtc, row.endUtc),
+      ].join(' · ')}
       theme={teamTheme(sport?.accent ?? null, mode)}
-      monogram={monogramOf(row.name)}
+      monogram={monogramOf(draw.name)}
       {...(cachedPriorities().competitionArt[row.key]
         ? { crestUrl: cachedPriorities().competitionArt[row.key] }
         : {})}
@@ -548,17 +570,24 @@ export default function LeagueListScreen({ navigation, route }: Props) {
       glyph={sport?.glyph ?? '🎾'}
       onOpen={() =>
         navigation.navigate('Team', {
-          teamKey: row.key,
-          name: row.name,
+          teamKey: draw.key,
+          name: draw.label,
           sportKey: route.params.sportKey,
           followType: 'competition',
         })
       }
-      following={isFollowed(row.key)}
+      following={isFollowed(draw.key)}
       onFollow={() =>
-        void toggle({ id: row.key, name: row.name, country: '', key: row.key, followOnly: true })
+        void toggle({
+          id: draw.key,
+          name: draw.name,
+          followLabel: draw.label,
+          country: '',
+          key: draw.key,
+          followOnly: true,
+        })
       }
-      busy={busyKey === row.key}
+      busy={busyKey === draw.key}
     />
   );
 
@@ -686,9 +715,11 @@ export default function LeagueListScreen({ navigation, route }: Props) {
         ...l,
         country: i18n.t('follows.league.everyEventOnTour'),
       }));
-      const tournamentCards = tournaments.filter((row) =>
-        needles.some((n) => anyFoldedIncludes([row.name], n)),
-      );
+      // One card per DRAW (Round 7 item 8): a joint tournament searched
+      // by name is two cards, men's and women's.
+      const tournamentCards = tournaments
+        .filter((row) => needles.some((n) => anyFoldedIncludes([row.name], n)))
+        .flatMap((row) => sexedTournamentRows(row).map((draw) => ({ draw, row })));
       return (
         <View style={{ flex: 1, backgroundColor: t.bg }}>
           {searchField}
@@ -696,14 +727,14 @@ export default function LeagueListScreen({ navigation, route }: Props) {
           <FlatList
             data={[
               ...tourCards.map((l) => ({ kind: 'tour' as const, l })),
-              ...tournamentCards.map((row) => ({ kind: 'tournament' as const, row })),
+              ...tournamentCards.map(({ draw, row }) => ({ kind: 'tournament' as const, draw, row })),
             ]}
-            keyExtractor={(r) => (r.kind === 'tour' ? r.l.key : r.row.key)}
+            keyExtractor={(r) => (r.kind === 'tour' ? r.l.key : r.draw.key)}
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) =>
               item.kind === 'tour'
                 ? leagueCard(item.l)
-                : tournamentCard(item.row)
+                : tournamentCard(item.draw, item.row)
             }
             ListEmptyComponent={
               <Text style={[type.secondary, styles.noMatches, { color: t.textSecondary }]}>
@@ -729,11 +760,15 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   }
 
   function renderTennisRow(r: BrowseRow) {
-    // The four majors' keys, for the row-level Follow all. Derived from
-    // the served tournaments so a slam we do not hold is never claimed.
-    const slamKeys = tournaments
-      .filter((x) => SLAM_KEYS.includes(x.key))
-      .map((x) => x.key);
+    // The four majors, for the row-level Follow all — as THIS section's
+    // draws (Round 7 item 8). Derived from the served tournaments so a
+    // slam we do not hold is never claimed.
+    const slams = tournaments.filter((x) => SLAM_KEYS.includes(x.key));
+    const slamDraws = (tour: 'atp' | 'wta') =>
+      slams.map((x) => ({
+        key: tournamentFollowKey(x.key, tour),
+        label: tournamentFollowLabel(x.name, tour),
+      }));
     switch (r.kind) {
       case 'header':
         return (
@@ -818,10 +853,10 @@ export default function LeagueListScreen({ navigation, route }: Props) {
               isSlams ? (
                 <FollowButton
                   theme={teamTheme(sport?.accent ?? null, mode)}
-                  following={slamKeys.every((k) => isFollowed(k))}
+                  following={slamDraws(r.tour).every((d) => isFollowed(d.key))}
                   subject={i18n.t('follows.tennis.allFourMajorsSubject')}
-                  busy={busyKey === 'slams'}
-                  onPress={() => void followAll(slamKeys, 'slams')}
+                  busy={busyKey === `slams-${r.tour}`}
+                  onPress={() => void followAll(slamDraws(r.tour), `slams-${r.tour}`)}
                 />
               ) : undefined
             }
@@ -1070,13 +1105,35 @@ export default function LeagueListScreen({ navigation, route }: Props) {
   }
 
   const searchActive = needles.length > 0;
+
+  // MOTORSPORT AT REST (Round 7 items 3 and 4): two runs under small
+  // headers — the Formula group (F1, F2, Formula E) and the rest of
+  // motorsport — Formula first where F1 leads, the series first in
+  // North America. The Drivers row keeps its place above. Searching
+  // falls through to the generic list.
+  const motorsportRuns =
+    route.params.sportKey === 'motorsport' && !searchActive
+      ? motorsportSections(visibleLeagues, activeRegion())
+      : null;
+  const runTitle = (id: 'formula' | 'motorsport'): string =>
+    id === 'formula'
+      ? i18n.t('follows.motorsport.formula')
+      : i18n.t('core.sport.motorsport');
+  const motorsportRows: Array<
+    { kind: 'run'; id: 'formula' | 'motorsport' } | { kind: 'comp'; item: DirectoryLeague }
+  > =
+    motorsportRuns?.flatMap((run) => [
+      { kind: 'run' as const, id: run.id },
+      ...run.rows.map((item) => ({ kind: 'comp' as const, item })),
+    ]) ?? [];
+
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       {searchField}
       {banners}
       <FlatList
-        data={visibleLeagues}
-        keyExtractor={(l) => l.key}
+        data={motorsportRuns ? motorsportRows : visibleLeagues.map((item) => ({ kind: 'comp' as const, item }))}
+        keyExtractor={(r) => (r.kind === 'run' ? `run-${r.id}` : r.item.key)}
         keyboardShouldPersistTaps="handled"
         // Athlete browse rides ABOVE the competition cards for sports
         // that have a directory (Prompt 8): people are what a fan of an
@@ -1116,7 +1173,27 @@ export default function LeagueListScreen({ navigation, route }: Props) {
             </>
           )
         }
-        renderItem={({ item }) => leagueCard(item)}
+        renderItem={({ item: row }) =>
+          row.kind === 'run' ? (
+            <Text
+              accessibilityRole="header"
+              style={[
+                type.caption,
+                {
+                  color: t.textSecondary,
+                  paddingHorizontal: spacing.l,
+                  paddingTop: spacing.l,
+                  paddingBottom: spacing.s,
+                  fontWeight: '600',
+                },
+              ]}
+            >
+              {runTitle(row.id).toUpperCase()}
+            </Text>
+          ) : (
+            leagueCard(row.item)
+          )
+        }
         // The TEAM half of the search (27C): server hits for this sport,
         // below whatever competitions matched.
         ListFooterComponent={

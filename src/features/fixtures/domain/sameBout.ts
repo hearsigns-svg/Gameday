@@ -30,6 +30,7 @@
 import { foldName, pairKey as foldedPair } from '../../../core/nameFold';
 import { Fixture } from './fixture';
 import { timePrecisionOf } from './horizon';
+import { isBareTennisKey } from './tennisKeys';
 
 // Sports whose fixtures name PEOPLE — mirrors the server's
 // participants.ts PERSON_SPORTS (kept in sync by hand, like the
@@ -161,7 +162,9 @@ function canonicalPairKey(f: Fixture): string | null {
 function tournamentPairKey(f: Fixture): string | null {
   if (f.sport !== 'tennis') return null;
   if (f.parentFixtureId) return null; // appearances are never parents
-  return f.followKeys.find((k) => k.startsWith('tennis-t-')) ?? null;
+  // The BARE joint key (Round 7 item 8): the sexed keys name one draw
+  // each and would never pair the two parents.
+  return f.followKeys.find(isBareTennisKey) ?? null;
 }
 
 function spansOverlap(a: Fixture, b: Fixture): boolean {

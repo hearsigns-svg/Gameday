@@ -301,7 +301,7 @@ export const de: Catalog = {
   'follows.coverage.boxing':
     'Die Zeiten der Fight Cards sind der Übertragungsstart, nicht die Ringwalks. Das Kämpfer-Verzeichnis umfasst Weltmeister und IBF-gerankte Herausforderer sowie Kämpfer auf angekündigten Cards.',
   'follows.coverage.ufc':
-    'Abdeckung nur auf Card-Ebene. Einzelnen Kämpfern kann man nicht folgen: Kein MMA-Verband veröffentlicht ein brauchbares Roster — ein Kämpfer-Verzeichnis wäre Raterei, und wir sind lieber ehrlich als falsch.',
+    'Zeiten auf Card-Ebene. Das Kämpfer-Verzeichnis ist das UFC-Roster nach Gewichtsklassen, vierteljährlich aktualisiert, plus Kämpfer auf angekündigten Cards der anderen Organisationen.',
   'follows.coverage.olympics':
     'Die nächsten Spiele sind Los Angeles 2028 (14.–30. Juli) und die Milano-Cortina-Winterspiele 2030. Jede Disziplin ist schon jetzt gelistet und du kannst ihr folgen, aber ein Zeitplan ist noch nicht veröffentlicht — das IOC gibt Session-Zeiten erst näher an den Spielen frei, ein Follow von heute liefert seine Events also in dem Moment, in dem es sie gibt. Olympische Embleme werden nicht gezeigt: Die Marken sind durch eigene Gesetze geschützt, deshalb benennt die App die Events und erzeugt eigene Grafiken.',
 
@@ -732,4 +732,5 @@ export const de: Catalog = {
   // ── Round 6 item 6: Olympic group nodes in the Following strip ──
   'follows.rail.summerOlympics': 'Olympische Sommerspiele',
   'follows.rail.winterOlympics': 'Olympische Winterspiele',
+  'follows.motorsport.formula': 'Formel',
 };

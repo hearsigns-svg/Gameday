@@ -68,6 +68,9 @@ export interface CompetitionCardProps {
   // an instant switch. Omitted, the card keeps its own state.
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  // Round 7 item 5: an EMOJI-STYLE tile — the glyph IS the mark and no
+  // monogram is drawn (an Olympic sport's emoji).
+  emoji?: boolean;
 }
 
 export function CompetitionCard(props: CompetitionCardProps) {
@@ -111,7 +114,7 @@ export function CompetitionCard(props: CompetitionCardProps) {
         caption={props.caption}
         glyph={props.glyph}
         theme={props.theme}
-        monogram={props.monogram}
+        {...(props.emoji ? {} : { monogram: props.monogram })}
         {...(props.crestUrl ? { imageUrl: props.crestUrl } : {})}
         {...(props.tileFill ? { tileFill: props.tileFill } : {})}
         accessibilityLabel={

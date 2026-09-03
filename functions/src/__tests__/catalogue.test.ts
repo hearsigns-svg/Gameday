@@ -248,3 +248,18 @@ describe('orderSweepPaths — priority replaces uid lexicography (F10)', () => {
 test('the sportByKey import is real — this test file is the cross-tree drift anchor', () => {
   expect(sportByKey('tennis')?.label).toBe('Tennis');
 });
+
+test('foldMotorsportWeight: the Motorsport tile ranks as F1 where F1 leads, as itself in North America (Round 7 item 2)', () => {
+  const { foldMotorsportWeight } = require('../catalogue');
+  const w = sportWeightsOf(CATALOGUE_SEED);
+  expect(w.f1).toBe(88);
+  expect(w.motorsport).toBe(54);
+  expect(foldMotorsportWeight(w, undefined).motorsport).toBe(88);
+  expect(foldMotorsportWeight(w, 'uk-ie').motorsport).toBe(88);
+  expect(foldMotorsportWeight(w, 'default').motorsport).toBe(88);
+  expect(foldMotorsportWeight(w, 'north-america').motorsport).toBe(54);
+  // The f1 weight itself is untouched everywhere.
+  expect(foldMotorsportWeight(w, 'uk-ie').f1).toBe(88);
+  // A map with no f1 row is returned as is.
+  expect(foldMotorsportWeight({ motorsport: 10 }, 'uk-ie')).toEqual({ motorsport: 10 });
+});

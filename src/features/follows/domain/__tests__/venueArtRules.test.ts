@@ -311,3 +311,23 @@ describe('pickCityCandidate — settlement-shaped only, never first-hit', () => 
     ).toBeNull();
   });
 });
+
+describe('venueNameVariants (Round 7 item 9 — golf feeds vs Wikidata labels)', () => {
+  const { venueNameVariants } = require('../venueArtRules');
+  test('the feed spelling leads; qualifiers, abbreviations and casing produce the labels Wikidata uses', () => {
+    expect(venueNameVariants('St Andrews (Old Course)')).toEqual([
+      'St Andrews (Old Course)',
+      'Old Course at St Andrews',
+      'St Andrews',
+    ]);
+    expect(venueNameVariants('Yas Links GC')).toEqual(['Yas Links GC', 'Yas Links Golf Club', 'Yas Links Club', 'Yas Links']);
+    expect(venueNameVariants('Wentworth Golf Club')).toEqual(['Wentworth Golf Club', 'Wentworth Club', 'Wentworth']);
+    expect(venueNameVariants('Jumeirah Golf Estate')).toEqual(['Jumeirah Golf Estate', 'Jumeirah Golf Estates']);
+    expect(venueNameVariants('black desert resort')).toEqual(['black desert resort', 'Black Desert Resort']);
+    expect(venueNameVariants('Delhi GC')).toEqual(['Delhi GC', 'Delhi Golf Club', 'Delhi Club', 'Delhi']);
+  });
+  test('a name with nothing to re-spell is itself, once', () => {
+    expect(venueNameVariants('Le Golf National')).toEqual(['Le Golf National']);
+    expect(venueNameVariants('  Medinah Country Club ')).toEqual(['Medinah Country Club', 'Medinah']);
+  });
+});

@@ -35,7 +35,7 @@ import { appearanceFor } from '../appearances';
 import { RoundCode } from '../fixture';
 import { AppearanceDraft } from '../athletes';
 import { Fixture } from '../fixture';
-import { tournamentKey } from '../tennisTournaments';
+import { tournamentKeysFor } from '../tennisTournaments';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.wtatennis.com/tennis';
@@ -140,11 +140,9 @@ export function tournamentToFixture(
     // The tour slice plus the YEAR-AGNOSTIC canonical tournament key
     // (Prompt 9): a joint event shares this key with its ICS parent,
     // which is what makes "Wimbledon" one followable, not two. A title
-    // that normalises to nothing stamps no key.
-    followKeys: [
-      'tennis-wta',
-      ...((k) => (k ? [k] : []))(tournamentKey(shortTitle(t.title))),
-    ],
+    // that normalises to nothing stamps no key. Since Round 7 item 8 the
+    // women's draw key (`-w`) rides beside the bare key.
+    followKeys: ['tennis-wta', ...tournamentKeysFor(shortTitle(t.title), 'wta')],
     ...((t.city ?? t.country)
       ? { venueCity: [t.city, t.country].filter(Boolean).join(' ') }
       : {}),

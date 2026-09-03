@@ -224,3 +224,17 @@ describe('shapeTournamentRows', () => {
     ).toHaveLength(0);
   });
 });
+
+describe('sex-scoped tournament keys (Round 7 item 8)', () => {
+  const { tournamentKeysFor, sexedTournamentKey } = require('../tennisTournaments');
+  test('a tour parent carries the bare joint key AND its own draw key', () => {
+    expect(tournamentKeysFor('US Open', 'atp')).toEqual(['tennis-t-us-open', 'tennis-t-us-open-m']);
+    expect(tournamentKeysFor('US Open', 'wta')).toEqual(['tennis-t-us-open', 'tennis-t-us-open-w']);
+    // Aliases resolve BEFORE the suffix, so both feeds' variants share a base.
+    expect(tournamentKeysFor('Mubadala Citi DC Open', 'atp')).toEqual(['tennis-t-dc-open', 'tennis-t-dc-open-m']);
+    expect(sexedTournamentKey('tennis-t-wimbledon', 'wta')).toBe('tennis-t-wimbledon-w');
+  });
+  test('a title that normalises to nothing stamps no key at all', () => {
+    expect(tournamentKeysFor('—', 'atp')).toEqual([]);
+  });
+});

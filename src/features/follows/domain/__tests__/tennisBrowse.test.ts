@@ -122,3 +122,21 @@ describe('placement', () => {
     expect(isSlam('tennis-t-cincinnati-open')).toBe(false);
   });
 });
+
+describe('one follow per draw (Round 7 item 8)', () => {
+  const { sexedTournamentRows, tournamentFollowKey, tournamentFollowLabel, tournamentDraws } = require('../tennisBrowse');
+  const usOpen = { key: 'tennis-t-us-open', name: 'US Open', tours: ['atp', 'wta'], coverage: ['atp', 'wta'], startUtc: '2026-08-30T00:00:00.000Z', endUtc: '2026-09-14T00:00:00.000Z' };
+  const mensOnly = { key: 'tennis-t-stockholm-open', name: 'Stockholm Open', coverage: ['atp'], startUtc: '2026-10-12T00:00:00.000Z', endUtc: '2026-10-19T00:00:00.000Z' };
+  test('a joint tournament offers two follows, a single-tour one offers one', () => {
+    expect(tournamentDraws(usOpen)).toEqual(['atp', 'wta']);
+    expect(tournamentDraws(mensOnly)).toEqual(['atp']);
+    expect(sexedTournamentRows(usOpen).map((r: { key: string }) => r.key)).toEqual(['tennis-t-us-open-m', 'tennis-t-us-open-w']);
+    expect(sexedTournamentRows(mensOnly).map((r: { key: string }) => r.key)).toEqual(['tennis-t-stockholm-open-m']);
+  });
+  test('the follow key is the tour\'s draw; the label carries the sex, the name stays bare', () => {
+    expect(tournamentFollowKey('tennis-t-wimbledon', 'wta')).toBe('tennis-t-wimbledon-w');
+    expect(tournamentFollowLabel('Wimbledon', 'atp')).toBe('Wimbledon — Men’s');
+    const rows = sexedTournamentRows(usOpen);
+    expect(rows[1]).toMatchObject({ tour: 'wta', name: 'US Open', label: 'US Open — Women’s' });
+  });
+});

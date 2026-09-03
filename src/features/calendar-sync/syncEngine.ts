@@ -84,6 +84,7 @@ import {
   upcomingSnapshot,
 } from './domain/syncPlan';
 import { fixturesInWindow } from './domain/schedulePaging';
+import { presentationFixtures } from './domain/presentation';
 
 const LAST_SYNC_KEY = 'lastSync.v1';
 const UPCOMING_KEY = 'upcomingByFollow.v1';
@@ -942,8 +943,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // and gated by the same desiredEventFor the planner uses — the app
     // never shows a fixture the calendar doesn't want (cancelled,
     // race-only excluded), and never runs ahead of a sync that failed.
+    // The tier pass's MATCH copies join the parents (Round 7 item 7):
+    // the in-app Schedule mirrors the calendar entry for entry, where
+    // it used to show the tournament block alone.
     writePresentationState(
-      planFixtures,
+      presentationFixtures(planFixtures, tieredFixtures),
       follows,
       prefs,
       horizonStart,

@@ -251,13 +251,19 @@ export function cachedAthleteCount(
   return groups.reduce((n, g) => n + g.count, 0);
 }
 
-// Fire-and-forget; a failure leaves the caption without its count.
-export function refreshAthleteCount(sportKey: string): void {
+// Fire-and-forget; a failure leaves the caption without its count. The
+// promise settles when the fetch has landed (or was not needed), so a
+// screen can repaint its caption on completion rather than on a timer
+// (Round 7: a 630-fighter directory outlived the old fixed delay and
+// the row stayed count-less until re-entered).
+export function refreshAthleteCount(sportKey: string): Promise<void> {
   const entry = readJson<Record<string, AthleteCountEntry>>(ATHLETE_COUNTS_KEY, {})[sportKey];
-  if (entry && Date.now() - Date.parse(entry.at) < ATHLETE_COUNTS_TTL_MS) return;
-  if (countRefreshInFlight.has(sportKey)) return;
+  if (entry && Date.now() - Date.parse(entry.at) < ATHLETE_COUNTS_TTL_MS) return Promise.resolve();
+  if (countRefreshInFlight.has(sportKey)) return Promise.resolve();
   countRefreshInFlight.add(sportKey);
-  void fetchAthleteBrowse(sportKey).finally(() => countRefreshInFlight.delete(sportKey));
+  return fetchAthleteBrowse(sportKey)
+    .then(() => undefined)
+    .finally(() => countRefreshInFlight.delete(sportKey));
 }
 
 // Federated search — teams server-filtered to leagues we actually
