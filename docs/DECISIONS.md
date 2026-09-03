@@ -4584,3 +4584,10 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   the Schedule shows the US Open mark on the block row and on every match
   row; the "US Open — Women’s" page header and its row carry the mark.
   Gate 140 suites / 1662 tests, both zones; tsc clean.
+
+- 2026-09-03 — **Sexed-follow ♂/♀ badges wear the brand blue.** The
+  glyphs are text, not emoji, so they took the tile's default text
+  colour: black on a dark tile is invisible, and white would be on a
+  light one (owner). GlyphTile detects a symbol badge (♂ ♀ ⚥) and
+  colours it `primary`, bold; emoji badges (flags) keep their own
+  colour. Gate 140/1662 both zones; tsc clean.

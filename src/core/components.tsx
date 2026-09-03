@@ -105,8 +105,15 @@ export function GlyphTile(props: {
   badgePill?: boolean;
 }) {
   const size = props.size ?? 40;
+  const ui = useTheme();
   const [imageFailed, setImageFailed] = useState(false);
   const image = imageFailed ? undefined : usableImage(props.imageUrl);
+  // A SYMBOL badge (the ♂/♀ of a sexed follow) is text, not an emoji:
+  // left to the default text colour it was black in both modes —
+  // invisible on a dark tile (owner, 2026-09-03). It wears the brand
+  // blue, which reads on every tile fill in both modes; emoji badges
+  // (flags) carry their own colour.
+  const symbolBadge = props.badge !== undefined && /^[♂♀⚥]$/u.test(props.badge);
   return (
     <View
       accessible={false}
@@ -180,6 +187,7 @@ export function GlyphTile(props: {
             right: -2,
             bottom: -2,
             fontSize: size * 0.36,
+            ...(symbolBadge ? { color: ui.primary, fontWeight: '700' } : {}),
           }}
         >
           {props.badge}
