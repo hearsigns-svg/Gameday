@@ -46,6 +46,9 @@ Rules:
   tile's right-hand end before the Following button. There are two
   control points: per follow (hero card, Following row) and the Settings
   default for new follows. The Following page stays one flat list.
+- Unfollowing on the Following page happens in place: the row stays with
+  a Follow button that restores exactly what it had (calendar in/out
+  included); unfollowed rows leave the next time the page is opened.
 - A NEW follow starts in if a broader followed thing that is in already
   covers it; otherwise it takes the Settings default "Add new follows to
   your calendar" (on by default; off in the free state). The default never

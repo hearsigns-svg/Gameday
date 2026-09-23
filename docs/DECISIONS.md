@@ -5020,3 +5020,32 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   change notification stand. Removed with it: the sport-section module
   and its test, the control's header mode and its four strings, and the
   three sport-less caption strings, in all six languages.
+- 2026-09-23 — **Owner ruling: unfollow in place on the Following page;
+  the Undo row is retired.** SUPERSEDES the Following page's Undo row
+  (the 6-second "Unfollowed X · Undo" line above the list). Tapping
+  Following unfollows as before, but the row STAYS where it is and its
+  button reads Follow: no Undo row, no timer, no row moves. Found in
+  testing the day before: the Undo row appeared above the list, pushing
+  every row down, and vanished after 6 seconds, pulling them back up — a
+  late tap aimed at Undo landed on the next row's Following button and
+  unfollowed it. Follow on that row re-follows and restores EXACTLY what
+  it had: `unfollow` now remembers the whole stored record (scope,
+  calendar in/out, artwork, poll path — what the old Undo rebuilt from
+  scope and calendar alone) and its place, and `refollow` puts that
+  record back in front of the rows shown after it
+  (`followStore.restoreFollowed`), so the list order — which also breaks
+  ties for a card's identity — is what it was. A toast's Undo on other
+  surfaces uses the same restore. An unfollowed row's calendar glyph
+  behaves as on a hero card of an entity you don't follow: not shown; its
+  lane in the tile stays reserved, and the row keeps the "N upcoming"
+  count it had, so the tile never reflows. The button no longer shows a
+  spinner or blocks while the sync runs, so a quick second tap re-follows;
+  a failure is a toast (a line above the list would move every row). The
+  rows unfollowed during a visit leave the next time the page is OPENED —
+  a tab-bar press or a fresh launch — not on coming back from a page
+  pushed on top (an entity's own page), which is a return, not an opening
+  (`domain/followingVisit.ts`: a visit's order is fixed, a follow made
+  elsewhere joins at the end, nothing leaves or reorders). Retired with
+  it: the Undo row, its timer and styles. Kept: `follows.following.a11yUndo`
+  and the unfollow toast strings, which the Olympic season page and the
+  toast Undo still read.

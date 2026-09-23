@@ -258,6 +258,10 @@ silent).
     then were REVERTED by owner ruling the same day: flat list,
     "<Sport> · N upcoming", Following button restored, glyph inside the
     tile. iOS verified; Android pending the Pixel.
+  - [x] Owner ruling (same day): unfollow in place on Following — the row
+    stays with Follow, which restores the exact record and place; the
+    Undo row and its timer are retired; unfollowed rows leave on the next
+    opening. iOS verified; Android pending the Pixel.
   - [x] Stage 4 — Settings default for new follows + starting state;
     honest follow toasts. iOS verified (all four table rows); Android
     pending the Pixel.

@@ -18,6 +18,7 @@ import {
   Followable,
   inclusionFollows,
   loadFollowables,
+  restoreFollowed,
   setFollowCalendar,
   setFollowed,
   setFollowScope,
@@ -189,43 +190,45 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   return outcome;
 }
 
-// Scopes remembered across an unfollow, so the toast's Undo restores
-// the follow AS IT WAS. Screens rebuild the Followable from route
-// params or search rows, which never carry scope — without this, Undo
-// silently widened a final-round golf follow back to every round
-// (review round). In-session only: Undo is a 6-second window.
-const lastScopes = new Map<string, FollowScope>();
-// …and its calendar preference, so an undone unfollow comes back in or
-// out exactly as it was (per-follow calendar control, 2026-09-23).
-const lastCalendars = new Map<string, CalendarPref>();
+// What an unfollow took away, remembered so a re-follow restores the
+// follow EXACTLY as it was (owner ruling 2026-09-23: the Following page's
+// Follow button, and a toast's Undo): the whole stored record — scope,
+// calendar preference, artwork, poll path — and its place in the list
+// (the keys stored after it). Screens rebuild a Followable from route
+// params or search rows, which never carry scope or a calendar
+// preference: restoring from those silently widened a final-round golf
+// follow back to every round (review round), and would put an `out`
+// follow back in. In-session only.
+const lastRecords = new Map<string, Followable>();
+const lastPlaces = new Map<string, readonly string[]>();
 
 export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
-  const stored = loadFollowables().find((f) => f.key === item.key);
-  if (stored?.scope) lastScopes.set(item.key, stored.scope);
-  else lastScopes.delete(item.key);
-  if (stored) lastCalendars.set(item.key, calendarPrefOf(stored));
-  else lastCalendars.delete(item.key);
+  const all = loadFollowables();
+  const i = all.findIndex((f) => f.key === item.key);
+  if (i >= 0) {
+    lastRecords.set(item.key, all[i]);
+    lastPlaces.set(item.key, all.slice(i + 1).map((f) => f.key));
+  }
   setFollowed(item, false);
   updateRegistry();
   return runSync();
 }
 
-// Undo path: the fixture cache is still warm from the original follow,
-// so no re-poll — just restore the follow and reconcile.
-export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
+// Re-follow what an unfollow took away: the remembered record, put back
+// in its place. `before` — the keys it should sit in front of — lets the
+// Following page put a row back where it is on screen (its own order
+// also holds rows unfollowed after this one, which the store no longer
+// has). The fixture cache is still warm, so no re-poll.
+export async function refollow(
+  item: Followable,
+  before?: readonly string[],
+): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
-  const remembered = lastScopes.get(item.key);
-  const base =
-    item.scope === undefined && remembered !== undefined
-      ? { ...item, scope: remembered }
-      : item;
-  setFollowed(
-    {
-      ...base,
-      calendar: lastCalendars.get(item.key) ?? item.calendar ?? startingCalendarFor(item),
-    },
-    true,
+  const record = lastRecords.get(item.key) ?? item;
+  restoreFollowed(
+    { ...record, calendar: record.calendar ?? startingCalendarFor(record) },
+    before ?? lastPlaces.get(item.key) ?? [],
   );
   updateRegistry();
   return runSync();

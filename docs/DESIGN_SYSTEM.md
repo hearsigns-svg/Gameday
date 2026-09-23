@@ -104,10 +104,14 @@ revoked, offline — every one specified, none left to chance.
 - No sign-up to start. One calendar-permission prompt, primed with a
   plain-language explainer immediately before the OS dialog.
 - Every screen has exactly one primary action.
-- Follow = one tap; unfollow = one tap + undo toast, no confirmation.
+- Follow = one tap; unfollow = one tap, no confirmation. On Following
+  the row stays in place with Follow, which puts back exactly what it
+  had; elsewhere an undo toast (2026-09-23).
 - Manage-follows lives on Following; Home never risks a mis-tap unfollow.
   Each Following row carries the calendar glyph inside its tile, at the
   right-hand end, beside the Following button (2026-09-23).
+- Nothing moves under a finger: a control's answer happens in place — no
+  row appears, disappears or reflows on a tap (2026-09-23).
 
 ## Accessibility
 

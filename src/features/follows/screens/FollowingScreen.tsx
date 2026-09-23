@@ -1,5 +1,12 @@
 // Following: manage what Gameday tracks. Follow/unfollow is the primary
 // gesture HERE (it's the manage surface); Home stays free of it.
+//
+// UNFOLLOW IN PLACE (owner ruling 2026-09-23, replacing the Undo row):
+// tapping Following unfollows and the row STAYS where it is, its button
+// now Follow — no Undo row, no timer, nothing moves. Follow on that row
+// puts back exactly what it had (the stored record and its place). The
+// rows unfollowed during a visit leave when the page is next opened
+// (domain/followingVisit.ts).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -20,20 +27,26 @@ import {
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { useReduceMotion } from '../../../core/useReduceMotion';
 import { messageOf } from '../../../core/result';
+import { showToast } from '../../../core/toast';
 import { teamTheme } from '../../../core/teamTheme';
 import { flagEmojiOf } from '../../../core/nationality';
 import { spacing, type, useTheme } from '../../../core/tokens';
 import { subscribeSync, upcomingByFollow } from '../../calendar-sync/syncEngine';
 import { refollow, unfollow } from '../followActions';
-import { Followable, loadFollowables } from '../data/followStore';
+import { Followable, loadFollowables, subscribeFollows } from '../data/followStore';
+import {
+  advanceVisit,
+  keysAfter,
+  openVisit,
+  VisitRow,
+  visitRows,
+} from '../domain/followingVisit';
 import { sportByKey } from '../domain/sportsConfig';
 import { sportLabelFor } from '../domain/sportTerms';
 import { olympicSportGlyph } from '../domain/olympicGlyphs';
 import { tennisSexGlyph } from '../../fixtures/domain/tennisKeys';
 import { activeRegion } from '../../../core/regionStore';
 import { FollowCalendarControl } from '../FollowCalendarControl';
-
-const UNDO_WINDOW_MS = 6000;
 
 type Props = TabScreenProps<'Following'>;
 
@@ -55,104 +68,74 @@ export default function FollowingScreen({ navigation }: Props) {
   const t = useTheme();
   const mode = useColorSchemeMode();
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
-  const [error, setError] = useState<string | null>(null);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [undoItem, setUndoItem] = useState<Followable | null>(null);
-  const [upcoming, setUpcoming] = useState<Record<string, number>>(
-    upcomingByFollow,
+  // The rows this visit shows, each in its place for the whole visit.
+  const [visit, setVisit] = useState(() =>
+    openVisit(loadFollowables(), upcomingByFollow()),
   );
   const reduceMotion = useReduceMotion();
   // A TAB PRESS LANDS AT THE ENTRY STATE (Round 4 B3): the top, whether
-  // this tab is already frontmost or being switched back to.
-  const listRef = useRef<FlatList<Followable>>(null);
+  // this tab is already frontmost or being switched back to — and it is
+  // the page being OPENED, so it starts a new visit: rows unfollowed on
+  // the last one leave now. Coming back from a page pushed on top (an
+  // entity's own page) is not an opening; those rows stay.
+  const listRef = useRef<FlatList<VisitRow<Followable>>>(null);
   useEffect(
     () =>
       navigation.addListener('tabPress', () => {
+        const stored = loadFollowables();
+        setFollows(stored);
+        setVisit(openVisit(stored, upcomingByFollow()));
         listRef.current?.scrollToOffset({ offset: 0, animated: !reduceMotion });
       }),
     [navigation, reduceMotion],
   );
 
   useEffect(() => {
-    if (!undoItem) return;
-    const timer = setTimeout(() => setUndoItem(null), UNDO_WINDOW_MS);
-    return () => clearTimeout(timer);
-  }, [undoItem]);
-
-  useEffect(() => {
-    const unsub = subscribeSync(() => {
-      setFollows(loadFollowables());
-      setUpcoming(upcomingByFollow());
-    });
+    // Fold the store into the visit — records refresh, new follows join
+    // at the end, nothing leaves or moves.
+    const refresh = () => {
+      const stored = loadFollowables();
+      setFollows(stored);
+      setVisit((v) => advanceVisit(v, stored, upcomingByFollow()));
+    };
+    const unsub = subscribeSync(refresh);
+    // A tap here (or on a hero card) changes the store at once: the
+    // button and the glyph answer before any sync runs.
+    const unsubFollows = subscribeFollows(refresh);
     // Marks and tile fills paint from the priorities cache at render —
     // repaint when a fetch lands (Round 6 follow-up).
-    const unsubArt = subscribePriorities(() => setFollows(loadFollowables()));
-    const focus = navigation.addListener('focus', () =>
-      setFollows(loadFollowables()),
-    );
+    const unsubArt = subscribePriorities(refresh);
+    const focus = navigation.addListener('focus', refresh);
     return () => {
       unsub();
+      unsubFollows();
       unsubArt();
       focus();
     };
   }, [navigation]);
 
+  // No confirmation and no busy state: the button flips at once and stays
+  // live, so a quick second tap on the same spot re-follows. A failure is
+  // a toast — a line above the list would push every row down.
   const onUnfollow = useCallback(async (item: Followable) => {
-    setBusyKey(item.key);
-    setError(null);
-    setUndoItem(item); // no confirmation — undo instead (friction rule)
-    setFollows(loadFollowables().filter((f) => f.key !== item.key));
     const r = await unfollow(item);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
-      setError(messageOf(r.error));
+      showToast({ message: messageOf(r.error) });
     }
-    setFollows(loadFollowables());
-    setBusyKey(null);
   }, []);
 
-  const onUndo = useCallback(async (item: Followable) => {
-    setUndoItem(null);
-    setError(null);
-    const r = await refollow(item);
+  const onRefollow = useCallback(async (item: Followable, before: string[]) => {
+    const r = await refollow(item, before);
     if (!r.ok && r.error.kind !== 'sync-in-progress') {
-      setError(messageOf(r.error));
+      showToast({ message: messageOf(r.error) });
     }
-    setFollows(loadFollowables());
   }, []);
+
+  const rows = visitRows(visit, follows);
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      {error ? (
-        <Text style={[type.secondary, { color: t.danger, padding: spacing.l }]}>
-          {error}
-        </Text>
-      ) : null}
-      {undoItem ? (
-        <View
-          style={[
-            styles.undoRow,
-            { backgroundColor: t.surfaceRaised, borderColor: t.border },
-          ]}
-          accessibilityLiveRegion="polite"
-        >
-          <Text style={[type.secondary, { color: t.textPrimary, flex: 1 }]}>
-            {i18n.t('follows.feedback.unfollowed', { name: undoItem.label })}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={i18n.t('follows.following.a11yUndo', {
-              name: undoItem.label,
-            })}
-            onPress={() => void onUndo(undoItem)}
-            hitSlop={12}
-          >
-            <Text style={[type.body, { color: t.primary, fontWeight: '600' }]}>
-              {i18n.t('follows.undo')}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-      {follows.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
           headline={i18n.t('follows.following.emptyHeadline')}
           body={i18n.t('follows.following.emptyBody')}
@@ -162,9 +145,10 @@ export default function FollowingScreen({ navigation }: Props) {
       ) : (
         <FlatList
           ref={listRef}
-          data={follows}
-          keyExtractor={(f) => f.key}
-          renderItem={({ item }) => {
+          data={rows}
+          keyExtractor={(row) => row.follow.key}
+          renderItem={({ item: row }) => {
+            const item = row.follow;
             const sport = sportByKey(item.sportKey);
             return (
               // THE RAIL STAYS ROUND, THE LIST GOES SQUARE (owner
@@ -180,10 +164,13 @@ export default function FollowingScreen({ navigation }: Props) {
                       item.brandColour ?? sport?.accent ?? null,
                       mode,
                     )}
-                    following
+                    following={row.followed}
                     subject={item.label}
-                    busy={busyKey === item.key}
-                    onPress={() => void onUnfollow(item)}
+                    onPress={() =>
+                      void (row.followed
+                        ? onUnfollow(item)
+                        : onRefollow(item, keysAfter(visit, item.key)))
+                    }
                   />
                 }
               >
@@ -193,7 +180,10 @@ export default function FollowingScreen({ navigation }: Props) {
                   // tile at its right-hand end, before the Following
                   // button — the hero card's placement — and never the
                   // tile's own tap (SportCard lays it beside the press
-                  // target at the platform's minimum touch size).
+                  // target at the platform's minimum touch size). An
+                  // unfollowed row shows none, as a hero card of an entity
+                  // you don't follow shows none; its lane stays reserved,
+                  // so the tile never reflows.
                   trailing={
                     <FollowCalendarControl
                       keys={[item.key]}
@@ -202,7 +192,9 @@ export default function FollowingScreen({ navigation }: Props) {
                     />
                   }
                   label={item.label}
-                  caption={captionFor(item, upcoming[item.key])}
+                  // The count this visit last saw: an unfollowed row keeps
+                  // its caption, so its height never changes under it.
+                  caption={captionFor(item, visit.counts[item.key])}
                   // An Olympic sport wears its own emoji (Round 7 item 5).
                   glyph={olympicSportGlyph(item.key) ?? sport?.glyph ?? '·'}
                   theme={teamTheme(
@@ -223,15 +215,19 @@ export default function FollowingScreen({ navigation }: Props) {
                     : tennisSexGlyph(item.key)
                       ? { tileBadge: tennisSexGlyph(item.key) as string }
                       : {})}
-                  accessibilityLabel={i18n.t('follows.following.a11yRow', {
-                    name: item.label,
-                    // The display word, never the raw enum — the enum
-                    // is English whatever language the sentence is in
-                    // (caught by the de translation pass).
-                    type: i18n.t(
-                      `core.followType.${item.type}` as i18n.CatalogKey,
-                    ),
-                  })}
+                  accessibilityLabel={
+                    row.followed
+                      ? i18n.t('follows.following.a11yRow', {
+                          name: item.label,
+                          // The display word, never the raw enum — the enum
+                          // is English whatever language the sentence is in
+                          // (caught by the de translation pass).
+                          type: i18n.t(
+                            `core.followType.${item.type}` as i18n.CatalogKey,
+                          ),
+                        })
+                      : i18n.t('follows.card.a11yViewFixtures', { name: item.label })
+                  }
                   // A followed thing's own schedule was previously
                   // reachable only from browse or search — you could not
                   // open the page for something you already follow.
@@ -269,16 +265,6 @@ export default function FollowingScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  undoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
-    marginHorizontal: spacing.l,
-    marginTop: spacing.m,
-    paddingHorizontal: spacing.l,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   addMore: {
     margin: spacing.l,
     minHeight: 48,

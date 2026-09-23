@@ -211,6 +211,19 @@ export function replaceFollowables(next: Followable[]): void {
 
 // Attach lazily-resolved venue art to an existing follow. No-op if the
 // follow has gone (unfollowed while resolving).
+// Put a follow back where it was — a re-follow of a row the Following
+// page kept in place, or a toast's Undo: stored as given (the record the
+// follow had, not a rebuilt one), in front of the first of `before` that
+// is still followed, else at the end.
+export function restoreFollowed(item: Followable, before: readonly string[]): Followable[] {
+  const current = loadFollowables().filter((f) => f.key !== item.key);
+  const at = before.map((k) => current.findIndex((f) => f.key === k)).find((i) => i >= 0);
+  const next =
+    at === undefined ? [...current, item] : [...current.slice(0, at), item, ...current.slice(at)];
+  store(next);
+  return next;
+}
+
 export function setFollowed(item: Followable, followed: boolean): Followable[] {
   const current = loadFollowables().filter((f) => f.key !== item.key);
   const next = followed ? [...current, item] : current;
