@@ -155,6 +155,14 @@ export function applyTournamentTiers(
   followedKeys: readonly string[],
   children: TournamentChildren = { byParent: new Map() },
   overrides: ReadonlyMap<string, TournamentTier> = new Map(),
+  // Per-follow calendar control (owner brief 2026-09-23): whether a
+  // follow key is `in` the calendar. The PARENT's shape is taken from
+  // the tiers of the follows that are in — an `out` draw's "All
+  // matches" must not turn the block of the draw that is in into
+  // bookends. Copies are still made for every followed draw (each
+  // stamped with its own draw's key), and the planner's inclusion rule
+  // refuses the ones an `out` follow carries. Default: everything in.
+  isIn: (key: string) => boolean = () => true,
 ): Fixture[] {
   const followed = new Set(followedKeys);
   const tierOf = (key: string): TournamentTier => overrides.get(key) ?? globalTier;
@@ -176,9 +184,11 @@ export function applyTournamentTiers(
       .filter((child) => child.status !== 'cancelled')
       .map((child) => ({ child, stamp: childFollowKey(child, f, followed, followKey) }))
       .filter((r): r is { child: Fixture; stamp: string } => r.stamp !== null);
+    const ridingIn = rides.filter((r) => isIn(r.stamp));
+    const shaping = ridingIn.length > 0 ? ridingIn : rides;
     const tier =
-      rides.length > 0
-        ? mostPermissiveTier(rides.map((r) => tierOf(r.stamp)), globalTier)
+      shaping.length > 0
+        ? mostPermissiveTier(shaping.map((r) => tierOf(r.stamp)), globalTier)
         : tierOf(followKey);
     if (tier === 'block') {
       // The pointer is only honest where the card actually OFFERS

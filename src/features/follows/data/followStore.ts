@@ -4,6 +4,11 @@
 
 import { readJson, writeJson } from '../../../core/storage';
 import { applyArtHydration, ArtRow } from '../domain/followArt';
+import {
+  CalendarPref,
+  inclusionPredicate,
+  InclusionFollow,
+} from '../domain/calendarInclusion';
 import { followQueryKeys, FollowScope } from '../domain/followScopes';
 import { FollowableType } from '../domain/sportsConfig';
 
@@ -46,6 +51,13 @@ export interface Followable {
   // so the page simply falls back to the ordinary empty state.
   careerStatus?: 'retired';
   careerEndYear?: number;
+  // Per-follow calendar control (owner brief 2026-09-23): whether this
+  // follow's fixtures go in the calendar. ABSENT READS AS `in` — every
+  // follow before this field existed was in the calendar, and the launch
+  // normalizer (data/followMigrations.ts::migrateCalendarPrefs) stamps
+  // the explicit value. A new follow gets its starting state in
+  // followActions.follow (domain/calendarInclusion.ts).
+  calendar?: CalendarPref;
   // NOTE: venue photography is no longer cached here. A ground belongs
   // to the HOME team of a given fixture, not to whoever you follow, so
   // it is keyed by team name in data/photoCache.ts. Stored follows may
@@ -94,6 +106,45 @@ export function setFollowScope(key: string, scope: FollowScope | null): void {
     return scope === null ? rest : { ...rest, scope };
   });
   writeJson(KEY_V2, next);
+}
+
+// The calendar preference, absent-means-in.
+export function calendarPrefOf(f: Pick<Followable, 'calendar'>): CalendarPref {
+  return f.calendar ?? 'in';
+}
+
+// Set the calendar preference of the named follows in place. Keys that
+// are not followed are ignored (unfollowed on another screen meanwhile).
+export function setFollowCalendar(keys: readonly string[], pref: CalendarPref): void {
+  const wanted = new Set(keys);
+  writeJson(
+    KEY_V2,
+    loadFollowables().map((f) => (wanted.has(f.key) ? { ...f, calendar: pref } : f)),
+  );
+}
+
+// The follows as the inclusion rule sees them.
+export function toInclusionFollow(f: Followable): InclusionFollow {
+  return {
+    key: f.key,
+    type: f.type,
+    calendar: calendarPrefOf(f),
+    queryKeys: followQueryKeys(f),
+  };
+}
+
+export function inclusionFollows(
+  follows: readonly Followable[] = loadFollowables(),
+): InclusionFollow[] {
+  return follows.map(toInclusionFollow);
+}
+
+// Is a fixture with these keys in the calendar by preference, right now?
+// Pins and per-event exclusions are the caller's business.
+export function fixtureWantedByFollows(
+  follows: readonly Followable[] = loadFollowables(),
+): (fixtureKeys: readonly string[]) => boolean {
+  return inclusionPredicate(inclusionFollows(follows));
 }
 
 export function isFollowed(key: string): boolean {

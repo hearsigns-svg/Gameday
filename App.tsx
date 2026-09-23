@@ -29,6 +29,7 @@ import {
   migratePbcFollows,
   migrateTennisSexFollows,
   migrateTournamentFinalsScope,
+  migrateCalendarPrefs,
 } from './src/features/follows/data/followMigrations';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { CelebrationHost } from './src/core/celebration';
@@ -181,6 +182,11 @@ export default function App() {
     // before this build shipped (followMigrations.ts explains why).
     migrateTennisSexFollows();
     migrateTournamentFinalsScope();
+    // Per-follow calendar control (owner brief 2026-09-23): every existing
+    // follow is IN — what the calendar holds today — so the first sync
+    // after the update adds nothing and removes nothing. Last, so a follow
+    // the normalizers above just minted gets its stamp too.
+    migrateCalendarPrefs();
     // Round 5: the remote switchboard, then measurement under its flag.
     // Both fail-safe — an unreachable flags doc leaves the launch
     // defaults, and a missing analytics pod logs once and stays quiet.

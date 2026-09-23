@@ -10,7 +10,12 @@ import { planEntitlement } from '../../core/entitlementStore';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
 import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
-import { loadFollowables, loadFollowKeys } from '../follows/data/followStore';
+import {
+  calendarPrefOf,
+  fixtureWantedByFollows,
+  loadFollowables,
+  loadFollowKeys,
+} from '../follows/data/followStore';
 import {
   followQueryKeys,
   seriesScopesFrom,
@@ -801,6 +806,11 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // join after the first dedupe, and the WTA final slot beside the
     // real final match (same parent, same exact time, both wanted) is
     // exactly the twin dedupeFinalSlots exists to collapse.
+    const calendarInKeys = new Set(
+      loadFollowables()
+        .filter((f) => calendarPrefOf(f) === 'in')
+        .flatMap((f) => followQueryKeys(f)),
+    );
     const tieredFixtures = dedupeSameEvent(
       applyTournamentTiers(
         planFixtures,
@@ -808,10 +818,20 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         follows,
         kids.value,
         tournamentTierOverridesFrom(loadFollowables()),
+        (key) => calendarInKeys.has(key),
       ),
       pins,
       new Set(follows),
     );
+    // PER-FOLLOW CALENDAR CONTROL (owner brief 2026-09-23): what goes in
+    // the calendar is the inclusion rule's answer over the follows that
+    // match each fixture — most specific level decides, any `in` among
+    // equals wins (follows/domain/calendarInclusion.ts). The fetch, the
+    // dedupe and the tier pass above still see EVERY follow: the app
+    // shows what you follow whether or not it is in the calendar, and a
+    // tier copy is stamped with its own draw's key so an `out` draw's
+    // matches are refused here, not silently re-admitted by a tour key.
+    const wantedByFollows = fixtureWantedByFollows(loadFollowables());
     const ops = planSync(
       tieredFixtures,
       ledger,
@@ -826,7 +846,10 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       // Round 5: the planner's entitlement input. Open sync gate →
       // Premium for everyone; entitled gate → the store's cached state
       // with offline grace and the downgrade rules (core/entitlement.ts).
-      { entitlement: planEntitlement(Date.now()) },
+      {
+        entitlement: planEntitlement(Date.now()),
+        includes: (f) => wantedByFollows(f.followKeys),
+      },
     );
 
     // Bounded pass: corrections first, creates after, stopping when the
@@ -947,7 +970,15 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // the in-app Schedule mirrors the calendar entry for entry, where
     // it used to show the tournament block alone.
     writePresentationState(
-      presentationFixtures(planFixtures, tieredFixtures),
+      presentationFixtures(
+        planFixtures,
+        // The match copies the CALENDAR takes, never an `out` follow's:
+        // a tournament taken out shows as its one block in the app, not
+        // as every match it would have delivered.
+        tieredFixtures.filter(
+          (f) => !f.parentFixtureId || pins.has(f.id) || wantedByFollows(f.followKeys),
+        ),
+      ),
       follows,
       prefs,
       horizonStart,

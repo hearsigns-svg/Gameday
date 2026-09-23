@@ -35,6 +35,13 @@ athlete, series. Each sport declares its browse hierarchy and offered types:
 Rules:
 - Team-follow spans ALL competitions (league is navigation, not a filter):
   following Liverpool yields PL + UCL + cups.
+- Every follow is `in` or `out` of the calendar (per-follow calendar
+  control, 2026-09-23). A fixture goes in when the most specific follows
+  that match it (participant → container → competition → sport) include
+  one that is in — "NBA in, Warriors out" is every NBA game but the
+  Warriors'; "Warriors out, Lakers in" keeps Warriors @ Lakers. Following
+  and being in the calendar are separate: the app shows everything you
+  follow.
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule

@@ -187,6 +187,7 @@ function dedupeJointTournaments(
     byKey.set(key, [...(byKey.get(key) ?? []), f]);
   }
   const drop = new Set<string>();
+  const mergeInto = new Map<string, Set<string>>();
   for (const group of byKey.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) =>
@@ -207,7 +208,10 @@ function dedupeJointTournaments(
           return aw - bw || a.id.localeCompare(b.id);
         })[0];
         for (const f of cluster) {
-          if (f.id !== winner.id && !pinnedIds.has(f.id)) drop.add(f.id);
+          if (f.id !== winner.id && !pinnedIds.has(f.id)) {
+            drop.add(f.id);
+            absorb(mergeInto, f.id, winner.id);
+          }
         }
       }
       cluster = [];
@@ -222,7 +226,7 @@ function dedupeJointTournaments(
     }
     flush();
   }
-  return fixtures.filter((f) => !drop.has(f.id));
+  return survivorsWithAbsorbedKeys(fixtures, drop, mergeInto);
 }
 
 // ─── Tennis: the finals slot and a followed finalist ──────────────────
@@ -249,6 +253,7 @@ function dedupeFinalSlots(
   // keeping both is harmless; deleting a wanted event is not.
   if (wantedKeys === null) return [...fixtures];
   const drop = new Set<string>();
+  const mergeInto = new Map<string, Set<string>>();
   for (const s of fixtures) {
     if (s.status === 'cancelled' || pinnedIds.has(s.id)) continue;
     if (!s.parentFixtureId) continue;
@@ -256,7 +261,7 @@ function dedupeFinalSlots(
       continue;
     }
     if (timePrecisionOf(s) !== 'exact') continue;
-    const twin = fixtures.some(
+    const twin = fixtures.find(
       (f) =>
         f.id !== s.id &&
         f.status !== 'cancelled' &&
@@ -267,9 +272,12 @@ function dedupeFinalSlots(
         (pinnedIds.has(f.id) ||
           f.followKeys.some((k) => wantedKeys.has(k))),
     );
-    if (twin) drop.add(s.id);
+    if (twin) {
+      drop.add(s.id);
+      absorb(mergeInto, s.id, twin.id);
+    }
   }
-  return drop.size === 0 ? [...fixtures] : fixtures.filter((f) => !drop.has(f.id));
+  return drop.size === 0 ? [...fixtures] : survivorsWithAbsorbedKeys(fixtures, drop, mergeInto);
 }
 
 // The umbrella: every same-real-event rule, applied before the planner
@@ -314,6 +322,7 @@ export function dedupeSameBout(
     }
   }
   const drop = new Set<string>();
+  const mergeInto = new Map<string, Set<string>>();
   for (const group of buckets.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) =>
@@ -330,7 +339,10 @@ export function dedupeSameBout(
         (a, b) => score(b) - score(a) || a.id.localeCompare(b.id),
       )[0];
       for (const f of cluster) {
-        if (f.id !== winner.id && !pinnedIds.has(f.id)) drop.add(f.id);
+        if (f.id !== winner.id && !pinnedIds.has(f.id)) {
+          drop.add(f.id);
+          absorb(mergeInto, f.id, winner.id);
+        }
       }
       cluster = [];
     };
@@ -347,5 +359,56 @@ export function dedupeSameBout(
     }
     flush();
   }
-  return fixtures.filter((f) => !drop.has(f.id));
+  return survivorsWithAbsorbedKeys(fixtures, drop, mergeInto);
+}
+
+// ─── The survivor speaks for every doc it absorbed ─────────────────────
+//
+// One real event, one entry — AND every follow that wanted either doc
+// still wants that entry (per-follow calendar control, owner brief
+// 2026-09-23). A dropped twin's followKeys join its survivor's, so the
+// inclusion rule reading the survivor sees the fighter follow that
+// wanted the PBC bout doc behind the surviving TSDB card, and a joint
+// tennis card carries BOTH draws' keys: "men's in, women's out" keeps
+// the one card, where the survivor's own keys alone would have read the
+// women's draw only and taken the tournament out. Order-preserving —
+// the survivor's own keys first — and a survivor that absorbed nothing
+// is returned as the same object.
+function absorb(
+  mergeInto: Map<string, Set<string>>,
+  loserId: string,
+  winnerId: string,
+): void {
+  const into = mergeInto.get(loserId);
+  if (into) into.add(winnerId);
+  else mergeInto.set(loserId, new Set([winnerId]));
+}
+
+function survivorsWithAbsorbedKeys(
+  fixtures: readonly Fixture[],
+  drop: ReadonlySet<string>,
+  mergeInto: ReadonlyMap<string, ReadonlySet<string>>,
+): Fixture[] {
+  const extra = new Map<string, string[]>();
+  for (const loser of fixtures) {
+    const winners = mergeInto.get(loser.id);
+    if (!winners || !drop.has(loser.id)) continue;
+    for (const winnerId of winners) {
+      extra.set(winnerId, [...(extra.get(winnerId) ?? []), ...loser.followKeys]);
+    }
+  }
+  return fixtures
+    .filter((f) => !drop.has(f.id))
+    .map((f) => {
+      const add = extra.get(f.id);
+      if (!add) return f;
+      const own = new Set(f.followKeys);
+      const merged = [...f.followKeys];
+      for (const k of add) {
+        if (own.has(k)) continue;
+        own.add(k);
+        merged.push(k);
+      }
+      return merged.length === f.followKeys.length ? f : { ...f, followKeys: merged };
+    });
 }

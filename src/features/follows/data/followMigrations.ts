@@ -150,3 +150,17 @@ export function migratePbcFollows(): void {
   }
   replaceFollowables(next);
 }
+
+// Per-follow calendar control (owner brief 2026-09-23): every follow
+// that predates the preference is IN — that is exactly what the calendar
+// holds today, so the first sync after the update adds nothing and
+// removes nothing. Idempotent like every normalizer here: only a follow
+// with no stated preference is touched, and one that states `out` is the
+// user's own choice and stays.
+export function migrateCalendarPrefs(): void {
+  const follows = loadFollowables();
+  if (follows.every((f) => f.calendar !== undefined)) return;
+  replaceFollowables(
+    follows.map((f) => (f.calendar !== undefined ? f : { ...f, calendar: 'in' as const })),
+  );
+}

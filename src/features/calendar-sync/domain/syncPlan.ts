@@ -328,6 +328,13 @@ export function nowFromHorizon(horizonStartUtc: string): number {
 // for how store state becomes these effects.
 export interface PlanOptions {
   entitlement?: PlanEntitlement;
+  // Per-follow calendar control (owner brief 2026-09-23): whether the
+  // follows that match a fixture put it in the calendar — the pure
+  // inclusion rule (follows/domain/calendarInclusion.ts), handed in so
+  // this module stays feature-local. Absent = the pre-brief rule: any
+  // matched follow key wants it, which is what an all-`in` follow set
+  // decides too.
+  includes?: (f: Fixture) => boolean;
 }
 
 // Downgrade removals are batched: at most this many removal ops per
@@ -351,6 +358,9 @@ export function planSync(
   options: PlanOptions = {},
 ): SyncOp[] {
   const entitlement = options.entitlement ?? PREMIUM_PLAN;
+  const followed = new Set(followedKeys);
+  const includes =
+    options.includes ?? ((f: Fixture) => f.followKeys.some((k) => followed.has(k)));
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
   for (const f of fixtures) {
@@ -358,9 +368,10 @@ export function planSync(
     // followed; an EXCLUSION still wins over both (an explicit remove
     // beats a follow and beats an older pin).
     if (excluded.has(f.id)) continue;
-    if (!pinned.has(f.id) && !f.followKeys.some((k) => followedKeys.includes(k))) {
-      continue;
-    }
+    // WANTED BY A FOLLOW now means the inclusion rule says so: the most
+    // specific matching follows decide, any `in` among them wins
+    // (options.includes). A pin still wants its one fixture regardless.
+    if (!pinned.has(f.id) && !includes(f)) continue;
     // FROZEN: a fixture that has finished gets no ops at all — not an
     // update, and not a create if its event has somehow gone. Its ledger
     // entry is retained below so the prune sweep still sees it referenced.

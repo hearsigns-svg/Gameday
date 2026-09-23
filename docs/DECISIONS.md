@@ -4689,3 +4689,58 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   Verified: emulator (release build) — "liverpool" painted results 0.8 s
   after the last keystroke against a warm door; see the report for the
   device pass. Gate per the report.
+
+- 2026-09-23 — **Per-follow calendar control, Stage 1: the preference
+  and the inclusion rule** (owner brief "Per-follow calendar control and
+  motorsport sessions"). Chosen over per-sport calendars and in-app sport
+  filter chips (both considered and rejected by the owner): ONE KickOffCal
+  calendar, and every follow carries `calendar: 'in' | 'out'`
+  (Followable.calendar; absent reads as in). The launch normalizer
+  `migrateCalendarPrefs` stamps every existing follow IN — exactly what
+  the calendar held — so the upgrade adds and removes nothing.
+  THE INCLUSION RULE (pure, follows/domain/calendarInclusion.ts): for each
+  fixture, the follows matching it (by their scope-expanded query keys)
+  are ranked participant → container → competition → sport; only the most
+  specific level with a match decides, and among equals any `in` wins.
+  Filters (tier, M/W chips, the session ladder, Olympic scoping) apply
+  after inclusion; entitlement gates writing, not preferences. JUDGEMENT
+  CALL (the brief leaves it open): a narrower slice of the same level is
+  more specific than its whole — a tennis DRAW (tennis-t-<slug>-m/-w)
+  beats its tournament's joint key, a sport at a Games edition
+  (olympics-2028-athletics) beats the edition, one sex of a card stream
+  (tsdb-league-4445-m) beats the stream — so "US Open in, US Open —
+  Women's out" keeps the women's draw out instead of "any in wins"
+  re-admitting it. Placement of every follow type: team/athlete
+  (incl. boxers, MMA fighters, F1 drivers) = participant; tennis
+  tournament and Games edition = container; league, cup, tour, promotion,
+  card stream and series = competition. No sport-level follow exists
+  (the rung is kept so the rule states the full ladder); no single-card
+  follow exists (a card stream is a competition).
+  WIRING: the engine still FETCHES, dedupes and tier-passes every follow
+  (in or out — the app shows what you follow whether or not it is in the
+  calendar) and hands the planner the rule as `PlanOptions.includes`; the
+  old any-followed-key test is the default for other callers. Two
+  supporting changes make the rule see the truth: (1) `dedupeSameEvent`
+  now merges a dropped twin's followKeys into its survivor — one real
+  event, and every follow that wanted either doc still wants it (the joint
+  US Open card carries both draws' keys; a fighter follow behind a
+  dropped PBC doc still claims the surviving TSDB card); (2) the tier
+  pass takes an `isIn` predicate and shapes a PARENT from the tiers of
+  the follows that are in (an `out` draw's All matches must not turn the
+  in draw's block into bookends), while every draw's copies are still
+  stamped with their own draw key so the rule refuses an out draw's
+  matches. The in-app snapshot keeps every followed fixture but only the
+  match copies the calendar takes. Starting state of a new follow
+  (`startingCalendarPref`): in if a BROADER followed thing that is in
+  already covers it — by key grammar (a draw in its tournament, a Games
+  sport in its edition) or by a shared fixture in view — else the
+  Settings default. Verified: 30 new tests (both of the brief's tables
+  row by row, the tennis rows through the tier pass and planner, removal
+  drains only unclaimed future events, the dedupe merge); gate 146/1724
+  both zones; iOS simulator UPGRADE test — the pre-change build (43961d6)
+  followed NBA, Lakers, Warriors, F1, Premier League, Liverpool, WTA Tour,
+  Moses Itauma and synced 1,623 events; the Stage 1 build installed over
+  it synced 0 created / 0 updated / 0 deleted (the app's own lastSync
+  record, 16:45:37Z) and the Calendar store matched event for event; all
+  9 follows read `calendar: "in"`. Android half blocked: the Pixel was
+  not connected.
