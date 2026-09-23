@@ -144,6 +144,10 @@ export const de: Catalog = {
     'Finale, Halbfinale und Viertelfinale, sofern die Daten Runden benennen. Die WTA-Auslosung tut das; die meisten Herren-Matches tragen noch keine Rundenangabe, sodass ein reines Herrenturnier ggf. nur Start- und Endnotiz liefert.',
 
   // ── Following (manage) ────────────────────────────────────────────
+  // Row captions under a sport header (the header names the sport).
+  'follows.following.noUpcoming': 'Noch keine anstehenden Spiele',
+  'follows.following.upcoming_one': '{n} anstehend',
+  'follows.following.upcoming_other': '{n} anstehend',
   'follows.following.captionNoUpcoming':
     '{sport} · noch keine anstehenden Spiele',
   'follows.following.captionUpcoming_one': '{sport} · {n} anstehend',

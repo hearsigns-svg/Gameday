@@ -856,6 +856,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // tier copy is stamped with its own draw's key so an `out` draw's
     // matches are refused here, not silently re-admitted by a tour key.
     const wantedByFollows = fixtureWantedByFollows(loadFollowables());
+    // Removals the per-pass delete cap held back (a follow taken out, a
+    // rung lowered) — drained by the rerun this pass queues below.
+    let removalsHeldBack = 0;
     const ops = planSync(
       tieredFixtures,
       ledger,
@@ -873,6 +876,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       {
         entitlement: planEntitlement(Date.now()),
         includes: (f) => wantedByFollows(f.followKeys),
+        onRemovalsHeldBack: (n) => {
+          removalsHeldBack = n;
+        },
       },
     );
 
@@ -967,7 +973,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
         applied++;
       }
     }
-    const deferred = ordered.length - applied;
+    const deferred = ordered.length - applied + removalsHeldBack;
     outcome.opsApplied = applied;
     outcome.passMs = Date.now() - passStartedAt;
     if (deferred > 0) outcome.deferred = deferred;

@@ -41,7 +41,12 @@ Rules:
   one that is in — "NBA in, Warriors out" is every NBA game but the
   Warriors'; "Warriors out, Lakers in" keeps Warriors @ Lakers. Following
   and being in the calendar are separate: the app shows everything you
-  follow.
+  follow. The calendar glyph (+ not in / ✓ in) sits on every hero card
+  whose entity is followed, every Following row, and every Following
+  sport header (✓ only when all of that sport's follows are in); the
+  Following page groups follows under their sport in browse order, with
+  Formula 1 under Motorsport and every Olympic follow in one Olympics
+  group.
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule

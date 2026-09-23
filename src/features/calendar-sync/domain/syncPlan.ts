@@ -335,6 +335,10 @@ export interface PlanOptions {
   // matched follow key wants it, which is what an all-`in` follow set
   // decides too.
   includes?: (f: Fixture) => boolean;
+  // Told how many capped removals this pass held back (see
+  // PREFERENCE_DELETE_CAP) so the engine can queue the pass that drains
+  // them. Not called when nothing was held back.
+  onRemovalsHeldBack?: (count: number) => void;
 }
 
 // Downgrade removals are batched: at most this many removal ops per
@@ -343,6 +347,17 @@ export interface PlanOptions {
 // adapter (Prompt 24–26 hardware round: ~50 tripped the
 // too-many-deletions gate once in 166; 40 is the hygiene figure).
 export const DOWNGRADE_DELETE_CAP = 40;
+
+// Removals a PREFERENCE causes share that per-pass budget (owner brief
+// "Per-follow calendar control", 2026-09-23: turning a follow out, or
+// lowering a tier or a session rung, removes "through the existing
+// ledger-scoped erase machinery under the delete cap"). A preference
+// removal is a ledgered, still-future event whose fixture is STILL IN
+// THE FETCH yet no longer wanted — one sport header can take a thousand
+// events out in one tap, which is exactly the burst the cap exists for.
+// Removals of fixtures that left the fetch (an unfollow, a cancellation
+// the source dropped) keep their pre-brief uncapped path.
+export const PREFERENCE_DELETE_CAP = DOWNGRADE_DELETE_CAP;
 
 export function planSync(
   fixtures: readonly Fixture[],
@@ -363,6 +378,7 @@ export function planSync(
     options.includes ?? ((f: Fixture) => f.followKeys.some((k) => followed.has(k)));
   const ops: SyncOp[] = [];
   const wanted = new Map<string, { fixture: Fixture; desired: DesiredEvent }>();
+  const fetchedIds = new Set(fixtures.map((f) => f.id));
   for (const f of fixtures) {
     // A PIN wants this one fixture even when nothing it belongs to is
     // followed; an EXCLUSION still wins over both (an explicit remove
@@ -430,6 +446,8 @@ export function planSync(
   // Anything ledgered that we no longer want: cancelled, unfollowed, or
   // gone from the cache. REMOVAL IS NEVER GATED (ruling 2): this loop
   // runs identically on every tier.
+  let preferenceRemovals = 0;
+  let heldBack = 0;
   for (const [fixtureId, entry] of Object.entries(ledger)) {
     if (removedByDowngrade.has(fixtureId)) continue;
     // A frozen entry is NOT a deletion candidate, whatever the fetch did
@@ -445,8 +463,19 @@ export function planSync(
       }
       continue;
     }
-    if (!wanted.has(fixtureId)) ops.push({ op: 'delete', fixtureId, entry });
+    if (wanted.has(fixtureId)) continue;
+    if (fetchedIds.has(fixtureId)) {
+      // Still fetched, no longer wanted: a preference removed it. Capped,
+      // sharing the pass's budget with the downgrade removals above.
+      if (downgradeRemovals.length + preferenceRemovals >= PREFERENCE_DELETE_CAP) {
+        heldBack++;
+        continue;
+      }
+      preferenceRemovals++;
+    }
+    ops.push({ op: 'delete', fixtureId, entry });
   }
+  if (heldBack > 0) options.onRemovalsHeldBack?.(heldBack);
 
   return ops;
 }

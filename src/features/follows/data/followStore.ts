@@ -67,6 +67,25 @@ export interface Followable {
 const KEY_V2 = 'follows.v2';
 const KEY_V1 = 'follows.v1';
 
+// Screens and controls that must agree the moment a follow changes — a
+// calendar glyph tapped on a hero card repaints the Following row and
+// its sport header at once, before any sync runs. Fired by every write
+// below; never by the read path's one-time v1 migration.
+type FollowsListener = () => void;
+const followsListeners = new Set<FollowsListener>();
+
+export function subscribeFollows(fn: FollowsListener): () => void {
+  followsListeners.add(fn);
+  return () => {
+    followsListeners.delete(fn);
+  };
+}
+
+function store(next: Followable[]): void {
+  writeJson(KEY_V2, next);
+  for (const fn of [...followsListeners]) fn();
+}
+
 // The only key the M1 slice could follow.
 const V1_KNOWN: Record<string, Followable> = {
   'apisports-team-40': {
@@ -105,7 +124,7 @@ export function setFollowScope(key: string, scope: FollowScope | null): void {
     const { scope: _drop, ...rest } = f;
     return scope === null ? rest : { ...rest, scope };
   });
-  writeJson(KEY_V2, next);
+  store(next);
 }
 
 // The calendar preference, absent-means-in.
@@ -117,10 +136,7 @@ export function calendarPrefOf(f: Pick<Followable, 'calendar'>): CalendarPref {
 // are not followed are ignored (unfollowed on another screen meanwhile).
 export function setFollowCalendar(keys: readonly string[], pref: CalendarPref): void {
   const wanted = new Set(keys);
-  writeJson(
-    KEY_V2,
-    loadFollowables().map((f) => (wanted.has(f.key) ? { ...f, calendar: pref } : f)),
-  );
+  store(loadFollowables().map((f) => (wanted.has(f.key) ? { ...f, calendar: pref } : f)));
 }
 
 // The follows as the inclusion rule sees them.
@@ -172,7 +188,7 @@ export function clearTournamentTierOverrides(): string[] {
     const { scope: _drop, ...rest } = f;
     return rest;
   });
-  if (cleared.length > 0) writeJson(KEY_V2, next);
+  if (cleared.length > 0) store(next);
   return cleared;
 }
 
@@ -182,7 +198,7 @@ export function clearTournamentTierOverrides(): string[] {
 // a screen can repaint without a needless render on every fetch.
 export function hydrateFollowArt(rows: readonly ArtRow[]): boolean {
   const { next, changed } = applyArtHydration(loadFollowables(), rows);
-  if (changed) writeJson(KEY_V2, next);
+  if (changed) store(next);
   return changed;
 }
 
@@ -190,7 +206,7 @@ export function hydrateFollowArt(rows: readonly ArtRow[]): boolean {
 // (data/followMigrations.ts) — the ONE writer besides setFollowed, so
 // the storage key never leaks out of this module.
 export function replaceFollowables(next: Followable[]): void {
-  writeJson(KEY_V2, next);
+  store(next);
 }
 
 // Attach lazily-resolved venue art to an existing follow. No-op if the
@@ -198,6 +214,6 @@ export function replaceFollowables(next: Followable[]): void {
 export function setFollowed(item: Followable, followed: boolean): Followable[] {
   const current = loadFollowables().filter((f) => f.key !== item.key);
   const next = followed ? [...current, item] : current;
-  writeJson(KEY_V2, next);
+  store(next);
   return next;
 }

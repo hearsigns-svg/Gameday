@@ -142,6 +142,10 @@ export const it: Catalog = {
     'Finali, semifinali e quarti, dove i dati indicano il turno. Il tabellone WTA lo indica; la maggior parte dei match maschili non riporta ancora il turno, quindi un torneo solo maschile può fornire soltanto le note di inizio e fine.',
 
   // ── Following (manage) ────────────────────────────────────────────
+  // Row captions under a sport header (the header names the sport).
+  'follows.following.noUpcoming': 'Ancora nessuna partita in programma',
+  'follows.following.upcoming_one': '{n} in programma',
+  'follows.following.upcoming_other': '{n} in programma',
   'follows.following.captionNoUpcoming':
     '{sport} · ancora nessuna partita in programma',
   'follows.following.captionUpcoming_one': '{sport} · {n} in programma',

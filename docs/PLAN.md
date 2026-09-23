@@ -253,7 +253,9 @@ silent).
     expanded card) with toasts and revert-on-failure; "Remove from
     calendar" and "Add all ⇄ Remove all" retired. iOS verified; Android
     pending the Pixel.
-  - [ ] Stage 3 — Following page grouped by sport, row + header glyphs.
+  - [x] Stage 3 — Following page grouped by sport, row + header glyphs;
+    preference removals under the per-pass delete cap. iOS verified;
+    Android pending the Pixel.
   - [ ] Stage 4 — Settings default for new follows + starting state.
   - [ ] Stage 5 — motorsport session ladder.
   - [ ] Stage 6 — "sync" retired from user-facing copy.

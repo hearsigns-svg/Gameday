@@ -4812,3 +4812,54 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   and the stored preference stayed out. Past events: this calendar holds
   none (every synced event is still ahead), so the device check is vacuous
   there; the planner's horizon tests pin it. Android blocked: no device.
+- 2026-09-23 — **Per-follow calendar control, Stage 3: the Following page
+  and the delete cap.** Following is now the calendar surface. Follows sit
+  under sport headers in browse's order (the same tiles, the same
+  regional catalogue weights, `byPriority`), with Formula 1 under
+  Motorsport (a tile-less sport sits under the tile whose static row
+  follows as it) and every Olympic follow — Games edition or sport at a
+  Games, whichever tile it was followed from — in the ONE Olympics group,
+  matching the strip's group node (pure, follows/domain/
+  followingSections.ts). A row is the entity and its calendar glyph at
+  the trailing edge; the Follow/Following button and the undo row are
+  gone — Following is implied, and unfollowing lives on the entity's own
+  page (the brief's "Unfollow stays on the hero card" read as the
+  entity page's header card: the fixture hero cards carry the calendar
+  glyph, not a follow control). The row keeps one caption, the follow's
+  schedule state ("41 upcoming" / "No upcoming fixtures yet" — the Voice
+  rule's honest off-season state); the sport it used to lead with is the
+  header now (three new keys × six languages; the old sport-prefixed
+  keys stay, the Olympic season page still reads them). A sport header
+  is weight and space, not caps (AGENTS rule 12), and its glyph speaks
+  for every follow under it: ✓ only when all are in, + otherwise; + puts
+  them all in, ✓ takes them all out ("All [sport] added to / removed
+  from your calendar"). Every glyph repaints the moment any follow
+  changes: the follow store now announces every write
+  (`subscribeFollows`; never the read path's one-time v1 migration — a
+  render-time announcement would set state mid-render; the test caught
+  one write that bypassed it).
+  THE DELETE CAP (the brief's "through the existing ledger-scoped erase
+  machinery under the delete cap"): ordinary removals had no count cap —
+  only DOWNGRADE_DELETE_CAP (40 per pass) existed. A PREFERENCE removal —
+  a ledgered future event whose fixture is still fetched but no longer
+  wanted (a follow taken out, a tier or session rung lowered) — now
+  shares that per-pass budget (PREFERENCE_DELETE_CAP); the planner
+  reports what it held back and the engine folds it into `deferred`,
+  which queues the pass that drains the rest. Removals of fixtures that
+  left the fetch (an unfollow, a dropped cancellation) keep their
+  uncapped path. Rule 15: with the cap disabled the two cap tests fail.
+  NOT CHANGED: the Olympic season page (reached from the strip's
+  Olympics node) keeps its own Follow/Following rows and undo — the
+  brief names the Following page, hero cards and Settings only.
+  Verified on the iOS simulator: groups Football · F1 & Motorsport ·
+  Tennis · Basketball · American football · Boxing, in browse order;
+  Lakers row ✓→+ removed exactly the 74 Lakers games not against the
+  Warriors, in two passes (40, then the deferred 34), and the Basketball
+  header turned + (mixed); header + restored the store event for event;
+  header ✓ took all 1,208 NBA events out in 40-event passes, nothing
+  else; the Warriors' hero card then read + like its row, + there turned
+  the row ✓ while the header stayed + (NBA out, Warriors in = exactly the
+  Warriors' 82 games); header + restored the calendar to the baseline
+  exactly (1,126 created in one pass). A scroll-to-top of the list was
+  seen once shortly after launch and did not recur across three later
+  sync flows, including a 30-pass drain. Android blocked: no device.

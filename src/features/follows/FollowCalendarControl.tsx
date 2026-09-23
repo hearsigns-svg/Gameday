@@ -18,7 +18,7 @@ import { requestPaywall } from '../../core/paywall';
 import { TeamTheme } from '../../core/teamTheme';
 import { showToast } from '../../core/toast';
 import { subscribeSync } from '../calendar-sync/syncEngine';
-import { loadFollowables } from './data/followStore';
+import { loadFollowables, subscribeFollows } from './data/followStore';
 import { targetsCalendarState } from './domain/calendarTargets';
 import { setCalendar } from './followActions';
 
@@ -41,6 +41,9 @@ export function FollowCalendarControl(props: {
   // (setCalendar's own generation guard keeps its revert off newer taps).
   const tapSeq = useRef(0);
   useEffect(() => subscribeSync(() => repaint((n) => n + 1)), []);
+  // Every glyph on screen agrees the moment any of them is tapped — the
+  // hero's and the Following row's, a row's and its sport header's.
+  useEffect(() => subscribeFollows(() => repaint((n) => n + 1)), []);
   const wanted = new Set(props.keys);
   const follows = loadFollowables().filter((f) => wanted.has(f.key));
   // Shown only while the entity is followed.

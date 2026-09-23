@@ -27,7 +27,8 @@ content. This principle settles arguments before they happen.
 6. **One geometry.** Single radius scale + one pill shape (tokens).
    Hairline borders preferred; one soft shadow level, used only on heroes.
 7. **Three tabs, three jobs.** Home (hero + next up + sport pills),
-   Following (manage follows), Schedule (what Gameday manages, with sync
+   Following (what you follow, by sport, and whether each is in your
+   calendar), Schedule (what Gameday manages, with sync
    status). Browse and Preferences push over the tabs. Resist
    News/Video/Community forever — different product.
 8. **Onboarding is choosing favourites, not configuring software.**
@@ -101,7 +102,10 @@ revoked, offline — every one specified, none left to chance.
   plain-language explainer immediately before the OS dialog.
 - Every screen has exactly one primary action.
 - Follow = one tap; unfollow = one tap + undo toast, no confirmation.
-- Manage-follows lives on Following; Home never risks a mis-tap unfollow.
+- Unfollow lives on the entity's own page (2026-09-23): Following is the
+  calendar surface — each follow and each sport header carries the
+  calendar glyph — so neither Following nor Home risks a mis-tap
+  unfollow.
 
 ## Accessibility
 

@@ -147,6 +147,10 @@ export const pt: Catalog = {
     'Finais, semifinais e quartas, quando os dados indicam a fase. O chaveamento da WTA indica; a maioria dos jogos masculinos ainda não traz fase, então um torneio só masculino pode entregar apenas as notas de início e fim.',
 
   // ── Following (manage) ────────────────────────────────────────────
+  // Row captions under a sport header (the header names the sport).
+  'follows.following.noUpcoming': 'Ainda sem próximos jogos',
+  'follows.following.upcoming_one': '{n} próximo',
+  'follows.following.upcoming_other': '{n} próximos',
   'follows.following.captionNoUpcoming': '{sport} · ainda sem próximos jogos',
   'follows.following.captionUpcoming_one': '{sport} · {n} próximo',
   'follows.following.captionUpcoming_other': '{sport} · {n} próximos',

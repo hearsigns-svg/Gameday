@@ -14,7 +14,7 @@ import {
 } from '../../../follows/domain/calendarInclusion';
 import type { FollowableType } from '../../../follows/domain/sportsConfig';
 import { CalendarPrefs } from '../prefs';
-import { horizonStartFrom, planSync, SyncOp } from '../syncPlan';
+import { horizonStartFrom, planSync, PREFERENCE_DELETE_CAP, SyncOp } from '../syncPlan';
 import { applyTournamentTiers, CLOSE_ID_SUFFIX } from '../tournamentTiers';
 
 const NOW = Date.parse('2026-06-20T12:00:00.000Z');
@@ -256,6 +256,73 @@ describe('removal: turning a follow out drains only its future events', () => {
     });
     const deleted = ops.filter((o) => o.op === 'delete').map((o) => (o.op === 'delete' ? o.fixtureId : ''));
     expect(deleted).toEqual(['gsw-future']);
+  });
+});
+
+describe('removal by preference runs under the delete cap', () => {
+  const NBA = 'tsdb-league-4387';
+  const game = (i: number): Fixture => ({
+    ...base,
+    id: `nba-${i}`,
+    sport: 'basketball',
+    competition: 'NBA',
+    competitionId: NBA,
+    title: `game ${i}`,
+    followKeys: [NBA],
+    startUtc: new Date(Date.parse('2026-07-01T00:00:00.000Z') + i * 3_600_000).toISOString(),
+    timePrecision: 'exact',
+  });
+  const games = Array.from({ length: 100 }, (_, i) => game(i));
+  const ledger = Object.fromEntries(
+    games.map((g) => [
+      g.id,
+      {
+        eventId: `ev-${g.id}`,
+        calendarId: 'cal',
+        startUtc: g.startUtc,
+        endUtc: new Date(Date.parse(g.startUtc) + 2 * 3_600_000).toISOString(),
+        title: g.title,
+        reminderMinutes: null,
+      },
+    ]),
+  );
+  const deletes = (fixtures: Fixture[], follows: InclusionFollow[], heard: number[]) => {
+    const wanted = inclusionPredicate(follows);
+    return planSync(fixtures, ledger, [NBA], PREFS, HORIZON, new Set(), new Set(), NOW, undefined, {}, {
+      includes: (f) => wanted(f.followKeys),
+      onRemovalsHeldBack: (n) => heard.push(n),
+    }).filter((o) => o.op === 'delete').length;
+  };
+
+  test('NBA taken out: 40 removals this pass, the other 60 held back for the next', () => {
+    const heard: number[] = [];
+    expect(PREFERENCE_DELETE_CAP).toBe(40);
+    expect(deletes(games, [follow(NBA, 'competition', 'out')], heard)).toBe(40);
+    expect(heard).toEqual([60]);
+  });
+
+  test('the pass after drains the next 40 — the count only falls', () => {
+    const heard: number[] = [];
+    const remaining = Object.fromEntries(Object.entries(ledger).slice(40));
+    const wanted = inclusionPredicate([follow(NBA, 'competition', 'out')]);
+    const ops = planSync(games, remaining, [NBA], PREFS, HORIZON, new Set(), new Set(), NOW, undefined, {}, {
+      includes: (f) => wanted(f.followKeys),
+      onRemovalsHeldBack: (n) => heard.push(n),
+    });
+    expect(ops.filter((o) => o.op === 'delete')).toHaveLength(40);
+    expect(heard).toEqual([20]);
+  });
+
+  test('an UNFOLLOW (fixtures gone from the fetch) keeps its uncapped path', () => {
+    const heard: number[] = [];
+    expect(deletes([], [], heard)).toBe(100);
+    expect(heard).toEqual([]);
+  });
+
+  test('nothing held back → the engine is not told anything', () => {
+    const heard: number[] = [];
+    expect(deletes(games, [follow(NBA, 'competition', 'in')], heard)).toBe(0);
+    expect(heard).toEqual([]);
   });
 });
 

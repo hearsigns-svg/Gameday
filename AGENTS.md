@@ -354,8 +354,11 @@ These apply to every stage. They do not need restating in a brief.
     stay under the adapter's gate. The chunked SYNCED_DELETE_CAP this
     rule once named was retired with the REST swap (its machinery is
     gone); the surviving cap is DOWNGRADE_DELETE_CAP in
-    domain/syncPlan.ts (40 per pass, Round 5) — check it before
-    touching any removal machinery.
+    domain/syncPlan.ts (40 per pass, Round 5), and since 2026-09-23
+    PREFERENCE_DELETE_CAP shares that per-pass budget (a follow taken
+    out, a tier or session rung lowered; the engine queues the pass
+    that drains the rest) — check both before touching any removal
+    machinery.
 
 17. **`main` and any pushed branch are never reset, rebased or
     force-pushed by any chain** (owner ruling 2026-09-02). History

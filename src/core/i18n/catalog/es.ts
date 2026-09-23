@@ -152,6 +152,10 @@ export const es: Catalog = {
     'Finales, semifinales y cuartos, cuando los datos indican la ronda. El cuadro de la WTA la indica; la mayoría de los partidos masculinos aún no llevan ronda, así que un torneo solo masculino puede aportar únicamente sus notas de inicio y final.',
 
   // ── Following (manage) ────────────────────────────────────────────
+  // Row captions under a sport header (the header names the sport).
+  'follows.following.noUpcoming': 'Aún sin próximos partidos',
+  'follows.following.upcoming_one': '{n} próximo',
+  'follows.following.upcoming_other': '{n} próximos',
   'follows.following.captionNoUpcoming': '{sport} · aún sin próximos partidos',
   'follows.following.captionUpcoming_one': '{sport} · {n} próximo',
   'follows.following.captionUpcoming_other': '{sport} · {n} próximos',

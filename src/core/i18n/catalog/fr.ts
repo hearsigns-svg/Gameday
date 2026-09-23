@@ -155,6 +155,10 @@ export const fr: Catalog = {
     'Finales, demi-finales et quarts, lorsque les données nomment les tours. Le tableau WTA les nomme\u00a0; la plupart des matchs masculins n\u2019ont pas encore de tour indiqué, un tournoi masculin peut donc ne livrer que ses notes de début et de fin.',
 
   // ── Following (manage) ────────────────────────────────────────────
+  // Row captions under a sport header (the header names the sport).
+  'follows.following.noUpcoming': 'Pas encore de matchs à venir',
+  'follows.following.upcoming_one': '{n} à venir',
+  'follows.following.upcoming_other': '{n} à venir',
   'follows.following.captionNoUpcoming':
     '{sport} · pas encore de matchs à venir',
   'follows.following.captionUpcoming_one': '{sport} · {n} à venir',
