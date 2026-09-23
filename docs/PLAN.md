@@ -259,7 +259,10 @@ silent).
   - [x] Stage 4 — Settings default for new follows + starting state;
     honest follow toasts. iOS verified (all four table rows); Android
     pending the Pixel.
-  - [ ] Stage 5 — motorsport session ladder.
+  - [x] Stage 5 — motorsport session ladder (F1 only; other series carry no
+    session data). iOS verified. OWNER: deploy `functions:pollF1` (the
+    classifier refused the agent's deploy) — the client reads the F1 id
+    slug until the stamped field lands. Android pending the Pixel.
   - [ ] Stage 6 — "sync" retired from user-facing copy.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.

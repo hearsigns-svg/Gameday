@@ -20,6 +20,7 @@ const PREFS: CalendarPrefs = {
   tournamentTier: 'block',
   autoDeletePast: false,
   newFollowsInCalendar: true,
+  sessionRungs: {},
 };
 
 const HORIZON = '2026-07-29T00:00:00.000Z';

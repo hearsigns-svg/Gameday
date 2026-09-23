@@ -430,6 +430,10 @@ export const it: Catalog = {
   'calendar.control.sportAddA11y': 'Aggiungi tutto al calendario: {sport}',
   'calendar.control.sportInA11y': '{sport}: è tutto nel tuo calendario',
   'calendar.control.failed': 'Impossibile aggiornare il calendario. Riprova.',
+  'calendar.card.sessions': 'Sessioni',
+  'calendar.sessions.race': 'Solo gara',
+  'calendar.sessions.qualifying': 'Qualifiche e gara',
+  'calendar.sessions.all': 'Tutte le sessioni',
   'calendar.card.close': 'Chiudi',
 
   // ── Toasts (FixtureCard / ScheduleScreen) ──────────────────────────
@@ -576,9 +580,6 @@ export const it: Catalog = {
   'settings.events.style': 'Formato eventi',
   'settings.events.timed': 'Con orario',
   'settings.events.allDay': 'Tutto il giorno',
-  'settings.events.raceWeekends': 'Weekend di gara',
-  'settings.events.allSessions': 'Tutte le sessioni',
-  'settings.events.raceOnly': 'Solo gara',
   'settings.events.block': 'Solo date',
   'settings.events.keyRounds': 'Turni chiave',
   'settings.events.allMatches': 'Tutte le partite',

@@ -40,6 +40,13 @@ import {
 } from '../../calendar-sync/data/exclusionStore';
 import { pinnedIds, setPinned } from '../../calendar-sync/data/pinStore';
 import { runSync, subscribeSync } from '../../calendar-sync/syncEngine';
+import {
+  ladderKeeps,
+  rungFor,
+  SESSION_RUNGS,
+  sessionSeriesOf,
+} from '../../calendar-sync/domain/sessionLadder';
+import { setSessionRung } from '../../calendar-sync/data/sessionRungs';
 import { tierChildrenOf } from '../../calendar-sync/domain/cardCoverage';
 import { isBlockParent } from '../../calendar-sync/domain/tournamentTiers';
 import {
@@ -329,16 +336,19 @@ export default function TeamScreen({ navigation, route }: Props) {
   // preference is the default, and the selected chip reflects the
   // EFFECTIVE value until overridden (Round 7 — the tournament chips
   // are the Preferences tier vocabulary, per tournament).
-  const globalDefault: FollowScope | null =
-    item.type === 'series'
-      ? loadPrefs().seriesSessions === 'race-only'
-        ? 'race-only'
-        : 'all-sessions'
-      : tierChips
-        ? ((
-            { block: 'block', key: 'key-rounds', all: 'all-matches' } as const
-          )[loadPrefs().tournamentTier] as FollowScope)
-        : null;
+  const globalDefault: FollowScope | null = tierChips
+    ? ((
+        { block: 'block', key: 'key-rounds', all: 'all-matches' } as const
+      )[loadPrefs().tournamentTier] as FollowScope)
+    : null;
+  // THE SESSION LADDER (Stage 5): a page whose fixtures are laddered
+  // sessions (F1, a driver) offers its series' rung in the tier
+  // ladder's place and form — while the follow is in, like the tiers.
+  const ladderSeries =
+    following && followIn
+      ? ((fixtures ?? []).map((f) => sessionSeriesOf(f)).find((k) => k !== null) ?? null)
+      : null;
+  const sessionRungs = loadPrefs().sessionRungs;
   const effectiveScope: FollowScope | null = storedScope ?? globalDefault;
 
   // THE ROWS: each fixture, and under a block-shaped tournament the
@@ -540,6 +550,49 @@ export default function TeamScreen({ navigation, route }: Props) {
           ) : null}
         </View>
       ) : null}
+      {ladderSeries !== null ? (
+        <View style={[styles.scopeBlock, { borderColor: t.border }]}>
+          <Text style={[type.caption, { color: t.textSecondary, fontWeight: '600' }]}>
+            {i18n.t('follows.team.calendarEvents')}
+          </Text>
+          <View style={styles.scopeRow}>
+            {SESSION_RUNGS.map((rung) => {
+              const active = rungFor(ladderSeries, sessionRungs) === rung;
+              const label = i18n.t(
+                rung === 'race'
+                  ? 'calendar.sessions.race'
+                  : rung === 'qualifying'
+                    ? 'calendar.sessions.qualifying'
+                    : 'calendar.sessions.all',
+              );
+              return (
+                <Text
+                  key={rung}
+                  onPress={() => {
+                    if (active) return;
+                    setSessionRung(ladderSeries, rung);
+                    forceRender((n) => n + 1);
+                    void runSync();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    active ? i18n.t('follows.team.a11ySelected', { label }) : label
+                  }
+                  style={[
+                    type.body,
+                    styles.scopeChoice,
+                    active
+                      ? { color: t.primary, fontWeight: '600', borderColor: t.primary }
+                      : { color: t.textSecondary, borderColor: t.border },
+                  ]}
+                >
+                  {label}
+                </Text>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
       {fixtures === null ? (
         <View style={styles.center}>
           <ActivityIndicator color={t.primary} />
@@ -592,7 +645,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               {...(competitionTileFillFor(teamKey)
                 ? { tileFill: competitionTileFillFor(teamKey) as string }
                 : {})}
-              {...(wantedByFollows(f.followKeys)
+              {...(wantedByFollows(f.followKeys) && ladderKeeps(f, sessionRungs) !== false
                 ? {
                     excluded: excludedIds.has(f.id),
                     onToggleExcluded: () => toggleExclude(f),

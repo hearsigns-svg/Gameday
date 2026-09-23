@@ -417,6 +417,7 @@ function writePresentationState(
     prefs,
     horizonStart,
     seriesScopesFrom(loadFollowables()),
+    new Set(pinnedIds()),
   );
   writeJson(UPCOMING_FIXTURES_KEY, snapshot);
   // Age-based: an exclusion must survive an unfollow/re-follow cycle —

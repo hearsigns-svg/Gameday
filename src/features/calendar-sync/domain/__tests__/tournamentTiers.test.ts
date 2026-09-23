@@ -21,6 +21,7 @@ const PREFS: CalendarPrefs = {
   tournamentTier: 'key',
   autoDeletePast: false,
   newFollowsInCalendar: true,
+  sessionRungs: {},
 };
 
 const parent: Fixture = {

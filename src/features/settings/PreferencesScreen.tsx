@@ -696,21 +696,9 @@ export default function PreferencesScreen({
             },
           ]}
         />
-        <SegmentedRow
-          label={tr('settings.events.raceWeekends')}
-          options={[
-            {
-              label: tr('settings.events.allSessions'),
-              selected: prefs.seriesSessions === 'all',
-              onPress: () => apply({ ...prefs, seriesSessions: 'all' }),
-            },
-            {
-              label: tr('settings.events.raceOnly'),
-              selected: prefs.seriesSessions === 'race-only',
-              onPress: () => apply({ ...prefs, seriesSessions: 'race-only' }),
-            },
-          ]}
-        />
+        {/* "Race weekends" is RETIRED (Stage 5, owner brief 2026-09-23):
+            the per-series session ladder on the series' own card and
+            page replaces it; its value was migrated into the rung. */}
         {/* Tournament calendar tiers (Round 3 B3): what a followed
             multi-day tournament writes — the full block, bookend notes
             plus the key rounds, or bookends plus every match. The row's

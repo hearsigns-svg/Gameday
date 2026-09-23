@@ -51,6 +51,11 @@ Rules:
   covers it; otherwise it takes the Settings default "Add new follows to
   your calendar" (on by default; off in the free state). The default never
   changes an existing follow.
+- Motorsport series with session data (Formula 1) carry a per-series
+  session ladder — Race only · Qualifying & race · All sessions, default
+  Qualifying & race — on their cards and pages. A sprint counts as a race,
+  sprint qualifying as qualifying; practice only under All sessions.
+  Series without session data have no ladder and deliver every session.
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule

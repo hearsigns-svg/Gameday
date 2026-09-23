@@ -6,6 +6,7 @@
 // byte-for-byte.
 
 import { t, tn } from '../../../core/i18n';
+import type { SessionRung } from './sessionLadder';
 
 // A reminder for an event whose TIME nobody has published yet. "N
 // minutes before" is meaningless against a midnight day sentinel, so
@@ -56,6 +57,12 @@ export interface CalendarPrefs {
   // is in already covers starts in whatever this says
   // (follows/domain/calendarInclusion.ts startingCalendarPref).
   newFollowsInCalendar: boolean;
+  // The motorsport session ladder, per SERIES (competitionId → rung;
+  // domain/sessionLadder.ts). A series with no entry takes the default
+  // rung (Qualifying & race). Supersedes `seriesSessions` for every
+  // fixture that carries a session type; `seriesSessions` still governs
+  // a series without one.
+  sessionRungs: Record<string, SessionRung>;
 }
 
 export type TournamentTier = 'block' | 'key' | 'all';
@@ -84,6 +91,7 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   // On by default: a new follow goes in, as every follow did before the
   // per-follow control existed.
   newFollowsInCalendar: true,
+  sessionRungs: {},
 };
 
 // `short` is the form a one-row control uses: the durations have to fit

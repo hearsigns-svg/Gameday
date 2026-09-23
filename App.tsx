@@ -31,6 +31,7 @@ import {
   migrateTournamentFinalsScope,
   migrateCalendarPrefs,
 } from './src/features/follows/data/followMigrations';
+import { migrateSessionRungs } from './src/features/calendar-sync/data/sessionRungs';
 import { RootStackParamList, TabParamList } from './src/core/navigation';
 import { CelebrationHost } from './src/core/celebration';
 import { ToastHost } from './src/core/toast';
@@ -187,6 +188,10 @@ export default function App() {
     // after the update adds nothing and removes nothing. Last, so a follow
     // the normalizers above just minted gets its stamp too.
     migrateCalendarPrefs();
+    // Stage 5 of the same brief: every laddered series a stored follow
+    // delivers gets the session rung that reproduces what it delivers
+    // today (sessionRungs.ts) — before the first sync plans with it.
+    migrateSessionRungs(loadFollowables());
     // Round 5: the remote switchboard, then measurement under its flag.
     // Both fail-safe — an unreachable flags doc leaves the launch
     // defaults, and a missing analytics pod logs once and stays quiet.

@@ -66,6 +66,8 @@ import {
   toggleRowOps,
 } from '../domain/cardRowState';
 import { calendarTargetsFor } from '../../follows/domain/calendarTargets';
+import { SESSION_RUNGS, SessionRung, sessionSeriesOf } from '../domain/sessionLadder';
+import { sessionRungOf, setSessionRung } from '../data/sessionRungs';
 import { FollowCalendarControl } from '../../follows/FollowCalendarControl';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
 import { followMarkUrl, hasServedMark } from '../../follows/data/browsePriority';
@@ -482,6 +484,8 @@ export function FixtureCardBody(props: {
   // The per-follow calendar glyph acts on the entity this card IS —
   // shown only while it is followed (follows/domain/calendarTargets.ts).
   const glyphTargets = calendarTargetsFor(fixture.followKeys, follows, hasServedMark);
+  // The session ladder's series, when this is a laddered session.
+  const ladderSeries = sessionSeriesOf(fixture);
   // EVERY ROW IS ONE TWO-STATE TOGGLE (owner, 2026-09-03), whatever put
   // it in the calendar: a covered row removes through a per-event
   // exclusion — the planner honours it by id on the tier's copies, and
@@ -636,6 +640,20 @@ export function FixtureCardBody(props: {
         <Animated.View style={body}>
           {past ? null : (
             <>
+              {/* THE SESSION LADDER (Stage 5): a laddered series' own
+                  setting, in the tier ladder's form — shown while a
+                  follow that is in delivers this session. */}
+              {ladderSeries !== null && wantedByFollows(fixture.followKeys) ? (
+                <SessionLadderRow
+                  theme={theme}
+                  rung={sessionRungOf(ladderSeries)}
+                  onPick={(rung) => {
+                    setSessionRung(ladderSeries, rung);
+                    repaint();
+                    void runSync();
+                  }}
+                />
+              ) : null}
               {fixture.status === 'postponed' ? null : banner ? (
                 // AN ALL-DAY ENTRY GETS DAY-SHAPED CHOICES, NOT DEAD
                 // CHIPS (Prompt 24 A1). This row used to render the
@@ -745,6 +763,65 @@ export function FixtureCardBody(props: {
 // rendered by the card every sport's fixtures pass through, in the
 // calendar toggle's own visual language. On = filled, off = outlined
 // and dimmed; the state is a filter, so both-on is the resting truth.
+// The motorsport session ladder (Stage 5): the series' one setting, in
+// the tier ladder's form — a caption over a row of chips, the lit chip
+// the rung in force. Wraps rather than scrolls: three chips that must
+// all be seen to be compared.
+function SessionLadderRow(props: {
+  theme: TeamTheme;
+  rung: SessionRung;
+  onPick: (rung: SessionRung) => void;
+}) {
+  const { theme } = props;
+  return (
+    <View style={styles.ladder}>
+      <Text style={[type.body, { color: theme.onGradient }]}>
+        {t('calendar.card.sessions')}
+      </Text>
+      <View style={styles.ladderChips}>
+        {SESSION_RUNGS.map((rung) => {
+          const on = rung === props.rung;
+          const label = t(SESSION_RUNG_LABEL[rung]);
+          return (
+            <Pressable
+              key={rung}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={on ? t('calendar.card.optionSelected', { label }) : label}
+              onPress={() => {
+                if (!on) props.onPick(rung);
+              }}
+              style={({ pressed }) => [
+                styles.calendarToggle,
+                {
+                  borderColor: theme.onGradient,
+                  backgroundColor: on ? theme.onGradient : 'transparent',
+                  opacity: pressed ? 0.55 : on ? 1 : 0.6,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  type.secondary,
+                  { fontWeight: '600', color: on ? theme.gradient[1] : theme.onGradient },
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const SESSION_RUNG_LABEL = {
+  race: 'calendar.sessions.race',
+  qualifying: 'calendar.sessions.qualifying',
+  all: 'calendar.sessions.all',
+} as const;
+
 function SexChip(props: {
   label: string;
   on: boolean;
@@ -1083,6 +1160,12 @@ const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   // Same corner as the collapsed card's glyph (core HeroCard.heroCorner).
   cornerGlyph: { position: 'absolute', top: spacing.s, right: spacing.s },
+  ladder: {
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
+    gap: spacing.s,
+  },
+  ladderChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s },
   rule: { height: StyleSheet.hairlineWidth, marginHorizontal: spacing.l },
   row: {
     minHeight: 52,

@@ -4905,3 +4905,63 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   while taps above the tab bar went unanswered; a restart cleared it and
   the same follow then completed normally twice. Android blocked: no
   device.
+- 2026-09-23 — **Per-follow calendar control, Stage 5: the motorsport
+  session ladder.** One setting per SERIES — Race only · Qualifying & race
+  · All sessions — keyed by the fixture's competitionId, so the series
+  follow and every driver follow riding the same sessions obey one rung
+  (CalendarPrefs.sessionRungs; pure rule calendar-sync/domain/
+  sessionLadder.ts). The sprint counts as a race, sprint qualifying (the
+  shootout) as qualifying, practice only under All sessions: Race only on
+  a sprint weekend is the sprint plus the Grand Prix; Qualifying & race
+  adds both qualifying sessions. Default for a series nobody had followed:
+  Qualifying & race ("new follows get the default" — a follow that brings
+  a laddered series in afresh clears any stale rung). The ladder filters
+  WITHIN a follow that is in: the inclusion rule decides first, the rung
+  second; a PIN beats the rung (an explicit per-event opt-in, like an
+  exclusion beating a follow), so an entity-page Add on a session the rung
+  leaves out works. Lowering a rung is a preference removal and runs under
+  the per-pass delete cap; raising it is an ordinary pass.
+  PLACEMENT: on the series' hero card expansion (a "Sessions" row, the
+  tier ladder's chip form, top of the card body, shown while an in follow
+  delivers the session) and on the series' / driver's own page in the
+  tournament tier ladder's exact place and form ("Calendar events" chips)
+  — the brief named the expansion; the tier ladder it pointed to lives on
+  the entity page, so the session ladder is in both. RETIRED: the F1
+  "All sessions / Race only" follow-scope chips (hardcoded English) and
+  Preferences › Events › "Race weekends", with their three catalog keys
+  (rule 13: both writers of the old shape removed in the same change).
+  `seriesSessions` and the per-follow F1 scopes stay stored as the
+  migration's input and still govern a series WITHOUT session data.
+  WHICH SERIES: only Formula 1. MotoGP, F2, NASCAR and WEC publish no
+  session names (probed in production 2026-09-23: no sessionKind, no
+  session field) — they show no ladder and deliver exactly what they did
+  (a MotoGP follow still adds every session). SESSION DATA: the F1
+  provider now stamps `sessionType` on every session (functions/src/
+  providers/f1.ts; contract-tested on a real sprint weekend), and the
+  client ALSO reads the type from the F1 id's session slug
+  (`f1-<season>-<circuit>-<slug>`, the same mapping) whenever the field is
+  absent — so the ladder works on documents written before the stamp is
+  deployed; the stamped field wins once present. The pollF1 deploy was
+  refused by the session's auto-mode classifier (production deploy) and
+  is the owner's to run; nothing waits on it.
+  EXISTING FOLLOWS (the migration, once, before the first sync): the rung
+  that reproduces each series' delivery — the most permissive explicit
+  per-follow choice, else the global "Race weekends" value; all → All
+  sessions, race-only → Race only. THE CONFLICT, as the brief asked:
+  "Race only" now includes the sprint, so a race-only install gains the
+  season's remaining sprints (on the verified install: exactly one event,
+  the Singapore Grand Prix sprint on 10 Oct). Kept, because the brief
+  defines the sprint as a race and a hidden legacy rung that showed "Race
+  only" while leaving the sprint out would make the ladder lie.
+  Verified on the iOS simulator (Release): the update added exactly that
+  sprint and nothing else (1,623 → 1,624; the migrated rung read race);
+  Qualifying & race → 20 F1 events (9 qualifying, 1 sprint qualifying, 1
+  sprint, 9 races), All sessions → all 45 future sessions (the production
+  count), back to Race only → 35 removed in one capped pass and the
+  calendar identical to before; zero non-F1 changes throughout; the F1
+  page shows the ladder and its rows name the calendar (sessions the rung
+  leaves out offer Add); the expanded card shows the Sessions row; a
+  MotoGP follow showed no ladder on its page or card and added its 49
+  sessions as before. The calendar holds no past F1 sessions, so "lowering
+  removes only future sessions" is pinned by the planner test (a finished
+  session survives All → Race only). Android blocked: no device.

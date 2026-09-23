@@ -12,6 +12,14 @@ export type FixtureStatus =
   | 'in_play'
   | 'finished';
 
+// The motorsport session ladder's input (mirrors functions/src/fixture.ts).
+export type SessionType =
+  | 'practice'
+  | 'qualifying'
+  | 'sprint-qualifying'
+  | 'sprint'
+  | 'race';
+
 export interface Fixture {
   id: string; // provider-scoped stable id, e.g. 'apisports-1030318'
   sport: string; // sport key from the sports config, e.g. 'soccer'
@@ -53,6 +61,10 @@ export interface Fixture {
   };
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
+  // Which session of a race weekend (server-stamped for F1 since
+  // 2026-09-23; calendar-sync/domain/sessionLadder.ts reads it, with the
+  // F1 id slug as the fallback for documents written before the stamp).
+  sessionType?: SessionType;
   // HOW PRECISELY THE START TIME IS KNOWN. Separate from `status`, which
   // conflated "no time" with "time not confirmed" and left startUtc
   // carrying a midnight sentinel with two meanings.

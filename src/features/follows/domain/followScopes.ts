@@ -98,12 +98,10 @@ export function scopesFor(f: Followable, ctx: ScopeContext = {}): ScopeOption[] 
       { scope: 'final-round', label: 'Final round only', note: GOLF_FINAL_NOTE },
     ];
   }
-  if (f.type === 'series' && f.key === 'f1-series-1') {
-    return [
-      { scope: 'all-sessions', label: 'All sessions' },
-      { scope: 'race-only', label: 'Race only' },
-    ];
-  }
+  // F1's "All sessions / Race only" chips are RETIRED (Stage 5, owner
+  // brief 2026-09-23): the per-series session ladder replaces them
+  // (calendar-sync/domain/sessionLadder.ts), and its migration carried
+  // any stored 'all-sessions' / 'race-only' choice into the rung.
   return [];
 }
 

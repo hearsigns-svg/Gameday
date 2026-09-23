@@ -27,6 +27,7 @@ import {
   extraRemindersFor,
   reminderMinutesFor,
 } from './eventSettings';
+import { ladderKeeps } from './sessionLadder';
 import { CalendarPrefs } from './prefs';
 import { PlanEntitlement, PREMIUM_PLAN } from '../../../core/entitlement';
 import { TOURNAMENT_POINTER_NOTE } from './tournamentTiers';
@@ -168,9 +169,19 @@ export function desiredEventFor(
   // existing caller — and every snapshot consumer, which has no business
   // knowing about alarms — keeps working unchanged.
   settings: EventSettingsMap = {},
+  // A PIN is an explicit per-event opt-in, and like an exclusion it
+  // beats the broader rule: a session the ladder leaves out still goes
+  // in when it is pinned (the entity page's Add on that row).
+  opts: { pinned?: boolean } = {},
 ): DesiredEvent | null {
-  // Series sports: optionally keep only the race itself in the calendar.
+  // THE SESSION LADDER (per-follow calendar control, Stage 5): a fixture
+  // that carries a session type is kept or dropped by its series' rung
+  // alone; the pre-ladder race-only filter governs only series without
+  // session data.
+  const ladder = ladderKeeps(f, prefs.sessionRungs);
+  if (ladder === false && opts.pinned !== true) return null;
   if (
+    ladder === undefined &&
     seriesSessionsFor(f, prefs, seriesScopes) === 'race-only' &&
     f.sessionKind === 'support'
   ) {
@@ -392,7 +403,9 @@ export function planSync(
     // update, and not a create if its event has somehow gone. Its ledger
     // entry is retained below so the prune sweep still sees it referenced.
     if (isPast(f, nowMs)) continue;
-    const desired = desiredEventFor(f, prefs, seriesScopes, settings);
+    const desired = desiredEventFor(f, prefs, seriesScopes, settings, {
+      pinned: pinned.has(f.id),
+    });
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour
     // hundreds of past fixtures into the calendar. Events we already
@@ -611,6 +624,8 @@ export interface SnapshotFixture {
   // hero composite renders them regardless of which follow owns the card.
   homeCrestUrl?: string;
   awayCrestUrl?: string;
+  // The session ladder's input where the server stamped it (Stage 5).
+  sessionType?: Fixture['sessionType'];
 }
 
 // UNCAPPED (Round 5 ruling 4): every not-yet-finished fixture the
@@ -623,6 +638,9 @@ export function upcomingSnapshot(
   prefs: CalendarPrefs,
   horizonStartUtc: string,
   seriesScopes?: SeriesScopeMap,
+  // Pinned ids: a pinned session the ladder leaves out is still in the
+  // calendar, so it is still in the app's view of it.
+  pinned: ReadonlySet<string> = new Set(),
 ): SnapshotFixture[] {
   return fixtures
     .filter(
@@ -633,7 +651,7 @@ export function upcomingSnapshot(
         // this differs from the old start-based cut by minutes; for a
         // multi-day span it is the difference between present and gone.)
         fixtureEndUtc(f) > horizonStartUtc &&
-        desiredEventFor(f, prefs, seriesScopes) !== null,
+        desiredEventFor(f, prefs, seriesScopes, {}, { pinned: pinned.has(f.id) }) !== null,
     )
     .sort((a, b) => a.startUtc.localeCompare(b.startUtc))
     .map((f) => ({
@@ -665,5 +683,6 @@ export function upcomingSnapshot(
       ...(f.awayCrestUrl !== undefined ? { awayCrestUrl: f.awayCrestUrl } : {}),
       ...(f.venue !== undefined ? { venue: f.venue } : {}),
       ...(f.venueCity !== undefined ? { venueCity: f.venueCity } : {}),
+      ...(f.sessionType !== undefined ? { sessionType: f.sessionType } : {}),
     }));
 }

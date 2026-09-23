@@ -118,6 +118,33 @@ describe('NHL adapter against real payload', () => {
 describe('F1 adapter against real payload', () => {
   const races = (f1Sample as { races: F1Race[] }).races;
 
+  // The session ladder's input (per-follow calendar control, 2026-09-23):
+  // every session names its type — a sprint is a race, sprint qualifying
+  // is qualifying, practice is practice.
+  test('every session carries its session type', () => {
+    const fixtures = racesToFixtures('2026', races, NOW);
+    const bySlug = new Map<string, Set<string | undefined>>();
+    for (const f of fixtures) {
+      const slug = f.id.split('-').pop() as string;
+      const set = bySlug.get(slug) ?? new Set();
+      set.add(f.sessionType);
+      bySlug.set(slug, set);
+    }
+    const expected: Record<string, string> = {
+      fp1: 'practice',
+      fp2: 'practice',
+      fp3: 'practice',
+      sprintquali: 'sprint-qualifying',
+      sprint: 'sprint',
+      quali: 'qualifying',
+      race: 'race',
+    };
+    for (const [slug, types] of bySlug) {
+      expect([slug, [...types]]).toEqual([slug, [expected[slug]]]);
+    }
+    expect(fixtures.every((f) => f.sessionType !== undefined)).toBe(true);
+  });
+
   test('a race weekend fans out into per-session fixtures', () => {
     const fixtures = racesToFixtures('2026', [races[0]], NOW);
     // Real 2026 opener carries FP1-3 + Qualifying + Race = 5 sessions.

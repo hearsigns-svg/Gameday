@@ -564,39 +564,43 @@ describe('isRunAbandoned', () => {
   });
 });
 
+// The pre-ladder mechanism, which still governs a series WITHOUT session
+// data (Stage 5, 2026-09-23: F1 is laddered now — its sessions carry a
+// session type, stamped or read from the id — so these pin the rule on a
+// series whose fixtures only say race vs support).
 describe('per-follow seriesSessions override (Prompt 11)', () => {
   const support = fixture({
-    id: 'f1-2026-albert_park-fp1',
-    sport: 'f1',
-    competitionId: 'f1-series-1',
-    followKeys: ['f1-series-1', 'athlete_000200'],
+    id: 'series-x-2026-round1-support',
+    sport: 'motorsport',
+    competitionId: 'series-x',
+    followKeys: ['series-x', 'athlete_000200'],
     sessionKind: 'support',
   });
   const race = fixture({
-    id: 'f1-2026-albert_park-race',
-    sport: 'f1',
-    competitionId: 'f1-series-1',
-    followKeys: ['f1-series-1', 'athlete_000200'],
+    id: 'series-x-2026-round1-race',
+    sport: 'motorsport',
+    competitionId: 'series-x',
+    followKeys: ['series-x', 'athlete_000200'],
     sessionKind: 'race',
   });
 
   test('a race-only follow scope drops support sessions even when the global pref says all', () => {
     const prefs = { ...DEFAULT_PREFS, seriesSessions: 'all' as const };
-    const scopes = new Map([['f1-series-1', 'race-only' as const]]);
+    const scopes = new Map([['series-x', 'race-only' as const]]);
     expect(desiredEventFor(support, prefs, scopes)).toBeNull();
     expect(desiredEventFor(race, prefs, scopes)).not.toBeNull();
   });
 
   test('an all-sessions follow scope keeps the weekend under a race-only global pref', () => {
     const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
-    const scopes = new Map([['f1-series-1', 'all' as const]]);
+    const scopes = new Map([['series-x', 'all' as const]]);
     expect(desiredEventFor(support, prefs, scopes)).not.toBeNull();
   });
 
   test('most permissive wins when several matching follows disagree', () => {
     const prefs = { ...DEFAULT_PREFS, seriesSessions: 'race-only' as const };
     const scopes = new Map<string, 'all' | 'race-only'>([
-      ['f1-series-1', 'race-only'],
+      ['series-x', 'race-only'],
       ['athlete_000200', 'all'],
     ]);
     expect(desiredEventFor(support, prefs, scopes)).not.toBeNull();
@@ -614,27 +618,27 @@ describe('per-follow seriesSessions override (Prompt 11)', () => {
     const raceOnly = planSync(
       [support, race],
       {},
-      ['f1-series-1'],
+      ['series-x'],
       prefs,
       PAST_HORIZON,
       new Set(),
       new Set(),
       undefined,
-      new Map([['f1-series-1', 'race-only' as const]]),
+      new Map([['series-x', 'race-only' as const]]),
     );
     expect(raceOnly.map((o) => o.op === 'create' && o.fixture.id)).toEqual([
-      'f1-2026-albert_park-race',
+      'series-x-2026-round1-race',
     ]);
     const all = planSync(
       [support, race],
       {},
-      ['f1-series-1'],
+      ['series-x'],
       prefs,
       PAST_HORIZON,
       new Set(),
       new Set(),
       undefined,
-      new Map([['f1-series-1', 'all' as const]]),
+      new Map([['series-x', 'all' as const]]),
     );
     expect(all.filter((o) => o.op === 'create')).toHaveLength(2);
   });

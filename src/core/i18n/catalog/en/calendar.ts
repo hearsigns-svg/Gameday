@@ -126,6 +126,10 @@ export const calendarStrings = {
   'calendar.control.sportAddA11y': 'Add all {sport} to calendar',
   'calendar.control.sportInA11y': 'All {sport} is in your calendar',
   'calendar.control.failed': 'Couldn’t update your calendar. Try again.',
+  'calendar.card.sessions': 'Sessions',
+  'calendar.sessions.race': 'Race only',
+  'calendar.sessions.qualifying': 'Qualifying & race',
+  'calendar.sessions.all': 'All sessions',
   'calendar.card.close': 'Close',
 
   // ── Toasts (FixtureCard / ScheduleScreen) ──────────────────────────

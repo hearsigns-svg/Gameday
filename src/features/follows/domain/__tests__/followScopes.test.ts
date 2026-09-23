@@ -64,7 +64,7 @@ describe('followQueryKeys', () => {
 });
 
 describe('scopesFor', () => {
-  test('tennis tournaments, catalogued golf tours and the F1 series offer options; everything else none', () => {
+  test('tennis tournaments and catalogued golf tours offer options; everything else none (F1 moved to the session ladder)', () => {
     expect(scopesFor(follow({ key: 'tennis-t-us-open' })).map((o) => o.scope)).toEqual([
       'block',
       'key-rounds',
@@ -73,9 +73,9 @@ describe('scopesFor', () => {
     expect(
       scopesFor(follow({ key: 'tsdb-league-5329', sportKey: 'golf' })).map((o) => o.scope),
     ).toEqual([null, 'final-round']);
-    expect(
-      scopesFor(follow({ key: 'f1-series-1', type: 'series' })).map((o) => o.scope),
-    ).toEqual(['all-sessions', 'race-only']);
+    // F1's "All sessions / Race only" chips are retired: the per-series
+    // session ladder replaces them (Stage 5, 2026-09-23).
+    expect(scopesFor(follow({ key: 'f1-series-1', type: 'series' }))).toEqual([]);
     expect(scopesFor(follow({ key: 'fdorg-comp-PL' }))).toEqual([]);
     expect(scopesFor(follow({ key: 'tsdb-league-4445', sportKey: 'boxing' }))).toEqual([]);
     // The athletes route must never grow a selector by accident.
@@ -95,17 +95,16 @@ describe('scopesFor', () => {
     expect(
       scopesFor(follow({ key: 'tennis-wta' }), { hasTournaments: true }).map((o) => o.scope),
     ).toEqual(tiers);
-    // Golf tours and the F1 series keep their bespoke options.
+    // Golf tours keep their bespoke options; the F1 series is bespoke
+    // too (never the tier chips) and now offers none of its own.
     expect(
       scopesFor(follow({ key: 'tsdb-league-4425', sportKey: 'golf' }), {
         hasTournaments: true,
       }).map((o) => o.scope),
     ).toEqual([null, 'final-round']);
-    expect(
-      scopesFor(follow({ key: 'f1-series-1', type: 'series' }), { hasTournaments: true }).map(
-        (o) => o.scope,
-      ),
-    ).toEqual(['all-sessions', 'race-only']);
+    expect(scopesFor(follow({ key: 'f1-series-1', type: 'series' }), { hasTournaments: true })).toEqual(
+      [],
+    );
     // Teams and athletes never grow the selector, tournaments in view or not.
     expect(scopesFor(follow({ key: 'fdorg-team-64', type: 'team' }), { hasTournaments: true })).toEqual([]);
     expect(scopesFor(follow({ key: 'athlete_000001', type: 'athlete' }), { hasTournaments: true })).toEqual([]);

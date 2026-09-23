@@ -15,6 +15,7 @@ const PREFS: CalendarPrefs = {
   tournamentTier: 'block',
   autoDeletePast: false,
   newFollowsInCalendar: true,
+  sessionRungs: {},
 };
 
 const card: Fixture = {

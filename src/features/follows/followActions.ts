@@ -11,6 +11,7 @@ import {
   upcomingFixtures,
 } from '../calendar-sync/syncEngine';
 import { loadPrefs } from '../calendar-sync/data/prefsStore';
+import { resetRungForFreshSeries } from '../calendar-sync/data/sessionRungs';
 import { premiumLocked } from '../../core/entitlementStore';
 import {
   calendarPrefOf,
@@ -144,6 +145,9 @@ export function startingCalendarFor(item: Followable): CalendarPref {
 
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
+  // A laddered series brought in afresh starts at the default session
+  // rung (Stage 5 — "new follows get the default").
+  resetRungForFreshSeries(item, loadFollowables());
   setFollowed({ ...item, calendar: startingCalendarFor(item) }, true);
   // Funnel event 1 of the Round 5 set — sport and follow type only.
   void logFollow(item.sportKey, item.type);

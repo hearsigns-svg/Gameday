@@ -26,6 +26,13 @@ export type RoundCode =
   | 'f'
   | 'third-place';
 
+export type SessionType =
+  | 'practice'
+  | 'qualifying'
+  | 'sprint-qualifying'
+  | 'sprint'
+  | 'race';
+
 export interface FixtureStage {
   label?: string; // verbatim provider text, never parsed for meaning
   round?: RoundCode; // knockout position, only where unambiguous
@@ -112,6 +119,13 @@ export interface Fixture {
   stage?: FixtureStage;
   durationHours?: number; // event length; default 2 when absent
   sessionKind?: 'race' | 'support'; // series sports: race vs practice/quali
+  // WHICH session of a race weekend (per-follow calendar control, owner
+  // brief 2026-09-23): the motorsport session ladder (Race only ·
+  // Qualifying & race · All sessions) reads it. A sprint counts as a
+  // race and sprint qualifying as qualifying; practice only under All
+  // sessions. Stamped only where the provider names sessions (F1); a
+  // series without it gets no ladder and keeps sessionKind's filter.
+  sessionType?: SessionType;
   // HOW PRECISELY THE START TIME IS KNOWN. Separate from `status`, which
   // conflated "no time" with "time not confirmed" and left startUtc
   // carrying a midnight sentinel with two meanings.

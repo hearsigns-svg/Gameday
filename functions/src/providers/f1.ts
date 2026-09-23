@@ -2,7 +2,7 @@
 // One race weekend fans out into per-session fixtures (taxonomy: series
 // follow, per-session events, race-only preference filters 'support').
 
-import { Fixture } from '../fixture';
+import { Fixture, SessionType } from '../fixture';
 import { ProviderFetch, requireArray } from './fetchResult';
 
 const BASE = 'https://api.jolpi.ca/ergast/f1';
@@ -35,13 +35,20 @@ const SESSION_DEFS: Array<{
   field: keyof F1Race;
   slug: string;
   label: string;
+  // The session ladder's input (fixture.ts SessionType).
+  sessionType: SessionType;
 }> = [
-  { field: 'FirstPractice', slug: 'fp1', label: 'Practice 1' },
-  { field: 'SecondPractice', slug: 'fp2', label: 'Practice 2' },
-  { field: 'ThirdPractice', slug: 'fp3', label: 'Practice 3' },
-  { field: 'SprintQualifying', slug: 'sprintquali', label: 'Sprint Qualifying' },
-  { field: 'Sprint', slug: 'sprint', label: 'Sprint' },
-  { field: 'Qualifying', slug: 'quali', label: 'Qualifying' },
+  { field: 'FirstPractice', slug: 'fp1', label: 'Practice 1', sessionType: 'practice' },
+  { field: 'SecondPractice', slug: 'fp2', label: 'Practice 2', sessionType: 'practice' },
+  { field: 'ThirdPractice', slug: 'fp3', label: 'Practice 3', sessionType: 'practice' },
+  {
+    field: 'SprintQualifying',
+    slug: 'sprintquali',
+    label: 'Sprint Qualifying',
+    sessionType: 'sprint-qualifying',
+  },
+  { field: 'Sprint', slug: 'sprint', label: 'Sprint', sessionType: 'sprint' },
+  { field: 'Qualifying', slug: 'quali', label: 'Qualifying', sessionType: 'qualifying' },
 ];
 
 function sessionFixture(
@@ -52,6 +59,7 @@ function sessionFixture(
   label: string,
   at: SessionTime,
   kind: 'race' | 'support',
+  sessionType: SessionType,
   durationHours: number,
   updatedAt: string,
 ): Fixture {
@@ -84,6 +92,7 @@ function sessionFixture(
     status: hasTime ? 'scheduled' : 'tbd',
     durationHours,
     sessionKind: kind,
+    sessionType,
     timePrecision: hasTime ? 'exact' : 'date_only',
     confidence: hasTime ? 'confirmed' : 'provisional',
     updatedAt,
@@ -118,12 +127,23 @@ export function racesToFixtures(
       const at = race[def.field] as SessionTime | undefined;
       if (at?.date) {
         fixtures.push(
-          sessionFixture(season, race, circuitKey, def.slug, def.label, at, 'support', 1, updatedAt),
+          sessionFixture(
+            season,
+            race,
+            circuitKey,
+            def.slug,
+            def.label,
+            at,
+            'support',
+            def.sessionType,
+            1,
+            updatedAt,
+          ),
         );
       }
     }
     fixtures.push(
-      sessionFixture(season, race, circuitKey, 'race', 'Race', race, 'race', 2, updatedAt),
+      sessionFixture(season, race, circuitKey, 'race', 'Race', race, 'race', 'race', 2, updatedAt),
     );
   }
   return fixtures;
