@@ -49,6 +49,13 @@ export interface CalendarPrefs {
   // PAST_RETENTION_DAYS ago. OFF unless the user turns it on: deleting
   // somebody's record of games they went to is not a default.
   autoDeletePast: boolean;
+  // The Settings default for NEW follows (owner brief "Per-follow
+  // calendar control", 2026-09-23): whether a follow you add from now on
+  // starts in the calendar. Changing it never touches an existing follow.
+  // It is only the fallback: a new follow a broader followed thing that
+  // is in already covers starts in whatever this says
+  // (follows/domain/calendarInclusion.ts startingCalendarPref).
+  newFollowsInCalendar: boolean;
 }
 
 export type TournamentTier = 'block' | 'key' | 'all';
@@ -74,6 +81,9 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   tournamentTier: 'key',
   // Never on without an explicit opt-in.
   autoDeletePast: false,
+  // On by default: a new follow goes in, as every follow did before the
+  // per-follow control existed.
+  newFollowsInCalendar: true,
 };
 
 // `short` is the form a one-row control uses: the durations have to fit

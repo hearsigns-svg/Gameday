@@ -208,3 +208,15 @@ export function startingCalendarPref(
   }
   return settingDefault;
 }
+
+// The Settings default as it applies to a new follow (Stage 4). In the
+// free state it reads OFF, as the Settings switch shows it: nothing new
+// is written without Premium, and a ✓ on a follow that places nothing
+// would be a lie. Entitled, it is the switch.
+export function settingDefaultFor(
+  newFollowsInCalendar: boolean,
+  premiumLocked: boolean,
+): CalendarPref {
+  if (premiumLocked) return 'out';
+  return newFollowsInCalendar ? 'in' : 'out';
+}

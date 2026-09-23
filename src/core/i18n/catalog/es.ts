@@ -299,6 +299,8 @@ export const es: Catalog = {
   'follows.feedback.added_other': 'Se añadieron {n} partidos a tu calendario',
   'follows.feedback.noUpcoming':
     'Siguiendo a {name} — aún sin próximos partidos',
+  'follows.feedback.notInCalendar': 'Siguiendo a {name} — no está en tu calendario',
+  'follows.feedback.alreadyInCalendar': 'Siguiendo a {name} — ya está en tu calendario',
 
   // ── Coverage notes (verbatim from sportsConfig) ───────────────────
   'follows.coverage.cricket':
@@ -564,6 +566,8 @@ export const es: Catalog = {
     'Cómo se ven los eventos de KickOffCal en la app de calendario de tu teléfono.',
   'settings.calendar.inheritedColour':
     'Tus partidos toman el color de {calendar}, que puedes cambiar en tu app de calendario.',
+  'settings.calendar.newFollows': 'Añadir a tu calendario lo que empieces a seguir',
+  'settings.calendar.newFollowsCaption': 'Se aplica a lo que sigas a partir de ahora.',
   'settings.calendar.colourApplied': 'El color del calendario ahora es {colour}',
   'settings.calendar.colourSaved':
     'Color guardado — se aplicará al conectar tu calendario',

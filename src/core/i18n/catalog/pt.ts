@@ -295,6 +295,8 @@ export const pt: Catalog = {
   'follows.feedback.added_one': '{n} jogo adicionado ao seu calendário',
   'follows.feedback.added_other': '{n} jogos adicionados ao seu calendário',
   'follows.feedback.noUpcoming': 'Seguindo {name} — ainda sem próximos jogos',
+  'follows.feedback.notInCalendar': 'Seguindo {name} — fora do seu calendário',
+  'follows.feedback.alreadyInCalendar': 'Seguindo {name} — já está no seu calendário',
 
   // ── Coverage notes (verbatim from sportsConfig; read via
   //    domain/coverageNotes.ts) ───────────────────────────────────────
@@ -554,6 +556,8 @@ export const pt: Catalog = {
     'Como os eventos do KickOffCal aparecem no app de calendário do seu celular.',
   'settings.calendar.inheritedColour':
     'Seus jogos usam a cor de {calendar}, que você define no seu app de calendário.',
+  'settings.calendar.newFollows': 'Adicionar ao seu calendário o que você passar a seguir',
+  'settings.calendar.newFollowsCaption': 'Vale para o que você seguir a partir de agora.',
   'settings.calendar.colourApplied': 'A cor do calendário agora é {colour}',
   'settings.calendar.colourSaved':
     'Cor salva — vale quando seu calendário conectar',

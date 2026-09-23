@@ -19,6 +19,7 @@ const PREFS: CalendarPrefs = {
   // they pin other features.
   tournamentTier: 'block',
   autoDeletePast: false,
+  newFollowsInCalendar: true,
 };
 
 const HORIZON = '2026-07-29T00:00:00.000Z';

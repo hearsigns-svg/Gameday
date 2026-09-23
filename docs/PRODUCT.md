@@ -47,6 +47,10 @@ Rules:
   Following page groups follows under their sport in browse order, with
   Formula 1 under Motorsport and every Olympic follow in one Olympics
   group.
+- A NEW follow starts in if a broader followed thing that is in already
+  covers it; otherwise it takes the Settings default "Add new follows to
+  your calendar" (on by default; off in the free state). The default never
+  changes an existing follow.
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule

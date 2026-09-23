@@ -20,6 +20,7 @@ const PREFS: CalendarPrefs = {
   seriesSessions: 'all',
   tournamentTier: 'key',
   autoDeletePast: false,
+  newFollowsInCalendar: true,
 };
 
 const parent: Fixture = {

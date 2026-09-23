@@ -4863,3 +4863,45 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   exactly (1,126 created in one pass). A scroll-to-top of the list was
   seen once shortly after launch and did not recur across three later
   sync flows, including a 30-pass drain. Android blocked: no device.
+- 2026-09-23 — **Per-follow calendar control, Stage 4: the Settings default
+  and where a new follow starts.** Preferences › Calendar ends with a
+  standard platform switch, "Add new follows to your calendar" / "Applies
+  to follows you add from now on.", on by default
+  (`CalendarPrefs.newFollowsInCalendar`, default true — a follow went in
+  before the control existed). Changing it saves the preference WITHOUT a
+  sync and never touches an existing follow. THE STARTING STATE is wired
+  into `follow()` (`startingCalendarFor`): in if a broader followed thing
+  that is in already covers the new follow — by key grammar (a draw in its
+  tournament, a Games sport in its edition) or by a fixture the app
+  already holds for it (the presentation snapshot) — whatever the default;
+  otherwise the Settings default. A follow that already exists keeps its
+  own preference (following twice never flips it), and Undo after an
+  unfollow restores the preference it had, remembered beside the scope.
+  FREE STATE: the switch shows OFF and a tap goes to the Premium offer
+  (suppressed after a decline → the inline Premium line); the default a
+  new follow takes reads OFF too — nothing new is written without
+  Premium, and a ✓ on a follow that places nothing would be a lie. A
+  broader in follow still covers a new one in the free state. THE FOLLOW
+  TOAST now says why nothing was added instead of "no upcoming fixtures
+  yet" over fixtures that exist (found in Stage 1): "Following [Name] —
+  not in your calendar" for a follow that starts out, "Following [Name] —
+  already in your calendar" for one a broader follow covers; the
+  off-season line only when nothing is ahead. `updateRegistry` resolves
+  the device registry with a call-time require (the house cycle-breaker)
+  instead of a dynamic import(), which the test runner cannot load — no
+  test could reach follow() before; it now has the table's tests.
+  Verified on the iOS simulator, every row of the brief's table: NBA in +
+  switch off → the re-followed Warriors started IN (0 created, "already in
+  your calendar"); Premier League out + off → Liverpool OUT (0 created,
+  "not in your calendar", rows offer Add); PL out + on → Liverpool IN (41
+  created); nothing broader + on → Kansas City Chiefs IN (15 created);
+  nothing broader + off → Chiefs OUT (0 created). Turning the switch off
+  changed the stored follows not at all (byte-identical), ran no sync and
+  left the calendar identical. The free state is not reachable in a
+  Release build (the sync gate is open by default and the override is
+  development-only) and the offer needs RevenueCat keys that are absent,
+  so it is pinned by tests only. OBSERVED ONCE, NOT REPRODUCED: one follow
+  (the Chiefs, from Search) left its sync pass unfinished for ~9 minutes
+  while taps above the tab bar went unanswered; a restart cleared it and
+  the same follow then completed normally twice. Android blocked: no
+  device.

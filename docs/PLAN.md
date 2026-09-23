@@ -256,7 +256,9 @@ silent).
   - [x] Stage 3 — Following page grouped by sport, row + header glyphs;
     preference removals under the per-pass delete cap. iOS verified;
     Android pending the Pixel.
-  - [ ] Stage 4 — Settings default for new follows + starting state.
+  - [x] Stage 4 — Settings default for new follows + starting state;
+    honest follow toasts. iOS verified (all four table rows); Android
+    pending the Pixel.
   - [ ] Stage 5 — motorsport session ladder.
   - [ ] Stage 6 — "sync" retired from user-facing copy.
 - Verification: review checklist clean; EAS production builds submitted

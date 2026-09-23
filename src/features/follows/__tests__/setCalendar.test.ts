@@ -18,6 +18,12 @@ jest.mock('../../calendar-sync/syncEngine', () => ({
   runSyncAwaited: () => mockRunSync(),
 }));
 jest.mock('../../../core/analytics', () => ({ logFollow: jest.fn() }));
+// followActions reads the new-follow default and the entitlement for a
+// NEW follow's starting state — neither is in play here.
+jest.mock('../../calendar-sync/data/prefsStore', () => ({
+  loadPrefs: () => ({ newFollowsInCalendar: true }),
+}));
+jest.mock('../../../core/entitlementStore', () => ({ premiumLocked: () => false }));
 jest.mock('../../../core/firebase', () => ({ functionsBaseUrl: 'https://example.invalid' }));
 
 import { calendarPrefOf, Followable, loadFollowables, replaceFollowables } from '../data/followStore';

@@ -45,6 +45,8 @@ export const settingsStrings = {
     "How KickOffCal events look inside your phone's calendar app.",
   'settings.calendar.inheritedColour':
     'Your fixtures take the colour of {calendar}, which is yours to set in your calendar app.',
+  'settings.calendar.newFollows': 'Add new follows to your calendar',
+  'settings.calendar.newFollowsCaption': 'Applies to follows you add from now on.',
   'settings.calendar.colourApplied': 'Calendar colour is now {colour}',
   'settings.calendar.colourSaved':
     'Colour saved — applies when your calendar connects',

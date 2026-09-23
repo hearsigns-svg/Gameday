@@ -28,6 +28,7 @@ const PREFS: CalendarPrefs = {
   seriesSessions: 'all',
   tournamentTier: 'all',
   autoDeletePast: false,
+  newFollowsInCalendar: true,
 };
 
 const follow = (

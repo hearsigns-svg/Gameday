@@ -177,6 +177,8 @@ export const followsStrings = {
   'follows.feedback.added_one': 'Added {n} fixture to your calendar',
   'follows.feedback.added_other': 'Added {n} fixtures to your calendar',
   'follows.feedback.noUpcoming': 'Following {name} — no upcoming fixtures yet',
+  'follows.feedback.notInCalendar': 'Following {name} — not in your calendar',
+  'follows.feedback.alreadyInCalendar': 'Following {name} — already in your calendar',
 
   // ── Coverage notes (verbatim from sportsConfig; read via
   //    domain/coverageNotes.ts — the config field is no longer read by

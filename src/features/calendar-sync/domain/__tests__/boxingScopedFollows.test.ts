@@ -14,6 +14,7 @@ const PREFS: CalendarPrefs = {
   seriesSessions: 'all',
   tournamentTier: 'block',
   autoDeletePast: false,
+  newFollowsInCalendar: true,
 };
 
 const card: Fixture = {

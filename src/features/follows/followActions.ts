@@ -4,16 +4,28 @@
 import { err, messageOf, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { logFollow } from '../../core/analytics';
-import { runSync, runSyncAwaited, SyncOutcome } from '../calendar-sync/syncEngine';
+import {
+  runSync,
+  runSyncAwaited,
+  SyncOutcome,
+  upcomingFixtures,
+} from '../calendar-sync/syncEngine';
+import { loadPrefs } from '../calendar-sync/data/prefsStore';
+import { premiumLocked } from '../../core/entitlementStore';
 import {
   calendarPrefOf,
   Followable,
+  inclusionFollows,
   loadFollowables,
   setFollowCalendar,
   setFollowed,
   setFollowScope,
 } from './data/followStore';
-import { CalendarPref } from './domain/calendarInclusion';
+import {
+  CalendarPref,
+  settingDefaultFor,
+  startingCalendarPref,
+} from './domain/calendarInclusion';
 import { followQueryKeys, FollowScope } from './domain/followScopes';
 import { pollPathFor } from './domain/pollPaths';
 import { shouldPoll } from './domain/pollGate';
@@ -87,12 +99,16 @@ export function collectFollowState(): {
   };
 }
 
-// Registry updates are lazy-imported to avoid a require cycle
-// (deviceRegistry → followActions).
+// Registry updates are resolved lazily to avoid a require cycle
+// (deviceRegistry → followActions): the house cycle-breaker (a require
+// at call time, as core/components.tsx does), still off the tap's
+// critical path. It was a dynamic import(), which the test runner
+// cannot load — no test could reach follow() at all.
 function updateRegistry(): void {
-  void import('../calendar-sync/data/deviceRegistry').then((m) =>
-    m.registerDevice(),
-  );
+  void Promise.resolve().then(() => {
+    const registry = require('../calendar-sync/data/deviceRegistry') as typeof import('../calendar-sync/data/deviceRegistry');
+    return registry.registerDevice();
+  });
 }
 
 // Per-key intent generation: a follow's failure rollback must never
@@ -107,9 +123,28 @@ function nextGeneration(key: string): number {
   return gen;
 }
 
+// Where a NEW follow starts (owner brief 2026-09-23, Stage 4): in if a
+// broader followed thing that is in already covers it — by key grammar
+// (a draw in its tournament, a Games sport in its edition) or by a
+// fixture the app already holds for it — whatever the Settings default;
+// otherwise the Settings default (off in the free state). A follow that
+// already exists keeps its own preference: following twice never flips
+// it.
+export function startingCalendarFor(item: Followable): CalendarPref {
+  const existing = loadFollowables();
+  const same = existing.find((f) => f.key === item.key);
+  if (same) return calendarPrefOf(same);
+  return startingCalendarPref(
+    { key: item.key, type: item.type, queryKeys: followQueryKeys(item) },
+    inclusionFollows(existing),
+    upcomingFixtures(),
+    settingDefaultFor(loadPrefs().newFollowsInCalendar, premiumLocked()),
+  );
+}
+
 export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
-  setFollowed(item, true);
+  setFollowed({ ...item, calendar: startingCalendarFor(item) }, true);
   // Funnel event 1 of the Round 5 set — sport and follow type only.
   void logFollow(item.sportKey, item.type);
   // THE FOLLOW STANDS EVEN IF THE REFRESH FAILS.
@@ -156,12 +191,17 @@ export async function follow(item: Followable): Promise<Result<SyncOutcome>> {
 // silently widened a final-round golf follow back to every round
 // (review round). In-session only: Undo is a 6-second window.
 const lastScopes = new Map<string, FollowScope>();
+// …and its calendar preference, so an undone unfollow comes back in or
+// out exactly as it was (per-follow calendar control, 2026-09-23).
+const lastCalendars = new Map<string, CalendarPref>();
 
 export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
   const stored = loadFollowables().find((f) => f.key === item.key);
   if (stored?.scope) lastScopes.set(item.key, stored.scope);
   else lastScopes.delete(item.key);
+  if (stored) lastCalendars.set(item.key, calendarPrefOf(stored));
+  else lastCalendars.delete(item.key);
   setFollowed(item, false);
   updateRegistry();
   return runSync();
@@ -172,10 +212,15 @@ export async function unfollow(item: Followable): Promise<Result<SyncOutcome>> {
 export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
   nextGeneration(item.key);
   const remembered = lastScopes.get(item.key);
-  setFollowed(
+  const base =
     item.scope === undefined && remembered !== undefined
       ? { ...item, scope: remembered }
-      : item,
+      : item;
+  setFollowed(
+    {
+      ...base,
+      calendar: lastCalendars.get(item.key) ?? item.calendar ?? startingCalendarFor(item),
+    },
     true,
   );
   updateRegistry();

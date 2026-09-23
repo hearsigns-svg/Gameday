@@ -12,12 +12,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Animated,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
-  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
@@ -277,6 +278,43 @@ function OptionRow(props: {
 }
 
 // A row whose right side is its current value; tapping navigates. With
+// A row whose control is a standard platform Switch (the new-follows
+// default, 2026-09-23). The switch is the one target; the caption rides
+// as its hint for screen readers.
+function SwitchRow(props: {
+  label: string;
+  caption?: string;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+  last?: boolean;
+}) {
+  const t = useTheme();
+  return (
+    <View
+      style={[
+        styles.row,
+        !props.last && { borderBottomWidth: StyleSheet.hairlineWidth },
+        { borderColor: t.border, minHeight: 56 },
+      ]}
+    >
+      <View style={{ flex: 1, marginRight: spacing.m }}>
+        <Text style={[type.body, { color: t.textPrimary }]}>{props.label}</Text>
+        {props.caption ? (
+          <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={2}>
+            {props.caption}
+          </Text>
+        ) : null}
+      </View>
+      <Switch
+        accessibilityLabel={props.label}
+        {...(props.caption ? { accessibilityHint: props.caption } : {})}
+        value={props.value}
+        onValueChange={props.onValueChange}
+      />
+    </View>
+  );
+}
+
 // no onPress it is a STATEMENT, not a control — the connected Google
 // row (B4 item 2) says where fixtures are and offers no verb.
 function ValueRow(props: {
@@ -613,6 +651,28 @@ export default function PreferencesScreen({
             </Text>
           </View>
         )}
+        {/* WHERE A NEW FOLLOW STARTS (per-follow calendar control,
+            2026-09-23). A standard platform switch; changing it never
+            touches an existing follow, so it saves without a sync. In
+            the free state it shows OFF — nothing new is written without
+            Premium — and a tap is the on-demand way into the offer. */}
+        <SwitchRow
+          label={tr('settings.calendar.newFollows')}
+          caption={tr('settings.calendar.newFollowsCaption')}
+          value={!premiumLocked() && prefs.newFollowsInCalendar}
+          onValueChange={(next) => {
+            if (premiumLocked()) {
+              if (!requestPaywall('on_demand')) {
+                showToast({ message: tr('premium.syncRow') });
+              }
+              return;
+            }
+            const saved = { ...prefs, newFollowsInCalendar: next };
+            setPrefs(saved);
+            savePrefs(saved);
+          }}
+          last
+        />
       </Section>
 
       <Section
