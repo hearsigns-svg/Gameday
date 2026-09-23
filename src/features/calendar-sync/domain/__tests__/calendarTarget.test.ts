@@ -104,11 +104,11 @@ describe('automatic target — the zero-friction path', () => {
 
 describe('honest consequence copy', () => {
   it('says plainly when events will not leave the device', () => {
-    expect(consequenceOf(localCal(), true)).toContain("won't appear on your other devices");
+    expect(consequenceOf(localCal(), true)).toContain("won’t appear on your other devices");
   });
 
   it('promises sync only when it is true', () => {
-    expect(consequenceOf(icloud({ title: 'KickOffCal' }), true)).toContain('syncs to your other devices');
+    expect(consequenceOf(icloud({ title: 'KickOffCal' }), true)).toContain('appears on your other devices');
   });
 
   it('warns that a user calendar mixes fixtures with their own events', () => {

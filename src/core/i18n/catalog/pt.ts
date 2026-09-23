@@ -100,9 +100,13 @@ export const pt: Catalog = {
   'core.status.updating': 'Atualizando seu calendário…',
   'core.status.sourcesQuiet':
     'Fontes de jogos sem atualização há {n}d — os dados podem estar defasados',
-  'core.status.calendarOff': 'Sincronização do calendário desativada',
+  'core.status.calendarOff': 'Calendário desativado',
   'core.status.upToDateCalendarOff': 'Jogos em dia · calendário desativado',
-  'core.status.notSynced': 'Ainda não sincronizado',
+  'core.status.notSynced': 'Ainda não está no seu calendário',
+  'core.status.updateFailed': 'Não foi possível atualizar seu calendário — vamos tentar de novo',
+  'core.error.alreadyUpdating': 'Seu calendário já está sendo atualizado.',
+  'core.error.authExpired':
+    'O login do Google expirou — reconecte para manter seu calendário em dia.',
   'core.status.updated': 'Calendário atualizado · {changes} · {when}',
   'core.status.changes_one': '{n} alteração',
   'core.status.changes_other': '{n} alterações',
@@ -495,7 +499,7 @@ export const pt: Catalog = {
     'O acesso ao calendário está desativado para o KickOffCal. Permita nas configurações do aparelho e volte — seus jogos estão esperando.',
   'calendar.priming.tryAgain': '{message} Tente de novo em instantes.',
   'calendar.priming.googleNote':
-    'A sincronização do calendário precisa de um login do Google no Android. Sem ele, seus jogos ficam no app.',
+    'Adicionar jogos ao seu calendário precisa de um login do Google no Android. Sem ele, seus jogos ficam no app.',
   'calendar.priming.openSettings': 'Abrir configurações',
   'calendar.priming.connecting': 'Conectando…',
   'calendar.priming.connectGoogle': 'Conectar Google Agenda',
@@ -562,6 +566,10 @@ export const pt: Catalog = {
     'Seus jogos usam a cor de {calendar}, que você define no seu app de calendário.',
   'settings.calendar.newFollows': 'Adicionar ao seu calendário o que você passar a seguir',
   'settings.calendar.newFollowsCaption': 'Vale para o que você seguir a partir de agora.',
+  'settings.calendar.onDeviceOnly': 'Só neste aparelho — não aparece nos seus outros aparelhos',
+  'settings.calendar.onYourDevices': '{account} — aparece nos seus outros aparelhos',
+  'settings.calendar.alongsideYours':
+    '{account} — os jogos aparecem ao lado dos seus próprios eventos',
   'settings.calendar.colourApplied': 'A cor do calendário agora é {colour}',
   'settings.calendar.colourSaved':
     'Cor salva — vale quando seu calendário conectar',
@@ -582,7 +590,7 @@ export const pt: Catalog = {
 
   // ── Events section ─────────────────────────────────────────────────
   'settings.events.footnote':
-    'Eventos com horário vão do pontapé inicial ao apito final. As mudanças valem para todos os jogos sincronizados na próxima sincronização.',
+    'Eventos com horário vão do pontapé inicial ao apito final. As mudanças valem para todos os jogos do seu calendário na próxima atualização.',
   'settings.events.style': 'Estilo do evento',
   'settings.events.timed': 'Com horário',
   'settings.events.allDay': 'Dia inteiro',
@@ -592,7 +600,7 @@ export const pt: Catalog = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Lembretes',
-  'settings.reminders.footnote': 'As alterações aplicam-se na próxima sincronização.',
+  'settings.reminders.footnote': 'As alterações valem na próxima atualização do seu calendário.',
   'settings.reminders.daysWithoutDates': 'Dias sem horário',
   'settings.reminders.slotA11y': 'Lembrete {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valor do lembrete {n}',
@@ -623,26 +631,29 @@ export const pt: Catalog = {
   'settings.past.remove': 'Removê-los {days} dias depois de terminarem',
 
   // ── Data & privacy rows ────────────────────────────────────────────
-  'settings.privacy.erase': 'Apagar eventos sincronizados',
+  'settings.privacy.erase': 'Apagar eventos do seu calendário',
   'settings.privacy.eraseOwnTarget':
     'Remove os eventos que o KickOffCal adicionou a {calendar}, incluindo os passados. Nada mais nele é alterado.',
   'settings.privacy.eraseOurs':
     'Remove o calendário KickOffCal e todos os eventos dele — incluindo os passados. Nada mais no seu calendário é alterado.',
   'settings.privacy.eraseResync':
-    'Se a sincronização continuar conectada, eventos futuros serão adicionados de novo.',
+    'Se o seu calendário continuar conectado, eventos futuros serão adicionados de novo.',
   'settings.privacy.eraseAction': 'Apagar',
   'settings.privacy.eraseFailed_one':
     '{n} evento não pôde ser removido — tente de novo',
   'settings.privacy.eraseFailed_other':
     '{n} eventos não puderam ser removidos — tente de novo',
-  'settings.privacy.nothingToErase': 'Nada sincronizado para apagar',
-  'settings.privacy.erased': 'Eventos sincronizados apagados',
+  'settings.privacy.resetEraseFailed_one':
+    '{n} evento não pôde ser removido do seu calendário — nada foi apagado. Tente de novo.',
+  'settings.privacy.resetEraseFailed_other':
+    '{n} eventos não puderam ser removidos do seu calendário — nada foi apagado. Tente de novo.',
+  'settings.privacy.nothingToErase': 'Nada no seu calendário para apagar',
+  'settings.privacy.erased': 'Eventos removidos do seu calendário',
   'settings.privacy.deleteTitle': 'Excluir meus dados e redefinir',
   'settings.privacy.deleteA11y': 'Excluir meus dados e redefinir',
   'settings.privacy.deleteBody':
     'Remove tudo o que este app guarda sobre você — o que você segue, as configurações e o cadastro no servidor — e começa do zero.',
-  'settings.privacy.alsoErase':
-    'Apagar também os eventos sincronizados do meu calendário',
+  'settings.privacy.alsoErase': 'Remover também os eventos do KickOffCal do meu calendário',
   'settings.privacy.cantUndo': 'Isso não pode ser desfeito.',
   'settings.privacy.deleteAction': 'Excluir',
   'settings.privacy.deleteMyData': 'Excluir meus dados',
@@ -652,9 +663,8 @@ export const pt: Catalog = {
   'settings.status.underHourAgo': 'há menos de uma hora',
   'settings.status.hoursAgo': 'há {n}h',
   'settings.status.daysAgo': 'há {n}d',
-  'settings.status.deviceNotSynced': 'Este aparelho: ainda não sincronizado',
-  'settings.status.deviceSynced':
-    'Última sincronização deste aparelho: {when}',
+  'settings.status.deviceNotSynced': 'Este aparelho: calendário ainda não atualizado',
+  'settings.status.deviceSynced': 'Última atualização do calendário neste aparelho: {when}',
   'settings.status.nothingFollowed': 'Fontes de jogos: nada seguido ainda',
   'settings.status.freshnessUnknown':
     'Fontes de jogos: atualização desconhecida',
@@ -703,9 +713,11 @@ export const pt: Catalog = {
   'reminders.notify': 'Avisar-me antes dos jogos',
   'reminders.notification.body': 'Começa em {when}',
   'registry.ceiling': 'Atualizações em segundo plano pausadas: demasiados seguimentos',
+  'registry.tooMany':
+    'Seguindo coisas demais para manter tudo em dia ({n} de {limit}). Deixe de seguir algo e isso se resolve.',
 
   // ── Round 5 Stage 3: paywall, purchase outcomes, subscription state ──
-  'paywall.headline': 'Sincroniza com o teu calendário',
+  'paywall.headline': 'Adiciona os jogos ao teu calendário',
   'paywall.lockSync': 'Todos os jogos no teu calendário, sempre atualizados',
   'paywall.lockReminders': 'Três lembretes',
   'paywall.lockColour': 'Cor do calendário',

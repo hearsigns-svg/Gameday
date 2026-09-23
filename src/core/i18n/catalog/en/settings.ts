@@ -47,6 +47,9 @@ export const settingsStrings = {
     'Your fixtures take the colour of {calendar}, which is yours to set in your calendar app.',
   'settings.calendar.newFollows': 'Add new follows to your calendar',
   'settings.calendar.newFollowsCaption': 'Applies to follows you add from now on.',
+  'settings.calendar.onDeviceOnly': 'On this device only — won’t appear on your other devices',
+  'settings.calendar.onYourDevices': '{account} — appears on your other devices',
+  'settings.calendar.alongsideYours': '{account} — fixtures appear alongside your own events',
   'settings.calendar.colourApplied': 'Calendar colour is now {colour}',
   'settings.calendar.colourSaved':
     'Colour saved — applies when your calendar connects',
@@ -70,7 +73,7 @@ export const settingsStrings = {
 
   // ── Events section ─────────────────────────────────────────────────
   'settings.events.footnote':
-    'Timed events run kick-off to full time. Changes apply to every synced fixture on the next sync.',
+    'Timed events run kick-off to full time. Changes apply to every fixture in your calendar the next time it updates.',
   'settings.events.style': 'Event style',
   'settings.events.timed': 'Timed',
   'settings.events.allDay': 'All-day',
@@ -80,7 +83,7 @@ export const settingsStrings = {
 
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Reminders',
-  'settings.reminders.footnote': 'Changes apply on the next sync.',
+  'settings.reminders.footnote': 'Changes apply the next time your calendar updates.',
   'settings.reminders.daysWithoutDates': 'Days without dates',
   'settings.reminders.slotA11y': 'Reminder {n}, {value}',
   'settings.reminders.slotValueA11y': 'Reminder {n} value',
@@ -111,25 +114,29 @@ export const settingsStrings = {
   'settings.past.remove': 'Remove them {days} days after they finish',
 
   // ── Data & privacy rows ────────────────────────────────────────────
-  'settings.privacy.erase': 'Erase synced events',
+  'settings.privacy.erase': 'Erase events from your calendar',
   'settings.privacy.eraseOwnTarget':
     'Removes the events KickOffCal added to {calendar}, including past ones. Nothing else in it is touched.',
   'settings.privacy.eraseOurs':
     'Removes the KickOffCal calendar and every event in it — past ones included. Nothing else in your calendar is touched.',
   'settings.privacy.eraseResync':
-    'If sync stays connected, future events are added again.',
+    'If your calendar stays connected, future events are added again.',
   'settings.privacy.eraseAction': 'Erase',
   'settings.privacy.eraseFailed_one':
     '{n} event couldn’t be removed — try again',
   'settings.privacy.eraseFailed_other':
     '{n} events couldn’t be removed — try again',
-  'settings.privacy.nothingToErase': 'Nothing synced to erase',
-  'settings.privacy.erased': 'Synced events erased',
+  'settings.privacy.resetEraseFailed_one':
+    '{n} event couldn’t be removed from your calendar — nothing was deleted. Try again.',
+  'settings.privacy.resetEraseFailed_other':
+    '{n} events couldn’t be removed from your calendar — nothing was deleted. Try again.',
+  'settings.privacy.nothingToErase': 'Nothing in your calendar to erase',
+  'settings.privacy.erased': 'Events removed from your calendar',
   'settings.privacy.deleteTitle': 'Delete my data & reset',
   'settings.privacy.deleteA11y': 'Delete my data and reset',
   'settings.privacy.deleteBody':
     'Removes everything this app holds about you — follows, settings and the server-side registration — and starts over.',
-  'settings.privacy.alsoErase': 'Also erase synced events from my calendar',
+  'settings.privacy.alsoErase': 'Also remove KickOffCal events from my calendar',
   'settings.privacy.cantUndo': 'This can’t be undone.',
   'settings.privacy.deleteAction': 'Delete',
   'settings.privacy.deleteMyData': 'Delete my data',
@@ -139,8 +146,8 @@ export const settingsStrings = {
   'settings.status.underHourAgo': 'under an hour ago',
   'settings.status.hoursAgo': '{n}h ago',
   'settings.status.daysAgo': '{n}d ago',
-  'settings.status.deviceNotSynced': 'This device: not synced yet',
-  'settings.status.deviceSynced': 'This device last synced {when}',
+  'settings.status.deviceNotSynced': 'This device: calendar not updated yet',
+  'settings.status.deviceSynced': 'This device last updated your calendar {when}',
   'settings.status.nothingFollowed': 'Fixture sources: nothing followed yet',
   'settings.status.freshnessUnknown': 'Fixture sources: freshness unknown',
   'settings.status.sourcesConfirmed': 'Fixture sources last confirmed {when}',
@@ -191,9 +198,11 @@ export const settingsStrings = {
   'reminders.notify': 'Notify me before fixtures',
   'reminders.notification.body': 'Starts in {when}',
   'registry.ceiling': 'Background updates paused: too many follows',
+  'registry.tooMany':
+    'Too many follows to keep up to date ({n} of {limit}). Unfollow something and this will clear.',
 
   // ── Round 5 Stage 3: paywall, purchase outcomes, subscription state ──
-  'paywall.headline': 'Sync to your calendar',
+  'paywall.headline': 'Add fixtures to your calendar',
   'paywall.lockSync': 'Every fixture in your calendar, kept up to date',
   'paywall.lockReminders': 'Three reminder slots',
   'paywall.lockColour': 'Calendar colour',

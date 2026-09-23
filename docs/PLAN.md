@@ -245,7 +245,7 @@ silent).
   then `node scripts/refresh-team-directory.mjs --apply`. Client
   degrades cleanly until then. Deferred: Schedule polish, Following
   swipe-actions, per-follow scope beyond race-only.
-- [~] 2026-09-23 owner brief "Per-follow calendar control and motorsport
+- [x] 2026-09-23 owner brief "Per-follow calendar control and motorsport
   sessions" (six stages, DECISIONS 2026-09-23 entries carry the detail):
   - [x] Stage 1 — `calendar: in|out` on every follow, migration to in, the
     pure inclusion rule routed through the planner (iOS upgrade 0/0/0).
@@ -263,7 +263,8 @@ silent).
     session data). iOS verified. OWNER: deploy `functions:pollF1` (the
     classifier refused the agent's deploy) — the client reads the F1 id
     slug until the stamped field lands. Android pending the Pixel.
-  - [ ] Stage 6 — "sync" retired from user-facing copy.
+  - [x] Stage 6 — "sync" retired from user-facing copy (guard test on
+    every catalog value). iOS verified.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

@@ -4965,3 +4965,26 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   sessions as before. The calendar holds no past F1 sessions, so "lowering
   removes only future sessions" is pinned by the planner test (a finished
   session survives All → Race only). Android blocked: no device.
+- 2026-09-23 — **Per-follow calendar control, Stage 6: "sync" retired
+  from every word the app says.** The app speaks of adding to your
+  calendar, being in your calendar and being removed from it; Connect /
+  Disconnect Google Calendar stays (it never said sync). Thirteen catalog
+  values rewritten in all six languages (calendar.priming.googleNote,
+  settings.events.footnote, settings.reminders.footnote, the five
+  settings.privacy erase lines, settings.status.deviceNotSynced /
+  deviceSynced, paywall.headline, core.status.calendarOff /
+  notSynced — Italian's calendarOff never said it); five hardcoded
+  English strings that did moved INTO the catalog with translations
+  (messageOf's "A sync is already running." and the Google auth-expired
+  line, the engine's "Sync failed — will retry", the device-registry
+  follow limit, the account-reset erase failure) and the calendar-target
+  captions with them (all three, so the one function is not half
+  localised). Keys keep their names — they are code. A guard test fails
+  the build if any catalog VALUE in any language says sync / sincroni /
+  synchroni again (defeated on purpose with the old German "Kalender-Sync
+  ist aus": it failed; restored: it passed). NOT CHANGED, not
+  user-facing: the development-only sync-gate override control
+  (rendered under __DEV__ only), provider User-Agent strings and the
+  silent-push data type on the server. The hosted privacy-policy draft
+  said "the app's sync runs"; the file now says "calendar updates" — the
+  live page changes when the owner deploys hosting.

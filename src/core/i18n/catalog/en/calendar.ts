@@ -187,7 +187,7 @@ export const calendarStrings = {
     'Calendar access is turned off for KickOffCal. Allow it in Settings, then come back — your fixtures are waiting.',
   'calendar.priming.tryAgain': '{message} Try again in a moment.',
   'calendar.priming.googleNote':
-    'Calendar sync needs a Google sign-in on Android. Without it, your fixtures live in the app.',
+    'Adding fixtures to your calendar needs a Google sign-in on Android. Without it, your fixtures live in the app.',
   'calendar.priming.openSettings': 'Open Settings',
   'calendar.priming.connecting': 'Connecting…',
   'calendar.priming.connectGoogle': 'Connect Google Calendar',

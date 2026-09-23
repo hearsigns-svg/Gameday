@@ -292,7 +292,7 @@ async function withSyncLock<T>(
     return result;
   } catch (e) {
     // Nothing inside may leak an uncaught rejection to the UI.
-    lastErrorMessage = 'Sync failed — will retry';
+    lastErrorMessage = t('core.status.updateFailed');
     lastErrorKindValue = 'unknown';
     // Same lesson as the Result branch above, for the THROW exit: this
     // was the one failure path with no logcat line, which made "a run

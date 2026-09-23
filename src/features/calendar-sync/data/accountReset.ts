@@ -11,6 +11,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteUser, signOut } from 'firebase/auth';
 import { auth, functionsBaseUrl } from '../../../core/firebase';
+import { tn } from '../../../core/i18n';
 import { err, ok, Result } from '../../../core/result';
 import { wipeAllLocalData } from '../../../core/storage';
 import { activeBackend } from './calendarBackend';
@@ -129,7 +130,7 @@ export async function deleteAllDataAndReset(opts: {
     if (erased.value.failed > 0) {
       return err({
         kind: 'unknown',
-        message: `${erased.value.failed} synced ${erased.value.failed === 1 ? 'event' : 'events'} couldn’t be removed — nothing was deleted. Try again.`,
+        message: tn('settings.privacy.resetEraseFailed', erased.value.failed),
       });
     }
   }

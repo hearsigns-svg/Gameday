@@ -6,6 +6,8 @@
 // modules, no I/O — the driver stays thin and this is what the tests
 // pin.
 
+import { t } from '../../../core/i18n';
+
 export type SourceKind = 'cloud' | 'device' | 'unwritable';
 
 // expo-calendar SourceType values (verified in 57.0.1).
@@ -71,14 +73,14 @@ export interface TargetDescription {
 
 export function consequenceForTarget(d: TargetDescription): string {
   if (d.sourceKind === 'device') {
-    return "On this device only — won't appear on your other devices";
+    return t('settings.calendar.onDeviceOnly');
   }
   return d.ours
-    ? `${d.accountLabel} — syncs to your other devices`
-    : `${d.accountLabel} — fixtures appear alongside your own events`;
+    ? t('settings.calendar.onYourDevices', { account: d.accountLabel })
+    : t('settings.calendar.alongsideYours', { account: d.accountLabel });
 }
 
-// "KickOffCal · iCloud — syncs to your other devices". The single line
+// "KickOffCal · iCloud — appears on your other devices". The single line
 // the Preferences row and the picker header both show.
 export function targetSummary(
   d: TargetDescription & { label: string },

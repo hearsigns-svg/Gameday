@@ -83,7 +83,7 @@ describe('the stored target describes itself truthfully', () => {
         accountLabel: 'iCloud',
         ours: true,
       }),
-    ).toBe('iCloud — syncs to your other devices');
+    ).toBe('iCloud — appears on your other devices');
   });
 
   it('says a user calendar mixes our fixtures in with their events', () => {
@@ -104,7 +104,7 @@ describe('the stored target describes itself truthfully', () => {
         ours,
       });
       expect(line).toBe(
-        "On this device only — won't appear on your other devices",
+        "On this device only — won’t appear on your other devices",
       );
       expect(line).not.toMatch(/sync/i);
     }
@@ -136,7 +136,7 @@ describe('the stored target describes itself truthfully', () => {
         sourceKind: 'cloud',
         ours: true,
       }),
-    ).toBe('KickOffCal · iCloud — syncs to your other devices');
+    ).toBe('KickOffCal · iCloud — appears on your other devices');
   });
 });
 

@@ -91,7 +91,10 @@ need a new component is a screen to question first.
 ## Voice
 
 The app speaks like a person, not a diff. "Calendar up to date · checked
-5 min ago", never "0 added · 0 updated · 0 removed". Honest unglamorous
+5 min ago", never "0 added · 0 updated · 0 removed". Never "sync"
+(2026-09-23): things are added to your calendar, are in your calendar, or
+are removed from your calendar — a guard test holds every catalog value
+to it. Honest unglamorous
 states are part of the product's trust promise: off-season ("no upcoming
 fixtures yet"), TBC times ("Time TBC", italic), postponements, permission
 revoked, offline — every one specified, none left to chance.

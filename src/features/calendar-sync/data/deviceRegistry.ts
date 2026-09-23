@@ -110,9 +110,10 @@ export async function registerDevice(): Promise<void> {
     if (overflow) {
       // Fail loudly and STOP. Attempting the write would be rejected by
       // rules anyway; the point is that the device now knows, and says so.
-      const message =
-        `Too many follows to keep in sync (${Math.max(overflow.followKeys, overflow.pollPaths)} of ${overflow.limit}). ` +
-        'Unfollow something and this will clear.';
+      const message = t('registry.tooMany', {
+        n: Math.max(overflow.followKeys, overflow.pollPaths),
+        limit: overflow.limit,
+      });
       console.error(`[kickoffcal] device registration blocked: ${message}`);
       setRegistryError(message);
       // VISIBLE at the ceiling (Round 5 ruling 8): once per app session,

@@ -1,5 +1,7 @@
 // Typed results at the data boundary — UI never sees raw throws.
 
+import { t } from './i18n';
+
 export type Result<T, E extends AppError = AppError> =
   | { ok: true; value: T }
   | { ok: false; error: E };
@@ -53,7 +55,7 @@ export function messageOf(e: AppError): string {
     case 'not-found':
       return `Could not find ${e.what}.`;
     case 'sync-in-progress':
-      return 'A sync is already running.';
+      return t('core.error.alreadyUpdating');
     case 'suspect-empty':
       return 'Fixture service returned nothing — calendar left untouched.';
     case 'scan-anomaly':
@@ -61,7 +63,7 @@ export function messageOf(e: AppError): string {
       // would be a lie, and acting on it would delete real events.
       return 'Could not read your calendar — nothing was changed.';
     case 'auth-expired':
-      return 'Google sign-in expired — reconnect to keep your calendar in sync.';
+      return t('core.error.authExpired');
     case 'unknown':
       // Never surface raw SDK text: long, jargon-laden, and sometimes
       // contains developer instructions. Callers put detail in logs.
