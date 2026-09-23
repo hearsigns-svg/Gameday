@@ -1414,47 +1414,54 @@ export function SportCard(props: {
   expansion?: ReactNode;
   // Read by assistive tech when the tile expands rather than navigates.
   accessibilityExpanded?: boolean;
+  // A control that lives INSIDE the tile at its right-hand end — the
+  // Following row's calendar glyph (owner ruling 2026-09-23, the hero
+  // card's placement). It is a SIBLING of the tile's press target, laid
+  // over the tile's right end, never inside it: a tap on it never opens
+  // or lights the tile. The tile's content stops short of its target.
+  trailing?: ReactNode;
 }) {
   const t = useTheme();
   const { press, setPress } = usePressFade();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel}
-      accessibilityState={{
-        ...(props.disabled ? { disabled: true } : {}),
-        ...(props.accessibilityExpanded !== undefined
-          ? { expanded: props.accessibilityExpanded }
-          : {}),
-      }}
-      disabled={props.disabled === true}
-      onPress={props.onPress}
-      onPressIn={() => setPress(true)}
-      onPressOut={() => setPress(false)}
-      style={[
-        styles.sportCard,
-        // An ODD grid used to hand the last sport a full-width tile —
-        // the "double" Olympics tile was this layout accident, no
-        // recorded reason behind it (Round 3 A5/B6). Capped to the
-        // two-across geometry; the picker's fullWidth tiles opt out.
-        !props.fullWidth && styles.sportCardGridCap,
-        props.disabled === true && { opacity: 0.45 },
-        // Uniform collapsed height; an EXPANSION grows the card below the
-        // row (the height rides on the row, never on the card — a fixed
-        // card height clipped the [Fixtures | Teams] strip to a sliver).
-        props.rowHeight !== undefined && { minHeight: props.rowHeight },
-        props.fullWidth && {
-          flexBasis: 0,
-          flexGrow: 1,
-          flexShrink: 1,
-          // Without this a long label sets the tile's minimum width and
-          // the control is pushed off the screen edge — measured, on
-          // "Other tournaments" beside a Follow all.
-          minWidth: 0,
-        },
-        { backgroundColor: t.surfaceRaised, borderColor: t.border },
-      ]}
-    >
+  const cardStyle = [
+    styles.sportCard,
+    // An ODD grid used to hand the last sport a full-width tile —
+    // the "double" Olympics tile was this layout accident, no
+    // recorded reason behind it (Round 3 A5/B6). Capped to the
+    // two-across geometry; the picker's fullWidth tiles opt out.
+    !props.fullWidth && styles.sportCardGridCap,
+    props.disabled === true && { opacity: 0.45 },
+    // Uniform collapsed height; an EXPANSION grows the card below the
+    // row (the height rides on the row, never on the card — a fixed
+    // card height clipped the [Fixtures | Teams] strip to a sliver).
+    props.rowHeight !== undefined && { minHeight: props.rowHeight },
+    props.fullWidth && {
+      flexBasis: 0,
+      flexGrow: 1,
+      flexShrink: 1,
+      // Without this a long label sets the tile's minimum width and
+      // the control is pushed off the screen edge — measured, on
+      // "Other tournaments" beside a Follow all.
+      minWidth: 0,
+    },
+    { backgroundColor: t.surfaceRaised, borderColor: t.border },
+  ];
+  const pressProps = {
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: props.accessibilityLabel,
+    accessibilityState: {
+      ...(props.disabled ? { disabled: true } : {}),
+      ...(props.accessibilityExpanded !== undefined
+        ? { expanded: props.accessibilityExpanded }
+        : {}),
+    },
+    disabled: props.disabled === true,
+    onPress: props.onPress,
+    onPressIn: () => setPress(true),
+    onPressOut: () => setPress(false),
+  };
+  const body = (
+    <>
       {/* The same tonal, brief press the rows use — the tile's edge says
           "pressable", the wash says "pressed". */}
       <Animated.View
@@ -1469,6 +1476,7 @@ export function SportCard(props: {
           styles.sportCardRow,
           props.compact && styles.sportCardRowCompact,
           props.rowHeight !== undefined && { height: props.rowHeight },
+          props.trailing ? { paddingRight: touchTarget + spacing.xs } : null,
         ]}
       >
       <GlyphTile
@@ -1513,7 +1521,27 @@ export function SportCard(props: {
       </View>
       </View>
       {props.expansion}
-    </Pressable>
+    </>
+  );
+  if (!props.trailing) {
+    return (
+      <Pressable {...pressProps} style={cardStyle}>
+        {body}
+      </Pressable>
+    );
+  }
+  // The shell carries the tile's look; the press target fills it; the
+  // trailing control sits over the right end as the press target's
+  // sibling.
+  return (
+    <View style={cardStyle}>
+      <Pressable {...pressProps} style={styles.sportCardPress}>
+        {body}
+      </Pressable>
+      <View style={styles.sportCardTrailing} pointerEvents="box-none">
+        {props.trailing}
+      </View>
+    </View>
   );
 }
 
@@ -2264,6 +2292,16 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingVertical: spacing.s,
     gap: spacing.s,
+  },
+  // The press target inside a shell that also holds a trailing control.
+  sportCardPress: { flexGrow: 1 },
+  // A trailing control's lane: the tile's right end, vertically centred.
+  sportCardTrailing: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: spacing.xs,
+    justifyContent: 'center',
   },
   statusChip: {
     flexDirection: 'row',

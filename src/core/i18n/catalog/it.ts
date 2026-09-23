@@ -146,10 +146,6 @@ export const it: Catalog = {
     'Finali, semifinali e quarti, dove i dati indicano il turno. Il tabellone WTA lo indica; la maggior parte dei match maschili non riporta ancora il turno, quindi un torneo solo maschile può fornire soltanto le note di inizio e fine.',
 
   // ── Following (manage) ────────────────────────────────────────────
-  // Row captions under a sport header (the header names the sport).
-  'follows.following.noUpcoming': 'Ancora nessuna partita in programma',
-  'follows.following.upcoming_one': '{n} in programma',
-  'follows.following.upcoming_other': '{n} in programma',
   'follows.following.captionNoUpcoming':
     '{sport} · ancora nessuna partita in programma',
   'follows.following.captionUpcoming_one': '{sport} · {n} in programma',
@@ -429,10 +425,6 @@ export const it: Catalog = {
   'calendar.control.inA11y': '{name} è nel tuo calendario',
   'calendar.control.added': '{name} ora è nel tuo calendario',
   'calendar.control.removed': '{name} non è più nel tuo calendario',
-  'calendar.control.sportAdded': '{sport}: ora è tutto nel tuo calendario',
-  'calendar.control.sportRemoved': '{sport}: tutto rimosso dal tuo calendario',
-  'calendar.control.sportAddA11y': 'Aggiungi tutto al calendario: {sport}',
-  'calendar.control.sportInA11y': '{sport}: è tutto nel tuo calendario',
   'calendar.control.failed': 'Impossibile aggiornare il calendario. Riprova.',
   'calendar.card.sessions': 'Sessioni',
   'calendar.sessions.race': 'Solo gara',

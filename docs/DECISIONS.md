@@ -4998,3 +4998,25 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   next pass read the stamped field and changed nothing (0 created / 0
   updated / 0 deleted; the calendar identical). The id-slug fallback stays
   as the safety net for documents outside the feed.
+- 2026-09-23 — **Owner ruling: the Following page returns to its previous
+  layout, with the calendar glyph moved into the tile.** Reverted: the
+  sport section headers and their calendar glyphs are gone — one flat
+  list again; each row's subtitle is "<Sport> · N upcoming" (or "<Sport>
+  · no upcoming fixtures yet"); the Following button is back to the right
+  of each tile, outside it, with its one-tap unfollow and Undo row. Kept
+  and moved: the calendar glyph (calendar-plus = not in your calendar,
+  calendar-check = in it) and its toasts, now INSIDE the tile at its
+  right-hand end, before the Following button — the hero card's
+  placement. It sits beside the tile's press target, never inside it
+  (SportCard's new `trailing` slot: a shell carries the tile's look, the
+  press target fills it, the control is laid over the right end), so a
+  tap on it never opens or lights the tile; its own target is the
+  platform minimum (44pt iOS, 48dp Android). This drops the sport-header
+  control: TWO control points remain — per follow (hero card and
+  Following row) and the Settings default for new follows. This
+  supersedes the Stage 3 entry's page layout, its "row shows only the
+  entity and the glyph", "Unfollow stays on the hero card" reading and
+  the header's mixed-state rule; the Stage 3 delete cap and the store's
+  change notification stand. Removed with it: the sport-section module
+  and its test, the control's header mode and its four strings, and the
+  three sport-less caption strings, in all six languages.

@@ -68,8 +68,8 @@ const KEY_V2 = 'follows.v2';
 const KEY_V1 = 'follows.v1';
 
 // Screens and controls that must agree the moment a follow changes — a
-// calendar glyph tapped on a hero card repaints the Following row and
-// its sport header at once, before any sync runs. Fired by every write
+// calendar glyph tapped on a hero card repaints the Following row at
+// once, before any sync runs. Fired by every write
 // below; never by the read path's one-time v1 migration.
 type FollowsListener = () => void;
 const followsListeners = new Set<FollowsListener>();

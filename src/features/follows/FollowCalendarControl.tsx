@@ -1,7 +1,8 @@
 // The calendar glyph wired to the follow store (owner brief "Per-follow
-// calendar control", 2026-09-23). One vocabulary, three places: a hero
-// card (that one follow), a Following row (that one follow), a
-// Following sport header (every follow under it).
+// calendar control", 2026-09-23). One vocabulary, two places: a hero
+// card and a Following row, each acting on that one follow (a joint
+// tennis card on both of its followed draws). The sport-header control
+// was dropped by the owner the same day.
 //
 // The glyph flips the moment it is tapped — the store changes before the
 // sync that writes the calendar starts — and a toast confirms when the
@@ -23,16 +24,13 @@ import { targetsCalendarState } from './domain/calendarTargets';
 import { setCalendar } from './followActions';
 
 export function FollowCalendarControl(props: {
-  // The follows this glyph acts on — one for a card or a row, every
-  // follow under a sport header, both followed draws of a joint card.
+  // The follows this glyph acts on — one for a card or a Following row,
+  // both followed draws of a joint tennis card.
   keys: readonly string[];
-  // What the labels and toasts call it: the follow's name, or the sport's
-  // for a header.
+  // What the labels and toasts call it: the follow's name.
   name: string;
   variant: 'poster' | 'row';
   theme?: TeamTheme;
-  // A sport header speaks for everything under it ("All Football …").
-  scope?: 'follow' | 'sport';
 }) {
   const [, repaint] = useState(0);
   // Taps are never blocked while a write is in flight — the glyph always
@@ -42,16 +40,15 @@ export function FollowCalendarControl(props: {
   const tapSeq = useRef(0);
   useEffect(() => subscribeSync(() => repaint((n) => n + 1)), []);
   // Every glyph on screen agrees the moment any of them is tapped — the
-  // hero's and the Following row's, a row's and its sport header's.
+  // hero card's and the Following row's.
   useEffect(() => subscribeFollows(() => repaint((n) => n + 1)), []);
   const wanted = new Set(props.keys);
   const follows = loadFollowables().filter((f) => wanted.has(f.key));
   // Shown only while the entity is followed.
   if (follows.length === 0) return null;
-  // ✓ only when every target is in (a joint card's two draws, a header's
-  // whole sport); a tap on a mixed set puts all of them in.
+  // ✓ only when every target is in (a joint card's two draws); a tap on
+  // a mixed set puts all of them in.
   const state = targetsCalendarState(follows);
-  const sport = props.scope === 'sport';
 
   const onPress = async () => {
     const next = state === 'in' ? 'out' : 'in';
@@ -72,13 +69,9 @@ export function FollowCalendarControl(props: {
       return;
     }
     showToast({
-      message: sport
-        ? t(next === 'in' ? 'calendar.control.sportAdded' : 'calendar.control.sportRemoved', {
-            sport: props.name,
-          })
-        : t(next === 'in' ? 'calendar.control.added' : 'calendar.control.removed', {
-            name: props.name,
-          }),
+      message: t(next === 'in' ? 'calendar.control.added' : 'calendar.control.removed', {
+        name: props.name,
+      }),
     });
   };
 
@@ -87,15 +80,10 @@ export function FollowCalendarControl(props: {
       state={state}
       variant={props.variant}
       {...(props.theme ? { theme: props.theme } : {})}
-      accessibilityLabel={
-        sport
-          ? t(state === 'in' ? 'calendar.control.sportInA11y' : 'calendar.control.sportAddA11y', {
-              sport: props.name,
-            })
-          : t(state === 'in' ? 'calendar.control.inA11y' : 'calendar.control.addA11y', {
-              name: props.name,
-            })
-      }
+      accessibilityLabel={t(
+        state === 'in' ? 'calendar.control.inA11y' : 'calendar.control.addA11y',
+        { name: props.name },
+      )}
       onPress={() => void onPress()}
     />
   );

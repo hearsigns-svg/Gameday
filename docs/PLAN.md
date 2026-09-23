@@ -253,9 +253,11 @@ silent).
     expanded card) with toasts and revert-on-failure; "Remove from
     calendar" and "Add all ⇄ Remove all" retired. iOS verified; Android
     pending the Pixel.
-  - [x] Stage 3 — Following page grouped by sport, row + header glyphs;
-    preference removals under the per-pass delete cap. iOS verified;
-    Android pending the Pixel.
+  - [x] Stage 3 — Following row glyph; preference removals under the
+    per-pass delete cap. The sport grouping and header glyph shipped,
+    then were REVERTED by owner ruling the same day: flat list,
+    "<Sport> · N upcoming", Following button restored, glyph inside the
+    tile. iOS verified; Android pending the Pixel.
   - [x] Stage 4 — Settings default for new follows + starting state;
     honest follow toasts. iOS verified (all four table rows); Android
     pending the Pixel.

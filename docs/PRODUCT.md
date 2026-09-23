@@ -42,11 +42,10 @@ Rules:
   Warriors'; "Warriors out, Lakers in" keeps Warriors @ Lakers. Following
   and being in the calendar are separate: the app shows everything you
   follow. The calendar glyph (+ not in / ✓ in) sits on every hero card
-  whose entity is followed, every Following row, and every Following
-  sport header (✓ only when all of that sport's follows are in); the
-  Following page groups follows under their sport in browse order, with
-  Formula 1 under Motorsport and every Olympic follow in one Olympics
-  group.
+  whose entity is followed and inside every Following row, at the
+  tile's right-hand end before the Following button. There are two
+  control points: per follow (hero card, Following row) and the Settings
+  default for new follows. The Following page stays one flat list.
 - A NEW follow starts in if a broader followed thing that is in already
   covers it; otherwise it takes the Settings default "Add new follows to
   your calendar" (on by default; off in the free state). The default never

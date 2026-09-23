@@ -151,10 +151,6 @@ export const pt: Catalog = {
     'Finais, semifinais e quartas, quando os dados indicam a fase. O chaveamento da WTA indica; a maioria dos jogos masculinos ainda não traz fase, então um torneio só masculino pode entregar apenas as notas de início e fim.',
 
   // ── Following (manage) ────────────────────────────────────────────
-  // Row captions under a sport header (the header names the sport).
-  'follows.following.noUpcoming': 'Ainda sem próximos jogos',
-  'follows.following.upcoming_one': '{n} próximo',
-  'follows.following.upcoming_other': '{n} próximos',
   'follows.following.captionNoUpcoming': '{sport} · ainda sem próximos jogos',
   'follows.following.captionUpcoming_one': '{sport} · {n} próximo',
   'follows.following.captionUpcoming_other': '{sport} · {n} próximos',
@@ -433,10 +429,6 @@ export const pt: Catalog = {
   'calendar.control.inA11y': '{name} está no seu calendário',
   'calendar.control.added': '{name} agora está no seu calendário',
   'calendar.control.removed': '{name} não está mais no seu calendário',
-  'calendar.control.sportAdded': '{sport}: tudo agora está no seu calendário',
-  'calendar.control.sportRemoved': '{sport}: tudo foi removido do seu calendário',
-  'calendar.control.sportAddA11y': 'Adicionar tudo ao calendário: {sport}',
-  'calendar.control.sportInA11y': '{sport}: tudo está no seu calendário',
   'calendar.control.failed': 'Não foi possível atualizar seu calendário. Tente de novo.',
   'calendar.card.sessions': 'Sessões',
   'calendar.sessions.race': 'Só a corrida',

@@ -33,10 +33,6 @@ export const followsStrings = {
     'Finals, semi-finals and quarter-finals, where the data names rounds. The WTA draw names them; most men\u2019s matches carry no round marker yet, so a men-only tournament may deliver just its start and end notes.',
 
   // ── Following (manage) ────────────────────────────────────────────
-  // Row captions under a sport header (the header names the sport).
-  'follows.following.noUpcoming': 'No upcoming fixtures yet',
-  'follows.following.upcoming_one': '{n} upcoming',
-  'follows.following.upcoming_other': '{n} upcoming',
   'follows.following.captionNoUpcoming': '{sport} · no upcoming fixtures yet',
   'follows.following.captionUpcoming_one': '{sport} · {n} upcoming',
   'follows.following.captionUpcoming_other': '{sport} · {n} upcoming',

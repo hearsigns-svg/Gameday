@@ -10,8 +10,7 @@
 //
 // ONE EXCEPTION: a joint tennis tournament is ONE card for up to two
 // followed draws (Round 7 item 8), so its glyph acts on every followed
-// draw of that tournament, and reads ✓ only when all of them are in —
-// the same mixed-state rule the Following page's sport headers use.
+// draw of that tournament, and reads ✓ only when all of them are in.
 //
 // No match → no targets → no glyph ("shown only when the entity is
 // followed"): a pinned fixture nobody follows has nothing to toggle.

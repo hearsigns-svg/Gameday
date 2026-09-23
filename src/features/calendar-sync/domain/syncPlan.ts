@@ -364,8 +364,9 @@ export const DOWNGRADE_DELETE_CAP = 40;
 // lowering a tier or a session rung, removes "through the existing
 // ledger-scoped erase machinery under the delete cap"). A preference
 // removal is a ledgered, still-future event whose fixture is STILL IN
-// THE FETCH yet no longer wanted — one sport header can take a thousand
-// events out in one tap, which is exactly the burst the cap exists for.
+// THE FETCH yet no longer wanted — taking one league out can remove a
+// thousand events in one tap, which is exactly the burst the cap exists
+// for.
 // Removals of fixtures that left the fetch (an unfollow, a cancellation
 // the source dropped) keep their pre-brief uncapped path.
 export const PREFERENCE_DELETE_CAP = DOWNGRADE_DELETE_CAP;

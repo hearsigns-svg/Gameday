@@ -159,10 +159,6 @@ export const fr: Catalog = {
     'Finales, demi-finales et quarts, lorsque les données nomment les tours. Le tableau WTA les nomme\u00a0; la plupart des matchs masculins n\u2019ont pas encore de tour indiqué, un tournoi masculin peut donc ne livrer que ses notes de début et de fin.',
 
   // ── Following (manage) ────────────────────────────────────────────
-  // Row captions under a sport header (the header names the sport).
-  'follows.following.noUpcoming': 'Pas encore de matchs à venir',
-  'follows.following.upcoming_one': '{n} à venir',
-  'follows.following.upcoming_other': '{n} à venir',
   'follows.following.captionNoUpcoming':
     '{sport} · pas encore de matchs à venir',
   'follows.following.captionUpcoming_one': '{sport} · {n} à venir',
@@ -451,10 +447,6 @@ export const fr: Catalog = {
   'calendar.control.inA11y': '{name} est dans votre calendrier',
   'calendar.control.added': '{name} est maintenant dans votre calendrier',
   'calendar.control.removed': '{name} n’est plus dans votre calendrier',
-  'calendar.control.sportAdded': '{sport} : tout est maintenant dans votre calendrier',
-  'calendar.control.sportRemoved': '{sport} : tout a été retiré de votre calendrier',
-  'calendar.control.sportAddA11y': 'Tout ajouter au calendrier : {sport}',
-  'calendar.control.sportInA11y': '{sport} : tout est dans votre calendrier',
   'calendar.control.failed': 'Impossible de mettre à jour votre calendrier. Réessayez.',
   'calendar.card.sessions': 'Séances',
   'calendar.sessions.race': 'Course seule',
