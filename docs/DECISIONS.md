@@ -4988,3 +4988,13 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   silent-push data type on the server. The hosted privacy-policy draft
   said "the app's sync runs"; the file now says "calendar updates" — the
   live page changes when the owner deploys hosting.
+- 2026-09-23 — **Stage 5 server half landed.** The owner deployed
+  `functions:pollF1` (explicit target). After the two-minute rollout wait
+  the season was re-polled through the deployed function: 23 rounds, 115
+  sessions stored, no time or status changes (so no pushes). Firestore:
+  every one of the 45 future F1 sessions carries `sessionType`, all 115
+  stamped documents match the slug mapping, and the 55 unstamped 2026
+  documents are all past ones the feed no longer lists. The simulator's
+  next pass read the stamped field and changed nothing (0 created / 0
+  updated / 0 deleted; the calendar identical). The id-slug fallback stays
+  as the safety net for documents outside the feed.
