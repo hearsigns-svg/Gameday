@@ -125,14 +125,21 @@ export function localAthleteHits(
     }));
 }
 
-// Server rows first, in the server's order, then any local row the
-// server did not return (the index can be a day older and the server
-// caps differently) — one row per key.
+// THE ROWS ON SCREEN NEVER MOVE (found on the simulator 2026-09-23):
+// the device's rows paint first, and a tap aimed at one landed on a
+// different team when the server's answer arrived and reordered the
+// list under the finger ("warriors" → a follow of Winona State; the
+// server led with NCAA sides whose nickname alias matched exactly).
+// So the device's rows keep their places — refreshed IN PLACE with the
+// server's fields where both know a key, the server's being the fresher
+// — and rows only the server knows are appended below them.
 export function mergeHits<T extends { key: string }>(
   local: readonly T[],
   server: readonly T[] | null,
 ): T[] {
   if (!server) return [...local];
-  const seen = new Set(server.map((h) => h.key));
-  return [...server, ...local.filter((h) => !seen.has(h.key))];
+  const fromServer = new Map(server.map((h) => [h.key, h] as const));
+  const kept = local.map((h) => fromServer.get(h.key) ?? h);
+  const shown = new Set(local.map((h) => h.key));
+  return [...kept, ...server.filter((h) => !shown.has(h.key))];
 }

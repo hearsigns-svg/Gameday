@@ -73,13 +73,15 @@ test('short and empty queries and a missing index answer nothing', () => {
   expect(localTeamHits(null, 'liverpool')).toEqual([]);
 });
 
-test('merge: server rows lead in server order, local rows the server lacks follow, one row per key', () => {
+test('merge: the device\'s rows keep their places (refreshed in place), server-only rows append below', () => {
   const local = [{ key: 'a', v: 'local' }, { key: 'b', v: 'local' }];
-  const server = [{ key: 'b', v: 'server' }, { key: 'c', v: 'server' }];
+  const server = [{ key: 'c', v: 'server' }, { key: 'b', v: 'server' }];
   expect(mergeHits(local, server)).toEqual([
+    { key: 'a', v: 'local' },
     { key: 'b', v: 'server' },
     { key: 'c', v: 'server' },
-    { key: 'a', v: 'local' },
   ]);
   expect(mergeHits(local, null)).toEqual(local);
+  // Nothing on the device yet: the server's order stands.
+  expect(mergeHits([], server)).toEqual(server);
 });
