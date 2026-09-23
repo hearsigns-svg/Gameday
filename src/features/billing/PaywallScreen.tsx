@@ -31,6 +31,7 @@ import {
   PRIVACY_URL,
   TERMS_URL,
 } from '../../core/billing';
+import { notePaywallDeclined } from '../../core/paywall';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Paywall'>;
 
@@ -56,6 +57,7 @@ export function PaywallScreen({ navigation, route }: Props) {
 
   const decline = () => {
     void logPaywallDeclined(entry);
+    notePaywallDeclined();
     navigation.goBack();
   };
 

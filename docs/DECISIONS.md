@@ -4744,3 +4744,71 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   record, 16:45:37Z) and the Calendar store matched event for event; all
   9 follows read `calendar: "in"`. Android half blocked: the Pixel was
   not connected.
+- 2026-09-23 — **Per-follow calendar control, Stage 2: the calendar
+  glyph on hero cards** (owner brief "Per-follow calendar control and
+  motorsport sessions"). A two-state glyph top right inside every hero
+  card whose entity is followed — the Home carousel poster and the
+  expanded card: + (`calendar-plus-outline`, neutral) = not in your
+  calendar, a tap adds; ✓ (`calendar-check-outline`, brand accent `primary`
+  on a filled disc in the poster's on-colour) = in your calendar, a tap
+  removes. One outline family from the app's existing library
+  (MaterialCommunityIcons), both platforms; the states differ in SHAPE and
+  colour, never colour alone. Press target = the new `touchTarget` token
+  (44pt iOS / 48dp Android; the glyph draws smaller). Screen reader labels
+  "Add [Name] to calendar" / "[Name] is in your calendar"; no `checked`
+  state (it would announce the same fact twice).
+  GLYPH-ONLY EXCEPTION, scoped and deliberate: the house standard since
+  27C is the word, not the glyph, for follow controls (the "+" pin became
+  Add/Added). The calendar glyph is the ONE exception — it is a state
+  indicator as much as a control, it sits on posters and dense rows where a
+  word would crowd the title, and its label names the state. Follow ⇄
+  Following stays text everywhere.
+  NO-CHEVRON STANDARD: the glyph is a SIBLING of the surface's own press
+  target, never inside it (core HeroCard's `calendarControl` overlay; the
+  expanded card's corner view beside the poster's close Pressable), so a
+  tap on it never lights, opens or closes the card. Found on device: the
+  expanded card's dismiss handle had a FULL-WIDTH 22pt hit strip with 16pt
+  slop, drawn above the poster — it swallowed a tap on the glyph and closed
+  the card. The strip is now inset symmetrically from both sides so strip +
+  slop stop a spacing.s short of the glyph's target.
+  WHICH FOLLOW (pure, follows/domain/calendarTargets.ts): the card's
+  identity follow — the one whose crest and colour it already wears
+  (followIdentity) — else the most specific follow that matches it. A
+  joint tennis card acts on every followed draw of that tournament and
+  reads ✓ only when all are in. No matching follow → no glyph.
+  THE TAP: the preference changes at once (the glyph flips on the tap),
+  then one sync writes the difference and a toast confirms WHEN IT LANDS —
+  "[Name] added to your calendar" / "[Name] removed from your calendar". If
+  the pass fails (EventKit / REST / fetch), the preference reverts and the
+  toast reads "Couldn’t update your calendar. Try again." Only the latest
+  tap on a control speaks, and a failure never reverts a newer tap on the
+  same follow (per-key generation guard). A tap while a pass is already
+  running used to be read as success ("coalesced"); the new
+  `runSyncAwaited` hands the caller the verdict of the rerun queued behind
+  the running pass — the pass that actually carries the change (the waiter
+  registers synchronously with the queue flag; pinned against the real
+  engine lock, and the test fails when the queue-join is removed).
+  RETIRED: the hero card's "Remove from calendar" and the expansion's
+  "Add all ⇄ Remove all" master (both acted on EVENTS; the glyph acts on
+  the FOLLOW) and their six catalog keys, plus the long-orphaned
+  `calendar.card.alreadyInCalendar`. The per-match rows, the tournament
+  tier ladder and the M/W chips stay; they filter within a follow that is
+  in. ROWS NAME THE CALENDAR, NOT THE FOLLOW: an entity-page or Schedule
+  row a follow delivers but no `in` follow claims offers Add (a pin), not
+  Remove; the Schedule's dimmed-day dot covers days whose fixtures are all
+  out. PAYWALL: the free-state + opens the Premium offer through the one
+  gate, and the suppress-after-decline rule is now code
+  (core/paywall.ts, session-scoped): suppressed or no presenter → the
+  inline Premium line toasts and nothing changes. Taking out is never
+  gated.
+  Verified on the iOS simulator (Release build, 1,623 events): Warriors
+  ✓→+ removed exactly 76 events — every future Warriors game except the 6
+  against the Lakers (Lakers in keeps them, rule 2) — and nothing else
+  (NBA in + Warriors out correct); +→✓ restored the store event for event;
+  same on the rebuilt app; WTA Tour ✓→+ from the Home carousel removed 68
+  WTA events and nothing else without opening the card, and + restored
+  them; with calendar access revoked (a genuine EventKit failure — the
+  simulator has no airplane mode), + reverted to + with the failure toast
+  and the stored preference stayed out. Past events: this calendar holds
+  none (every synced event is still ahead), so the device check is vacuous
+  there; the planner's horizon tests pin it. Android blocked: no device.

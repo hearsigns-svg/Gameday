@@ -232,6 +232,9 @@ let syncRunning = false;
 // alive run must never be mistaken for an abandoned one.
 let syncHeartbeatAt = 0;
 let rerunQueued = false;
+// Callers waiting on the run queued behind the current one (see
+// runSyncAwaited). Handed that run's result when it completes.
+let queuedWaiters: Array<(r: Result<SyncOutcome>) => void> = [];
 
 // Called from every long-running loop so the lock can tell "still working"
 // from "died mid-flight". Deliberately NOT a per-op timeout: abandoning a
@@ -302,13 +305,34 @@ async function withSyncLock<T>(
     emit(false);
     if (rerunQueued) {
       rerunQueued = false;
-      void runSync();
+      const waiters = queuedWaiters;
+      queuedWaiters = [];
+      void runSync().then((r) => {
+        for (const w of waiters) w(r);
+      });
     }
   }
 }
 
 export function runSync(): Promise<Result<SyncOutcome>> {
   return withSyncLock(runSyncInner);
+}
+
+// runSync for a caller that must know how ITS change landed (the
+// per-follow calendar glyph reverts when the calendar write fails). A
+// run already in flight read the preferences before the change, so the
+// change lands in the rerun queued behind it — and this resolves with
+// THAT run's result instead of reading "coalesced" as success. The
+// waiter is registered synchronously with the queue flag, so the
+// running pass's finally can never hand the rerun out before it joins.
+export function runSyncAwaited(): Promise<Result<SyncOutcome>> {
+  if (syncRunning && !isRunAbandoned(syncHeartbeatAt, Date.now(), STALE_RUN_MS)) {
+    rerunQueued = true;
+    return new Promise((resolve) => {
+      queuedWaiters.push(resolve);
+    });
+  }
+  return runSync();
 }
 
 // Outbound channels other than the calendar (Round 5: system-notification

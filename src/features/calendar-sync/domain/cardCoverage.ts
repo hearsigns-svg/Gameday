@@ -28,6 +28,9 @@ export function tierChildrenOf(
   followedKeys: readonly string[],
   globalTier: TournamentTier,
   overrides: ReadonlyMap<string, TournamentTier> = new Map(),
+  // Which follow keys are `in` the calendar (per-follow calendar
+  // control) — shapes the parent the way the engine does. Default: all.
+  isIn: (key: string) => boolean = () => true,
 ): Fixture[] {
   return applyTournamentTiers(
     [parent],
@@ -35,6 +38,7 @@ export function tierChildrenOf(
     followedKeys,
     { byParent: new Map([[parent.id, children]]) },
     overrides,
+    isIn,
   ).filter((f) => f.parentFixtureId !== undefined);
 }
 

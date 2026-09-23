@@ -422,21 +422,12 @@ export const fr: Catalog = {
   // ── The expanded fixture card (FixtureCard.tsx) ────────────────────
   'calendar.card.loadFailed': 'Impossible de charger cet événement',
   'calendar.card.titleClose': '{title}. Fermer',
-  'calendar.card.removeFromCalendar': 'Retirer du calendrier',
-  'calendar.card.addToCalendar': 'Ajouter au calendrier',
   'calendar.card.removeTitleA11y': 'Retirer {title} de votre calendrier',
   'calendar.card.addTitleA11y': 'Ajouter {title} à votre calendrier',
-  'calendar.card.alreadyInCalendar': '{title} est déjà dans votre calendrier',
   'calendar.card.mens': 'Messieurs',
   'calendar.card.womens': 'Dames',
   'calendar.card.sexChipShown': 'Matchs {label}, affichés',
   'calendar.card.sexChipHidden': 'Matchs {label}, masqués',
-  'calendar.card.removeAllA11y':
-    'Retirer tous les matchs listés de votre calendrier',
-  'calendar.card.addAllA11y':
-    'Ajouter tous les matchs listés à votre calendrier',
-  'calendar.card.removeAll': 'Tout retirer',
-  'calendar.card.addAll': 'Tout ajouter',
   'calendar.card.reminder': 'Rappel',
   'calendar.card.optionSelected': '{label}, sélectionné',
   'calendar.card.useDefaultReminder': 'Utiliser mon rappel par défaut',
@@ -445,6 +436,16 @@ export const fr: Catalog = {
   'calendar.card.mainEvent': 'Combat principal',
   'calendar.card.added': 'Ajouté',
   'calendar.card.add': 'Ajouter',
+  // ── Per-follow calendar control (owner brief 2026-09-23) ──────────
+  'calendar.control.addA11y': 'Ajouter {name} au calendrier',
+  'calendar.control.inA11y': '{name} est dans votre calendrier',
+  'calendar.control.added': '{name} est maintenant dans votre calendrier',
+  'calendar.control.removed': '{name} n’est plus dans votre calendrier',
+  'calendar.control.sportAdded': '{sport} : tout est maintenant dans votre calendrier',
+  'calendar.control.sportRemoved': '{sport} : tout a été retiré de votre calendrier',
+  'calendar.control.sportAddA11y': 'Tout ajouter au calendrier : {sport}',
+  'calendar.control.sportInA11y': '{sport} : tout est dans votre calendrier',
+  'calendar.control.failed': 'Impossible de mettre à jour votre calendrier. Réessayez.',
   'calendar.card.close': 'Fermer',
 
   // ── Toasts (FixtureCard / ScheduleScreen) ──────────────────────────

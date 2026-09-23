@@ -31,7 +31,7 @@ import {
 import { t } from '../../../core/i18n';
 import { teamTheme, TeamTheme } from '../../../core/teamTheme';
 import { showToast } from '../../../core/toast';
-import { radius, spacing, type } from '../../../core/tokens';
+import { radius, spacing, touchTarget, type } from '../../../core/tokens';
 import { useColorSchemeMode } from '../../../core/useColorSchemeMode';
 import { isDateOnly, timeLabel } from '../../../core/when';
 import {
@@ -54,20 +54,29 @@ import { Fixture } from '../../fixtures/domain/fixture';
 import { isPast, timePrecisionOf } from '../../fixtures/domain/horizon';
 import { followedTennisSexes, TennisSex } from '../../fixtures/domain/tennisKeys';
 import { olympicGlyphForKeys } from '../../follows/domain/olympicGlyphs';
-import { tournamentTierOverridesFrom } from '../../follows/domain/followScopes';
-import { tierCoveredChildIds } from '../domain/cardCoverage';
+import {
+  followQueryKeys,
+  tournamentTierOverridesFrom,
+} from '../../follows/domain/followScopes';
+import { tierChildrenOf } from '../domain/cardCoverage';
 import {
   RowCalendarState,
   RowToggleOps,
   rowOn,
-  setRowsOps,
   toggleRowOps,
 } from '../domain/cardRowState';
+import { calendarTargetsFor } from '../../follows/domain/calendarTargets';
+import { FollowCalendarControl } from '../../follows/FollowCalendarControl';
 import { shortTimingNote } from '../../fixtures/domain/timingExplanation';
 import { followMarkUrl, hasServedMark } from '../../follows/data/browsePriority';
 import { identityFollow } from '../../follows/domain/followIdentity';
 import { sportByKey } from '../../follows/domain/sportsConfig';
-import { loadFollowables, loadFollowKeys } from '../../follows/data/followStore';
+import {
+  calendarPrefOf,
+  fixtureWantedByFollows,
+  loadFollowables,
+  loadFollowKeys,
+} from '../../follows/data/followStore';
 import {
   usePoolPhoto,
   useTournamentVenuePhoto,
@@ -414,10 +423,6 @@ export function FixtureCardBody(props: {
   const allDayChosen = allDayOverridden
     ? (settings[fixture.id]?.allDayReminder ?? null)
     : prefs.allDayReminder;
-  const excluded = isExcluded(fixture.id);
-  const pinned = isPinned(fixture.id);
-  const covered = fixture.followKeys.some((k) => loadFollowKeys().includes(k));
-  const inCalendar = !excluded && (covered || pinned);
   const colourCapable = calendarCapabilities().perEventColour;
 
   const applyReminder = (minutes: number | null | undefined) => {
@@ -447,66 +452,36 @@ export function FixtureCardBody(props: {
     at: new Date().toISOString(),
   });
 
-  const toggleCalendar = () => {
-    if (inCalendar) {
-      setExcluded(fixture.id, true);
-      if (pinned) {
-        setPinned(
-          pinPayload(
-            fixture.id,
-            fixture.title,
-            fixture.startUtc,
-            fixture.competitionId ?? '',
-          ),
-          false,
-        );
-      }
-      showToast({
-        message: t('calendar.toast.removed'),
-        action: {
-          label: t('calendar.toast.undo'),
-          onPress: () => {
-            setExcluded(fixture.id, false);
-            repaint();
-            void runSync();
-          },
-        },
-      });
-    } else {
-      setExcluded(fixture.id, false);
-      if (!covered && fixture.competitionId) {
-        setPinned(
-          pinPayload(
-            fixture.id,
-            fixture.title,
-            fixture.startUtc,
-            fixture.competitionId,
-          ),
-          true,
-        );
-      }
-      showToast({ message: t('calendar.toast.added') });
-    }
-    repaint();
-    void runSync();
-  };
-
-  // COVERED BY THE TIER TOO (Round 7 item 7): under "All matches" or
-  // "Key rounds" the tournament follow has already placed these rows,
-  // judged by the very pass the planner runs (domain/cardCoverage.ts).
-  const followedKeys = new Set(loadFollowKeys());
+  // COVERED MEANS IN THE CALENDAR BY PREFERENCE (per-follow calendar
+  // control, owner brief 2026-09-23): the inclusion rule over the row's
+  // own keys, or a tier copy the rule admits — the very pass and rule the
+  // planner runs (domain/cardCoverage.ts, follows/domain/
+  // calendarInclusion.ts). A row an `out` follow would have delivered
+  // reads "Add", because it is not in the calendar.
+  const wantedByFollows = fixtureWantedByFollows(follows);
+  const calendarInKeys = new Set(
+    follows.filter((f) => calendarPrefOf(f) === 'in').flatMap((f) => followQueryKeys(f)),
+  );
   const tierCovered: ReadonlySet<string> =
     cardParent && card
-      ? tierCoveredChildIds(
-          { ...cardParent, updatedAt: '' } as Fixture,
-          [...card, ...siblingSides.flatMap((s) => s.children)],
-          [...followedKeys],
-          prefs.tournamentTier,
-          tournamentTierOverridesFrom(follows),
+      ? new Set(
+          tierChildrenOf(
+            { ...cardParent, updatedAt: '' } as Fixture,
+            [...card, ...siblingSides.flatMap((s) => s.children)],
+            follows.flatMap((f) => followQueryKeys(f)),
+            prefs.tournamentTier,
+            tournamentTierOverridesFrom(follows),
+            (k) => calendarInKeys.has(k),
+          )
+            .filter((c) => wantedByFollows(c.followKeys))
+            .map((c) => c.id),
         )
       : new Set<string>();
   const entryCovered = (e: CardEntry) =>
-    e.followKeys.some((k) => followedKeys.has(k)) || tierCovered.has(e.id);
+    wantedByFollows(e.followKeys) || tierCovered.has(e.id);
+  // The per-follow calendar glyph acts on the entity this card IS —
+  // shown only while it is followed (follows/domain/calendarTargets.ts).
+  const glyphTargets = calendarTargetsFor(fixture.followKeys, follows, hasServedMark);
   // EVERY ROW IS ONE TWO-STATE TOGGLE (owner, 2026-09-03), whatever put
   // it in the calendar: a covered row removes through a per-event
   // exclusion — the planner honours it by id on the tier's copies, and
@@ -542,20 +517,6 @@ export function FixtureCardBody(props: {
         },
       });
     }
-    repaint();
-    void runSync();
-  };
-
-  // B2: the master acts on the VISIBLE (filtered) set only, and writes
-  // each row only what it needs. One sync for the whole batch.
-  const allOn =
-    visibleEntries.length > 0 && visibleEntries.every((e) => entryOn(e));
-  const toggleAll = () => {
-    const ops = setRowsOps(visibleEntries.map(rowState), !allOn);
-    visibleEntries.forEach((e, i) => applyRowOps(e, ops[i]));
-    showToast({
-      message: allOn ? t('calendar.toast.removed') : t('calendar.toast.added'),
-    });
     repaint();
     void runSync();
   };
@@ -613,6 +574,7 @@ export function FixtureCardBody(props: {
             top of the same object it was before the tap — and tapping it
             again closes the card, because the thing you tapped to open
             it is the thing you expect to tap to shut it. */}
+        <View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('calendar.card.titleClose', {
@@ -650,9 +612,26 @@ export function FixtureCardBody(props: {
             : {})}
           timingNote={note}
           {...(emojiMark ? { emojiMark } : {})}
+          {...(glyphTargets.length > 0 ? { reserveCorner: true } : {})}
           minHeight={HERO_MIN_HEIGHT}
         />
         </Pressable>
+        {/* The per-follow calendar glyph, top right — a SIBLING of the
+            poster's close target, so a tap on it never closes the card.
+            It replaces the card's old "Remove from calendar" and the
+            "Add all ⇄ Remove all" master: both acted on events, the
+            glyph acts on the follow. */}
+        {glyphTargets.length > 0 ? (
+          <View style={styles.cornerGlyph} pointerEvents="box-none">
+            <FollowCalendarControl
+              keys={glyphTargets.map((f) => f.key)}
+              name={glyphTargets.length === 1 ? glyphTargets[0].label : fixture.title}
+              variant="poster"
+              theme={theme}
+            />
+          </View>
+        ) : null}
+        </View>
 
         <Animated.View style={body}>
           {past ? null : (
@@ -705,48 +684,6 @@ export function FixtureCardBody(props: {
                   />
                 </>
               ) : null}
-              <Rule theme={theme} />
-              {/* THE WORDS ARE THE TARGET (Prompt 24 A2). This was a
-                  full-width 52pt pressable row, which put a destructive
-                  action exactly where a collapse tap lands — the owner
-                  removed real events trying to close the card. The
-                  visible outline now IS the boundary of the target,
-                  the same contract BoutRow's toggle already keeps. */}
-              <View style={styles.row}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    inCalendar
-                      ? t('calendar.card.removeTitleA11y', {
-                          title: fixture.title,
-                        })
-                      : t('calendar.card.addTitleA11y', {
-                          title: fixture.title,
-                        })
-                  }
-                  onPress={toggleCalendar}
-                  style={({ pressed }) => [
-                    styles.calendarToggle,
-                    { borderColor: theme.onGradient },
-                    pressed ? { opacity: 0.55 } : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      type.secondary,
-                      {
-                        fontWeight: '600',
-                        color: theme.onGradient,
-                        opacity: inCalendar ? 0.9 : 1,
-                      },
-                    ]}
-                  >
-                    {inCalendar
-                      ? t('calendar.card.removeFromCalendar')
-                      : t('calendar.card.addToCalendar')}
-                  </Text>
-                </Pressable>
-              </View>
             </>
           )}
 
@@ -772,44 +709,6 @@ export function FixtureCardBody(props: {
                   <View style={{ flex: 1 }} />
                 </View>
               ) : null}
-              {/* B2: one master over the visible set, wearing the same
-                  pill the per-match toggles wear. */}
-              <View style={styles.row}>
-                <View style={{ flex: 1 }} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    allOn
-                      ? t('calendar.card.removeAllA11y')
-                      : t('calendar.card.addAllA11y')
-                  }
-                  onPress={toggleAll}
-                  hitSlop={8}
-                  style={[
-                    styles.boutToggle,
-                    {
-                      borderColor: theme.onGradient,
-                      backgroundColor: allOn ? theme.onGradient : 'transparent',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      type.caption,
-                      {
-                        fontWeight: '700',
-                        color: allOn ? theme.gradient[1] : theme.onGradient,
-                      },
-                    ]}
-                    numberOfLines={1}
-                    maxFontSizeMultiplier={1.4}
-                  >
-                    {allOn
-                      ? t('calendar.card.removeAll')
-                      : t('calendar.card.addAll')}
-                  </Text>
-                </Pressable>
-              </View>
               {visibleEntries.map((e) => (
                 <BoutRow
                   key={e.id}
@@ -831,7 +730,7 @@ export function FixtureCardBody(props: {
         accessibilityRole="button"
         accessibilityLabel={t('calendar.card.close')}
         onPress={props.close}
-        hitSlop={16}
+        hitSlop={HANDLE_SLOP}
         style={styles.handleHit}
       >
         <View
@@ -1174,8 +1073,16 @@ function BoutRow(props: {
   );
 }
 
+// The dismiss handle's slop, and how far its strip stays from each side:
+// the glyph's corner (spacing.s in, a touch target wide), the slop, and
+// a spacing.s of clear air between the two targets.
+const HANDLE_SLOP = 16;
+const HANDLE_SIDE_INSET = spacing.s + touchTarget + HANDLE_SLOP + spacing.s;
+
 const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // Same corner as the collapsed card's glyph (core HeroCard.heroCorner).
+  cornerGlyph: { position: 'absolute', top: spacing.s, right: spacing.s },
   rule: { height: StyleSheet.hairlineWidth, marginHorizontal: spacing.l },
   row: {
     minHeight: 52,
@@ -1235,8 +1142,12 @@ const styles = StyleSheet.create({
   handleHit: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
+    // Inset from both sides (symmetric, so the handle stays centred):
+    // the strip and its slop stop short of the calendar glyph's corner
+    // press target. Full width, the slop swallowed a tap on the glyph and
+    // closed the card instead (found on device, 2026-09-23).
+    left: HANDLE_SIDE_INSET,
+    right: HANDLE_SIDE_INSET,
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',

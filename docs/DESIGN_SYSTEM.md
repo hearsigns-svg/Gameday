@@ -83,7 +83,8 @@ Hairline borders over shadows; the hero carries the one soft shadow.
 
 HeroCard · EventRow · ListRow · GlyphTile · SportPill · FollowButton ·
 SectionHeader · SyncStatusChip · CountdownBadge · EmptyState · search
-field. Every screen is a composition of these. A screen that seems to
+field · CalendarGlyph (the per-follow calendar control: + not in your
+calendar / ✓ in it — the one glyph-only control, DECISIONS 2026-09-23). Every screen is a composition of these. A screen that seems to
 need a new component is a screen to question first.
 
 ## Voice
@@ -104,7 +105,8 @@ revoked, offline — every one specified, none left to chance.
 
 ## Accessibility
 
-44-pt minimum targets; VoiceOver/TalkBack labels on all interactive
+44-pt minimum targets (48 dp on Android — the `touchTarget` token; a
+control may draw smaller, its press target never is); VoiceOver/TalkBack labels on all interactive
 elements; contrast ≥4.5:1 for text — enforced in CI for every derived
 team colour via the teamTheme test suite; focus order matches visual
 order; no information conveyed by colour alone; reduced-motion disables

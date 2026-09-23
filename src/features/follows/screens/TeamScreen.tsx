@@ -58,6 +58,8 @@ import { loadPrefs } from '../../calendar-sync/data/prefsStore';
 import { ensurePolled, follow, setScope, unfollow } from '../followActions';
 import { followFeedback } from '../followFeedback';
 import {
+  calendarPrefOf,
+  fixtureWantedByFollows,
   isFollowed,
   loadFollowables,
   loadFollowKeys,
@@ -306,9 +308,20 @@ export default function TeamScreen({ navigation, route }: Props) {
   // tournaments and similar competitions in other sports") — the same
   // structural test the tier pass itself applies.
   const hasTournaments = (fixtures ?? []).some(isBlockParent);
-  const scopeOptions = following
+  // The tier ladder filters WITHIN a follow that is in (per-follow
+  // calendar control): an `out` follow puts nothing in the calendar for
+  // a ladder to shape, so the ladder is not offered until it is back in.
+  const storedFollow = loadFollowables().find((f) => f.key === teamKey);
+  const followIn = storedFollow !== undefined && calendarPrefOf(storedFollow) === 'in';
+  const scopeOptions = following && followIn
     ? scopesFor({ ...item, key: teamKey }, { hasTournaments })
     : [];
+  // A row's control follows what the CALENDAR holds: a fixture some `in`
+  // follow claims — this page's or another's — removes through an
+  // exclusion; one no `in` follow claims adds through a pin. (Before the
+  // per-follow control, "followed" and "in the calendar" were the same
+  // thing and the page keyed the control on the former.)
+  const wantedByFollows = fixtureWantedByFollows();
   const tierChips = scopeOptions.some((o) => o.scope === 'block');
   const storedScope =
     loadFollowables().find((f) => f.key === teamKey)?.scope ?? null;
@@ -579,7 +592,7 @@ export default function TeamScreen({ navigation, route }: Props) {
               {...(competitionTileFillFor(teamKey)
                 ? { tileFill: competitionTileFillFor(teamKey) as string }
                 : {})}
-              {...(following
+              {...(wantedByFollows(f.followKeys)
                 ? {
                     excluded: excludedIds.has(f.id),
                     onToggleExcluded: () => toggleExclude(f),

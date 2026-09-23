@@ -4,13 +4,16 @@
 import { err, messageOf, ok, Result } from '../../core/result';
 import { functionsBaseUrl } from '../../core/firebase';
 import { logFollow } from '../../core/analytics';
-import { runSync, SyncOutcome } from '../calendar-sync/syncEngine';
+import { runSync, runSyncAwaited, SyncOutcome } from '../calendar-sync/syncEngine';
 import {
+  calendarPrefOf,
   Followable,
   loadFollowables,
+  setFollowCalendar,
   setFollowed,
   setFollowScope,
 } from './data/followStore';
+import { CalendarPref } from './domain/calendarInclusion';
 import { followQueryKeys, FollowScope } from './domain/followScopes';
 import { pollPathFor } from './domain/pollPaths';
 import { shouldPoll } from './domain/pollGate';
@@ -177,6 +180,49 @@ export async function refollow(item: Followable): Promise<Result<SyncOutcome>> {
   );
   updateRegistry();
   return runSync();
+}
+
+// ─── Per-follow calendar control (owner brief 2026-09-23) ──────────────
+//
+// Put follows in or take them out of the calendar. The preference
+// changes at once (the glyph flips on the tap), then one sync writes the
+// difference: turning a follow OUT recomputes the effective set and the
+// planner removes only the future events no longer claimed by any `in`
+// follow, through the ledger-scoped delete path and the per-pass removal
+// cap; turning one IN (or raising a rung) is an ordinary pass. If the
+// calendar write fails, the preference reverts — but only for keys whose
+// latest intent is still this one (a later tap on the same follow must
+// never be undone by an earlier tap's failure).
+//
+// Entitlement is the CALLER's gate for `in` (the + opens the offer);
+// `out` is never gated.
+export type CalendarChange = 'applied' | 'failed';
+
+const calendarGeneration = new Map<string, number>();
+
+export async function setCalendar(
+  keys: readonly string[],
+  next: CalendarPref,
+): Promise<CalendarChange> {
+  const stored = loadFollowables().filter((f) => keys.includes(f.key));
+  if (stored.length === 0) return 'applied';
+  const before = new Map(stored.map((f) => [f.key, calendarPrefOf(f)] as const));
+  const generations = stored.map((f) => {
+    const g = (calendarGeneration.get(f.key) ?? 0) + 1;
+    calendarGeneration.set(f.key, g);
+    return [f.key, g] as const;
+  });
+  setFollowCalendar([...before.keys()], next);
+  // A sync already running hands back the result of the rerun queued
+  // behind it — the pass that actually carries this change.
+  const r = await runSyncAwaited();
+  if (r.ok) return 'applied';
+  for (const [key, g] of generations) {
+    if (calendarGeneration.get(key) !== g) continue; // a newer tap owns it
+    const prev = before.get(key);
+    if (prev) setFollowCalendar([key], prev);
+  }
+  return 'failed';
 }
 
 // Change what a follow delivers (Prompt 11). A scope change is an

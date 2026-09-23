@@ -78,7 +78,12 @@ import {
 } from '../../follows/data/browsePriority';
 import { useAthletePhoto } from '../../follows/useEntityPhoto';
 import { identityFollow } from '../../follows/domain/followIdentity';
-import { Followable, loadFollowables } from '../../follows/data/followStore';
+import {
+  fixtureWantedByFollows,
+  Followable,
+  loadFollowables,
+} from '../../follows/data/followStore';
+import { pinnedIds, setPinned } from '../data/pinStore';
 import {
   lastSync,
   lastSyncError,
@@ -171,6 +176,13 @@ export default function ScheduleScreen({ navigation }: Props) {
   );
   const [follows, setFollows] = useState<Followable[]>(loadFollowables);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(loadExclusions);
+  const [pinIds, setPinIds] = useState<Set<string>>(pinnedIds);
+  // IN THE CALENDAR BY PREFERENCE (per-follow calendar control, owner
+  // brief 2026-09-23): the Schedule lists everything followed, and a
+  // row nothing `in` claims offers Add (a pin) instead of Remove — the
+  // control names what a tap does to the calendar, never the reverse.
+  const wantedByFollows = useMemo(() => fixtureWantedByFollows(follows), [follows]);
+  const claimed = (f: UpcomingFixture) => pinIds.has(f.id) || wantedByFollows(f.followKeys);
   // How many month pages the list holds (≥ 1). Only ever grows while
   // the screen is up; the tab-press entry state takes it back to one.
   const [pagesLoaded, setPagesLoaded] = useState(1);
@@ -235,6 +247,7 @@ export default function ScheduleScreen({ navigation }: Props) {
       setFixtures(upcomingFixtures());
       setFollows(loadFollowables());
       setExcludedIds(loadExclusions());
+      setPinIds(pinnedIds());
     };
     const unsub = subscribeSync((state) => {
       setRunning(state.running);
@@ -373,12 +386,15 @@ export default function ScheduleScreen({ navigation }: Props) {
         id: f.id,
         day: dayKey(f.startUtc, isDateOnly(f.status, f.timePrecision)),
       })),
-      excludedIds,
+      // A day whose only fixtures are out of the calendar keeps the
+      // dimmed dot a removed-only day has: not in the calendar either way.
+      new Set([...excludedIds, ...ahead.filter((f) => !claimed(f)).map((f) => f.id)]),
     );
     const days = new Set<string>();
     for (const [day, mark] of marks) if (mark === 'removed') days.add(day);
     return days;
-  }, [ahead, excludedIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ahead, excludedIds, pinIds, wantedByFollows]);
 
   // ---- calendar → list -----------------------------------------------
 
@@ -538,6 +554,27 @@ export default function ScheduleScreen({ navigation }: Props) {
         settleRef.current(opennessValue.current > 0.5),
     }),
   ).current;
+
+  // Opt ONE fixture in whose follows are all out — the entity page's
+  // pin, on the Schedule's own rows.
+  const togglePin = (f: UpcomingFixture) => {
+    const was = pinIds.has(f.id);
+    setPinned(
+      {
+        id: f.id,
+        title: f.title,
+        startUtc: f.startUtc,
+        competition: f.competition,
+        sport: f.sport,
+        followKey: f.competitionId,
+        at: new Date().toISOString(),
+      },
+      !was,
+    );
+    setPinIds(pinnedIds());
+    showToast({ message: was ? tr('calendar.toast.removed') : tr('calendar.toast.added') });
+    void runSync();
+  };
 
   const toggleExclude = (f: UpcomingFixture) => {
     const was = excludedIds.has(f.id);
@@ -728,6 +765,9 @@ export default function ScheduleScreen({ navigation }: Props) {
                 mode={mode}
                 excluded={excludedIds.has(item.id)}
                 onToggleExcluded={() => toggleExclude(item)}
+                claimed={claimed(item)}
+                pinned={pinIds.has(item.id)}
+                onTogglePinned={() => togglePin(item)}
                 locked={locked && !placedIds.has(item.id)}
               />
             )}
@@ -782,6 +822,10 @@ function ScheduleRow(props: {
   mode: 'light' | 'dark';
   excluded: boolean;
   onToggleExcluded: () => void;
+  // Claimed by an `in` follow or a pin: Remove/Removed; otherwise Add.
+  claimed: boolean;
+  pinned: boolean;
+  onTogglePinned: () => void;
   locked?: boolean;
 }) {
   const { item } = props;
@@ -832,8 +876,9 @@ function ScheduleRow(props: {
         ? {}
         : { monogram: monogramOf(owner?.label ?? item.homeTeam ?? item.competition) })}
       theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, props.mode)}
-      excluded={props.excluded}
-      onToggleExcluded={props.onToggleExcluded}
+      {...(props.claimed
+        ? { excluded: props.excluded, onToggleExcluded: props.onToggleExcluded }
+        : { pinned: props.pinned, onTogglePinned: props.onTogglePinned })}
       {...(props.locked ? { badge: '🔒', badgeA11y: tr('premium.lockA11y') } : {})}
     />
   );

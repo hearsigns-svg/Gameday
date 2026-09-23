@@ -5,7 +5,7 @@
 // can import them without react-native.
 
 import { useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { appearanceChoice, subscribeAppearance } from './appearanceStore';
 import { palette, Theme } from './palette';
 
@@ -28,6 +28,11 @@ export function useTheme(): Theme {
 }
 
 export const spacing = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 } as const;
+
+// The platform's minimum press target (DESIGN_SYSTEM Accessibility):
+// 44pt on iOS (HIG), 48dp on Android (Material). A control may DRAW
+// smaller; its press target never is.
+export const touchTarget: number = Platform.OS === 'android' ? 48 : 44;
 
 // One geometry: a single radius scale plus the pill.
 export const radius = {

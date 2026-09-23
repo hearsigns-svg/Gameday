@@ -410,21 +410,12 @@ export const es: Catalog = {
   // ── The expanded fixture card (FixtureCard.tsx) ────────────────────
   'calendar.card.loadFailed': 'No se pudo cargar este evento',
   'calendar.card.titleClose': '{title}. Cerrar',
-  'calendar.card.removeFromCalendar': 'Quitar del calendario',
-  'calendar.card.addToCalendar': 'Añadir al calendario',
   'calendar.card.removeTitleA11y': 'Quitar {title} de tu calendario',
   'calendar.card.addTitleA11y': 'Añadir {title} a tu calendario',
-  'calendar.card.alreadyInCalendar': '{title} ya está en tu calendario',
   'calendar.card.mens': 'Masculino',
   'calendar.card.womens': 'Femenino',
   'calendar.card.sexChipShown': '{label}: partidos visibles',
   'calendar.card.sexChipHidden': '{label}: partidos ocultos',
-  'calendar.card.removeAllA11y':
-    'Quitar todos los partidos listados de tu calendario',
-  'calendar.card.addAllA11y':
-    'Añadir todos los partidos listados a tu calendario',
-  'calendar.card.removeAll': 'Quitar todos',
-  'calendar.card.addAll': 'Añadir todos',
   'calendar.card.reminder': 'Recordatorio',
   'calendar.card.optionSelected': '{label}, seleccionado',
   'calendar.card.useDefaultReminder': 'Usar mi recordatorio predeterminado',
@@ -433,6 +424,16 @@ export const es: Catalog = {
   'calendar.card.mainEvent': 'Evento estelar',
   'calendar.card.added': 'Añadido',
   'calendar.card.add': 'Añadir',
+  // ── Per-follow calendar control (owner brief 2026-09-23) ──────────
+  'calendar.control.addA11y': 'Añadir {name} al calendario',
+  'calendar.control.inA11y': '{name} está en tu calendario',
+  'calendar.control.added': '{name} ya está en tu calendario',
+  'calendar.control.removed': '{name} ya no está en tu calendario',
+  'calendar.control.sportAdded': '{sport}: ya está todo en tu calendario',
+  'calendar.control.sportRemoved': '{sport}: todo quitado de tu calendario',
+  'calendar.control.sportAddA11y': 'Añadir todo lo de {sport} al calendario',
+  'calendar.control.sportInA11y': 'Todo lo de {sport} está en tu calendario',
+  'calendar.control.failed': 'No se pudo actualizar tu calendario. Inténtalo de nuevo.',
   'calendar.card.close': 'Cerrar',
 
   // ── Toasts (FixtureCard / ScheduleScreen) ──────────────────────────

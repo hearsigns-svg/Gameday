@@ -23,7 +23,7 @@ import { t as tr, tn } from './i18n';
 import { flagEmojiOf } from './nationality';
 import { SportPattern } from './sportPattern';
 import { useReduceMotion } from './useReduceMotion';
-import { motion, radius as radiusTokens, spacing, type, useTheme } from './tokens';
+import { motion, radius as radiusTokens, spacing, touchTarget, type, useTheme } from './tokens';
 const radius = radiusTokens;
 import { TeamTheme } from './teamTheme';
 import { countdownLabel, isDateOnly, timeLabel, whenLabel } from './when';
@@ -699,6 +699,11 @@ export function PosterFace(props: {
   // the sport's own mark where a badge would be (no Olympic emblem may
   // be drawn), in place of the monogram.
   emojiMark?: string;
+  // The top-right corner belongs to the calendar glyph (per-follow
+  // calendar control, 2026-09-23): the competition line and countdown
+  // stop short of it. The glyph itself is the host's sibling overlay —
+  // never inside the face, which sits in the card's own press target.
+  reserveCorner?: boolean;
 }) {
   const th = props.theme;
   const dateOnly = isDateOnly(props.status, props.timePrecision);
@@ -741,7 +746,12 @@ export function PosterFace(props: {
           {props.monogram}
         </Text>
       ) : null}
-      <View style={styles.heroTop}>
+      <View
+        style={[
+          styles.heroTop,
+          props.reserveCorner ? { paddingRight: touchTarget - spacing.xs } : null,
+        ]}
+      >
         <Text
           style={[type.label, { color: th.onGradient, opacity: 0.85, flex: 1 }]}
           numberOfLines={1}
@@ -812,6 +822,10 @@ export function HeroCard(props: {
   // not sit underneath it as a second copy.
   hidden?: boolean;
   innerRef?: React.Ref<View>;
+  // The per-follow calendar glyph (2026-09-23), rendered top-right as a
+  // SIBLING of the card's press target — pressing it never lights or
+  // opens the card (the no-chevron standard).
+  calendarControl?: ReactNode;
 }) {
   const th = props.theme;
   const dateOnly = isDateOnly(props.status, props.timePrecision);
@@ -824,8 +838,15 @@ export function HeroCard(props: {
     usableImage(props.awayCrestUrl) !== undefined;
   const Container = (props.onPress ? Pressable : View) as typeof Pressable;
   return (
+    <View
+      ref={props.innerRef}
+      style={[
+        styles.heroShadow,
+        props.style,
+        props.hidden ? { opacity: 0 } : null,
+      ]}
+    >
     <Container
-      ref={props.innerRef as never}
       accessible
       {...(props.onPress
         ? {
@@ -834,11 +855,6 @@ export function HeroCard(props: {
             onPress: props.onPress,
           }
         : { accessibilityLabel: label })}
-      style={[
-        styles.heroShadow,
-        props.style,
-        props.hidden ? { opacity: 0 } : null,
-      ]}
     >
       <PosterSurface
         theme={th}
@@ -868,10 +884,17 @@ export function HeroCard(props: {
             : {})}
           {...(props.timingNote ? { timingNote: props.timingNote } : {})}
           {...(props.emojiMark ? { emojiMark: props.emojiMark } : {})}
+          {...(props.calendarControl ? { reserveCorner: true } : {})}
           minHeight={HERO_MIN_HEIGHT}
         />
       </PosterSurface>
     </Container>
+    {props.calendarControl ? (
+      <View style={styles.heroCorner} pointerEvents="box-none">
+        {props.calendarControl}
+      </View>
+    ) : null}
+    </View>
   );
 }
 
@@ -2071,6 +2094,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
+  // The calendar glyph's corner: its press target centred on the
+  // countdown's line (hero padding 16, badge ~28 tall).
+  heroCorner: { position: 'absolute', top: spacing.s, right: spacing.s },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'center',

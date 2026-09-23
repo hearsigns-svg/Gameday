@@ -18,6 +18,8 @@ import { useColorSchemeMode } from '../../core/useColorSchemeMode';
 import { followMarkUrl, hasServedMark } from './data/browsePriority';
 import { Followable } from './data/followStore';
 import { identityFollow } from './domain/followIdentity';
+import { calendarTargetsFor } from './domain/calendarTargets';
+import { FollowCalendarControl } from './FollowCalendarControl';
 import { olympicGlyphForKeys } from './domain/olympicGlyphs';
 import { sportByKey } from './domain/sportsConfig';
 import {
@@ -93,6 +95,10 @@ export function FixtureHero(props: {
     placeArt === null && tournamentArt === null && teamArt === null;
   const poolArt = usePoolPhoto(item.sport, item.id, chainResolvedNone);
   const art = placeArt ?? tournamentArt ?? teamArt ?? poolArt;
+  // The per-follow calendar glyph acts on the entity this card IS
+  // (domain/calendarTargets.ts) — shown only while it is followed.
+  const targets = calendarTargetsFor(item.followKeys, props.follows, hasServedMark);
+  const theme = teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode);
   return (
     <HeroCard
       title={item.title}
@@ -128,7 +134,19 @@ export function FixtureHero(props: {
               .join(' · ')
           : undefined
       }
-      theme={teamTheme(owner?.brandColour ?? sport?.accent ?? null, mode)}
+      theme={theme}
+      {...(targets.length > 0
+        ? {
+            calendarControl: (
+              <FollowCalendarControl
+                keys={targets.map((f) => f.key)}
+                name={targets.length === 1 ? targets[0].label : item.title}
+                variant="poster"
+                theme={theme}
+              />
+            ),
+          }
+        : {})}
       {...(props.onPress ? { onPress: props.onPress } : {})}
       {...(props.standalone ? { standalone: true } : {})}
       {...(props.hidden ? { hidden: true } : {})}

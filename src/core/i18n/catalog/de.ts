@@ -405,21 +405,12 @@ export const de: Catalog = {
   // ── The expanded fixture card (FixtureCard.tsx) ────────────────────
   'calendar.card.loadFailed': 'Dieses Event konnte nicht geladen werden',
   'calendar.card.titleClose': '{title}. Schließen',
-  'calendar.card.removeFromCalendar': 'Aus dem Kalender entfernen',
-  'calendar.card.addToCalendar': 'Zum Kalender hinzufügen',
   'calendar.card.removeTitleA11y': '{title} aus deinem Kalender entfernen',
   'calendar.card.addTitleA11y': '{title} zu deinem Kalender hinzufügen',
-  'calendar.card.alreadyInCalendar': '{title} ist schon in deinem Kalender',
   'calendar.card.mens': 'Herren',
   'calendar.card.womens': 'Damen',
   'calendar.card.sexChipShown': '{label}-Spiele, eingeblendet',
   'calendar.card.sexChipHidden': '{label}-Spiele, ausgeblendet',
-  'calendar.card.removeAllA11y':
-    'Alle aufgeführten Spiele aus deinem Kalender entfernen',
-  'calendar.card.addAllA11y':
-    'Alle aufgeführten Spiele zu deinem Kalender hinzufügen',
-  'calendar.card.removeAll': 'Alle entfernen',
-  'calendar.card.addAll': 'Alle hinzufügen',
   'calendar.card.reminder': 'Erinnerung',
   'calendar.card.optionSelected': '{label}, ausgewählt',
   'calendar.card.useDefaultReminder': 'Meine Standard-Erinnerung verwenden',
@@ -428,6 +419,16 @@ export const de: Catalog = {
   'calendar.card.mainEvent': 'Main Event',
   'calendar.card.added': 'Hinzugefügt',
   'calendar.card.add': 'Hinzufügen',
+  // ── Per-follow calendar control (owner brief 2026-09-23) ──────────
+  'calendar.control.addA11y': '{name} zum Kalender hinzufügen',
+  'calendar.control.inA11y': '{name} ist in deinem Kalender',
+  'calendar.control.added': '{name} ist jetzt in deinem Kalender',
+  'calendar.control.removed': '{name} ist nicht mehr in deinem Kalender',
+  'calendar.control.sportAdded': '{sport}: alles ist jetzt in deinem Kalender',
+  'calendar.control.sportRemoved': '{sport}: alles aus deinem Kalender entfernt',
+  'calendar.control.sportAddA11y': 'Alles aus {sport} zum Kalender hinzufügen',
+  'calendar.control.sportInA11y': '{sport}: alles ist in deinem Kalender',
+  'calendar.control.failed': 'Dein Kalender konnte nicht aktualisiert werden. Versuch es noch einmal.',
   'calendar.card.close': 'Schließen',
 
   // ── Toasts (FixtureCard / ScheduleScreen) ──────────────────────────

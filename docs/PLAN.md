@@ -245,6 +245,18 @@ silent).
   then `node scripts/refresh-team-directory.mjs --apply`. Client
   degrades cleanly until then. Deferred: Schedule polish, Following
   swipe-actions, per-follow scope beyond race-only.
+- [~] 2026-09-23 owner brief "Per-follow calendar control and motorsport
+  sessions" (six stages, DECISIONS 2026-09-23 entries carry the detail):
+  - [x] Stage 1 — `calendar: in|out` on every follow, migration to in, the
+    pure inclusion rule routed through the planner (iOS upgrade 0/0/0).
+  - [x] Stage 2 — the calendar glyph on hero cards (Home poster +
+    expanded card) with toasts and revert-on-failure; "Remove from
+    calendar" and "Add all ⇄ Remove all" retired. iOS verified; Android
+    pending the Pixel.
+  - [ ] Stage 3 — Following page grouped by sport, row + header glyphs.
+  - [ ] Stage 4 — Settings default for new follows + starting state.
+  - [ ] Stage 5 — motorsport session ladder.
+  - [ ] Stage 6 — "sync" retired from user-facing copy.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 
