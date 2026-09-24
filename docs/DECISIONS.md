@@ -5157,6 +5157,6 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   byte-identical to the start. Olympics: no provider writes Olympic
   fixtures yet, so the Olympics calendar is proven by the tests only.
   Android not run (no device attached); its REST path is covered by the
-  Google-shaped store in the engine test. Simulator lore: a tap from the
-  control tool does not toggle a UISwitch on iOS 26; a short swipe across
-  the thumb does (AGENTS.md).
+  Google-shaped store in the engine test. Simulator lore: an instant tap from
+  the control tool does not toggle a UISwitch on iOS 26; a held tap or a
+  short swipe across the thumb does (AGENTS.md).
