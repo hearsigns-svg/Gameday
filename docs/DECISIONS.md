@@ -5234,3 +5234,49 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   lore — android/app/build (1.8 GB, regenerates), scratch frames and this
   project's Debug build products; none of the owner's shared caches
   touched; ~4 GB free after.
+- 2026-09-24 — **Owner rulings: the colour swatches are Premium; a lapse
+  locks Premium settings where they were left; the disk clean-ups are
+  standing permission.** (1) The calendar-colour swatches in Settings
+  are PREMIUM, the per-sport switch's pattern: shown to everyone; in the
+  free state a tap is the on-demand way into the offer — the paywall, or
+  the inline "Part of Premium" line when it is suppressed after a decline
+  or billing is not configured — and the colour is not touched
+  (`colourPickStep`, `domain/calendarConnection.ts`). One routine
+  (`offerPremium` in Preferences) now serves the new-follows switch, the
+  per-sport switch and the swatches, so the three behave alike by
+  construction. NOT CHANGED, flagged: the per-event colour row on the
+  fixture card — shown only where events carry their own colour, Google
+  Calendar on Android — stays open; the ruling named the calendar-colour
+  swatches. (2) LAPSED USERS, as built and now ruled: the per-sport
+  switch is a trial and Premium feature; after a lapse it stays locked
+  in whatever position the user left it, the calendars untouched, and
+  changing it in either direction needs Premium. The colour follows the
+  same rule: the calendar keeps the colour chosen while Premium. Pinned
+  through the real entitlement model — never subscribed, on a trial,
+  paying, trial lapsed, paid lapsed inside and past its renew window,
+  and the open gate (`premiumControls.test.ts`); the colour lock defeated
+  on purpose: the locked states failed. (3) DISK: when disk is low the
+  agent runs, without asking, `rm -rf ~/Library/Developer/Xcode/
+  DerivedData`, `xcrun simctl shutdown all && xcrun simctl erase all`
+  (only when no other build or simulator session is running on this Mac,
+  and the test calendar is reseeded before testing), `rm -rf
+  ~/.gradle/caches`, `npm cache clean --force` — AGENTS.md rule 18.
+  First use the same day: 4.9 GB free before a simulator build; the npm
+  cache (528 MB) and the Gradle caches (5.4 GB) cleared → 10 GB free;
+  DerivedData kept (a full iOS rebuild costs far more than it saves) and
+  the simulators not erased (the seeded test calendar is the evidence
+  base).
+- 2026-09-24 — **The colour lock, verified on the simulator.** Debug build
+  (the free state is reachable only through the development gate
+  control; RevenueCat keys are absent, so the paywall's own fallback line
+  stands in for the offer screen): FREE — a tap on the red swatch showed
+  "Part of Premium · Start 14 days free", blue stayed selected, nothing
+  was saved (no colour record) and the calendar kept #1463F3; the
+  per-sport switch, now on the shared routine, did the same with nothing
+  moved. PREMIUM (gate open again) — red applied, the calendar turned
+  #C81E1E ("Calendar colour is now red"), blue restored; the per-sport
+  switch asked its confirmation exactly as before (cancelled). RELEASE
+  build (bundle checked for `colourPickStep` and `offerPremium`): orange
+  applied and blue restored; the calendar still 1,624 games. The trial
+  case is pinned by the entitlement-model tests only — a trial needs the
+  store.

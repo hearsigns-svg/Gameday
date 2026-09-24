@@ -133,7 +133,10 @@ ads after a 14-day grace from the first follow. Premium = calendar sync
 with a full-season horizon, tournament tiers, calendar colour, a
 separate calendar for each sport (2026-09-24), three reminder slots, no
 ads; 14-day store-managed trial on the annual plan.
-ENFORCEMENT IS CLIENT-SIDE, in the sync planner: a pure, tested layer
+Premium SETTINGS (calendar colour, a calendar per sport) are shown to
+everyone: in the free state a tap opens the offer and changes nothing;
+after a lapse they stay as the user left them, and changing them needs
+Premium again (2026-09-24). ENFORCEMENT IS CLIENT-SIDE, in the sync planner: a pure, tested layer
 reads the billing SDK's cached entitlement (offline grace) and gates
 `create` only — placed events keep receiving corrections, removal is
 never gated, downgrade removals follow the recorded keep-window rules.

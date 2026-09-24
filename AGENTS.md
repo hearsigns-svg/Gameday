@@ -383,6 +383,30 @@ These apply to every stage. They do not need restating in a brief.
     never `a && b; c` where `c` rewrites history, never a reset whose
     target was computed by an earlier step that can fail.
 
+18. **Disk clean-ups are standing permission** (owner ruling
+    2026-09-24). When disk is low — a build dies with "No space left on
+    device" (errno 28), or free space is a few GB before a simulator or
+    Android build — run these without asking:
+    - `rm -rf ~/Library/Developer/Xcode/DerivedData`
+    - `xcrun simctl shutdown all && xcrun simctl erase all` — ONLY when no
+      other build or simulator session is running on this Mac (check
+      `pgrep -fl "xcodebuild|gradle|expo run|metro"` and the other
+      sessions), and reseed the test calendar before testing anything:
+      erasing wipes every simulator's app data and calendar store.
+    - `rm -rf ~/.gradle/caches`
+    - `npm cache clean --force`
+    Cheapest first: the npm and Gradle caches cost nothing for an iOS
+    round; DerivedData costs a full rebuild; an erase costs the evidence
+    base. Report what was cleared and the free space before and after.
+
+19. **A Premium control is shown to everyone** (owner rulings
+    2026-09-24). In the free state a tap goes through the one
+    on-demand routine (`offerPremium` in Preferences: the paywall, else
+    the inline Premium line) and changes NOTHING; after a lapse the
+    setting stays where the user left it, and changing it — in either
+    direction — needs Premium again. The calendar colour and the
+    per-sport switch are the reference cases (DECISIONS 2026-09-24).
+
 ## Concurrency against production
 
 A second Claude Code session (the owner's) also writes to the production

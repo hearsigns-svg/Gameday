@@ -84,6 +84,17 @@ export function ownsCalendarColour(
   return stored === null || stored.kind === 'ours';
 }
 
+// What a tap on a calendar-colour swatch does. PREMIUM (owner ruling
+// 2026-09-24), the per-sport switch's pattern: the swatches are shown to
+// everyone; in the free state a tap is the way into the offer and the
+// colour is not touched — a lapsed subscriber's calendar keeps the colour
+// they chose, and changing it needs Premium again.
+export type ColourPickStep = 'offer' | 'apply';
+
+export function colourPickStep(premiumLocked: boolean): ColourPickStep {
+  return premiumLocked ? 'offer' : 'apply';
+}
+
 // "Not now" on the priming ask records a deferral — and must NEVER
 // downgrade a choice that has already been latched 'enabled'. The old
 // handler wrote 'deferred' unconditionally, which on Android (where the

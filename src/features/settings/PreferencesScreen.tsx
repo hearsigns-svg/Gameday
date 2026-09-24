@@ -76,6 +76,7 @@ import {
 } from '../reminders/data/notificationScheduler';
 import { requestPaywall } from '../../core/paywall';
 import {
+  colourPickStep,
   ownsCalendarColour,
   restRowMode,
 } from '../calendar-sync/domain/calendarConnection';
@@ -461,7 +462,22 @@ export default function PreferencesScreen({
   const colourRefused =
     activeBackend() === 'rest' && restColourState()?.status === 'refused';
 
+  // The on-demand way into the offer from a Premium control in the free
+  // state (Round 5): the paywall — or, when it is suppressed after a
+  // decline or billing is not configured, the inline Premium line. One
+  // routine, so every locked control here behaves the same by
+  // construction.
+  const offerPremium = () => {
+    if (!requestPaywall('on_demand')) {
+      showToast({ message: tr('premium.syncRow') });
+    }
+  };
+
   const pickColour = async (hex: string, name: string) => {
+    if (colourPickStep(premiumLocked()) === 'offer') {
+      offerPremium();
+      return;
+    }
     setColour(hex);
     const outcome = await setCalendarColour(hex);
     showToast({
@@ -672,9 +688,7 @@ export default function PreferencesScreen({
           value={!premiumLocked() && prefs.newFollowsInCalendar}
           onValueChange={(next) => {
             if (premiumLocked()) {
-              if (!requestPaywall('on_demand')) {
-                showToast({ message: tr('premium.syncRow') });
-              }
+              offerPremium();
               return;
             }
             const saved = { ...prefs, newFollowsInCalendar: next };
@@ -698,9 +712,7 @@ export default function PreferencesScreen({
             const games = Object.keys(loadLedger()).length;
             const step = layoutSwitchStep(premiumLocked(), games);
             if (step === 'offer') {
-              if (!requestPaywall('on_demand')) {
-                showToast({ message: tr('premium.syncRow') });
-              }
+              offerPremium();
               return;
             }
             const commit = () => {

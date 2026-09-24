@@ -287,8 +287,13 @@ silent).
     fixture record is gone is REMOVED on every sync in both layouts (rule
     5's deliberate exception; counted existence check, 40 a pass), so
     KickOffCal no longer lingers in the per-sport layout; the switch is
-    PREMIUM (free tap → the offer, nothing moves). Flagged: the Settings
-    colour swatches themselves are not gated.
+    PREMIUM (free tap → the offer, nothing moves).
+  - [x] Owner rulings (same day, second report): the calendar-colour
+    swatches are PREMIUM on the switch's pattern (one `offerPremium`
+    routine for all three Premium controls); a lapse keeps Premium
+    settings where they were left, changing them needs Premium; disk
+    clean-ups are standing permission (AGENTS rule 18). Flagged: the
+    fixture card's per-event colour row (Android/Google) stays open.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 
