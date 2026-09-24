@@ -63,6 +63,9 @@ export interface CalendarPrefs {
   // fixture that carries a session type; `seriesSessions` still governs
   // a series without one.
   sessionRungs: Record<string, SessionRung>;
+  // A separate calendar for each sport (owner brief 2026-09-24): where
+  // events LIVE, never which — domain/sportCalendars.ts. Off by default.
+  separateSportCalendars: boolean;
 }
 
 export type TournamentTier = 'block' | 'key' | 'all';
@@ -92,6 +95,7 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   // per-follow control existed.
   newFollowsInCalendar: true,
   sessionRungs: {},
+  separateSportCalendars: false,
 };
 
 // `short` is the form a one-row control uses: the durations have to fit

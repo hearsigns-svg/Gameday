@@ -22,6 +22,7 @@ const PREFS: CalendarPrefs = {
   autoDeletePast: false,
   newFollowsInCalendar: true,
   sessionRungs: {},
+  separateSportCalendars: false,
 };
 
 const parent: Fixture = {

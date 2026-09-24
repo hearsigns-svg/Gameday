@@ -59,6 +59,15 @@ export function isEventGoneError(message: string): boolean {
   );
 }
 
+// A calendar the store no longer has. iOS throws CalendarIdNotFound
+// ("Calendar with id … could not be found"); Android's lookup answers
+// null, which the JS wrapper's setPrototypeOf then rejects.
+export function isCalendarGoneError(message: string): boolean {
+  return /could not be found|not.?found|no such calendar|does not exist|setPrototypeOf argument is not coercible/i.test(
+    message,
+  );
+}
+
 // The raw shape the platform hands back from a calendar scan. Only the
 // fields ownership and recovery actually need.
 export interface ScannedEvent {

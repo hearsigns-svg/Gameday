@@ -174,6 +174,11 @@ source of truth for build state — never chat history.
 - Firebase emulators: `firebase emulators:start --project demo-gameday` —
   Firestore 8180, Functions 5101 (offset from MedHandover's 8080/5001).
   Functions need `cd functions && npm run build` first.
+- **A native Switch ignores a synthesized TAP on the iOS 26 simulator**
+  (2026-09-24): the control tool's tap on a UISwitch lands (the system
+  log shows it) and changes nothing — no onValueChange. A short swipe
+  across the thumb (left→right to turn on, right→left to turn off) flips
+  it like a finger does. Not an app bug; do not "fix" a Switch for it.
 - Simulator limits (verified): silent-push wake, BGTaskScheduler, and
   AppState 'active' on `simctl launch` of a running app do NOT fire on
   iOS sims — verify those layers on a real device (M6). Sync logic is

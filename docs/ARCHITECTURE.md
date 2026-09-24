@@ -116,6 +116,25 @@ banners, the Connect row and the picker all read it; reinstall healing
 latches an opt-in from durable evidence only where that opt-in would
 actually connect.
 
+**One calendar, or one per sport (2026-09-24).** The calendar LAYOUT
+(`domain/sportCalendars.ts`, the `separateSportCalendars` preference)
+decides where events live, never which. Combined: every event in the
+target, resolved every pass as above. Per sport: each event in its
+fixture's group calendar ("KickOffCal · <Sport>",
+`follows/domain/sportCalendarGroup.ts`), created — and its id recorded
+(`data/sportCalendarStore.ts`) before any event goes in — when the sport
+first has an event; the target is then only READ (`currentTargetId`),
+never created. Every pass surveys the calendars it relies on once
+(a recorded one deleted by hand is forgotten, then recreated), drains
+leftovers naming their calendar (`strayCalendarId`), moves what the
+layout wants elsewhere (`data/layoutRelocation.ts` — the target switch's
+create → repoint-and-owe → delete, placed by the ledger's `sport`
+stamp, this pass's fixtures, or a by-id lookup), plans and applies (new
+events land by the layout; updates and deletes address the event's own
+calendar — Google reaches an event only through its calendar), prunes
+EVERY calendar of ours, and removes the ones left empty (the per-sport
+layout removes an emptied KickOffCal of ours too).
+
 **One target record.** Both paths write `calendarTarget.v1`
 (`data/calendarTargetStore.ts`) when they resolve; connect and
 disconnect clear it. Preferences, the priming confirmation and the erase

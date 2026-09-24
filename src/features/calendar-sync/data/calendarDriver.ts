@@ -17,6 +17,7 @@ import { Platform } from 'react-native';
 import { AppError, err, ok, Result } from '../../../core/result';
 import { readJson, writeJson, removeKey } from '../../../core/storage';
 import { calendarColour, saveCalendarColour } from './calendarColourStore';
+import { sportCalendarIds } from './sportCalendarStore';
 import {
   CalendarLike,
   CreatableSource,
@@ -29,12 +30,14 @@ import {
   mayRecolour,
 } from '../domain/calendarTarget';
 import { allDayAlarmMinutesBefore } from '../domain/allDayAlarm';
+import { SPORT_CALENDAR_PREFIX } from '../domain/sportCalendars';
 import { AllDayReminder } from '../domain/prefs';
 import {
   fixtureIdFromNotes,
   foreignEventCount,
   NOTES_TAG,
   isEventGoneError,
+  isCalendarGoneError,
   ourEventsIn,
   RecoveredEvent,
   ScannedEvent,
@@ -413,12 +416,14 @@ function remember(target: ResolvedTarget, chosen: boolean): ResolvedTarget {
 
 async function createOurCalendar(
   sourceId: string | undefined,
+  title: string = CAL_TITLE,
+  colour: string = calendarColour(),
 ): Promise<Calendar.ExpoCalendar> {
   const details: NonNullable<Parameters<typeof Calendar.createCalendar>[0]> = {
-    title: CAL_TITLE,
-    color: calendarColour(),
+    title,
+    color: colour,
     entityType: Calendar.EntityTypes.EVENT,
-    name: CAL_TITLE,
+    name: title,
   };
   if (Platform.OS === 'ios') {
     // A cloud source when the device has one — that is the whole point
@@ -498,7 +503,7 @@ export async function ensureCalendarTarget(): Promise<Result<ResolvedTarget>> {
       const cal = likes.find((c) => c.id === pick.calendarId);
       if (cal) return ok(remember(targetFrom(cal, 'user'), false));
     }
-    const created = await createOurCalendar(pick.createInSourceId);
+    const created = await createOurCalendar(ourSourceId(likes) ?? pick.createInSourceId);
     const like = toCalendarLike(created, defaultId);
     return ok(remember({ ...targetFrom(like, 'ours'), label: CAL_TITLE }, false));
   } catch (e) {
@@ -627,6 +632,136 @@ export async function eraseOurNativeCalendar(): Promise<Result<boolean>> {
   } catch (e) {
     return err({ kind: 'unknown', message: `calendar erase failed: ${e}` });
   }
+}
+
+// ─── Sport calendars (owner brief 2026-09-24) ────────────────────────
+//
+// "KickOffCal · <Sport>" calendars, one per sport, when the user asks for
+// a separate calendar for each. OURS the same two ways KickOffCal is:
+// by our own record (the sport-calendar store, written the moment one is
+// created), or — after a reinstall wiped that record — by title prefix
+// PLUS a scan showing no event that is not ours. Never adopted, recoloured
+// or deleted otherwise.
+
+// Where a new calendar of ours goes: beside the ones already there — the
+// target's source, else the source the sport calendars live in — while
+// that source can still be created in. A user who put KickOffCal on the
+// phone rather than in iCloud keeps it there through a switch to a
+// calendar per sport and back. `undefined` → the default resolution.
+function ourSourceId(likes: readonly CalendarLike[]): string | undefined {
+  const creatable = new Set(creatableSources(likes).map((src) => src.sourceId));
+  const ids = [storedTarget()?.calendarId, ...Object.values(sportCalendarIds())];
+  for (const id of ids) {
+    const sourceId = likes.find((c) => c.id === id)?.source?.id;
+    if (sourceId && creatable.has(sourceId)) return sourceId;
+  }
+  return undefined;
+}
+
+export async function createSportCalendar(
+  title: string,
+  colour: string,
+): Promise<Result<string>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    const defaultId = defaultCalendarId();
+    const likes = calendars.map((c) => toCalendarLike(c, defaultId));
+    const sourceId =
+      ourSourceId(likes) ??
+      chooseDefaultTarget(likes, [CAL_TITLE, ...LEGACY_CAL_TITLES], 'ios').createInSourceId ??
+      undefined;
+    const created = await createOurCalendar(sourceId, title, colour);
+    return ok(created.id);
+  } catch (e) {
+    return err({ kind: 'unknown', message: `sport calendar create failed: ${e}` });
+  }
+}
+
+// One look at the store per pass (2026-09-24): which of the calendars a
+// pass is about to rely on still exist, and which "KickOffCal · …"
+// calendars are provably ours without being in our record — a reinstall
+// wiped it, or the app died between creating one and recording it. An
+// empty answer is the store failing to answer (every device has a
+// calendar), never "all gone".
+export async function surveyCalendars(
+  candidateIds: readonly string[],
+  recordedSportIds: readonly string[],
+): Promise<Result<{ present: Set<string>; unrecordedSport: string[] }>> {
+  try {
+    const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
+    if (calendars.length === 0) {
+      return err({ kind: 'unknown', message: 'No calendars available yet.' });
+    }
+    const all = new Set(calendars.map((c) => c.id));
+    const present = new Set(candidateIds.filter((id) => all.has(id)));
+    const recorded = new Set(recordedSportIds);
+    const unrecordedSport: string[] = [];
+    for (const c of calendars) {
+      if (recorded.has(c.id) || !(c.title ?? '').startsWith(SPORT_CALENDAR_PREFIX)) continue;
+      let scan: CalendarScan;
+      try {
+        scan = await scanCalendar(c);
+      } catch {
+        continue; // unreadable → not provably ours
+      }
+      if (scan.foreign === 0) unrecordedSport.push(c.id);
+    }
+    return ok({ present, unrecordedSport });
+  } catch (e) {
+    return err({ kind: 'unknown', message: `calendar survey failed: ${e}` });
+  }
+}
+
+// Remove a sport calendar of ours once it holds NOTHING — no event of
+// ours and none the user added by hand. `true` when it is gone (deleted
+// now, or already).
+export async function deleteSportCalendarIfEmpty(
+  calendarId: string,
+  recorded: boolean,
+): Promise<boolean> {
+  try {
+    const cal = await Calendar.ExpoCalendar.get(calendarId);
+    if (!recorded && !(cal.title ?? '').startsWith(SPORT_CALENDAR_PREFIX)) return false;
+    const scan = await scanCalendar(cal);
+    if (scan.ours.length > 0 || scan.foreign > 0) return false;
+    await cal.delete();
+    return true;
+  } catch (e) {
+    // A calendar the store no longer has is the outcome we wanted.
+    return isCalendarGoneError(String(e));
+  }
+}
+
+// A separate calendar for each sport leaves KickOffCal itself unused;
+// once it holds nothing it goes, and the stored target with it (the next
+// combined pass resolves a fresh one, in the saved colour). Only ever
+// OUR calendar — a user's own target is never touched.
+export async function vacateTargetIfOursAndEmpty(): Promise<boolean> {
+  const stored = storedTarget();
+  if (!stored || stored.kind !== 'ours') return false;
+  const gone = await deleteVacatedCalendarIfOurs(stored.calendarId);
+  if (gone) clearTarget();
+  return gone;
+}
+
+// The erase (Data & privacy) takes every sport calendar of ours too — the
+// user asked for everything KickOffCal put there. Same proof as above.
+export async function eraseSportCalendars(
+  calendars: ReadonlyArray<{ id: string; recorded: boolean }>,
+): Promise<Result<number>> {
+  let erased = 0;
+  for (const { id, recorded } of calendars) {
+    try {
+      const cal = await Calendar.ExpoCalendar.get(id);
+      if (!recorded && !(cal.title ?? '').startsWith(SPORT_CALENDAR_PREFIX)) continue;
+      await cal.delete();
+      erased++;
+    } catch (e) {
+      if (isCalendarGoneError(String(e))) continue;
+      return err({ kind: 'unknown', message: `sport calendar erase failed: ${e}` });
+    }
+  }
+  return ok(erased);
 }
 
 // ─── Events ───────────────────────────────────────────────────────────

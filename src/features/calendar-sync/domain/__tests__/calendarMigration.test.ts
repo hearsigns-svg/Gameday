@@ -161,8 +161,11 @@ describe('the atomic half-step', () => {
     expect(moved.eventId).toBe('new-1');
     expect(moved.calendarId).toBe(NEW);
     expect(moved.strayEventId).toBe('old-1');
+    // The leftover names the calendar it sits in (2026-09-24): a delete
+    // that must name its calendar (REST) can still find it.
+    expect(moved.strayCalendarId).toBe('cal-old');
     expect(strayEventIds({ 'f-0': moved })).toEqual([
-      { fixtureId: 'f-0', eventId: 'old-1' },
+      { fixtureId: 'f-0', eventId: 'old-1', calendarId: 'cal-old' },
     ]);
   });
 

@@ -6,6 +6,7 @@
 import {
   collection,
   doc,
+  documentId,
   getDocFromServer,
   getDocsFromServer,
   query,
@@ -95,6 +96,35 @@ export async function fetchFixtureById(
     return ok(snap.exists() ? (snap.data() as Fixture) : null);
   } catch (e) {
     console.warn(`[kickoffcal] fixture read failed for ${fixtureId}: ${e}`);
+    return err({ kind: 'offline' });
+  }
+}
+
+// Many fixtures by id — the sport of events already in the calendar
+// whose fixtures the follow query no longer returns (finished games; a
+// calendar-per-sport move places every event, 2026-09-24). Ids absent
+// from the answer are documents that do not exist; a read FAILURE is an
+// error for the whole call, never a shorter list.
+const IDS_PER_QUERY = 30; // Firestore's `in` limit
+
+export async function fetchFixturesByIds(
+  ids: readonly string[],
+): Promise<Result<Fixture[]>> {
+  const unique = [...new Set(ids)];
+  const found: Fixture[] = [];
+  try {
+    for (let i = 0; i < unique.length; i += IDS_PER_QUERY) {
+      const snap = await getDocsFromServer(
+        query(
+          collection(db, 'fixtures'),
+          where(documentId(), 'in', unique.slice(i, i + IDS_PER_QUERY)),
+        ),
+      );
+      for (const d of snap.docs) found.push(d.data() as Fixture);
+    }
+    return ok(found);
+  } catch (e) {
+    console.warn(`[kickoffcal] fixtures-by-id read failed: ${e}`);
     return err({ kind: 'offline' });
   }
 }

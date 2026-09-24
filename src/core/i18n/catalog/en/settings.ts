@@ -47,6 +47,16 @@ export const settingsStrings = {
     'Your fixtures take the colour of {calendar}, which is yours to set in your calendar app.',
   'settings.calendar.newFollows': 'Add new follows to your calendar',
   'settings.calendar.newFollowsCaption': 'Applies to follows you add from now on.',
+  // A calendar per sport (owner brief 2026-09-24): the switch, and the
+  // confirmation a switch asks first when games are already in a calendar.
+  'settings.calendar.separateSports': 'Separate calendar for each sport',
+  'settings.calendar.separateTitle': 'Move your games into separate calendars?',
+  'settings.calendar.combineTitle': 'Move your games back into one calendar?',
+  'settings.calendar.moveBody_one':
+    'Any colour or visibility you’ve set in your phone’s calendar app won’t carry over. Moving {n} game may take a little while.',
+  'settings.calendar.moveBody_other':
+    'Any colour or visibility you’ve set in your phone’s calendar app won’t carry over. Moving {n} games may take a little while.',
+  'settings.calendar.moveAction': 'Move',
   'settings.calendar.onDeviceOnly': 'On this device only — won’t appear on your other devices',
   'settings.calendar.onYourDevices': '{account} — appears on your other devices',
   'settings.calendar.alongsideYours': '{account} — fixtures appear alongside your own events',
@@ -119,6 +129,9 @@ export const settingsStrings = {
     'Removes the events KickOffCal added to {calendar}, including past ones. Nothing else in it is touched.',
   'settings.privacy.eraseOurs':
     'Removes the KickOffCal calendar and every event in it — past ones included. Nothing else in your calendar is touched.',
+  // …and when each sport has its own calendar (2026-09-24).
+  'settings.privacy.eraseOursSeparate':
+    'Removes the KickOffCal calendars and every event in them — past ones included. Nothing else in your calendar is touched.',
   'settings.privacy.eraseResync':
     'If your calendar stays connected, future events are added again.',
   'settings.privacy.eraseAction': 'Erase',

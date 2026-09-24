@@ -9,7 +9,7 @@ import { readJson, writeJson } from '../../core/storage';
 import { planEntitlement } from '../../core/entitlementStore';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
-import { fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
+import { fetchFixturesByIds, fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
 import {
   calendarPrefOf,
   fixtureWantedByFollows,
@@ -21,6 +21,10 @@ import {
   seriesScopesFrom,
   tournamentTierOverridesFrom,
 } from '../follows/domain/followScopes';
+import { calendarGroupOf, sportCalendarColour } from '../follows/domain/sportCalendarGroup';
+import { sportByKey } from '../follows/domain/sportsConfig';
+import { sportLabelFor } from '../follows/domain/sportTerms';
+import { activeRegion } from '../../core/regionStore';
 import { activeBackend } from './data/calendarBackend';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import { calendarConnection } from './data/calendarConnection';
@@ -44,8 +48,12 @@ import {
 import { CalendarPrefs } from './domain/prefs';
 import {
   applyTargetRequest,
+  CalendarHandle,
   createFixtureEvent,
+  createSportCalendar,
+  currentTargetId,
   deleteFixtureEvent,
+  deleteSportCalendarIfEmpty,
   deleteVacatedCalendarIfOurs,
   ensureCalendarPermission,
   hasCalendarGrant,
@@ -55,14 +63,30 @@ import {
   listTaggedEvents,
   nativeSyncRoute,
   ResolvedTarget,
+  surveyCalendars,
   TargetRequest,
   updateFixtureEvent,
+  vacateTargetIfEmpty,
 } from './data/driver';
+import { isScanAnomaly, orphanEventIds, RecoveredEvent } from './domain/recovery';
+import { drainStrayEvents, relocate } from './data/layoutRelocation';
 import {
-  entriesFromRecoveredEvents,
-  isScanAnomaly,
-  orphanEventIds,
-} from './domain/recovery';
+  forgetSportCalendar,
+  pendingLayoutMove,
+  recordSportCalendar,
+  setPendingLayoutMove,
+  sportCalendarIds,
+} from './data/sportCalendarStore';
+import {
+  CalendarLayout,
+  layoutOf,
+  lookupIdOf,
+  mergeRecoveredCalendars,
+  Placement,
+  planLayoutRelocation,
+  SPORT_CALENDAR_PREFIX,
+  unreferencedCalendarIds,
+} from './domain/sportCalendars';
 import { isEndPast, isPast } from '../fixtures/domain/horizon';
 import {
   clearedStray,
@@ -78,8 +102,10 @@ import {
   upsertLedgerEntry,
 } from './data/ledger';
 import {
+  desiredEventFor,
   horizonStartFrom,
   isRunAbandoned,
+  Ledger,
   nowFromHorizon,
   orderOps,
   passBudgetMs,
@@ -492,12 +518,20 @@ function inputFor(
     endUtc: string;
     allDay?: boolean;
     reminderMinutes?: number | null;
+    note?: string;
+    colour?: string;
   },
   prefs: CalendarPrefs,
   settings: EventSettingsMap,
 ): EventInput {
   const allDay = entry.allDay ?? false;
   return {
+    // What the event SAID and how it LOOKED travel with it too
+    // (2026-09-24): its note, and a per-event colour — a move used to
+    // drop both, and the planner (which diffs neither the note nor, once
+    // the ledger carries it forward, the colour) never put them back.
+    ...(entry.note ? { note: entry.note } : {}),
+    ...(entry.colour ? { colour: entry.colour } : {}),
     fixtureId,
     title: entry.title,
     startUtc: entry.startUtc,
@@ -525,12 +559,13 @@ function inputFor(
 // the user doing anything. The old calendar is not scanned by prune, so
 // this is the ONLY thing that can clean them up.
 async function drainStrays(): Promise<void> {
-  for (const { fixtureId, eventId } of strayEventIds(loadLedger())) {
-    const del = await deleteFixtureEvent(eventId);
-    if (!del.ok) continue; // try again next sync; never lose the record
-    const entry = loadLedger()[fixtureId];
-    if (entry) upsertLedgerEntry(fixtureId, clearedStray(entry));
-  }
+  // Each leftover names its calendar (2026-09-24): a REST delete has to.
+  await drainStrayEvents({
+    ledger: loadLedger,
+    upsert: upsertLedgerEntry,
+    deleteEvent: deleteFixtureEvent,
+    beat,
+  });
 }
 
 export interface MoveProgress {
@@ -571,7 +606,7 @@ async function migrateToTarget(
         input.extraRemindersBefore,
       ),
     );
-    const del = await deleteFixtureEvent(step.entry.eventId);
+    const del = await deleteFixtureEvent(step.entry.eventId, step.entry.calendarId);
     if (del.ok) {
       const entry = loadLedger()[step.fixtureId];
       if (entry) upsertLedgerEntry(step.fixtureId, clearedStray(entry));
@@ -597,6 +632,11 @@ export async function switchCalendarTarget(
     // means THROUGH A WRITE PATH (B4 item 5), not merely opted in.
     if (calendarConnection() !== 'connected') {
       return err({ kind: 'unknown', message: 'Connect your calendar first.' });
+    }
+    // A calendar per sport has no one target to switch (the picker is
+    // absent in that layout); refused here too, never half-applied.
+    if (layoutOf(loadPrefs()) === 'per-sport') {
+      return err({ kind: 'unknown', message: 'Each sport has its own calendar.' });
     }
     const perm = await ensureCalendarPermission();
     if (!perm.ok) return perm;
@@ -626,6 +666,115 @@ export async function switchCalendarTarget(
     if (!sync.ok) return sync;
     return ok({ target: target.value, moved: moved.value });
   });
+}
+
+// ─── A calendar per sport (owner brief 2026-09-24) ────────────────────
+//
+// The layout (domain/sportCalendars.ts) decides WHERE events live, never
+// which. These are the pass's effects for it; the move itself is
+// data/layoutRelocation.ts, the same create → repoint-and-owe → delete
+// step a target switch takes.
+
+// "KickOffCal · <the sport as the Following row names it>" — the region's
+// and language's word at the moment the calendar is created. Never
+// renamed after: from then on the calendar is the user's to edit.
+function sportCalendarTitle(group: string): string {
+  const label = sportLabelFor(group, sportByKey(group)?.label ?? group, activeRegion());
+  return `${SPORT_CALENDAR_PREFIX}${label}`;
+}
+
+// A sport's calendar: the recorded one, or a new one — created, in its
+// sport's colour, and RECORDED before any event goes in it (the prune and
+// the empty-calendar sweep work from that record), the first time the
+// sport has an event.
+async function sportCalendarFor(group: string): Promise<Result<string>> {
+  const known = sportCalendarIds()[group];
+  if (known) return ok(known);
+  const created = await createSportCalendar(
+    sportCalendarTitle(group),
+    sportCalendarColour(group),
+  );
+  if (!created.ok) return created;
+  recordSportCalendar(group, created.value);
+  return created;
+}
+
+interface OurCalendars {
+  present: Set<string>;
+  // "KickOffCal · …" calendars provably ours but not in our record
+  // (provider only): recovered from, pruned, and removed once empty.
+  unrecordedSport: string[];
+}
+
+// Every calendar a pass may rely on, checked against the store ONCE. A
+// recorded sport calendar that is gone — the user deleted it in their
+// calendar app — is forgotten here, before anything is placed by it: its
+// sport's next event creates a fresh one, and the move recreates what was
+// in it there.
+async function surveyOurCalendars(
+  layout: CalendarLayout,
+  home: string | null,
+): Promise<Result<OurCalendars>> {
+  const recorded = Object.values(sportCalendarIds());
+  const candidates = new Set<string>(recorded);
+  for (const e of Object.values(loadLedger())) {
+    candidates.add(e.calendarId);
+    if (e.strayCalendarId) candidates.add(e.strayCalendarId);
+  }
+  if (home !== null) candidates.add(home);
+  // The combined layout's calendar was resolved a moment ago.
+  if (layout === 'combined' && home !== null) candidates.delete(home);
+  const survey = await surveyCalendars([...candidates], recorded);
+  if (!survey.ok) return survey;
+  const present = new Set(survey.value.present);
+  if (layout === 'combined' && home !== null) present.add(home);
+  for (const id of survey.value.unrecordedSport) present.add(id);
+  for (const id of recorded) if (!present.has(id)) forgetSportCalendar(id);
+  return ok({ present, unrecordedSport: survey.value.unrecordedSport });
+}
+
+// Fixture documents asked for by id that do not exist — not asked about
+// again this session. Their events stay where they are.
+const fixturesNotFound = new Set<string>();
+
+// The sport of every ledgered event: stamped on the entry when it was
+// written; else read off this pass's fixtures; else looked up by id — a
+// finished game is never fetched again, and a move places EVERY event.
+// `complete` is false when the lookup failed: what it would have placed
+// stays put this pass, and the move is not yet done.
+async function sportsOfLedger(
+  ledger: Ledger,
+  fixtures: readonly Fixture[],
+): Promise<{ groups: Map<string, string>; complete: boolean }> {
+  const byId = new Map(fixtures.map((f) => [f.id, f] as const));
+  const groups = new Map<string, string>();
+  const ask = new Set<string>();
+  for (const [fixtureId, entry] of Object.entries(ledger)) {
+    if (entry.sport) {
+      groups.set(fixtureId, entry.sport);
+      continue;
+    }
+    const f = byId.get(fixtureId) ?? byId.get(lookupIdOf(fixtureId));
+    if (f) groups.set(fixtureId, calendarGroupOf(f));
+    else if (!fixturesNotFound.has(lookupIdOf(fixtureId))) ask.add(lookupIdOf(fixtureId));
+  }
+  if (ask.size === 0) return { groups, complete: true };
+  const found = await fetchFixturesByIds([...ask]);
+  if (!found.ok) return { groups, complete: false };
+  const fetched = new Map(found.value.map((f) => [f.id, f] as const));
+  for (const id of ask) if (!fetched.has(id)) fixturesNotFound.add(id);
+  for (const fixtureId of Object.keys(ledger)) {
+    if (groups.has(fixtureId)) continue;
+    const f = fetched.get(lookupIdOf(fixtureId));
+    if (f) groups.set(fixtureId, calendarGroupOf(f));
+  }
+  return { groups, complete: true };
+}
+
+function sportPlacement(group: string | undefined): Placement | null {
+  if (!group) return null;
+  const id = sportCalendarIds()[group];
+  return id ? { calendarId: id, group } : { calendarId: null, group };
 }
 
 async function runSyncInner(): Promise<Result<SyncOutcome>> {
@@ -658,9 +807,20 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
   {
     const perm = await ensureCalendarPermission();
     if (!perm.ok) return perm;
-    const target = await ensureCalendarTarget();
-    if (!target.ok) return target;
-    const calendarId = target.value.calendarId;
+    // THE LAYOUT (owner brief 2026-09-24): one calendar target, or a
+    // calendar per sport. The combined layout resolves — and if need be
+    // creates — its calendar every pass, as it always has. The per-sport
+    // layout must never create it: it only reads where it was, so the
+    // events still in it can move out and the emptied calendar can go.
+    const layout = layoutOf(loadPrefs());
+    let home: string | null;
+    if (layout === 'combined') {
+      const target = await ensureCalendarTarget();
+      if (!target.ok) return target;
+      home = target.value.calendarId;
+    } else {
+      home = currentTargetId();
+    }
 
     // Reminders became OURS to write in Prompt 16. Entries from before
     // that carry no record of what was applied, and unknown is planned
@@ -678,34 +838,57 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       assumedAppliedReminder(entry.allDay, loadPrefs()),
     );
 
+    const survey = await surveyOurCalendars(layout, home);
+    if (!survey.ok) return survey;
+    const { present, unrecordedSport } = survey.value;
+    // Every calendar of ours that exists, the target first.
+    const ourCalendars = (): string[] => [
+      ...new Set([
+        ...(home !== null && present.has(home) ? [home] : []),
+        ...Object.values(sportCalendarIds()),
+        ...unrecordedSport,
+      ]),
+    ];
+
     // Reinstall recovery: an empty ledger with tagged events already in
     // the calendar means the app's storage was lost (uninstall) — the
     // events are the durable record. Rebuild before planning so the sync
     // updates instead of duplicating. Only OUR events are adopted: in a
-    // user's calendar everything else is invisible to us.
+    // user's calendar everything else is invisible to us. EVERY calendar
+    // of ours is read (2026-09-24): the events may sit in sport calendars,
+    // and a fixture found in two of them is kept once.
     let recovered = 0;
     let surplusDeleted = 0;
     if (Object.keys(loadLedger()).length === 0) {
-      const scan = await listTaggedEvents(calendarId);
-      if (scan.ok && scan.value.length > 0) {
-        const rebuilt = entriesFromRecoveredEvents(
-          scan.value,
-          calendarId,
-          Date.now(),
-        );
-        for (const [fixtureId, entry] of Object.entries(rebuilt.ledger)) {
-          upsertLedgerEntry(fixtureId, entry);
+      const scans: Array<{ calendarId: string; events: RecoveredEvent[] }> = [];
+      for (const id of ourCalendars()) {
+        const scan = await listTaggedEvents(id);
+        beat();
+        if (scan.ok && scan.value.length > 0) {
+          scans.push({ calendarId: id, events: scan.value });
         }
-        for (const eventId of rebuilt.surplusEventIds) {
-          await deleteFixtureEvent(eventId);
-          surplusDeleted++;
-          beat();
-        }
-        recovered = Object.keys(rebuilt.ledger).length;
       }
+      const rebuilt = mergeRecoveredCalendars(scans, Date.now());
+      for (const [fixtureId, entry] of Object.entries(rebuilt.ledger)) {
+        upsertLedgerEntry(fixtureId, entry);
+      }
+      for (const { eventId, calendarId } of rebuilt.surplus) {
+        await deleteFixtureEvent(eventId, calendarId);
+        surplusDeleted++;
+        beat();
+      }
+      recovered = Object.keys(rebuilt.ledger).length;
     }
-    const calObj = await getCalendarObject(calendarId);
-    if (!calObj.ok) return calObj;
+    // One native calendar object per calendar per run: per-event
+    // instantiation exhausts bridge handles.
+    const handles = new Map<string, CalendarHandle>();
+    const handleFor = async (id: string): Promise<Result<CalendarHandle>> => {
+      const known = handles.get(id);
+      if (known) return ok(known);
+      const h = await getCalendarObject(id);
+      if (h.ok) handles.set(id, h.value);
+      return h;
+    };
 
     const follows = loadFollowKeys();
     const prefs = loadPrefs();
@@ -716,14 +899,18 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Google Calendar, say) leaves ledger entries pointing at a calendar
     // we no longer write to. Both are repaired here, before planning, so
     // the plan below only ever deals with events in the current target.
+    // The combined layout moves every entry into its target here; the
+    // per-sport layout places each event by its fixture's sport, so its
+    // move waits for the fixtures below.
     await drainStrays();
-    const moved = await migrateToTarget(
-      calendarId,
-      calObj.value,
-      prefs,
-      settings,
-    );
-    if (!moved.ok) return moved;
+    let moved = 0;
+    if (layout === 'combined' && home !== null) {
+      const homeHandle = await handleFor(home);
+      if (!homeHandle.ok) return homeHandle;
+      const m = await migrateToTarget(home, homeHandle.value, prefs, settings);
+      if (!m.ok) return m;
+      moved = m.value;
+    }
 
     const fixtures = await fetchFixturesForFollows(
       [...new Set([...follows, ...pinFollowKeys()])],
@@ -761,9 +948,18 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // cannot read the calendar must never be allowed to conclude the
     // calendar is empty. (Stage 0's standing invariant, applied to the one
     // surface that was still exempt from it.)
-    const ledgerEntries = Object.keys(ledger).length;
-    if (ledgerEntries > 0) {
-      const guard = await listTaggedEvents(calendarId);
+    //
+    // Asked of EVERY calendar the ledger places events in (2026-09-24):
+    // one blind calendar among several must not hide behind the others'
+    // counts. A calendar that is gone is not asked — its events went with
+    // it, and the move recreates them.
+    const entriesIn = new Map<string, number>();
+    for (const e of Object.values(ledger)) {
+      if (!present.has(e.calendarId)) continue;
+      entriesIn.set(e.calendarId, (entriesIn.get(e.calendarId) ?? 0) + 1);
+    }
+    for (const [id, ledgerEntries] of entriesIn) {
+      const guard = await listTaggedEvents(id);
       if (!guard.ok) return guard;
       beat();
       if (isScanAnomaly(guard.value.length, ledgerEntries)) {
@@ -857,12 +1053,73 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // tier copy is stamped with its own draw's key so an `out` draw's
     // matches are refused here, not silently re-admitted by a tour key.
     const wantedByFollows = fixtureWantedByFollows(loadFollowables());
+
+    // THE PER-SPORT MOVE, each event placed by its own fixture's sport:
+    // after the tier pass, so a tournament's bookends and matches are in
+    // hand, and before the plan, so the plan sees events where the layout
+    // wants them. It shares the pass's time budget with the ops below;
+    // what it does not reach, the queued pass continues.
+    const budgetMs = passBudgetMs(STALE_RUN_MS);
+    const passStartedAt = Date.now();
+    let layoutSettled = true;
+    let relocationRemaining = 0;
+    if (layout === 'per-sport') {
+      const known = await sportsOfLedger(loadLedger(), [
+        ...fixtures.value.fixtures,
+        ...tieredFixtures,
+      ]);
+      if (!known.complete) layoutSettled = false;
+      const tieredById = new Map(tieredFixtures.map((f) => [f.id, f] as const));
+      const scopes = seriesScopesFrom(loadFollowables());
+      const rel = await relocate(
+        planLayoutRelocation(loadLedger(), (fixtureId) =>
+          sportPlacement(known.groups.get(fixtureId)),
+        ),
+        {
+          ledger: loadLedger,
+          upsert: upsertLedgerEntry,
+          calendarFor: async (to) =>
+            to.calendarId !== null ? ok(to.calendarId) : sportCalendarFor(to.group),
+          create: async (calendarId, step) => {
+            const h = await handleFor(calendarId);
+            if (!h.ok) return h;
+            const input = inputFor(step.fixtureId, step.entry, prefs, settings);
+            // An entry written before notes were recorded: its note is
+            // read off the fixture, while the fixture is still in hand.
+            if (input.note === undefined) {
+              const f = tieredById.get(step.fixtureId);
+              const note = f
+                ? desiredEventFor(f, prefs, scopes, settings, { pinned: pins.has(f.id) })?.note
+                : undefined;
+              if (note) input.note = note;
+            }
+            const made = await createFixtureEvent(h.value, input);
+            if (!made.ok) return made;
+            return ok({
+              eventId: made.value,
+              reminderMinutes: input.reminderMinutesBefore,
+              allDayReminder: input.allDayReminder,
+              extraReminders: input.extraRemindersBefore,
+              ...(input.note ? { note: input.note } : {}),
+            });
+          },
+          deleteEvent: (eventId, calendarId) => deleteFixtureEvent(eventId, calendarId),
+          stop: (n) => shouldStopPass(n, Date.now() - passStartedAt, budgetMs),
+          beat,
+        },
+      );
+      if (!rel.ok) return rel;
+      moved += rel.value.moved;
+      relocationRemaining = rel.value.remaining;
+      if (relocationRemaining > 0) layoutSettled = false;
+    }
+
     // Removals the per-pass delete cap held back (a follow taken out, a
     // rung lowered) — drained by the rerun this pass queues below.
     let removalsHeldBack = 0;
     const ops = planSync(
       tieredFixtures,
-      ledger,
+      loadLedger(),
       follows,
       prefs,
       horizonStart,
@@ -886,8 +1143,6 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Bounded pass: corrections first, creates after, stopping when the
     // time budget is spent rather than at a fixed op count.
     const ordered = orderOps(ops);
-    const budgetMs = passBudgetMs(STALE_RUN_MS);
-    const passStartedAt = Date.now();
     let applied = 0;
     const outcome: SyncOutcome = {
       created: 0,
@@ -895,7 +1150,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       deleted: 0,
       recovered,
 
-      ...(moved.value > 0 ? { moved: moved.value } : {}),
+      ...(moved > 0 ? { moved } : {}),
       followKeyCount: fixtures.value.keys,
       queryChunks: fixtures.value.chunks,
       at: new Date().toISOString(),
@@ -926,30 +1181,51 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           // colour never rendered the control, so never see one).
           ...(d.colour ? { colour: d.colour } : {}),
         };
+        // The fixture's own calendar group, stamped on the entry so a
+        // later move can place the event without the fixture in hand.
+        const group = calendarGroupOf(f);
+        // A NEW event goes where the layout wants it; an update stays in
+        // the calendar the event is in (a move not yet reached carries
+        // it across later, rebuilt from this very entry).
+        const createPlaced = async (): Promise<
+          Result<{ eventId: string; calendarId: string }>
+        > => {
+          const cal =
+            layout === 'combined' && home !== null
+              ? ok(home)
+              : await sportCalendarFor(group);
+          if (!cal.ok) return cal;
+          const h = await handleFor(cal.value);
+          if (!h.ok) return h;
+          const made = await createFixtureEvent(h.value, input);
+          return made.ok ? ok({ eventId: made.value, calendarId: cal.value }) : made;
+        };
         // EventKit half-applies all-day ↔ timed conversions on update
         // (flag flips, dates don't). A kind change is always delete +
         // recreate; same-kind changes update in place.
         const kindFlip =
           op.op === 'update' &&
           (op.entry.allDay ?? false) !== op.desired.allDay;
-        if (kindFlip) await deleteFixtureEvent(op.entry.eventId);
-        let r =
-          op.op === 'create' || kindFlip
-            ? await createFixtureEvent(calObj.value, input)
-            : await updateFixtureEvent(op.entry.eventId, input);
-        // A hand-deleted event whose fixture then changed: the update
-        // finds nothing, but the fixture is still WANTED — recreate it
-        // and let the ledger repoint below. Without this, one missing
-        // event aborted every sync from the moment its time moved
-        // (the delete-side twin of the same wedge parked a real phone
-        // at 174 events for an evening).
-        if (!r.ok && r.error.kind === 'not-found' && op.op === 'update') {
-          r = await createFixtureEvent(calObj.value, input);
+        if (kindFlip) await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
+        let r: Result<{ eventId: string; calendarId: string }>;
+        if (op.op === 'create' || kindFlip) {
+          r = await createPlaced();
+        } else {
+          const inPlace = op.entry.calendarId;
+          const u = await updateFixtureEvent(op.entry.eventId, input, inPlace);
+          r = u.ok ? ok({ eventId: u.value, calendarId: inPlace }) : u;
+          // A hand-deleted event whose fixture then changed: the update
+          // finds nothing, but the fixture is still WANTED — recreate it
+          // and let the ledger repoint below. Without this, one missing
+          // event aborted every sync from the moment its time moved
+          // (the delete-side twin of the same wedge parked a real phone
+          // at 174 events for an evening).
+          if (!r.ok && r.error.kind === 'not-found') r = await createPlaced();
         }
         if (!r.ok) return r;
         upsertLedgerEntry(f.id, {
-          eventId: r.value,
-          calendarId,
+          eventId: r.value.eventId,
+          calendarId: r.value.calendarId,
           startUtc: input.startUtc,
           endUtc: input.endUtc,
           title: input.title,
@@ -962,12 +1238,14 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           extraReminders: input.extraRemindersBefore,
           allDayReminder: d.allDayReminder,
           ...(d.colour ? { colour: d.colour } : {}),
+          sport: group,
+          ...(d.note ? { note: d.note } : {}),
         });
         if (op.op === 'create') outcome.created++;
         else outcome.updated++;
         applied++;
       } else {
-        const del = await deleteFixtureEvent(op.entry.eventId);
+        const del = await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
         if (!del.ok) return del; // never drop a ledger entry on a failed delete
         removeLedgerEntry(op.fixtureId);
         outcome.deleted++;
@@ -985,11 +1263,60 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // listTaggedEvents is the ownership gate: in a user's calendar it
     // returns ONLY events carrying our tag, so an appointment of theirs
     // can never become an "orphan".
-    const postScan = await listTaggedEvents(calendarId);
-    if (postScan.ok) {
+    //
+    // Every calendar of ours, not only the one the layout writes into
+    // (2026-09-24): an event a killed move created but never recorded sits
+    // in whichever calendar it was created in.
+    for (const id of ourCalendars()) {
+      const postScan = await listTaggedEvents(id);
+      beat();
+      if (!postScan.ok) continue;
       for (const eventId of orphanEventIds(postScan.value, loadLedger())) {
-        await deleteFixtureEvent(eventId);
+        await deleteFixtureEvent(eventId, id);
         outcome.pruned = (outcome.pruned ?? 0) + 1;
+      }
+    }
+
+    // "Remove it once it's empty" (owner brief 2026-09-24): a sport
+    // calendar no event of ours lives in any more goes — but only after
+    // the calendar ITSELF is read as holding nothing, not even an event the
+    // user added by hand. In the per-sport layout the one combined
+    // calendar goes the same way once the move has emptied it; a calendar
+    // the user chose as their target is never touched.
+    const ledgerNow = loadLedger();
+    const recordedNow = new Set(Object.values(sportCalendarIds()));
+    for (const id of unreferencedCalendarIds(ledgerNow, [...recordedNow, ...unrecordedSport])) {
+      if (await deleteSportCalendarIfEmpty(id, recordedNow.has(id))) forgetSportCalendar(id);
+      beat();
+    }
+    if (
+      layout === 'per-sport' &&
+      home !== null &&
+      present.has(home) &&
+      unreferencedCalendarIds(ledgerNow, [home]).length > 0
+    ) {
+      await vacateTargetIfEmpty();
+    }
+
+    // The move the user confirmed announces itself once, when nothing is
+    // left to move — on this open or a later one, however many passes and
+    // app closes it took.
+    const pending = pendingLayoutMove();
+    if (pending !== null) {
+      const settled =
+        layoutSettled &&
+        strayEventIds(ledgerNow).length === 0 &&
+        (layout === 'per-sport' ||
+          Object.values(ledgerNow).every((e) => e.calendarId === home));
+      if (pending !== layout) {
+        setPendingLayoutMove(null);
+      } else if (settled) {
+        setPendingLayoutMove(null);
+        showToast({
+          message: t(
+            layout === 'per-sport' ? 'calendar.layout.separated' : 'calendar.layout.combined',
+          ),
+        });
       }
     }
 
@@ -1025,7 +1352,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Drain the remainder on the next pass. Reuses the lock's existing
     // coalescing hop rather than recursing here, so the run finishes and
     // releases before the next one starts.
-    if (deferred > 0) rerunQueued = true;
+    if (deferred > 0 || relocationRemaining > 0) rerunQueued = true;
     return ok(outcome);
   }
 }

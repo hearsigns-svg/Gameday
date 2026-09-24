@@ -12,6 +12,10 @@ export const calendarStrings = {
   // The language-switch rewrite notice (Phase C ruling: the rewrite is
   // deliberate and announces itself in-UI when it runs).
   'calendar.language.rewrite': 'Updating your calendar events to {language}',
+  // A move between one calendar and a calendar per sport, finished
+  // (owner brief 2026-09-24) — said once, however long it took.
+  'calendar.layout.separated': 'Your games are now in separate calendars',
+  'calendar.layout.combined': 'Your games are back in one calendar',
   // ── Offset vocabulary (prefs.ts — offsetLabel / short / picker) ────
   'calendar.offset.off': 'Off',
   'calendar.offset.minBefore': '{n} min before',

@@ -302,3 +302,33 @@ its only writable source is the local `Default`):
 - [ ] Prune cost against a BUSY real calendar. The pass walks -5y…+3y of
       the target on every sync; that was cheap when the target was only
       ever ours, and is untested against someone's real primary calendar.
+
+## A calendar for each sport (owner brief 2026-09-24)
+
+The target above is the COMBINED layout's calendar. Settings → Calendar →
+"Separate calendar for each sport" switches to the PER-SPORT layout:
+every event lives in a "KickOffCal · <Sport>" calendar of ours instead
+(`domain/sportCalendars.ts`, `follows/domain/sportCalendarGroup.ts`).
+What it means for this document:
+
+- There is no target to pick or paint in that layout: the Preferences
+  target row, the colour swatches and the priming screen's "Use a
+  different calendar" are absent (`canPickCalendarTarget()` answers false;
+  `switchCalendarTarget` refuses). The stored target is only READ, so the
+  events still in it can move out; it is never re-resolved or created.
+- Once the move has emptied it, a KickOffCal calendar of OURS is removed
+  and the target record cleared (a user's own calendar is never touched —
+  its events move out, the calendar stays). Switching back resolves a
+  target as on a fresh install, creating KickOffCal in the account the
+  sport calendars live in, in the saved colour.
+- A switch in either direction MOVES every event with this document's
+  migration step — create, one ledger write repointing the entry and
+  owing the old event a delete (now naming its calendar), delete — so the
+  interrupted-switch guarantees above hold for it too. See
+  docs/DECISIONS.md 2026-09-24 for the ruling and the verification.
+- Each sport calendar is created where KickOffCal is (the target's
+  source, else the sport calendars' own source, else the default
+  resolution), recorded before any event goes in it, and removed once it
+  holds nothing at all. The event- and calendar-level ownership gates
+  above apply to them unchanged: our record, or the "KickOffCal · " title
+  plus zero foreign events.

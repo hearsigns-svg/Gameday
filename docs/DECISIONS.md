@@ -5049,3 +5049,114 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   it: the Undo row, its timer and styles. Kept: `follows.following.a11yUndo`
   and the unfollow toast strings, which the Olympic season page and the
   toast Undo still read.
+- 2026-09-24 — **Owner brief: a separate calendar for each sport.** A
+  standard switch, "Separate calendar for each sport", directly under "Add
+  new follows to your calendar"; off by default; not Premium-gated (the
+  brief says nothing of it, and it is layout, not sync). THE LAYOUT
+  DECIDES WHERE EVENTS LIVE, NEVER WHICH: the per-follow glyph, the
+  inclusion and inheritance rules and the new-follow default are untouched
+  and work the same either way. Which calendar: the fixture's own sport
+  folded onto the tile that hosts it — the Following row's subtitle word
+  (`follows/domain/sportCalendarGroup.ts`). F1 and every other motorsport
+  series share ONE calendar, labelled "F1 & Motorsport" or "Motorsport"
+  by region; any Olympic event goes in Olympics whatever its discipline;
+  the FIXTURE decides, never the follow that wanted it (one event, one
+  calendar). Named "KickOffCal · <Sport>" — spelled KickOffCal, the app's
+  existing calendar and brand (the brief wrote "KickoffCal") — in the
+  region's and language's word at creation. Each is created in a colour
+  of its own (fourteen, picked for separation, not the sport accents,
+  three of which are near-identical blues), set ONCE: never repainted,
+  never renamed; from then on it is the user's in their calendar app. In
+  this layout the colour swatches and the calendar picker are absent
+  (rule 10): there is no one calendar to name, pick or paint.
+  LIFECYCLE: a sport's calendar is created the first time the sport has
+  an event, and its id is RECORDED before any event is written into it;
+  it is removed once it holds nothing — read for real, not inferred: no
+  event of ours and none the user added by hand. The one KickOffCal
+  calendar goes the same way once the move has emptied it (only ever a
+  calendar of ours; a user's own target is never touched). Switching back
+  recreates it in the same account the sport calendars live in, so a
+  user who kept KickOffCal on the phone rather than in iCloud keeps it
+  there. FLAGGED — FINISHED GAMES KEEP A CALENDAR: the horizon rule (rule
+  5) never deletes a finished game, so a sport's calendar holding finished
+  games stays after its last follow leaves; "disappears when its last
+  follow leaves" is exactly true when nothing finished is left in it.
+  Deleting history to empty it was not done without a ruling.
+  SWITCHING with games already in a calendar asks first ("Move your games
+  into separate calendars?" / "Move your games back into one calendar?",
+  the brief's body with N = every event KickOffCal wrote, Cancel / Move);
+  Cancel changes nothing. EVERY event moves, finished ones included — the
+  target-switch precedent (2026-07-30), not rule 5: a move is the user
+  relocating their calendar, not sync churn. The step is the target
+  switch's, shared by both directions: create in the destination → ONE
+  ledger write repointing the entry and recording the old event as owed a
+  delete, now NAMING ITS CALENDAR (`strayCalendarId` — Google reaches an
+  event only through its calendar) → delete → debt cleared. Events are
+  placed by the ledger's new `sport` stamp (written on every write from
+  now on), else this pass's fixtures, else a by-id lookup (finished games
+  are never fetched again); an event whose fixture document no longer
+  exists stays where it is — and keeps KickOffCal alive — FLAGGED. The
+  move rebuilds each event WITH its note (recorded on the ledger from now
+  on; read off the fixture for older entries) and its per-event colour:
+  a target switch used to drop both, and nothing ever put them back. The
+  toast ("Your games are now in separate calendars" / "Your games are back
+  in one calendar") fires once, when nothing is left to move — recorded
+  persistently, so a move finished on a later open still says so.
+  Every pass now surveys the calendars it relies on once (a sport
+  calendar deleted by hand is forgotten, then recreated with its games),
+  recovers a lost ledger from every calendar of ours (a fixture found in
+  two kept once), prunes every calendar of ours, and runs the
+  scan-anomaly guard PER CALENDAR (one blind calendar cannot hide behind
+  the others' counts). The erase (Data & privacy) deletes every sport
+  calendar whole, with its own sentence. A reinstall resets the switch
+  with every other setting, so the games come back into one calendar.
+  CLOSED PARTWAY: proven by an engine-level test that runs the real pass
+  against a model calendar store killed before and after every single
+  calendar write, both directions, on an EventKit-like store and a
+  Google-like one that addresses events through their calendar, plus
+  random repeated kills while the user flips the switch back and forth —
+  every game ends exactly once, in the right calendar, the toast once. The
+  guards were then defeated on purpose (rule 15), one at a time: the
+  calendar id dropped on each of the five paths that pass one, the new
+  calendar left unrecorded, the prune narrowed to one calendar, no sweep,
+  no vacate, the target recreated in the per-sport layout, the plan fed
+  the pre-move ledger, the toast ungated, the repoint and the debt split,
+  a gone calendar kept, the note dropped, the guard narrowed — sixteen
+  defects, sixteen failures, each restored. The five calendar-id
+  defects and the stale ledger at first PASSED: the prune masked them by
+  deleting the leftover a pass later, so the test now also asserts no
+  Google write ever misses its calendar and that the prune only ever meets
+  an event created and not yet recorded. ONE HONEST LIMIT: under Google a
+  calendar created in the instant before its id is recorded cannot be
+  found again (the app-created scope cannot list calendars) and stays
+  behind EMPTY — no game is affected; EventKit finds such a calendar by
+  its title and proven contents and removes it.
+- 2026-09-24 — **A calendar for each sport: simulator verification (iPhone
+  17 Pro, Release build, measured in `Calendar.sqlitedb`, not
+  screenshots).** Start: 1,624 events, all in KickOffCal. The upgrade
+  pass changed nothing (0 / 0 / 0). ON: the confirmation read as briefed
+  ("Moving 1624 games…"); Cancel saved and moved nothing; Move moved all
+  1,624 in ONE pass (62.5 s, inside the pass budget) — Basketball 1,208,
+  Football 338 (one of them a TSDB-sourced Liverpool v Chelsea, rightly),
+  Tennis 68, F1 & Motorsport 10; 1,624 distinct, no duplicates; each
+  calendar in its creation colour; KickOffCal emptied and removed; the
+  toast shown; the calendar row and swatches absent from Settings.
+  SHARED MOTORSPORT: following MotoGP put its 49 sessions in the SAME
+  "KickOffCal · F1 & Motorsport" calendar; unfollowing it returned the
+  calendars to exactly the prior state. LAST FOLLOW LEAVES: unfollowing F1
+  (every race still to come) deleted its 10 races and the calendar went
+  with them, forgotten from the record; Follow on the same row recreated
+  it, same colour, content identical. CLOSED PARTWAY, both directions:
+  the app was terminated mid-move (back to one calendar: 424 moved;
+  into sport calendars: 924 moved). At each kill the store held 1,624
+  events for 1,624 fixtures with one delete still owed; each reopen
+  finished the move (1,200 and 700 moved), drained the debt, announced
+  itself once, and landed identical to the clean result. OFF, finally:
+  1,624 in KickOffCal, identical to the start in fixture, title, start,
+  all-day and note (all 29 tournament notes intact); follows
+  byte-identical to the start. Olympics: no provider writes Olympic
+  fixtures yet, so the Olympics calendar is proven by the tests only.
+  Android not run (no device attached); its REST path is covered by the
+  Google-shaped store in the engine test. Simulator lore: a tap from the
+  control tool does not toggle a UISwitch on iOS 26; a short swipe across
+  the thumb does (AGENTS.md).

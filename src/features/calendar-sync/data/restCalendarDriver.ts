@@ -35,6 +35,7 @@ import type { EventInput, ResolvedTarget } from './calendarDriver';
 import { clearTarget, saveTarget } from './calendarTargetStore';
 import { googleColorIdFor } from '../domain/googleEventColour';
 import {
+  calendarHasAnyEvent,
   createOwnedCalendar,
   deleteOwnedCalendar,
   deleteRestEvent,
@@ -224,12 +225,15 @@ export async function restCreateFixtureEvent(
 
 // Not-found propagates as the typed kind — the engine answers it by
 // RECREATING (a hand-deleted event whose fixture is still wanted),
-// exactly as on the provider path.
+// exactly as on the provider path. The calendar is the entry's own
+// (2026-09-24: events can live in a sport calendar); absent → the one
+// KickOffCal calendar, as before.
 export async function restUpdateFixtureEvent(
   eventId: string,
   input: EventInput,
+  inCalendarId?: string,
 ): Promise<Result<string>> {
-  const calendarId = restCalendarId();
+  const calendarId = inCalendarId ?? restCalendarId();
   if (!calendarId) return err({ kind: 'not-found', what: 'calendar' });
   return updateRestEvent(calendarId, eventId, toRestInput(input), token());
 }
@@ -240,8 +244,9 @@ export async function restUpdateFixtureEvent(
 // dropped.
 export async function restDeleteFixtureEvent(
   eventId: string,
+  inCalendarId?: string,
 ): Promise<Result<true>> {
-  const calendarId = restCalendarId();
+  const calendarId = inCalendarId ?? restCalendarId();
   if (!calendarId) return err({ kind: 'not-found', what: 'calendar' });
   const r = await deleteRestEvent(calendarId, eventId, token());
   if (!r.ok && r.error.kind === 'not-found') return ok(true);
@@ -264,4 +269,78 @@ export async function restListTaggedEvents(
       allDay: e.allDay,
     })),
   );
+}
+
+// ─── Sport calendars (owner brief 2026-09-24) ─────────────────────────
+//
+// One Google calendar per sport, created the first time that sport has an
+// event, in the same account as KickOffCal — calendar.app.created lets
+// this app create them and address nothing else. The colour is set ONCE
+// here and never repainted: from then on it is the user's, in Google
+// Calendar. A failed paint never fails the create.
+export async function restCreateSportCalendar(
+  title: string,
+  colour: string,
+): Promise<Result<string>> {
+  const created = await createOwnedCalendar(title, token());
+  if (!created.ok) return created;
+  const painted = await patchCalendarListColour(created.value, colour, token());
+  if (!painted.ok) {
+    console.warn(`[gameday] sport calendar colour not set: ${JSON.stringify(painted.error)}`);
+  }
+  return created;
+}
+
+// Which of these calendars of ours still exist (2026-09-24) — asked
+// before a pass places events by them. The app-created scope cannot list
+// calendars, so each one is asked about by id: a one-row event read, and
+// only "not found" means gone. Any other failure fails the survey.
+export async function restPresentCalendars(
+  calendarIds: readonly string[],
+): Promise<Result<Set<string>>> {
+  const present = new Set<string>();
+  for (const id of new Set(calendarIds)) {
+    const r = await calendarHasAnyEvent(id, token());
+    if (r.ok) present.add(id);
+    else if (r.error.kind !== 'not-found') return r;
+  }
+  return ok(present);
+}
+
+// Remove a calendar of ours once it holds NOTHING — not one of our events
+// and not one the user added by hand in Google Calendar. `true` when it is
+// gone (deleted now, or already); `false` keeps it for a later pass.
+export async function restDeleteCalendarIfEmpty(calendarId: string): Promise<boolean> {
+  const any = await calendarHasAnyEvent(calendarId, token());
+  if (!any.ok) return any.error.kind === 'not-found';
+  if (any.value) return false;
+  const r = await deleteOwnedCalendar(calendarId, token());
+  return r.ok;
+}
+
+// A separate calendar for each sport leaves the one KickOffCal calendar
+// unused; once it holds nothing it goes, with the records that described
+// it (the next combined pass creates it afresh, in the saved colour).
+export async function restVacateTargetIfEmpty(): Promise<boolean> {
+  const calendarId = restCalendarId();
+  if (!calendarId) return false;
+  const gone = await restDeleteCalendarIfEmpty(calendarId);
+  if (gone) {
+    clearRestCalendarId();
+    clearTarget();
+    removeKey(REST_COLOUR_KEY);
+  }
+  return gone;
+}
+
+// The erase (Data & privacy) takes every calendar of ours, sport ones
+// included — the user asked for everything KickOffCal put there.
+export async function restEraseCalendars(calendarIds: readonly string[]): Promise<Result<number>> {
+  let erased = 0;
+  for (const id of calendarIds) {
+    const r = await deleteOwnedCalendar(id, token());
+    if (!r.ok) return r;
+    erased++;
+  }
+  return ok(erased);
 }

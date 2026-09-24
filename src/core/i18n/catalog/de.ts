@@ -317,6 +317,8 @@ export const de: Catalog = {
 
   'calendar.language.rewrite':
     'Deine Kalendereinträge werden auf {language} umgestellt',
+  'calendar.layout.separated': 'Deine Spiele sind jetzt in getrennten Kalendern',
+  'calendar.layout.combined': 'Deine Spiele sind wieder in einem Kalender',
   // ── Offset vocabulary (prefs.ts — offsetLabel / short / picker) ────
   'calendar.offset.off': 'Aus',
   'calendar.offset.minBefore': '{n} Min. vorher',
@@ -560,6 +562,14 @@ export const de: Catalog = {
     'Deine Spiele übernehmen die Farbe von {calendar} — die stellst du in deiner Kalender-App ein.',
   'settings.calendar.newFollows': 'Neue Follows zu deinem Kalender hinzufügen',
   'settings.calendar.newFollowsCaption': 'Gilt für alles, dem du ab jetzt folgst.',
+  'settings.calendar.separateSports': 'Eigener Kalender für jede Sportart',
+  'settings.calendar.separateTitle': 'Deine Spiele in getrennte Kalender verschieben?',
+  'settings.calendar.combineTitle': 'Deine Spiele wieder in einen Kalender verschieben?',
+  'settings.calendar.moveBody_one':
+    'Farben oder Sichtbarkeit, die du in der Kalender-App deines Handys eingestellt hast, werden nicht übernommen. {n} Spiel zu verschieben kann einen Moment dauern.',
+  'settings.calendar.moveBody_other':
+    'Farben oder Sichtbarkeit, die du in der Kalender-App deines Handys eingestellt hast, werden nicht übernommen. {n} Spiele zu verschieben kann einen Moment dauern.',
+  'settings.calendar.moveAction': 'Verschieben',
   'settings.calendar.onDeviceOnly':
     'Nur auf diesem Gerät — erscheint nicht auf deinen anderen Geräten',
   'settings.calendar.onYourDevices': '{account} — erscheint auf deinen anderen Geräten',
@@ -632,6 +642,8 @@ export const de: Catalog = {
     'Entfernt die Einträge, die KickOffCal zu {calendar} hinzugefügt hat — auch vergangene. Alles andere darin bleibt unberührt.',
   'settings.privacy.eraseOurs':
     'Entfernt den KickOffCal-Kalender und alle Einträge darin — auch vergangene. Sonst wird in deinem Kalender nichts angetastet.',
+  'settings.privacy.eraseOursSeparate':
+    'Entfernt die KickOffCal-Kalender und alle Einträge darin — auch vergangene. Sonst wird in deinem Kalender nichts angetastet.',
   'settings.privacy.eraseResync':
     'Bleibt dein Kalender verbunden, werden künftige Einträge wieder hinzugefügt.',
   'settings.privacy.eraseAction': 'Löschen',

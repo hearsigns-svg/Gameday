@@ -271,6 +271,17 @@ silent).
     Firestore). Android pending the Pixel.
   - [x] Stage 6 — "sync" retired from user-facing copy (guard test on
     every catalog value). iOS verified.
+- [x] 2026-09-24 owner brief "a separate calendar for each sport"
+  (DECISIONS 2026-09-24, two entries): the Settings switch, one "KickOffCal ·
+  <Sport>" calendar per sport created with its sport's first event and
+  removed once empty, the confirmation + move + toast, kill-safe in both
+  directions. Gate 161 suites / 1,832 tests (both zones), tsc, functions
+  build. iOS simulator verified (on/off, counts, Motorsport sharing, the
+  last follow leaving, closed mid-move both ways). Olympics proven by tests
+  only (no provider writes Olympic fixtures yet). Android pending the Pixel
+  (REST path covered by the engine test's Google-shaped store). Owner
+  flags: finished games keep a sport's calendar (rule 5); an event whose
+  fixture document is gone stays in KickOffCal; spelled KickOffCal.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

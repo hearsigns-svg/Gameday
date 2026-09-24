@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
+  Alert,
   Animated,
   Linking,
   Pressable,
@@ -22,7 +23,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootScreenProps } from '../../core/navigation';
-import { t as tr, type CatalogKey } from '../../core/i18n';
+import { t as tr, tn, type CatalogKey } from '../../core/i18n';
 import { motion, radius, spacing, type, useTheme } from '../../core/tokens';
 import { useReduceMotion } from '../../core/useReduceMotion';
 import { PAST_RETENTION_DAYS } from '../fixtures/domain/horizon';
@@ -53,9 +54,13 @@ import { DataPrivacyRows } from './DataPrivacy';
 // connected calendar.
 import {
   calendarColour,
+  canPickCalendarTarget,
   nativeSyncRoute,
   setCalendarColour,
 } from '../calendar-sync/data/driver';
+import { loadLedger } from '../calendar-sync/data/ledger';
+import { setPendingLayoutMove } from '../calendar-sync/data/sportCalendarStore';
+import { layoutOf } from '../calendar-sync/domain/sportCalendars';
 import { restColourState } from '../calendar-sync/data/restCalendarDriver';
 import {
   calendarConnection,
@@ -586,7 +591,9 @@ export default function PreferencesScreen({
             accessibilityLabel={tr('settings.calendar.connectGoogle')}
             onPress={() => navigation.navigate('CalendarPriming', {})}
           />
-        ) : (
+        ) : canPickCalendarTarget() ? (
+          // Absent with a calendar for each sport (2026-09-24): there is
+          // no one calendar to name or to pick.
           <ValueRow
             label={target ? target.label : tr('settings.calendar.choose')}
             caption={
@@ -608,9 +615,12 @@ export default function PreferencesScreen({
             }
             onPress={() => navigation.navigate('CalendarTarget')}
           />
-        )}
-        {/* The calendar's colour lives WITH the calendar. */}
-        {ownCalendar ? (
+        ) : null}
+        {/* The calendar's colour lives WITH the calendar. A calendar for
+            each sport takes its sport's colour when it is created, and
+            from then on it is the user's, in their calendar app — so
+            there is no colour to choose here in that layout. */}
+        {prefs.separateSportCalendars ? null : ownCalendar ? (
           <View style={styles.swatchRow}>
             <Text style={[type.body, { color: t.textPrimary, marginBottom: spacing.s }]}>
               {tr('settings.calendar.colour')}
@@ -670,6 +680,36 @@ export default function PreferencesScreen({
             const saved = { ...prefs, newFollowsInCalendar: next };
             setPrefs(saved);
             savePrefs(saved);
+          }}
+        />
+        {/* A CALENDAR FOR EACH SPORT (owner brief 2026-09-24): where
+            events live, never which. With games already in a calendar
+            the switch asks first — every event is rebuilt in its new
+            calendar, and what the user set on a calendar in their
+            calendar app stays with that calendar. */}
+        <SwitchRow
+          label={tr('settings.calendar.separateSports')}
+          value={prefs.separateSportCalendars}
+          onValueChange={(next) => {
+            const games = Object.keys(loadLedger()).length;
+            const commit = () => {
+              const saved = { ...prefs, separateSportCalendars: next };
+              // The "done" toast is owed only when games actually move.
+              setPendingLayoutMove(games > 0 ? layoutOf(saved) : null);
+              apply(saved);
+            };
+            if (games === 0) {
+              commit();
+              return;
+            }
+            Alert.alert(
+              tr(next ? 'settings.calendar.separateTitle' : 'settings.calendar.combineTitle'),
+              tn('settings.calendar.moveBody', games),
+              [
+                { text: tr('core.actions.cancel'), style: 'cancel' },
+                { text: tr('settings.calendar.moveAction'), onPress: commit },
+              ],
+            );
           }}
           last
         />

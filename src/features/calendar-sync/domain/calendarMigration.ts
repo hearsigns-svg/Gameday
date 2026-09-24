@@ -61,6 +61,7 @@ export function movedEntry(
     eventId: newEventId,
     calendarId: targetCalendarId,
     strayEventId: entry.eventId,
+    strayCalendarId: entry.calendarId,
     ...(reminderMinutes !== undefined ? { reminderMinutes } : {}),
     ...(allDayReminder !== undefined ? { allDayReminder } : {}),
     ...(extraReminders !== undefined ? { extraReminders } : {}),
@@ -68,7 +69,7 @@ export function movedEntry(
 }
 
 export function clearedStray(entry: LedgerEntry): LedgerEntry {
-  const { strayEventId: _dropped, ...rest } = entry;
+  const { strayEventId: _dropped, strayCalendarId: _droppedCal, ...rest } = entry;
   return rest;
 }
 
@@ -77,10 +78,14 @@ export function clearedStray(entry: LedgerEntry): LedgerEntry {
 // touching the picker again.
 export function strayEventIds(
   ledger: Ledger,
-): Array<{ fixtureId: string; eventId: string }> {
+): Array<{ fixtureId: string; eventId: string; calendarId?: string }> {
   return Object.entries(ledger)
     .filter(([, e]) => typeof e.strayEventId === 'string' && e.strayEventId)
-    .map(([fixtureId, e]) => ({ fixtureId, eventId: e.strayEventId as string }));
+    .map(([fixtureId, e]) => ({
+      fixtureId,
+      eventId: e.strayEventId as string,
+      ...(e.strayCalendarId ? { calendarId: e.strayCalendarId } : {}),
+    }));
 }
 
 // Old calendars a switch has left behind — the candidates for "delete it

@@ -319,6 +319,8 @@ export const pt: Catalog = {
   // deliberate and announces itself in-UI when it runs).
   'calendar.language.rewrite':
     'Atualizando os eventos do seu calendário para {language}',
+  'calendar.layout.separated': 'Seus jogos agora estão em calendários separados',
+  'calendar.layout.combined': 'Seus jogos voltaram para um só calendário',
   // ── Offset vocabulary (prefs.ts — offsetLabel / short / picker) ────
   'calendar.offset.off': 'Desativado',
   'calendar.offset.minBefore': '{n} min antes',
@@ -558,6 +560,14 @@ export const pt: Catalog = {
     'Seus jogos usam a cor de {calendar}, que você define no seu app de calendário.',
   'settings.calendar.newFollows': 'Adicionar ao seu calendário o que você passar a seguir',
   'settings.calendar.newFollowsCaption': 'Vale para o que você seguir a partir de agora.',
+  'settings.calendar.separateSports': 'Um calendário para cada esporte',
+  'settings.calendar.separateTitle': 'Mover seus jogos para calendários separados?',
+  'settings.calendar.combineTitle': 'Voltar seus jogos para um só calendário?',
+  'settings.calendar.moveBody_one':
+    'Cores ou visibilidade que você definiu no app de calendário do celular não serão mantidas. Mover {n} jogo pode levar um tempinho.',
+  'settings.calendar.moveBody_other':
+    'Cores ou visibilidade que você definiu no app de calendário do celular não serão mantidas. Mover {n} jogos pode levar um tempinho.',
+  'settings.calendar.moveAction': 'Mover',
   'settings.calendar.onDeviceOnly': 'Só neste aparelho — não aparece nos seus outros aparelhos',
   'settings.calendar.onYourDevices': '{account} — aparece nos seus outros aparelhos',
   'settings.calendar.alongsideYours':
@@ -628,6 +638,8 @@ export const pt: Catalog = {
     'Remove os eventos que o KickOffCal adicionou a {calendar}, incluindo os passados. Nada mais nele é alterado.',
   'settings.privacy.eraseOurs':
     'Remove o calendário KickOffCal e todos os eventos dele — incluindo os passados. Nada mais no seu calendário é alterado.',
+  'settings.privacy.eraseOursSeparate':
+    'Remove os calendários KickOffCal e todos os eventos deles — incluindo os passados. Nada mais no seu calendário é alterado.',
   'settings.privacy.eraseResync':
     'Se o seu calendário continuar conectado, eventos futuros serão adicionados de novo.',
   'settings.privacy.eraseAction': 'Apagar',

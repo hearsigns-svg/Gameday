@@ -318,6 +318,35 @@ export async function deleteOwnedCalendar(
   return ok(undefined);
 }
 
+// Does this calendar hold ANY event — ours or a hand-added one? The
+// sport-calendar sweep (2026-09-24) deletes a calendar of ours only when
+// it is truly empty: the tagged listing filters server-side and cannot
+// see a user's own event, and deleting the calendar would delete it.
+// Answers not-found when the calendar itself is gone.
+export async function calendarHasAnyEvent(
+  calendarId: string,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<boolean>> {
+  const qs = new URLSearchParams({ maxResults: '1', showDeleted: 'false' });
+  const r = await request(
+    {
+      method: 'GET',
+      path: `/calendars/${encodeURIComponent(calendarId)}/events?${qs.toString()}`,
+    },
+    token,
+    deps,
+  );
+  if (!r.ok) return r;
+  // Standing invariant 4: a shape we cannot read is a failure, never
+  // "empty" — here "empty" is what licenses deleting the calendar.
+  const items = (r.value as { items?: unknown }).items;
+  if (!Array.isArray(items)) {
+    return err({ kind: 'unknown', message: 'calendar event list had no items array' });
+  }
+  return ok(items.length > 0);
+}
+
 export async function insertRestEvent(
   calendarId: string,
   input: RestEventInput,

@@ -53,6 +53,18 @@ Rules:
   covers it; otherwise it takes the Settings default "Add new follows to
   your calendar" (on by default; off in the free state). The default never
   changes an existing follow.
+- WHERE the calendar's events live is one choice for the whole calendar,
+  never per follow (2026-09-24): one KickOffCal calendar (the default), or
+  — Settings → "Separate calendar for each sport" — a "KickOffCal ·
+  <Sport>" calendar per sport, named with the Following row's word for the
+  sport (Motorsport is ONE calendar, "F1 & Motorsport" or "Motorsport" by
+  region; Olympic events have their own Olympics calendar). Each is
+  created, in a colour of its own, when its sport first has an event, and
+  removed once it holds nothing. The layout decides where, never which:
+  the per-follow glyph, the inclusion rule and the new-follow default work
+  the same either way. Switching moves every game (a confirmation first
+  when there are any), survives the app being closed partway, and says
+  when it is done.
 - Motorsport series with session data (Formula 1) carry a per-series
   session ladder — Race only · Qualifying & race · All sessions, default
   Qualifying & race — on their cards and pages. A sprint counts as a race,

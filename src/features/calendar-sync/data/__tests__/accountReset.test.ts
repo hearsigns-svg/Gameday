@@ -30,6 +30,12 @@ jest.mock('../../../../core/storage', () => ({
 jest.mock('../driver', () => ({
   deleteFixtureEvent: jest.fn(),
   eraseAppCalendar: jest.fn(),
+  surveyCalendars: jest.fn(),
+  eraseSportCalendars: jest.fn(),
+}));
+jest.mock('../sportCalendarStore', () => ({
+  sportCalendarIds: jest.fn(),
+  forgetAllSportCalendars: jest.fn(),
 }));
 jest.mock('../ledger', () => ({
   clearLedger: jest.fn(),
@@ -43,7 +49,13 @@ jest.mock('../googleCalendarAuth', () => ({
 }));
 
 import { deleteAllDataAndReset, eraseSyncedEvents } from '../accountReset';
-import { deleteFixtureEvent, eraseAppCalendar } from '../driver';
+import {
+  deleteFixtureEvent,
+  eraseAppCalendar,
+  eraseSportCalendars,
+  surveyCalendars,
+} from '../driver';
+import { forgetAllSportCalendars, sportCalendarIds } from '../sportCalendarStore';
 import { clearLedger, loadLedger, removeLedgerEntry } from '../ledger';
 import { activeBackend } from '../calendarBackend';
 import { storedTarget } from '../calendarTargetStore';
@@ -62,8 +74,19 @@ const ownCalendarMode = () => {
   mockTarget.mockReturnValue({ kind: 'user', calendarId: 'user-cal', label: 'Home' });
 };
 
+const mockSportIds = sportCalendarIds as jest.Mock;
+const mockSurvey = surveyCalendars as jest.Mock;
+const mockEraseSport = eraseSportCalendars as jest.Mock;
+
+// No calendar for each sport unless a test says otherwise.
+const noSportCalendars = () => {
+  mockSportIds.mockReturnValue({});
+  mockSurvey.mockResolvedValue(ok({ present: new Set(), unrecordedSport: [] }));
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
+  noSportCalendars();
 });
 
 describe('eraseSyncedEvents — own-calendar mode', () => {
@@ -136,5 +159,74 @@ describe('deleteAllDataAndReset — partial erase aborts', () => {
     // ARE the failed events' protection, and the wipe would destroy it.
     expect(wipeAllLocalData).not.toHaveBeenCalled();
     expect(disconnectGoogleCalendar).not.toHaveBeenCalled();
+  });
+});
+
+// A calendar for each sport (owner brief 2026-09-24): those calendars are
+// containers of ours whatever the target is, so the erase takes each one
+// whole — recorded ones, and on the provider the unrecorded ones proved
+// ours — and forgets the record.
+describe('eraseSyncedEvents — sport calendars', () => {
+  const withSportCalendars = () => {
+    mockSportIds.mockReturnValue({ soccer: 'cal-soccer', tennis: 'cal-tennis' });
+    // cal-tennis was deleted by hand; cal-orphan is ours but unrecorded.
+    mockSurvey.mockResolvedValue(
+      ok({ present: new Set(['cal-soccer']), unrecordedSport: ['cal-orphan'] }),
+    );
+    mockEraseSport.mockResolvedValue(ok(2));
+  };
+
+  it('container mode: every sport calendar goes whole, the ledger clears even with no KickOffCal left', async () => {
+    withSportCalendars();
+    mockBackend.mockReturnValue('provider');
+    mockTarget.mockReturnValue(null); // the combined calendar was vacated
+    mockErase.mockResolvedValue(ok(false));
+    expect(await eraseSyncedEvents()).toEqual(
+      ok({ mode: 'container', removed: 0, failed: 0 }),
+    );
+    expect(mockEraseSport).toHaveBeenCalledWith([
+      { id: 'cal-soccer', recorded: true },
+      { id: 'cal-orphan', recorded: false },
+    ]);
+    expect(forgetAllSportCalendars).toHaveBeenCalled();
+    expect(clearLedger).toHaveBeenCalled();
+  });
+
+  it('own-calendar mode: the sport calendars go too, and the ledger walk deletes in each entry’s own calendar', async () => {
+    withSportCalendars();
+    ownCalendarMode();
+    mockLedger.mockReturnValue({
+      a: { eventId: 'ev-a', calendarId: 'cal-soccer' },
+      b: { eventId: 'ev-b', calendarId: 'user-cal', strayEventId: 'ev-b0', strayCalendarId: 'cal-soccer' },
+    });
+    mockDelete.mockResolvedValue(ok(true));
+    expect(await eraseSyncedEvents()).toEqual(ok({ mode: 'events', removed: 2, failed: 0 }));
+    expect(mockEraseSport).toHaveBeenCalled();
+    expect(mockDelete.mock.calls).toEqual([
+      ['ev-a', 'cal-soccer'],
+      ['ev-b', 'user-cal'],
+      ['ev-b0', 'cal-soccer'],
+    ]);
+  });
+
+  it('a failed sport-calendar erase fails the erase before anything else is touched', async () => {
+    withSportCalendars();
+    mockEraseSport.mockResolvedValue(err({ kind: 'unknown', message: 'nope' }));
+    mockBackend.mockReturnValue('provider');
+    mockTarget.mockReturnValue({ kind: 'ours', calendarId: 'our-cal' });
+    const r = await eraseSyncedEvents();
+    expect(r.ok).toBe(false);
+    expect(mockErase).not.toHaveBeenCalled();
+    expect(forgetAllSportCalendars).not.toHaveBeenCalled();
+    expect(clearLedger).not.toHaveBeenCalled();
+  });
+
+  it('a survey that cannot read the calendars fails the erase — never read as "none"', async () => {
+    mockSportIds.mockReturnValue({ soccer: 'cal-soccer' });
+    mockSurvey.mockResolvedValue(err({ kind: 'unknown', message: 'No calendars available yet.' }));
+    mockBackend.mockReturnValue('provider');
+    mockTarget.mockReturnValue({ kind: 'ours', calendarId: 'our-cal' });
+    expect((await eraseSyncedEvents()).ok).toBe(false);
+    expect(forgetAllSportCalendars).not.toHaveBeenCalled();
   });
 });

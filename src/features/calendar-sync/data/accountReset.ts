@@ -16,7 +16,13 @@ import { err, ok, Result } from '../../../core/result';
 import { wipeAllLocalData } from '../../../core/storage';
 import { activeBackend } from './calendarBackend';
 import { storedTarget } from './calendarTargetStore';
-import { deleteFixtureEvent, eraseAppCalendar } from './driver';
+import {
+  deleteFixtureEvent,
+  eraseAppCalendar,
+  eraseSportCalendars,
+  surveyCalendars,
+} from './driver';
+import { forgetAllSportCalendars, sportCalendarIds } from './sportCalendarStore';
 import { clearLedger, loadLedger, removeLedgerEntry } from './ledger';
 import { disconnectGoogleCalendar } from './googleCalendarAuth';
 
@@ -59,6 +65,12 @@ export function ownCalendarEraseMode(): boolean {
 // targets ever become reachable on the Android provider path, AGENTS
 // rule 16's sync-adapter gate applies — pace before shipping that.
 export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
+  // The sport calendars (2026-09-24) are containers of ours whatever the
+  // target is: each goes whole, with everything in it. First, so that in
+  // own-calendar mode the ledger walk below finds their events already
+  // gone — confirmed gone, and cleared like any other.
+  const sport = await eraseOurSportCalendars();
+  if (!sport.ok) return sport;
   if (ownCalendarEraseMode()) {
     const entries = Object.entries(loadLedger());
     if (entries.length === 0) {
@@ -67,7 +79,7 @@ export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
     let removed = 0;
     let failed = 0;
     for (const [fixtureId, entry] of entries) {
-      const r = await deleteFixtureEvent(entry.eventId);
+      const r = await deleteFixtureEvent(entry.eventId, entry.calendarId);
       if (!r.ok) {
         failed++;
         continue;
@@ -75,7 +87,7 @@ export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
       // A mid-migration leftover in the OLD calendar is ours too —
       // best-effort (Result ignored): its calendar may already be gone.
       if (entry.strayEventId) {
-        await deleteFixtureEvent(entry.strayEventId);
+        await deleteFixtureEvent(entry.strayEventId, entry.strayCalendarId);
       }
       removeLedgerEntry(fixtureId);
       removed++;
@@ -84,8 +96,26 @@ export async function eraseSyncedEvents(): Promise<Result<EraseOutcome>> {
   }
   const r = await eraseAppCalendar();
   if (!r.ok) return r;
-  if (r.value) clearLedger();
-  return ok({ mode: r.value ? 'container' : 'nothing', removed: 0, failed: 0 });
+  const erased = r.value || sport.value > 0;
+  if (erased) clearLedger();
+  return ok({ mode: erased ? 'container' : 'nothing', removed: 0, failed: 0 });
+}
+
+// Every sport calendar of ours that exists — recorded, or (provider)
+// provably ours by title and contents — deleted whole; the record goes
+// with them. The count is how many were deleted.
+async function eraseOurSportCalendars(): Promise<Result<number>> {
+  const recorded = Object.values(sportCalendarIds());
+  const survey = await surveyCalendars(recorded, recorded);
+  if (!survey.ok) return survey;
+  const calendars = [
+    ...[...survey.value.present].map((id) => ({ id, recorded: true })),
+    ...survey.value.unrecordedSport.map((id) => ({ id, recorded: false })),
+  ];
+  const r = calendars.length > 0 ? await eraseSportCalendars(calendars) : ok(0);
+  if (!r.ok) return r;
+  forgetAllSportCalendars();
+  return r;
 }
 
 // The server-side wipe: the deleteAccountData callable removes

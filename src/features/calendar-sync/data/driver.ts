@@ -16,17 +16,24 @@
 import { Platform } from 'react-native';
 import { ok, Result } from '../../../core/result';
 import { RecoveredEvent } from '../domain/recovery';
-import { activeBackend } from './calendarBackend';
+import { activeBackend, restCalendarId } from './calendarBackend';
 import { saveCalendarColour } from './calendarColourStore';
 import * as provider from './calendarDriver';
+import { storedTarget } from './calendarTargetStore';
+import { loadPrefs } from './prefsStore';
 import {
   applyRestCalendarColour,
   ensureRestTarget,
   eraseRestCalendar,
   restCreateFixtureEvent,
+  restCreateSportCalendar,
+  restDeleteCalendarIfEmpty,
   restDeleteFixtureEvent,
+  restEraseCalendars,
   restListTaggedEvents,
+  restPresentCalendars,
   restUpdateFixtureEvent,
+  restVacateTargetIfEmpty,
 } from './restCalendarDriver';
 
 // Re-exported unchanged: types and the provider-only surfaces.
@@ -98,20 +105,26 @@ export async function createFixtureEvent(
     : provider.createFixtureEvent(handle.cal, input);
 }
 
+// `calendarId` names the calendar the event lives in (2026-09-24: events
+// can live in a sport calendar). REST addresses an event THROUGH its
+// calendar; an EventKit / CalendarProvider id is unique store-wide, so the
+// provider needs no calendar to find it.
 export async function updateFixtureEvent(
   eventId: string,
   input: provider.EventInput,
+  calendarId?: string,
 ): Promise<Result<string>> {
   return activeBackend() === 'rest'
-    ? restUpdateFixtureEvent(eventId, input)
+    ? restUpdateFixtureEvent(eventId, input, calendarId)
     : provider.updateFixtureEvent(eventId, input);
 }
 
 export async function deleteFixtureEvent(
   eventId: string,
+  calendarId?: string,
 ): Promise<Result<true>> {
   return activeBackend() === 'rest'
-    ? restDeleteFixtureEvent(eventId)
+    ? restDeleteFixtureEvent(eventId, calendarId)
     : provider.deleteFixtureEvent(eventId);
 }
 
@@ -155,9 +168,11 @@ export async function setCalendarColour(
 // The provider picker (CalendarTargetScreen, "Use a different calendar")
 // exists only where there is a choice to make. Under REST there is one
 // calendar and it is ours — nothing to pick (P28-3; B4 item 6 closes
-// the last route in).
+// the last route in). With a calendar for each sport (2026-09-24) there
+// is no one target to pick either: every route in is absent until the
+// user turns that layout off.
 export function canPickCalendarTarget(): boolean {
-  return activeBackend() !== 'rest';
+  return activeBackend() !== 'rest' && !loadPrefs().separateSportCalendars;
 }
 
 // How native calendar sync HAPPENS on this install — the UI asks this,
@@ -172,4 +187,71 @@ export type NativeSyncRoute = 'provider' | 'google-connect';
 export function nativeSyncRoute(): NativeSyncRoute {
   if (activeBackend() === 'rest') return 'google-connect';
   return Platform.OS === 'android' ? 'google-connect' : 'provider';
+}
+
+// ─── Sport calendars (owner brief 2026-09-24) ─────────────────────────
+//
+// A separate calendar for each sport: created the first time a sport has
+// an event, removed once it holds nothing. What makes one OURS is the
+// backend's business — the app-created scope under REST, our record or
+// the title-plus-no-foreign-events proof on the provider.
+
+export async function createSportCalendar(
+  title: string,
+  colour: string,
+): Promise<Result<string>> {
+  return activeBackend() === 'rest'
+    ? restCreateSportCalendar(title, colour)
+    : provider.createSportCalendar(title, colour);
+}
+
+// Which of `candidateIds` exist, plus (provider only) the "KickOffCal · …"
+// calendars provably ours but missing from our record. REST cannot list
+// calendars, so it can only ever find the ones it recorded.
+export async function surveyCalendars(
+  candidateIds: readonly string[],
+  recordedSportIds: readonly string[],
+): Promise<Result<{ present: Set<string>; unrecordedSport: string[] }>> {
+  if (activeBackend() === 'rest') {
+    const present = await restPresentCalendars(candidateIds);
+    if (!present.ok) return present;
+    return ok({ present: present.value, unrecordedSport: [] });
+  }
+  return provider.surveyCalendars(candidateIds, recordedSportIds);
+}
+
+// `true` when the calendar is gone — deleted now because it held nothing
+// at all, or already gone.
+export async function deleteSportCalendarIfEmpty(
+  calendarId: string,
+  recorded: boolean,
+): Promise<boolean> {
+  return activeBackend() === 'rest'
+    ? restDeleteCalendarIfEmpty(calendarId)
+    : provider.deleteSportCalendarIfEmpty(calendarId, recorded);
+}
+
+// The one KickOffCal calendar, emptied by a move to a calendar per sport:
+// removed when it is ours and holds nothing, with the target record.
+export async function vacateTargetIfEmpty(): Promise<boolean> {
+  return activeBackend() === 'rest'
+    ? restVacateTargetIfEmpty()
+    : provider.vacateTargetIfOursAndEmpty();
+}
+
+export async function eraseSportCalendars(
+  calendars: ReadonlyArray<{ id: string; recorded: boolean }>,
+): Promise<Result<number>> {
+  return activeBackend() === 'rest'
+    ? restEraseCalendars(calendars.map((c) => c.id))
+    : provider.eraseSportCalendars(calendars);
+}
+
+// The calendar a combined layout writes into, as last resolved — read
+// WITHOUT resolving, because a pass in the per-sport layout must never
+// create it.
+export function currentTargetId(): string | null {
+  return activeBackend() === 'rest'
+    ? restCalendarId()
+    : (storedTarget()?.calendarId ?? null);
 }

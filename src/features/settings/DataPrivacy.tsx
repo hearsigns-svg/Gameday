@@ -30,6 +30,7 @@ import {
 } from '../calendar-sync/data/accountReset';
 import { activeBackend } from '../calendar-sync/data/calendarBackend';
 import { storedTarget } from '../calendar-sync/data/calendarTargetStore';
+import { sportCalendarIds } from '../calendar-sync/data/sportCalendarStore';
 import { nativeSyncRoute } from '../calendar-sync/data/driver';
 import { messageOf } from '../../core/result';
 import { runSync } from '../calendar-sync/syncEngine';
@@ -157,7 +158,9 @@ export function DataPrivacyRows(props: { onReset: () => void }) {
         {open === 'erase' ? (
           <View style={styles.confirm}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
-              {ownCalendarEraseMode()
+              {Object.keys(sportCalendarIds()).length > 0
+                ? tr('settings.privacy.eraseOursSeparate')
+                : ownCalendarEraseMode()
                 ? tr('settings.privacy.eraseOwnTarget', {
                     calendar:
                       storedTarget()?.label ??

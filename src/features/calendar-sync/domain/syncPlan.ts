@@ -74,6 +74,23 @@ export interface LedgerEntry {
   // rides IN the entry so repointing the ledger and recording the
   // leftover are one atomic write — see domain/calendarMigration.ts.
   strayEventId?: string;
+  // The calendar that leftover lives in (2026-09-24). Needed wherever a
+  // delete must name its calendar (REST), and once events can live in
+  // several calendars of ours the entry's own calendarId is the NEW one.
+  // Absent on strays recorded before it existed → the old single-calendar
+  // behaviour (the backend's own calendar).
+  strayCalendarId?: string;
+  // The sport calendar group this event belongs to (owner brief
+  // 2026-09-24: a separate calendar for each sport) — the fixture's
+  // follows/domain/sportCalendarGroup.ts answer, stamped on every write so
+  // a layout move can place the event without the fixture in hand (a
+  // finished fixture is never fetched again). Absent → not yet known.
+  sport?: string;
+  // The description note last written (2026-09-24), so a move rebuilds
+  // the event with it — "time not confirmed yet" must not vanish because
+  // the event changed calendar. A RECORD, not a comparison: the planner
+  // does not diff notes. Absent → none, or written before this existed.
+  note?: string;
   // The per-event colour last written (Round 5 ruling 7). ABSENT MEANS
   // NONE — before this field existed no engine ever wrote one, so an
   // unstamped entry testifies to "calendar colour", and only a fixture

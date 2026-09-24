@@ -21,6 +21,7 @@ const PREFS: CalendarPrefs = {
   autoDeletePast: false,
   newFollowsInCalendar: true,
   sessionRungs: {},
+  separateSportCalendars: false,
 };
 
 const HORIZON = '2026-07-29T00:00:00.000Z';
