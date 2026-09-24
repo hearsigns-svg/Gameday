@@ -406,7 +406,8 @@ These apply to every stage. They do not need restating in a brief.
     lapse the setting stays where the user left it, and changing it — in
     either direction — needs Premium again. Reference cases: the calendar
     colour swatches, the per-sport switch, the fixture card's per-event
-    colour row, the calendar glyph (DECISIONS 2026-09-24).
+    colour row, the calendar glyph, the locked reminder slots (DECISIONS
+    2026-09-24).
 
 ## Concurrency against production
 

@@ -298,6 +298,9 @@ silent).
     the shared routine (moved to `core/premiumOffer.ts`); verified by
     tests (row handler, routine, engine recolour on both stores); the
     on-device check waits for the Pixel (Android + Google only).
+  - [x] Owner ruling (same day): the locked reminder slots use the shared
+    routine — after a decline a free tap shows the Premium line instead of
+    nothing (`settings/reminderSlotRules.ts`).
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

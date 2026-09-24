@@ -25,6 +25,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { t as tr } from '../../core/i18n';
 import { radius, spacing, type, useTheme } from '../../core/tokens';
+import { slotTap } from './reminderSlotRules';
 import {
   OFFSET_HOUR_VALUES,
   OFFSET_MINUTE_VALUES,
@@ -186,8 +187,9 @@ export function ReminderSlotsRow(props: {
   onToggleSlot: (slot: number) => void;
   onChange: (slot: number, minutes: number | null) => void;
   // Round 5 (Free tier): slot one is FIXED at the default (shown, not
-  // editable) and slots two and three are LOCKED — the Premium state;
-  // a tap on a locked slot is an on-demand paywall request.
+  // editable) and slots two and three are LOCKED — the Premium state; a
+  // tap on a locked slot is the shared "offer Premium" routine
+  // (reminderSlotRules.ts).
   fixedSlots?: ReadonlySet<number>;
   lockedSlots?: ReadonlySet<number>;
   onLockedPress?: () => void;
@@ -236,8 +238,9 @@ export function ReminderSlotsRow(props: {
                   disabled: fixed.has(slot),
                 }}
                 onPress={() => {
-                  if (lockedSet.has(slot)) props.onLockedPress?.();
-                  else if (!fixed.has(slot)) props.onToggleSlot(slot);
+                  const tap = slotTap(slot, fixed, lockedSet);
+                  if (tap === 'offer') props.onLockedPress?.();
+                  else if (tap === 'toggle') props.onToggleSlot(slot);
                 }}
                 style={({ pressed }) => [
                   styles.dropdown,

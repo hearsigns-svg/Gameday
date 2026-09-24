@@ -31,6 +31,7 @@ import { ALL_DAY_REMINDER_OPTIONS, CalendarPrefs,
   DEFAULT_PREFS,
 } from '../calendar-sync/domain/prefs';
 import { ReminderSlotsRow } from './ReminderSlots';
+import { reminderSlotLocks } from './reminderSlotRules';
 import { loadPrefs, savePrefs } from '../calendar-sync/data/prefsStore';
 import { lastRegistryError } from '../calendar-sync/data/deviceRegistry';
 import {
@@ -811,13 +812,7 @@ export default function PreferencesScreen({
                     prefs.extraReminders[1] ?? null,
                   ]
             }
-            {...(premiumLocked()
-              ? {
-                  fixedSlots: new Set([0]),
-                  lockedSlots: new Set([1, 2]),
-                  onLockedPress: () => requestPaywall('on_demand'),
-                }
-              : {})}
+            {...reminderSlotLocks(premiumLocked())}
             openSlot={openReminderSlot}
             onToggleSlot={(slot) =>
               setOpenReminderSlot((s) => (s === slot ? null : slot))

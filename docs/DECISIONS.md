@@ -5302,3 +5302,35 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   the on-device check waits for the Pixel. FLAGGED: the locked reminder
   slots in Settings still call the paywall directly, so after a decline
   this session a tap on one shows nothing.
+- 2026-09-24 — **Owner ruling: the locked reminder slots use the shared
+  "offer Premium" routine.** In the free state slots two and three are
+  locked; a tap on one now goes through `offerPremium` — the offer before
+  any decline, the "Part of Premium" line after one (or with billing not
+  configured) — like every other locked control. It used to call the
+  paywall directly, so after a decline this session the tap did nothing.
+  Slot one stays fixed at the default; trial and Premium unchanged (no
+  locks; a tap opens the slot's wheels and the value picked sets it).
+  The rules moved to `settings/reminderSlotRules.ts` (`reminderSlotLocks`
+  names the routine itself, so Preferences can only say whether the user
+  is locked; `slotTap` is the row's one decision). Verified through the
+  real routine and paywall seam: before a decline the offer opens, after
+  one the Premium line shows, slot one offers nothing, Premium has no
+  locks; the old direct call reintroduced on purpose failed the suite, as
+  did a locked slot opening its wheels and Premium being locked. Left as
+  it is: the Premium Sync row still calls the paywall directly — its own
+  label is the Premium line, so after a decline it already says it.
+- 2026-09-24 — **The reminder-slot change, verified on the simulator.**
+  Debug build, free (development gate control): slots two and three show
+  their locks; a tap on slot two now shows "Part of Premium · Start 14
+  days free" — before this change the same tap showed nothing, because
+  billing is not configured in this build and the direct call had no
+  fallback — and the reminders stayed 60 min / 6 h / 1 day. Premium: the
+  slots are dropdowns; a tap on slot two opened its wheels and a pick set
+  it (6 h → 8 h, then set back to 6 h). Release build: the Premium tap
+  opens the wheels as before. "Before any decline the offer opens" needs
+  the RevenueCat keys to show the offer screen, so it is pinned by the
+  tests (a registered presenter receives the request). Seen in passing,
+  not changed: on the simulator a tap on a row inside the wheel landed
+  two rows further than the row tapped (6 → 8, 8 → 4, 4 → 6); the row's
+  handler selects the tapped row directly, so this may be the simulator's
+  synthetic taps — worth one finger check on a phone.
