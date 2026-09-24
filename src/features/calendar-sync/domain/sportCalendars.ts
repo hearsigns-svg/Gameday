@@ -34,6 +34,18 @@ export function layoutOf(prefs: { separateSportCalendars: boolean }): CalendarLa
   return prefs.separateSportCalendars ? 'per-sport' : 'combined';
 }
 
+// What a tap on the switch does. PREMIUM ONLY (owner ruling 2026-09-24):
+// in the free state it is the way into the offer and changes NOTHING —
+// either direction, so a lapsed subscriber's calendars stay as they are.
+// Otherwise it asks first when games are already in a calendar (they
+// will move), and switches straight away when there is nothing to move.
+export type LayoutSwitchStep = 'offer' | 'confirm' | 'switch';
+
+export function layoutSwitchStep(premiumLocked: boolean, gamesInCalendar: number): LayoutSwitchStep {
+  if (premiumLocked) return 'offer';
+  return gamesInCalendar > 0 ? 'confirm' : 'switch';
+}
+
 // Where one entry belongs: a calendar that exists, or a sport whose
 // calendar must be created before the event can go in it.
 export type Placement =

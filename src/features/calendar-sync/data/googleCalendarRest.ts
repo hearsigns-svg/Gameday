@@ -217,7 +217,7 @@ async function request(
   }
 }
 
-// Create the KickoffCal-owned calendar in the user's account. UTC
+// Create the KickOffCal-owned calendar in the user's account. UTC
 // timezone, deliberately: date-only events then anchor their reminder
 // offsets to UTC midnight, matching the translation the rest of the
 // codebase already uses and tests.

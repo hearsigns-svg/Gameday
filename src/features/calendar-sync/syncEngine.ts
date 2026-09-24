@@ -9,7 +9,11 @@ import { readJson, writeJson } from '../../core/storage';
 import { planEntitlement } from '../../core/entitlementStore';
 import { Fixture } from '../fixtures/domain/fixture';
 import { dedupeSameEvent } from '../fixtures/domain/sameBout';
-import { fetchFixturesByIds, fetchFixturesForFollows } from '../fixtures/data/fixturesRepo';
+import {
+  fetchFixturesByIds,
+  fetchFixturesForFollows,
+  missingFixtureIds,
+} from '../fixtures/data/fixturesRepo';
 import {
   calendarPrefOf,
   fixtureWantedByFollows,
@@ -69,6 +73,7 @@ import {
   vacateTargetIfEmpty,
 } from './data/driver';
 import { isScanAnomaly, orphanEventIds, RecoveredEvent } from './domain/recovery';
+import { pastEntriesWithRecordGone, pastRecordIds } from './domain/recordGone';
 import { drainStrayEvents, relocate } from './data/layoutRelocation';
 import {
   forgetSportCalendar,
@@ -103,6 +108,7 @@ import {
 } from './data/ledger';
 import {
   desiredEventFor,
+  DOWNGRADE_DELETE_CAP,
   horizonStartFrom,
   isRunAbandoned,
   Ledger,
@@ -237,6 +243,13 @@ export interface SyncOutcome {
   scanAnomaly?: boolean;
   scannedTagged?: number;
   ledgerEntries?: number;
+  // Finished events whose fixture record was asked about this pass, and
+  // those removed because the store confirmed the record gone (owner
+  // ruling 2026-09-24). Counted apart from `deleted`, the way
+  // surplusDeleted is: the future-only rule's one exception must be
+  // visible in the wild as itself.
+  pastChecked?: number;
+  recordGone?: number;
   at: string;
 }
 
@@ -777,6 +790,45 @@ function sportPlacement(group: string | undefined): Placement | null {
   return id ? { calendarId: id, group } : { calendarId: null, group };
 }
 
+// FINISHED EVENTS WHOSE RECORD IS GONE (owner ruling 2026-09-24): the
+// one deliberate exception to the future-only rule. Every pass, in either
+// layout, the store is asked about every finished event's fixture record
+// (counted — one read per 30); an event whose record it confirms is gone
+// is removed with its ledger entry. A check that could not be made removes
+// nothing (rule 4). Capped per pass like the other removals; the queued
+// pass takes the rest.
+async function removeFinishedWithRecordGone(): Promise<{
+  checked: number;
+  removed: number;
+  heldBack: number;
+}> {
+  const nowMs = Date.now();
+  const ids = pastRecordIds(loadLedger(), nowMs);
+  if (ids.length === 0) return { checked: 0, removed: 0, heldBack: 0 };
+  const missing = await missingFixtureIds(ids);
+  beat();
+  if (!missing.ok) return { checked: 0, removed: 0, heldBack: 0 };
+  const gone = pastEntriesWithRecordGone(loadLedger(), missing.value, nowMs);
+  let removed = 0;
+  for (const fixtureId of gone.slice(0, DOWNGRADE_DELETE_CAP)) {
+    const entry = loadLedger()[fixtureId];
+    if (!entry) continue;
+    const del = await deleteFixtureEvent(entry.eventId, entry.calendarId);
+    if (!del.ok) continue; // kept, with its protection; the next pass retries
+    // A leftover a move still owes goes with it (best effort — the prune
+    // finds it in any calendar of ours if this fails).
+    if (entry.strayEventId) await deleteFixtureEvent(entry.strayEventId, entry.strayCalendarId);
+    removeLedgerEntry(fixtureId);
+    removed++;
+    beat();
+  }
+  return {
+    checked: ids.length,
+    removed,
+    heldBack: Math.max(0, gone.length - DOWNGRADE_DELETE_CAP),
+  };
+}
+
 async function runSyncInner(): Promise<Result<SyncOutcome>> {
   // THE GATE (Round 4 B4 item 5): connected means opted in AND a write
   // path exists. The choice alone used to decide here, and a legacy
@@ -903,6 +955,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // per-sport layout places each event by its fixture's sport, so its
     // move waits for the fixtures below.
     await drainStrays();
+    // Before anything moves: an event about to be removed is not moved.
+    const recordGone = await removeFinishedWithRecordGone();
     let moved = 0;
     if (layout === 'combined' && home !== null) {
       const homeHandle = await handleFor(home);
@@ -1151,6 +1205,8 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       recovered,
 
       ...(moved > 0 ? { moved } : {}),
+      ...(recordGone.checked > 0 ? { pastChecked: recordGone.checked } : {}),
+      ...(recordGone.removed > 0 ? { recordGone: recordGone.removed } : {}),
       followKeyCount: fixtures.value.keys,
       queryChunks: fixtures.value.chunks,
       at: new Date().toISOString(),
@@ -1352,7 +1408,9 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // Drain the remainder on the next pass. Reuses the lock's existing
     // coalescing hop rather than recursing here, so the run finishes and
     // releases before the next one starts.
-    if (deferred > 0 || relocationRemaining > 0) rerunQueued = true;
+    if (deferred > 0 || relocationRemaining > 0 || recordGone.heldBack > 0) {
+      rerunQueued = true;
+    }
     return ok(outcome);
   }
 }

@@ -60,7 +60,9 @@ Rules:
   sport (Motorsport is ONE calendar, "F1 & Motorsport" or "Motorsport" by
   region; Olympic events have their own Olympics calendar). Each is
   created, in a colour of its own, when its sport first has an event, and
-  removed once it holds nothing. The layout decides where, never which:
+  removed once it holds nothing. Premium; the switch is shown to everyone
+  and in the free state leads to the offer. The layout decides where,
+  never which:
   the per-follow glyph, the inclusion rule and the new-follow default work
   the same either way. Switching moves every game (a confirmation first
   when there are any), survives the app being closed partway, and says
@@ -70,6 +72,10 @@ Rules:
   Qualifying & race — on their cards and pages. A sprint counts as a race,
   sprint qualifying as qualifying; practice only under All sessions.
   Series without session data have no ladder and deliver every session.
+- Finished games stay in the calendar as history (the app never changes
+  or removes them), with one exception (2026-09-24): a finished game whose
+  fixture record no longer exists — re-keyed or withdrawn at the source —
+  is removed on the next sync, since the app can no longer vouch for it.
 - Multi-day units (golf/tennis tournaments) render as day-span entries
   by default; the tournament tier setting (Dates only / Key rounds / All
   matches) adds bookend notes plus matches, and the in-app Schedule
@@ -124,8 +130,9 @@ Round 5 model (owner ruling 2026-09-02, full text in DECISIONS): Free
 forever = unlimited follows, the full in-app schedule (windowed by date,
 paged), one system-notification reminder slot, no calendar sync, banner
 ads after a 14-day grace from the first follow. Premium = calendar sync
-with a full-season horizon, tournament tiers, calendar colour, three
-reminder slots, no ads; 14-day store-managed trial on the annual plan.
+with a full-season horizon, tournament tiers, calendar colour, a
+separate calendar for each sport (2026-09-24), three reminder slots, no
+ads; 14-day store-managed trial on the annual plan.
 ENFORCEMENT IS CLIENT-SIDE, in the sync planner: a pure, tested layer
 reads the billing SDK's cached entitlement (offline grace) and gates
 `create` only — placed events keep receiving corrections, removal is

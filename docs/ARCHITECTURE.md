@@ -133,7 +133,12 @@ stamp, this pass's fixtures, or a by-id lookup), plans and applies (new
 events land by the layout; updates and deletes address the event's own
 calendar — Google reaches an event only through its calendar), prunes
 EVERY calendar of ours, and removes the ones left empty (the per-sport
-layout removes an emptied KickOffCal of ours too).
+layout removes an emptied KickOffCal of ours too). Before any move, the
+pass asks the store about every FINISHED event's fixture record — counted
+(`missingFixtureIds`: one read per 30 ids, a short chunk read in full) —
+and removes the ones it confirms gone, 40 a pass (`domain/recordGone.ts`;
+the horizon rule's one sync-time exception, owner ruling 2026-09-24). The
+switch is Premium (`layoutSwitchStep`).
 
 **One target record.** Both paths write `calendarTarget.v1`
 (`data/calendarTargetStore.ts`) when they resolve; connect and

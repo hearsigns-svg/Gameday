@@ -3076,7 +3076,7 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
 - 2026-08-28 (Stage 7B, owner-reframed): NO Sign out / Delete account
   vocabulary while auth is anonymous — the controls are honest ones:
   Connect ⇄ Disconnect Google Calendar (grant only; calendar and events
-  untouched), "Erase synced events" (deletes the app-created KickoffCal
+  untouched), "Erase synced events" (deletes the app-created KickOffCal
   calendar and EVERYTHING in it — the sanctioned, explicit exception to
   the future-only horizon rule, which protects history from automated
   sync churn, not from the owner's own request; ledger cleared only
@@ -5062,8 +5062,8 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   by region; any Olympic event goes in Olympics whatever its discipline;
   the FIXTURE decides, never the follow that wanted it (one event, one
   calendar). Named "KickOffCal · <Sport>" — spelled KickOffCal, the app's
-  existing calendar and brand (the brief wrote "KickoffCal") — in the
-  region's and language's word at creation. Each is created in a colour
+  existing calendar and brand (confirmed by owner ruling the same day) —
+  in the region's and language's word at creation. Each is created in a colour
   of its own (fourteen, picked for separation, not the sport accents,
   three of which are near-identical blues), set ONCE: never repainted,
   never renamed; from then on it is the user's in their calendar app. In
@@ -5160,3 +5160,77 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   Google-shaped store in the engine test. Simulator lore: an instant tap from
   the control tool does not toggle a UISwitch on iOS 26; a held tap or a
   short swipe across the thumb does (AGENTS.md).
+- 2026-09-24 — **Owner rulings on the per-sport calendars report.** (1)
+  Unfollowing a sport's last follow: finished games stay, and so does
+  that sport's calendar while it holds any — as built. (2) Switching
+  layouts moves finished games as well as upcoming — as built. (3) The
+  spelling is KickOffCal, and calendar names stay "KickOffCal · <Sport>";
+  the two DECISIONS entries and four code comments that spelled it
+  otherwise are corrected (the stored calendar titles were always right).
+  (4) A FINISHED EVENT WHOSE FIXTURE RECORD IS GONE IS REMOVED — a
+  DELIBERATE EXCEPTION TO THE FUTURE-ONLY RULE (AGENTS rule 5), in both
+  layouts, on every sync, not only when switching. Every pass asks the
+  store about every finished event's record, a tournament bookend's by
+  its parent (`domain/recordGone.ts`); the question is COUNTED —
+  `getCountFromServer` over up to 30 ids is billed as one document read
+  however many match, and only a chunk that comes up short is read in
+  full to name what is missing (probed against production: 5 ids, 2 of
+  them invented, counted 3). An event whose record the store CONFIRMS is
+  gone is removed with its ledger entry and any leftover a move still
+  owes; a check that could not be made removes nothing (rule 4). Capped
+  at 40 a pass, the removals' shared figure; the queued pass takes the
+  rest. Upcoming events need no such step: the planner already removes an
+  upcoming event its fixture no longer backs. It runs before any move, so
+  an event about to go is never moved first. With these gone, the plain
+  KickOffCal calendar no longer lingers in the per-sport layout: it is
+  removed once empty, like the sport calendars. The sync record counts
+  them apart (`pastChecked`, `recordGone`), as it does surplus deletes —
+  the rule's exception must be visible in the wild as itself. (5) The
+  Android ghost calendar is ACCEPTED as a known limitation: a kill in the
+  instant between creating a Google calendar and saving its id leaves it
+  behind, EMPTY, because the app-created scope cannot list calendars to
+  find it again; no game is affected, and iOS finds and removes such a
+  calendar by its title and proven contents. (6) PREMIUM ONLY. The switch
+  is shown to everyone; in the free state a tap is the on-demand way into
+  the offer — the paywall, or the inline "Part of Premium" line when the
+  paywall is suppressed after a decline or billing is not configured —
+  and nothing is saved or moved, in either direction
+  (`layoutSwitchStep`). The switch shows where the events ARE: a lapsed
+  subscriber's calendars stay as they were, and changing them needs
+  Premium. FLAGGED: the Settings colour swatches the ruling names as the
+  model are NOT gated today — a free user can change the calendar colour
+  — although the paywall lists colour as Premium; the switch follows the
+  on-demand pattern the Round 5 design gives colour taps (the one the
+  new-follows switch and the calendar glyph already use), and gating the
+  swatches themselves waits for a ruling. (7) A reinstall resets the
+  switch with every other setting — accepted. VERIFIED BY TESTS: the
+  engine test runs the removal in both layouts on an EventKit-like and a
+  Google-like store — an ordinary combined sync with no switch; the
+  per-sport layout, KickOffCal removed once empty; a record vanishing
+  long after the move; a failed check removing nothing; an existing
+  record never touched; a burst of 45 going 40 then 5 — and seven defects
+  reintroduced one at a time (a failed check read as "all gone", no cap,
+  the calendar id dropped, the step skipped, an existing record read as
+  gone, a bookend asked about by its own id, upcoming events swept too)
+  each failed it. The free-state tap is pinned by `layoutSwitchStep`
+  (defeated on purpose: it failed).
+- 2026-09-24 — **The rulings, verified on the simulator.** FREE vs
+  PREMIUM in a Debug build — the free state is reachable only through
+  the development gate control, and the offer screen needs RevenueCat
+  keys this build does not carry, so the paywall's own fallback line
+  shows: free, the switch reads off and a tap shows "Part of Premium ·
+  Start 14 days free" — no confirmation, nothing saved, nothing moved
+  (preferences, pending move and calendar byte-identical); gate open
+  again, the confirmation exactly as before. RELEASE build (bundle
+  checked for this round's markers): a Premium switch on then off moved
+  all 1,624 games each way, the separation identical to the morning's
+  and the end state identical to the start, notes included (the move in
+  landed over two passes this time — the pass budget doing its job on a
+  slower sim). ORPHANS: the simulator holds no finished games at all
+  (its earliest event ends 26 September), so the existence check made no
+  queries there; the removal is proven by the engine tests and the
+  counting query by a read-only probe of production. DISK: the Mac hit
+  "no space left" mid-Debug-build (243 MB free); reclaimed per the disk
+  lore — android/app/build (1.8 GB, regenerates), scratch frames and this
+  project's Debug build products; none of the owner's shared caches
+  touched; ~4 GB free after.

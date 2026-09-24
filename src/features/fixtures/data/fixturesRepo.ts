@@ -7,6 +7,7 @@ import {
   collection,
   doc,
   documentId,
+  getCountFromServer,
   getDocFromServer,
   getDocsFromServer,
   query,
@@ -125,6 +126,43 @@ export async function fetchFixturesByIds(
     return ok(found);
   } catch (e) {
     console.warn(`[kickoffcal] fixtures-by-id read failed: ${e}`);
+    return err({ kind: 'offline' });
+  }
+}
+
+// Which of these fixture records do NOT exist (owner ruling 2026-09-24:
+// a finished event whose record is gone is removed). COUNTED, not read:
+// a count over up to 30 ids is billed as one document read however many
+// match, so asking about every finished event on every pass costs one
+// read per 30; only a chunk that comes up short is read in full, to name
+// what is missing. All or nothing: any failed read fails the call —
+// "gone" is only ever concluded from a read that succeeded (rule 4).
+const EXISTENCE_CHUNKS_IN_FLIGHT = 4;
+
+export async function missingFixtureIds(
+  ids: readonly string[],
+): Promise<Result<Set<string>>> {
+  const unique = [...new Set(ids)];
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += IDS_PER_QUERY) {
+    chunks.push(unique.slice(i, i + IDS_PER_QUERY));
+  }
+  const missing = new Set<string>();
+  const check = async (chunk: string[]): Promise<void> => {
+    const q = query(collection(db, 'fixtures'), where(documentId(), 'in', chunk));
+    const counted = await getCountFromServer(q);
+    if (counted.data().count === chunk.length) return;
+    const snap = await getDocsFromServer(q);
+    const present = new Set(snap.docs.map((d) => d.id));
+    for (const id of chunk) if (!present.has(id)) missing.add(id);
+  };
+  try {
+    for (let i = 0; i < chunks.length; i += EXISTENCE_CHUNKS_IN_FLIGHT) {
+      await Promise.all(chunks.slice(i, i + EXISTENCE_CHUNKS_IN_FLIGHT).map(check));
+    }
+    return ok(missing);
+  } catch (e) {
+    console.warn(`[kickoffcal] fixture existence check failed: ${e}`);
     return err({ kind: 'offline' });
   }
 }

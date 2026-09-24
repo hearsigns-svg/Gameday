@@ -60,7 +60,7 @@ import {
 } from '../calendar-sync/data/driver';
 import { loadLedger } from '../calendar-sync/data/ledger';
 import { setPendingLayoutMove } from '../calendar-sync/data/sportCalendarStore';
-import { layoutOf } from '../calendar-sync/domain/sportCalendars';
+import { layoutOf, layoutSwitchStep } from '../calendar-sync/domain/sportCalendars';
 import { restColourState } from '../calendar-sync/data/restCalendarDriver';
 import {
   calendarConnection,
@@ -686,19 +686,30 @@ export default function PreferencesScreen({
             events live, never which. With games already in a calendar
             the switch asks first — every event is rebuilt in its new
             calendar, and what the user set on a calendar in their
-            calendar app stays with that calendar. */}
+            calendar app stays with that calendar. PREMIUM (owner ruling
+            2026-09-24): shown to everyone; in the free state a tap is the
+            on-demand way into the offer, exactly as the other Premium
+            controls here, and nothing moves. It shows where the events
+            ARE — a lapsed subscriber's calendars stay as they were. */}
         <SwitchRow
           label={tr('settings.calendar.separateSports')}
           value={prefs.separateSportCalendars}
           onValueChange={(next) => {
             const games = Object.keys(loadLedger()).length;
+            const step = layoutSwitchStep(premiumLocked(), games);
+            if (step === 'offer') {
+              if (!requestPaywall('on_demand')) {
+                showToast({ message: tr('premium.syncRow') });
+              }
+              return;
+            }
             const commit = () => {
               const saved = { ...prefs, separateSportCalendars: next };
               // The "done" toast is owed only when games actually move.
               setPendingLayoutMove(games > 0 ? layoutOf(saved) : null);
               apply(saved);
             };
-            if (games === 0) {
+            if (step === 'switch') {
               commit();
               return;
             }

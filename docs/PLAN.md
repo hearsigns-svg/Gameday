@@ -279,9 +279,16 @@ silent).
   build. iOS simulator verified (on/off, counts, Motorsport sharing, the
   last follow leaving, closed mid-move both ways). Olympics proven by tests
   only (no provider writes Olympic fixtures yet). Android pending the Pixel
-  (REST path covered by the engine test's Google-shaped store). Owner
-  flags: finished games keep a sport's calendar (rule 5); an event whose
-  fixture document is gone stays in KickOffCal; spelled KickOffCal.
+  (REST path covered by the engine test's Google-shaped store).
+  - [x] Owner rulings (same day): as built — finished games keep a sport's
+    calendar, moves include finished games, a reinstall resets the switch,
+    the Android ghost calendar is an accepted limitation; spelling
+    KickOffCal corrected in docs and comments; a finished event whose
+    fixture record is gone is REMOVED on every sync in both layouts (rule
+    5's deliberate exception; counted existence check, 40 a pass), so
+    KickOffCal no longer lingers in the per-sport layout; the switch is
+    PREMIUM (free tap → the offer, nothing moves). Flagged: the Settings
+    colour swatches themselves are not gated.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

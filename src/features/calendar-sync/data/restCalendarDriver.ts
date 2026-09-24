@@ -82,7 +82,7 @@ function toRestInput(input: EventInput): RestEventInput {
   };
 }
 
-// The stored calendar id, or a freshly created KickoffCal calendar in
+// The stored calendar id, or a freshly created KickOffCal calendar in
 // the user's account. Kind is always 'ours': there is no other kind of
 // calendar this backend can touch.
 export async function ensureRestTarget(): Promise<Result<ResolvedTarget>> {
@@ -106,7 +106,7 @@ export async function ensureRestTarget(): Promise<Result<ResolvedTarget>> {
   return ok(target);
 }
 
-// User-invoked erase (Stage 7B): delete the KickoffCal calendar we
+// User-invoked erase (Stage 7B): delete the KickOffCal calendar we
 // created — and with it every event in it, past ones included; that is
 // the feature's entire purpose. `false` means there was nothing of
 // ours to erase. The scope makes over-reach structurally impossible:

@@ -262,6 +262,10 @@ These apply to every stage. They do not need restating in a brief.
 5. **Horizon rule:** only fixtures that have NOT YET FINISHED are ever
    created, updated or deleted in a calendar. `isPast`
    (`src/features/fixtures/domain/horizon.ts`) is the one definition.
+   The DELIBERATE exceptions, each an owner ruling in DECISIONS, are the
+   only ones: the user's own erase, the opt-in removal of past games, a
+   calendar-target or layout move, and a finished event whose fixture
+   record is gone (2026-09-24). Do not "fix" any of them back.
 6. The other Claude Code session must be idle against production during
    any reaper run.
 7. **One session per feature area, and commit before switching windows**

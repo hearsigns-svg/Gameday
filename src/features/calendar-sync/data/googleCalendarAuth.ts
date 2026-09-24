@@ -85,7 +85,7 @@ async function tokenProvider(): Promise<Result<string>> {
 // Interactive connect: the account picker, then the consent screen
 // naming exactly one permission. On success the REST driver has its
 // token provider and the backend flips — from the next sync onward,
-// writes go to the KickoffCal calendar in this account.
+// writes go to the KickOffCal calendar in this account.
 export async function connectGoogleCalendar(): Promise<Result<{ email: string | null }>> {
   const signin = configuredSignIn();
   if (!signin) {

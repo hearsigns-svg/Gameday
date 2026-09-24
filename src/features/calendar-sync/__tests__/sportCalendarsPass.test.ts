@@ -81,6 +81,13 @@ jest.mock('../../fixtures/data/fixturesRepo', () => ({
     mockState.lookupFails
       ? { ok: false, error: { kind: 'offline' } }
       : { ok: true, value: mockState.archive.filter((f) => ids.includes(f.id)) },
+  missingFixtureIds: async (ids: readonly string[]) =>
+    mockState.lookupFails
+      ? { ok: false, error: { kind: 'offline' } }
+      : {
+          ok: true,
+          value: new Set(ids.filter((id) => !mockState.archive.some((f) => f.id === id))),
+        },
 }));
 jest.mock('../data/driver', () => ({
   ensureCalendarPermission: async () => ({ ok: true, value: true }),
@@ -736,41 +743,117 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
   });
 });
 
-// The engine remembers, for the session, which fixture documents do not
-// exist — so this test's vanished game has an id no other test uses.
-test('a game whose fixture no longer exists stays where it is, and keeps KickOffCal', async () => {
-  mockStore.backend = 'provider';
-  await combinedWorld();
-  // A finished game whose document has since gone (re-keyed by a
-  // provider, say): nothing can say which sport it was.
-  const home = mockStore.target as string;
-  mockStore.cals.get(home)?.events.set('ev-gone', {
-    fixtureId: 'fd-gone',
-    title: 'Gone v Away',
-    startUtc: at(-40),
-    endUtc: at(-40, 17),
-    allDay: false,
+// A finished game the app can no longer verify — its fixture record is
+// gone — is removed on every sync, in either layout (owner ruling
+// 2026-09-24, the future-only rule's one deliberate exception).
+describe.each(['provider', 'rest'] as const)('%s store: a finished game whose record is gone', (backend) => {
+  beforeEach(() => {
+    mockStore.backend = backend;
   });
-  const storage = jest.requireMock('../../../core/storage') as {
-    readJson: (k: string, f: unknown) => Record<string, unknown>;
-    writeJson: (k: string, v: unknown) => void;
-  };
-  const ledger = storage.readJson('ledger.v1', {});
-  ledger['fd-gone'] = {
-    eventId: 'ev-gone',
-    calendarId: home,
-    startUtc: at(-40),
-    endUtc: at(-40, 17),
-    title: 'Gone v Away',
-    allDay: false,
-    reminderMinutes: DEFAULT_PREFS.reminderMinutes,
-  };
-  storage.writeJson('ledger.v1', ledger);
-  switchTo('per-sport');
-  await settle();
-  expect(where()['fd-gone']).toEqual(['KickOffCal']);
-  expect(mockStore.target).toBe(home); // kept: it still holds a game
-  // Everything that CAN be placed was, and the move announced itself.
-  for (const id of Object.keys(GROUP_OF)) expect(where()[id]).toEqual([CALENDAR_OF[GROUP_OF[id]]]);
-  expect(toasts()).toEqual([SEPARATED()]);
+
+  // Finished games synced while upcoming, in the combined calendar.
+  function seedFinished(ids: string[]) {
+    const home = mockStore.target as string;
+    const storage = jest.requireMock('../../../core/storage') as {
+      readJson: (k: string, f: unknown) => Record<string, unknown>;
+      writeJson: (k: string, v: unknown) => void;
+    };
+    const ledger = storage.readJson('ledger.v1', {});
+    for (const id of ids) {
+      const eventId = `ev-${id}`;
+      mockStore.cals.get(home)?.events.set(eventId, {
+        fixtureId: id,
+        title: `${id} title`,
+        startUtc: at(-40),
+        endUtc: at(-40, 17),
+        allDay: false,
+      });
+      ledger[id] = {
+        eventId,
+        calendarId: home,
+        startUtc: at(-40),
+        endUtc: at(-40, 17),
+        title: `${id} title`,
+        allDay: false,
+        reminderMinutes: DEFAULT_PREFS.reminderMinutes,
+      };
+    }
+    storage.writeJson('ledger.v1', ledger);
+  }
+
+  // Background reruns (a capped pass queues one) run on microtasks here;
+  // one macrotask turn lets every one of them finish.
+  const idle = () => new Promise((resolve) => setImmediate(resolve));
+
+  test('combined: removed on the next ordinary sync — no switch involved', async () => {
+    await combinedWorld();
+    const before = Object.keys(where()).length;
+    mockState.archive = UPCOMING; // fd-0's record is gone (re-keyed, say)
+    const r = await pass();
+    expect(r.ok && r.value.recordGone).toBe(1);
+    expect(where()['fd-0']).toBeUndefined();
+    expect(loadLedger()['fd-0']).toBeUndefined();
+    expect(Object.keys(where()).length).toBe(before - 1);
+    // Everything the app CAN verify is exactly where it was.
+    for (const f of UPCOMING) expect(where()[f.id]).toEqual(['KickOffCal']);
+    expect(mockStore.misaddressed).toBe(0);
+  });
+
+  test('per-sport: removed, and the plain KickOffCal calendar goes once empty', async () => {
+    await combinedWorld();
+    seedFinished(['fd-gone']);
+    mockState.archive = UPCOMING; // neither fd-0 nor fd-gone can be verified
+    switchTo('per-sport');
+    await settle();
+    expect(where()['fd-0']).toBeUndefined();
+    expect(where()['fd-gone']).toBeUndefined();
+    expect(mockStore.target).toBeNull();
+    expect([...mockStore.cals.values()].map((c) => c.title)).not.toContain('KickOffCal');
+    for (const f of UPCOMING) expect(where()[f.id]).toEqual([CALENDAR_OF[GROUP_OF[f.id]]]);
+    expect(toasts()).toEqual([SEPARATED()]);
+    expect(mockStore.misaddressed).toBe(0);
+  });
+
+  test('per-sport, long after the move: a record that disappears takes its finished game with it', async () => {
+    await combinedWorld();
+    switchTo('per-sport');
+    await settle();
+    expect(where()['fd-0']).toEqual(['KickOffCal · Football']);
+    mockState.archive = UPCOMING;
+    const r = await pass();
+    expect(r.ok && r.value.recordGone).toBe(1);
+    expect(where()['fd-0']).toBeUndefined();
+    expect(mockStore.misaddressed).toBe(0);
+  });
+
+  test('a check that could not be made removes nothing', async () => {
+    await combinedWorld();
+    mockState.archive = UPCOMING;
+    mockState.lookupFails = true;
+    await pass();
+    expect(where()['fd-0']).toEqual(['KickOffCal']);
+    expect(loadLedger()['fd-0']).toBeDefined();
+    mockState.lookupFails = false;
+    await pass();
+    expect(where()['fd-0']).toBeUndefined();
+  });
+
+  test('a finished game whose record exists is never touched', async () => {
+    await combinedWorld();
+    const r = await pass();
+    expect(r.ok && r.value.pastChecked).toBe(1);
+    expect(r.ok && r.value.recordGone).toBeUndefined();
+    expect(where()['fd-0']).toEqual(['KickOffCal']);
+  });
+
+  test('a burst goes 40 a pass, the queued pass taking the rest', async () => {
+    await combinedWorld();
+    const burst = Array.from({ length: 45 }, (_, i) => `gone-${i}`);
+    seedFinished(burst);
+    const r = await pass();
+    expect(r.ok && r.value.recordGone).toBe(40);
+    await idle();
+    for (const id of burst) expect([id, where()[id]]).toEqual([id, undefined]);
+    expect(where()['fd-0']).toEqual(['KickOffCal']); // verifiable: kept
+  });
 });

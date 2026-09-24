@@ -3,7 +3,7 @@
 // 'provider' — the OS calendar store via expo-calendar (iOS EventKit;
 // Android's CalendarProvider on installs that predate the REST path).
 // 'rest' — Google's Calendar API under calendar.app.created, writing
-// into a KickoffCal-owned calendar in the user's Google account
+// into a KickOffCal-owned calendar in the user's Google account
 // (Prompt 28: no sync adapter, no mass-deletion gate, and a scope that
 // structurally cannot see the user's other calendars).
 //
@@ -26,7 +26,7 @@ export function setActiveBackend(backend: CalendarBackend): void {
   writeJson(BACKEND_KEY, backend);
 }
 
-// The id of the KickoffCal calendar we created in the user's Google
+// The id of the KickOffCal calendar we created in the user's Google
 // account. Stored once at creation; ensureRestTarget re-creates (and
 // re-stores) if the user deletes the calendar out from under us.
 export function restCalendarId(): string | null {
