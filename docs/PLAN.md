@@ -294,6 +294,10 @@ silent).
     settings where they were left, changing them needs Premium; disk
     clean-ups are standing permission (AGENTS rule 18). Flagged: the
     fixture card's per-event colour row (Android/Google) stays open.
+  - [x] Owner ruling (same day): the per-event colour row is Premium on
+    the shared routine (moved to `core/premiumOffer.ts`); verified by
+    tests (row handler, routine, engine recolour on both stores); the
+    on-device check waits for the Pixel (Android + Google only).
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

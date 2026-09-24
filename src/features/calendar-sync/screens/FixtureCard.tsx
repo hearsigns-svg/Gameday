@@ -88,7 +88,6 @@ import {
 import { calendarCapabilities } from '../data/driver';
 import {
   loadEventSettings,
-  setEventColour,
   setEventAllDayReminder,
   setEventReminder,
 } from '../data/eventSettingsStore';
@@ -105,6 +104,7 @@ import {
   reminderSlotValues,
 } from '../domain/prefs';
 import { runSync, subscribeSync, upcomingFixtures } from '../syncEngine';
+import { pickEventColour } from '../eventColourPick';
 
 // What a caller hands the host to fly a card.
 export interface FixtureCardPayload {
@@ -695,9 +695,9 @@ export function FixtureCardBody(props: {
                     theme={theme}
                     chosen={settings[fixture.id]?.colour}
                     onPick={(hex) => {
-                      setEventColour(fixture.id, hex);
-                      repaint();
-                      void runSync();
+                      // Premium (owner ruling 2026-09-24): a free tap is
+                      // the offer, and nothing is saved.
+                      if (pickEventColour(fixture.id, hex) === 'saved') repaint();
                     }}
                   />
                 </>

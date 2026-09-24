@@ -401,11 +401,12 @@ These apply to every stage. They do not need restating in a brief.
 
 19. **A Premium control is shown to everyone** (owner rulings
     2026-09-24). In the free state a tap goes through the one
-    on-demand routine (`offerPremium` in Preferences: the paywall, else
-    the inline Premium line) and changes NOTHING; after a lapse the
-    setting stays where the user left it, and changing it — in either
-    direction — needs Premium again. The calendar colour and the
-    per-sport switch are the reference cases (DECISIONS 2026-09-24).
+    on-demand routine (`offerPremium`, `src/core/premiumOffer.ts`: the
+    paywall, else the inline Premium line) and changes NOTHING; after a
+    lapse the setting stays where the user left it, and changing it — in
+    either direction — needs Premium again. Reference cases: the calendar
+    colour swatches, the per-sport switch, the fixture card's per-event
+    colour row, the calendar glyph (DECISIONS 2026-09-24).
 
 ## Concurrency against production
 

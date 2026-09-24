@@ -75,6 +75,7 @@ import {
   requestNotificationPermission,
 } from '../reminders/data/notificationScheduler';
 import { requestPaywall } from '../../core/paywall';
+import { offerPremium } from '../../core/premiumOffer';
 import {
   colourPickStep,
   ownsCalendarColour,
@@ -461,17 +462,6 @@ export default function PreferencesScreen({
   // Under REST the swatch must not claim a colour Google refused.
   const colourRefused =
     activeBackend() === 'rest' && restColourState()?.status === 'refused';
-
-  // The on-demand way into the offer from a Premium control in the free
-  // state (Round 5): the paywall — or, when it is suppressed after a
-  // decline or billing is not configured, the inline Premium line. One
-  // routine, so every locked control here behaves the same by
-  // construction.
-  const offerPremium = () => {
-    if (!requestPaywall('on_demand')) {
-      showToast({ message: tr('premium.syncRow') });
-    }
-  };
 
   const pickColour = async (hex: string, name: string) => {
     if (colourPickStep(premiumLocked()) === 'offer') {

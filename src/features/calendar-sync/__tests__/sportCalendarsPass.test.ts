@@ -44,7 +44,7 @@ jest.mock('../data/calendarChoice', () => ({
   setCalendarChoice: () => undefined,
 }));
 jest.mock('../data/eventSettingsStore', () => ({
-  loadEventSettings: () => ({}),
+  loadEventSettings: () => mockState.eventSettings,
   pruneEventSettingsStore: () => undefined,
 }));
 jest.mock('../data/exclusionStore', () => ({
@@ -126,6 +126,7 @@ type MockInput = {
   endUtc: string;
   allDay: boolean;
   note?: string;
+  colour?: string;
 };
 
 // ─── The model calendar store ─────────────────────────────────────────
@@ -139,6 +140,7 @@ interface Ev {
   endUtc: string;
   allDay: boolean;
   note?: string;
+  colour?: string;
 }
 interface Cal {
   title: string;
@@ -264,6 +266,7 @@ const mockStore = {
         endUtc: input.endUtc,
         allDay: input.allDay,
         ...(input.note ? { note: input.note } : {}),
+        ...(input.colour ? { colour: input.colour } : {}),
       });
       this.creates.set(input.fixtureId, (this.creates.get(input.fixtureId) ?? 0) + 1);
       return eid;
@@ -291,6 +294,7 @@ const mockStore = {
           endUtc: input.endUtc,
           allDay: input.allDay,
           ...(input.note ? { note: input.note } : {}),
+          colour: input.colour, // absent = the calendar's own colour again
         }),
       );
       return { ok: true as const, value: eventId };
@@ -389,6 +393,7 @@ const mockState = {
   fixtures: [] as Fixture[],
   archive: [] as Fixture[],
   lookupFails: false,
+  eventSettings: {} as Record<string, { colour?: string; at: string }>,
   prefs() {
     return { ...DEFAULT_PREFS, separateSportCalendars: this.layout === 'per-sport' };
   },
@@ -503,6 +508,7 @@ async function combinedWorld(): Promise<void> {
   mockState.fixtures = [...UPCOMING];
   mockState.archive = [FINISHED, ...UPCOMING];
   mockState.lookupFails = false;
+  mockState.eventSettings = {};
   await settle();
   const ledgerKey = 'ledger.v1';
   const storage = jest.requireMock('../../../core/storage') as {
@@ -696,6 +702,25 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
     // stays behind empty.
     expectLayout('per-sport', { leaked: backend === 'rest' ? 1 : 0 });
     expect(mockStore.cals.get(soccer)?.events.size ?? 0).toBe(0);
+  });
+
+  // The fixture card's per-event colour row (owner ruling 2026-09-24): a
+  // trial or Premium user's pick is saved to the event settings, and the
+  // next pass recolours that one event — as before the row was locked.
+  test('a colour picked on the fixture card recolours its event; clearing it restores the calendar colour', async () => {
+    await combinedWorld();
+    const eventOf = (id: string) =>
+      [...mockStore.cals.values()].flatMap((c) => [...c.events.values()]).find((e) => e.fixtureId === id);
+    const writes = mockStore.writes;
+    mockState.eventSettings = { 'fd-1': { colour: '#C22A2A', at: new Date().toISOString() } };
+    await pass();
+    expect(eventOf('fd-1')?.colour).toBe('#C22A2A');
+    expect(mockStore.writes).toBe(writes + 1); // that one event, nothing else
+    for (const f of UPCOMING.filter((x) => x.id !== 'fd-1')) expect(eventOf(f.id)?.colour).toBeUndefined();
+    mockState.eventSettings = {};
+    await pass();
+    expect(eventOf('fd-1')?.colour).toBeUndefined();
+    expect(mockStore.misaddressed).toBe(0);
   });
 
   test('the "done" toast waits for the last game: a failed lookup holds it back a pass', async () => {

@@ -5280,3 +5280,25 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   applied and blue restored; the calendar still 1,624 games. The trial
   case is pinned by the entitlement-model tests only — a trial needs the
   store.
+- 2026-09-24 — **Owner ruling: the fixture card's per-event colour row is
+  Premium.** The row — shown only where events carry their own colour,
+  Google Calendar on Android — goes through the shared routine: in the
+  free state a tap, setting a colour or clearing the chosen one, opens the
+  offer and NOTHING is saved; trial and Premium unchanged
+  (`pickEventColour`, `calendar-sync/eventColourPick.ts`). Nothing else
+  about the row changed. The routine moved out of Preferences into core
+  (`core/premiumOffer.ts`) so the card can call it; the calendar glyph's
+  identical inline copy now calls it too, behaviour unchanged. VERIFIED BY
+  TESTS: the row's own handler (free: the offer, no colour saved, no pass;
+  trial or Premium: saved and the calendar updated), the routine (the
+  paywall; else the Premium line), and the engine (a picked colour
+  recolours exactly that event on the next pass, on an EventKit-like and
+  a Google-like store; clearing it restores the calendar's colour); four
+  defects reintroduced — the lock removed, offer-and-save, a silent
+  routine, the engine dropping the colour — each failed. NOT VERIFIED ON
+  A DEVICE: the row exists only on Android with Google Calendar
+  connected; no Android device was attached, the connection needs the
+  owner's Google sign-in, and the free state needs a development build —
+  the on-device check waits for the Pixel. FLAGGED: the locked reminder
+  slots in Settings still call the paywall directly, so after a decline
+  this session a tap on one shows nothing.

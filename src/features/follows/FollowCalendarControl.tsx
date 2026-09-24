@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CalendarGlyph } from '../../core/calendarGlyph';
 import { premiumLocked } from '../../core/entitlementStore';
 import { t } from '../../core/i18n';
-import { requestPaywall } from '../../core/paywall';
+import { offerPremium } from '../../core/premiumOffer';
 import { TeamTheme } from '../../core/teamTheme';
 import { showToast } from '../../core/toast';
 import { subscribeSync } from '../calendar-sync/syncEngine';
@@ -55,7 +55,7 @@ export function FollowCalendarControl(props: {
     if (next === 'in' && premiumLocked()) {
       // The single gate. Suppressed after a decline this session — then
       // the offer's own line says what + would need, and nothing changes.
-      if (!requestPaywall('on_demand')) showToast({ message: t('premium.syncRow') });
+      offerPremium();
       return;
     }
     const mine = ++tapSeq.current;
