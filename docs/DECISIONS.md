@@ -5334,3 +5334,19 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   two rows further than the row tapped (6 → 8, 8 → 4, 4 → 6); the row's
   handler selects the tapped row directly, so this may be the simulator's
   synthetic taps — worth one finger check on a phone.
+- 2026-09-25 — **Pixel updated to f9b1a70's app, and the Google Calendar
+  layer now says why a request failed.** Release APK (upload-signed, same
+  certificate as the install), bundle checked as a file in the APK and on
+  the device (rule 16), installed over the 3 September build with its
+  data. Minutes later the phone's log showed two sport calendars being
+  created (the per-sport switch turned on from the phone), each colour
+  PATCH failing "auth-expired", then four passes failing "offline" —
+  while the app sat behind the screensaver and another app. The REST
+  layer swallowed the platform's error, so nothing said which. Now
+  `request()` logs the raw failure ("did not reach Google: …") and a 401,
+  and the token provider logs why a token was unavailable; behaviour is
+  unchanged. The diagnostic build went on the Pixel at 14:04; its first
+  100 s in the foreground were clean. Open: the cause of the four
+  "offline" passes (the next failure will name itself), and the two
+  sport calendars' colours — set once by design, so a failed first paint
+  leaves Google's default colour for good.

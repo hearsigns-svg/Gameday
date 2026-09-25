@@ -169,7 +169,13 @@ async function request(
         },
         ...(spec.body !== undefined ? { body: JSON.stringify(spec.body) } : {}),
       });
-    } catch {
+    } catch (e) {
+      // The platform's own words, for logcat: "offline" alone cannot tell
+      // a dead network from a request the platform refused to send, and
+      // the hardware session has no other instrument (the engine's rule).
+      console.warn(
+        `[gameday] calendar API ${spec.method} ${spec.path.split('?')[0]} did not reach Google: ${e}`,
+      );
       return err({ kind: 'offline' });
     }
     if (res.status === 204) return ok(undefined);
@@ -183,7 +189,10 @@ async function request(
     // A 401 with a provider-fresh token means the refresh chain is
     // dead, not that this one call was unlucky. No retry: retrying an
     // expired grant just delays the reconnect ask.
-    if (res.status === 401) return err({ kind: 'auth-expired' });
+    if (res.status === 401) {
+      console.warn(`[gameday] calendar API ${spec.method} ${spec.path.split('?')[0]} answered 401`);
+      return err({ kind: 'auth-expired' });
+    }
     if (res.status === 404 || res.status === 410) {
       return err({ kind: 'not-found', what: 'event' });
     }

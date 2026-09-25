@@ -76,7 +76,10 @@ async function tokenProvider(): Promise<Result<string>> {
       await signin.signInSilently();
       const t = await signin.getTokens();
       return ok(t.accessToken);
-    } catch {
+    } catch (e) {
+      // Which failure it was, for logcat: a dead refresh chain and a
+      // momentary Play Services refusal both land here.
+      console.warn(`[gameday] google token unavailable: ${e}`);
       return err({ kind: 'auth-expired' });
     }
   }
