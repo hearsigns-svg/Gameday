@@ -91,6 +91,12 @@ function WheelColumn(props: {
         data={[...props.items]}
         keyExtractor={(label, i) => `${i}-${label}`}
         showsVerticalScrollIndicator={false}
+        // The wheel lives inside Preferences' own vertical ScrollView.
+        // Android hands a vertical drag to the OUTER scroller unless the
+        // inner one opts into nested scrolling — without this the wheel
+        // could only be tapped, never scrolled (owner report from the
+        // Pixel, 2026-09-25). iOS nests scroll views natively.
+        nestedScrollEnabled
         snapToInterval={ITEM_H}
         decelerationRate="fast"
         getItemLayout={(_d, i) => ({
