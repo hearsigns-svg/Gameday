@@ -20,6 +20,21 @@ export const GOOGLE_EVENT_COLOURS: ReadonlyArray<{ id: string; hex: string; name
   { id: '11', hex: '#D50000', name: 'Tomato' },
 ];
 
+// THE PICKER (owner ruling 2026-09-25: these eleven, everywhere — a sport,
+// a follow, an event, a calendar). One event can only wear one of Google's
+// eleven, so offering exactly these means a sport looks the same whether
+// it paints events in one calendar or is a calendar of its own. Google
+// Calendar's own menu order, warm to cool with Graphite last, so each
+// colour sits where the user has seen it in Google's app. `name` is the
+// catalog word under core.colours.
+export const PICKER_COLOURS: ReadonlyArray<{ id: string; hex: string; name: string }> = [
+  '11', '4', '6', '5', '2', '10', '7', '9', '1', '3', '8',
+].map((id) => {
+  const c = GOOGLE_EVENT_COLOURS.find((x) => x.id === id);
+  if (!c) throw new Error(`no Google colour ${id}`);
+  return { ...c, name: c.name.toLowerCase() };
+});
+
 function rgb(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;

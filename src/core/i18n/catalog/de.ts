@@ -80,6 +80,20 @@ export const de: Catalog = {
   'core.actions.remove': 'Entfernen',
   'core.actions.removed': 'Entfernt',
   'core.actions.cancel': 'Abbrechen',
+
+  // Google Calendar's eleven colours, by the names Google's own app
+  // gives them (the picker: calendar-sync/domain/googleEventColour.ts).
+  'core.colours.tomato': 'Tomate',
+  'core.colours.flamingo': 'Flamingo',
+  'core.colours.tangerine': 'Mandarine',
+  'core.colours.banana': 'Banane',
+  'core.colours.sage': 'Salbei',
+  'core.colours.basil': 'Basilikum',
+  'core.colours.peacock': 'Pfau',
+  'core.colours.blueberry': 'Heidelbeere',
+  'core.colours.lavender': 'Lavendel',
+  'core.colours.grape': 'Weintraube',
+  'core.colours.graphite': 'Graphit',
   'core.follow.follow': 'Folgen',
   'core.follow.following': 'Folge ich',
   'core.follow.followA11y': '{subject} folgen',
@@ -424,6 +438,8 @@ export const de: Catalog = {
   'calendar.card.useDefaultReminder': 'Meine Standard-Erinnerung verwenden',
   'calendar.card.colour': 'Farbe',
   'calendar.card.colourValue': 'Farbe {value}',
+  'calendar.colour.closeA11y': 'Farben schließen',
+  'calendar.colour.inheritA11y': 'Gleiche Farbe wie {name}',
   'calendar.card.mainEvent': 'Main Event',
   'calendar.card.added': 'Hinzugefügt',
   'calendar.card.add': 'Hinzufügen',
@@ -532,17 +548,17 @@ export const de: Catalog = {
   'settings.sections.a11y': 'Einstellungen für {title}',
 
   // ── Calendar section ───────────────────────────────────────────────
-  'settings.calendar.googleReconnectCaption':
-    'In deinem Google Kalender — tippen, um die Anmeldung neu zu verbinden',
   'settings.calendar.googleReconnectA11y':
     'KickOffCal im Google Kalender. Google-Anmeldung neu verbinden',
   'settings.calendar.googleReconnected': 'Google Kalender neu verbunden',
-  'settings.calendar.googleConnectedCaption': 'In deinem Google Kalender',
   'settings.calendar.googleConnectedA11y': 'KickOffCal im Google Kalender',
   'settings.calendar.disconnectGoogle': 'Google Kalender trennen',
   'settings.calendar.disconnectCaption':
     'Dein Kalender und seine Einträge bleiben unberührt',
   'settings.calendar.googleDisconnected': 'Google Kalender getrennt',
+  'settings.calendar.googleCalendar': 'Google Kalender',
+  'settings.calendar.googleReconnectTap': 'Tippen, um die Anmeldung neu zu verbinden',
+  'settings.calendar.colourOfA11y': '{name}, Farbe {colour}. Farbe ändern',
   'settings.calendar.connectGoogle': 'Google Kalender verbinden',
   'settings.calendar.connectCaption':
     'Bis dahin bleiben deine Spiele in der App',
@@ -554,10 +570,6 @@ export const de: Catalog = {
   'settings.calendar.targetA11y':
     'Kalender: {label}. {account}. Ändern, wohin Spiele geschrieben werden',
   'settings.calendar.chooseA11y': 'Wählen, wohin Spiele geschrieben werden',
-  'settings.calendar.colour': 'Farbe',
-  'settings.calendar.colourA11y': 'Kalenderfarbe {name}',
-  'settings.calendar.colourCaption':
-    'So sehen KickOffCal-Einträge in der Kalender-App deines Handys aus.',
   'settings.calendar.inheritedColour':
     'Deine Spiele übernehmen die Farbe von {calendar} — die stellst du in deiner Kalender-App ein.',
   'settings.calendar.newFollows': 'Neue Follows zu deinem Kalender hinzufügen',
@@ -583,15 +595,6 @@ export const de: Catalog = {
   // because every {calendar} slot reads "von/zu/in {calendar}".
   'settings.words.yourCalendar': 'deinem Kalender',
 
-  // Colour names — read out and toasted, so they are copy, not config.
-  'settings.colours.kickoffcalBlue': 'KickOffCal-Blau',
-  'settings.colours.red': 'Rot',
-  'settings.colours.orange': 'Orange',
-  'settings.colours.green': 'Grün',
-  'settings.colours.teal': 'Petrol',
-  'settings.colours.purple': 'Lila',
-  'settings.colours.pink': 'Pink',
-  'settings.colours.graphite': 'Graphit',
 
   // ── Events section ─────────────────────────────────────────────────
   'settings.events.footnote':
@@ -607,7 +610,7 @@ export const de: Catalog = {
   'settings.reminders.title': 'Erinnerungen',
   'settings.reminders.footnote':
     'Änderungen gelten, sobald sich dein Kalender das nächste Mal aktualisiert.',
-  'settings.reminders.daysWithoutDates': 'Tage ohne Uhrzeit',
+  'settings.reminders.allDayEvents': 'Ganztägige Termine',
   'settings.reminders.slotA11y': 'Erinnerung {n}, {value}',
   'settings.reminders.slotValueA11y': 'Wert für Erinnerung {n}',
   'settings.reminders.slotUnitA11y': 'Einheit für Erinnerung {n}',

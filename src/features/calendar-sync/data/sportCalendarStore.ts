@@ -8,9 +8,11 @@
 
 import { readJson, writeJson } from '../../../core/storage';
 import type { CalendarLayout } from '../domain/sportCalendars';
+import type { SportColourState } from '../domain/colourLayers';
 
 const MAP_KEY = 'sportCalendars.v1';
 const MOVE_KEY = 'calendarLayoutMove.v1';
+const COLOUR_KEY = 'sportCalendarColours.v1';
 
 export function sportCalendarIds(): Record<string, string> {
   return readJson<Record<string, string>>(MAP_KEY, {});
@@ -25,10 +27,24 @@ export function forgetSportCalendar(calendarId: string): void {
     Object.entries(sportCalendarIds()).filter(([, id]) => id !== calendarId),
   );
   writeJson(MAP_KEY, next);
+  const { [calendarId]: _gone, ...colours } = sportCalendarColourStates();
+  writeJson(COLOUR_KEY, colours);
 }
 
 export function forgetAllSportCalendars(): void {
   writeJson(MAP_KEY, {});
+  writeJson(COLOUR_KEY, {});
+}
+
+// What each sport calendar is KNOWN to wear (2026-09-25), by calendar id —
+// domain/colourLayers.ts::sportColourNeedsPaint reads it. Recorded by
+// every paint, the one at creation included.
+export function sportCalendarColourStates(): Record<string, SportColourState> {
+  return readJson<Record<string, SportColourState>>(COLOUR_KEY, {});
+}
+
+export function recordSportCalendarColour(calendarId: string, state: SportColourState): void {
+  writeJson(COLOUR_KEY, { ...sportCalendarColourStates(), [calendarId]: state });
 }
 
 // Set when the user confirms a move; cleared, with the "done" toast, by

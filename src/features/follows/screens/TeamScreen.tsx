@@ -9,6 +9,7 @@ import { fixtureCardRequest } from '../../calendar-sync/openFixtureCard';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -73,6 +74,23 @@ import {
   Followable,
 } from '../data/followStore';
 import { colourFromKitText } from '../domain/entityColour';
+import {
+  colourTap,
+  eventColoursPossible,
+  followColourChoice,
+  groupOfFollow,
+  pickFollowColour,
+  pickSportColour,
+  sportColourChoice,
+  sportColourChoosable,
+} from '../../calendar-sync/colourChoices';
+import { sportGroupLabel } from '../../calendar-sync/sportCalendarNames';
+import {
+  ColourDot,
+  colourName,
+  ColourRequest,
+  ColourSheet,
+} from '../../calendar-sync/screens/ColourPicker';
 import {
   followQueryKeys,
   FollowScope,
@@ -302,6 +320,14 @@ export default function TeamScreen({ navigation, route }: Props) {
 
   const following = isFollowed(teamKey);
   const olympicGlyph = olympicSportGlyph(teamKey);
+  // COLOUR (owner rulings 2026-09-25): the natural home of a sport's
+  // colour, and of this follow's own — a team, a fighter, a competition —
+  // which beats its sport's and loses to one picked on an event's card.
+  // Read from the store every render, like the scope below.
+  const followRecord = following
+    ? loadFollowables().find((f) => f.key === teamKey)
+    : undefined;
+  const [colourRequest, setColourRequest] = useState<ColourRequest | null>(null);
 
   // Per-follow granularity (Prompt 11): only rendered once followed —
   // scope is a property of the follow, and the options only exist for
@@ -593,6 +619,14 @@ export default function TeamScreen({ navigation, route }: Props) {
           </View>
         </View>
       ) : null}
+      {followRecord && (sportColourChoosable() || eventColoursPossible()) ? (
+        <FollowColours
+          follow={followRecord}
+          onOpen={setColourRequest}
+          onPicked={() => forceRender((n) => n + 1)}
+        />
+      ) : null}
+      <ColourSheet request={colourRequest} onClose={() => setColourRequest(null)} />
       {fixtures === null ? (
         <View style={styles.center}>
           <ActivityIndicator color={t.primary} />
@@ -736,6 +770,70 @@ function TeamFixtureRow(props: {
   );
 }
 
+// The follow page's colour chips: the sport's (where a sport has a colour
+// to choose here) and this follow's own (where one event can be
+// coloured — absent, never explained, where it cannot).
+function FollowColours(props: {
+  follow: Followable;
+  onOpen: (request: ColourRequest) => void;
+  onPicked: () => void;
+}) {
+  const t = useTheme();
+  const group = groupOfFollow(props.follow);
+  const sport = sportColourChoice(group);
+  const own = followColourChoice(props.follow);
+  const chip = (label: string, colour: string, open: () => void) => (
+    <Pressable
+      key={label}
+      accessibilityRole="button"
+      accessibilityLabel={i18n.t('settings.calendar.colourOfA11y', {
+        name: label,
+        colour: colourName(colour),
+      })}
+      onPress={() => colourTap(open)}
+      style={[styles.scopeChoice, styles.colourChip, { borderColor: t.border }]}
+    >
+      <ColourDot colour={colour} size={16} ringColour={t.border} />
+      <Text style={[type.body, { color: t.textPrimary }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+  return (
+    <View style={[styles.scopeBlock, { borderColor: t.border }]}>
+      <Text style={[type.caption, { color: t.textSecondary, fontWeight: '600' }]}>
+        {i18n.t('calendar.card.colour')}
+      </Text>
+      <View style={styles.scopeRow}>
+        {sportColourChoosable()
+          ? chip(sportGroupLabel(group), sport.colour, () =>
+              props.onOpen({
+                title: sport.title,
+                chosen: sport.chosen,
+                ...(sport.inherit ? { inherit: sport.inherit } : {}),
+                onPick: (hex) => {
+                  if (pickSportColour(group, hex) === 'saved') props.onPicked();
+                },
+              }),
+            )
+          : null}
+        {eventColoursPossible()
+          ? chip(props.follow.label, own.colour, () =>
+              props.onOpen({
+                title: props.follow.label,
+                chosen: own.chosen,
+                inherit: own.inherit,
+                onPick: (hex) => {
+                  if (pickFollowColour(props.follow.key, hex) === 'saved') props.onPicked();
+                },
+              }),
+            )
+          : null}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -759,5 +857,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.xs,
     overflow: 'hidden',
+  },
+  colourChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
+    maxWidth: '100%',
   },
 });

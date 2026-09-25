@@ -60,7 +60,25 @@ import {
   setCalendarColour,
 } from '../calendar-sync/data/driver';
 import { loadLedger } from '../calendar-sync/data/ledger';
-import { setPendingLayoutMove } from '../calendar-sync/data/sportCalendarStore';
+import {
+  setPendingLayoutMove,
+  sportCalendarColourStates,
+  sportCalendarIds,
+} from '../calendar-sync/data/sportCalendarStore';
+import {
+  colourTap,
+  pickSportColour,
+  sportColourChoice,
+  sportColourChoosable,
+} from '../calendar-sync/colourChoices';
+import { colourGroups } from '../calendar-sync/domain/colourLayers';
+import { sportGroupLabel } from '../calendar-sync/sportCalendarNames';
+import {
+  ColourDot,
+  colourName,
+  ColourRequest,
+  ColourSheet,
+} from '../calendar-sync/screens/ColourPicker';
 import { layoutOf, layoutSwitchStep } from '../calendar-sync/domain/sportCalendars';
 import { restColourState } from '../calendar-sync/data/restCalendarDriver';
 import {
@@ -94,21 +112,6 @@ import {
   appearanceChoice,
   setAppearanceChoice,
 } from '../../core/appearanceStore';
-
-// Colour choices for the Gameday calendar as it appears in the OS
-// calendar app. Named for accessibility; applied live when possible.
-// Names are CATALOG KEYS (Round 3 Phase C) — resolved at the use sites
-// so the words stay in the typed catalog, not in config.
-const CALENDAR_COLOURS: Array<{ nameKey: CatalogKey; hex: string }> = [
-  { nameKey: 'settings.colours.kickoffcalBlue', hex: '#1463F3' },
-  { nameKey: 'settings.colours.red', hex: '#C81E1E' },
-  { nameKey: 'settings.colours.orange', hex: '#EA580C' },
-  { nameKey: 'settings.colours.green', hex: '#16A34A' },
-  { nameKey: 'settings.colours.teal', hex: '#0D9488' },
-  { nameKey: 'settings.colours.purple', hex: '#6D28D9' },
-  { nameKey: 'settings.colours.pink', hex: '#DB2777' },
-  { nameKey: 'settings.colours.graphite', hex: '#52525B' },
-];
 
 // One intent-group: a heading and its card. The heading is now a
 // DISCLOSURE (consolidation brief, Stage 2): the whole row toggles the
@@ -332,6 +335,9 @@ function ValueRow(props: {
   onPress?: () => void;
   accessibilityLabel: string;
   last?: boolean;
+  // A control of its own at the row's end (KickOffCal's colour dot) —
+  // its own tap target, never the row's.
+  trailing?: React.ReactNode;
 }) {
   const t = useTheme();
   const rowStyle = [
@@ -354,6 +360,7 @@ function ValueRow(props: {
           {props.value}
         </Text>
       ) : null}
+      {props.trailing ?? null}
     </>
   );
   if (!props.onPress) {
@@ -371,6 +378,43 @@ function ValueRow(props: {
       style={rowStyle}
     >
       {body}
+    </Pressable>
+  );
+}
+
+// One sport — or, with a calendar for each sport, its calendar — under
+// the calendar row (owner rulings 2026-09-25): its name and its colour's
+// dot; the whole row opens the colours.
+function ColourListRow(props: {
+  label: string;
+  caption?: string;
+  colour: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
+      onPress={props.onPress}
+      style={[
+        styles.row,
+        styles.colourListRow,
+        { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border },
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[type.body, { color: t.textPrimary }]} numberOfLines={1}>
+          {props.label}
+        </Text>
+        {props.caption ? (
+          <Text style={[type.caption, { color: t.textSecondary }]} numberOfLines={2}>
+            {props.caption}
+          </Text>
+        ) : null}
+      </View>
+      <ColourDot colour={props.colour} ringColour={t.border} />
     </Pressable>
   );
 }
@@ -431,6 +475,8 @@ export default function PreferencesScreen({
   const t = useTheme();
   const [prefs, setPrefs] = useState<CalendarPrefs>(loadPrefs);
   const [colour, setColour] = useState<string>(calendarColour);
+  // The colour sheet, when one is open (ColourPicker).
+  const [colourRequest, setColourRequest] = useState<ColourRequest | null>(null);
   // Read from the persisted target so the row paints immediately, and
   // refreshed on focus because a sync (or the picker) may have moved it.
   const [target, setTarget] = useState(storedTarget);
@@ -464,7 +510,43 @@ export default function PreferencesScreen({
   const colourRefused =
     activeBackend() === 'rest' && restColourState()?.status === 'refused';
 
-  const pickColour = async (hex: string, name: string) => {
+  // KickOffCal's own colour, as a dot on the calendar row (2026-09-25).
+  const kickoffcalDot = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={tr('settings.calendar.colourOfA11y', {
+        name: 'KickOffCal',
+        colour: colourName(colour),
+      })}
+      hitSlop={spacing.m}
+      onPress={() =>
+        colourTap(() =>
+          setColourRequest({
+            title: 'KickOffCal',
+            chosen: colour,
+            onPick: (hex) => {
+              if (hex) void pickColour(hex);
+            },
+          }),
+        )
+      }
+    >
+      <ColourDot colour={colour} ringColour={t.border} />
+    </Pressable>
+  );
+  // The rows under the calendar: a connected calendar, a colour to choose.
+  const colourGroupsShown =
+    calendarConnection() === 'connected' && sportColourChoosable()
+      ? colourGroups(
+          loadFollowables(),
+          layoutOf(prefs),
+          Object.keys(sportCalendarIds()),
+          sportGroupLabel,
+        )
+      : [];
+
+  const pickColour = async (hex: string) => {
+    const name = colourName(hex);
     if (colourPickStep(premiumLocked()) === 'offer') {
       offerPremium();
       return;
@@ -529,58 +611,48 @@ export default function PreferencesScreen({
             onPress={() => requestPaywall('on_demand')}
           />
         ) : activeBackend() === 'rest' ? (
-          // Google-connected: one calendar, ours by construction —
-          // nothing to pick. The first row states where fixtures are,
-          // and becomes the reconnect surface ONLY when the last sync
-          // died of an expired grant (B4 item 2 — it used to read "tap
-          // to reconnect" whenever the backend was REST, i.e. always;
-          // the real signal is the sync engine's error kind, the same
-          // one the Schedule chip renders). The second row is its
-          // other half (Stage 7B): Connect ⇄ Disconnect as a proper
-          // state pair. Disconnect ends the grant and halts calendar
-          // writes — the calendar and its events are left exactly as
-          // they are.
-          <>
-            {restRowMode(lastSyncErrorKind()) === 'reconnect' ? (
-              <ValueRow
-                label="KickOffCal"
-                caption={tr('settings.calendar.googleReconnectCaption')}
-                accessibilityLabel={tr('settings.calendar.googleReconnectA11y')}
-                onPress={() =>
-                  void connectGoogleCalendar().then((r) => {
-                    if (r.ok) {
-                      showToast({
-                        message: tr('settings.calendar.googleReconnected'),
-                      });
-                      setTarget(storedTarget());
-                      forceRepaint((n) => n + 1);
-                      void runSync();
-                    }
-                  })
-                }
-              />
-            ) : (
-              <ValueRow
-                label="KickOffCal"
-                caption={tr('settings.calendar.googleConnectedCaption')}
-                accessibilityLabel={tr('settings.calendar.googleConnectedA11y')}
-              />
-            )}
+          // Google-connected (owner ruling 2026-09-25): the row names the
+          // app the calendars live in — Google Calendar — and, with one
+          // calendar, carries KickOffCal's own colour as a dot. It
+          // becomes the reconnect surface ONLY when the last sync died of
+          // an expired grant (B4 item 2: the real signal is the sync
+          // engine's error kind, the one the Schedule chip renders).
+          // Disconnect, its other half (Stage 7B), closes the section.
+          restRowMode(lastSyncErrorKind()) === 'reconnect' ? (
             <ValueRow
-              label={tr('settings.calendar.disconnectGoogle')}
-              caption={tr('settings.calendar.disconnectCaption')}
-              accessibilityLabel={tr('settings.calendar.disconnectGoogle')}
+              label={tr('settings.calendar.googleCalendar')}
+              caption={tr('settings.calendar.googleReconnectTap')}
+              accessibilityLabel={tr('settings.calendar.googleReconnectA11y')}
               onPress={() =>
-                void disconnectGoogleCalendar().then(() => {
-                  showToast({
-                    message: tr('settings.calendar.googleDisconnected'),
-                  });
-                  setTarget(storedTarget());
-                  forceRepaint((n) => n + 1);
+                void connectGoogleCalendar().then((r) => {
+                  if (r.ok) {
+                    showToast({
+                      message: tr('settings.calendar.googleReconnected'),
+                    });
+                    setTarget(storedTarget());
+                    forceRepaint((n) => n + 1);
+                    void runSync();
+                  }
                 })
               }
+              {...(prefs.separateSportCalendars ? {} : { trailing: kickoffcalDot })}
             />
-          </>
+          ) : (
+            <ValueRow
+              label={tr('settings.calendar.googleCalendar')}
+              // With one calendar, the calendar the dot colours — or,
+              // when Google refused the colour, that it did.
+              {...(prefs.separateSportCalendars
+                ? {}
+                : {
+                    caption: colourRefused
+                      ? tr('settings.calendar.colourRefused')
+                      : 'KickOffCal',
+                    trailing: kickoffcalDot,
+                  })}
+              accessibilityLabel={tr('settings.calendar.googleConnectedA11y')}
+            />
+          )
         ) : nativeSyncRoute() === 'google-connect' ? (
           // Android, not connected: settings is the later door into the
           // same priming flow onboarding offers. An install that already
@@ -600,7 +672,8 @@ export default function PreferencesScreen({
           />
         ) : canPickCalendarTarget() ? (
           // Absent with a calendar for each sport (2026-09-24): there is
-          // no one calendar to name or to pick.
+          // no one calendar to name or to pick. KickOffCal's colour rides
+          // the row as a dot where the calendar is ours to colour.
           <ValueRow
             label={target ? target.label : tr('settings.calendar.choose')}
             caption={
@@ -621,45 +694,11 @@ export default function PreferencesScreen({
                 : tr('settings.calendar.chooseA11y')
             }
             onPress={() => navigation.navigate('CalendarTarget')}
+            {...(ownCalendar ? { trailing: kickoffcalDot } : {})}
           />
         ) : null}
-        {/* The calendar's colour lives WITH the calendar. A calendar for
-            each sport takes its sport's colour when it is created, and
-            from then on it is the user's, in their calendar app — so
-            there is no colour to choose here in that layout. */}
-        {prefs.separateSportCalendars ? null : ownCalendar ? (
-          <View style={styles.swatchRow}>
-            <Text style={[type.body, { color: t.textPrimary, marginBottom: spacing.s }]}>
-              {tr('settings.calendar.colour')}
-            </Text>
-            <View style={styles.swatches}>
-              {CALENDAR_COLOURS.map((c) => (
-                <Pressable
-                  key={c.hex}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: colour === c.hex }}
-                  accessibilityLabel={tr('settings.calendar.colourA11y', {
-                    name: tr(c.nameKey),
-                  })}
-                  onPress={() => void pickColour(c.hex, tr(c.nameKey))}
-                  style={[
-                    styles.swatch,
-                    { backgroundColor: c.hex },
-                    colour === c.hex && {
-                      borderWidth: 3,
-                      borderColor: t.textPrimary,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-            <Text style={[type.caption, { color: t.textSecondary, marginTop: spacing.s }]}>
-              {colourRefused
-                ? tr('settings.calendar.colourRefused')
-                : tr('settings.calendar.colourCaption')}
-            </Text>
-          </View>
-        ) : (
+        {/* A calendar of the user's own keeps the colour they gave it. */}
+        {!prefs.separateSportCalendars && !ownCalendar ? (
           <View style={styles.swatchRow}>
             <Text style={[type.caption, { color: t.textSecondary }]}>
               {tr('settings.calendar.inheritedColour', {
@@ -667,26 +706,7 @@ export default function PreferencesScreen({
               })}
             </Text>
           </View>
-        )}
-        {/* WHERE A NEW FOLLOW STARTS (per-follow calendar control,
-            2026-09-23). A standard platform switch; changing it never
-            touches an existing follow, so it saves without a sync. In
-            the free state it shows OFF — nothing new is written without
-            Premium — and a tap is the on-demand way into the offer. */}
-        <SwitchRow
-          label={tr('settings.calendar.newFollows')}
-          caption={tr('settings.calendar.newFollowsCaption')}
-          value={!premiumLocked() && prefs.newFollowsInCalendar}
-          onValueChange={(next) => {
-            if (premiumLocked()) {
-              offerPremium();
-              return;
-            }
-            const saved = { ...prefs, newFollowsInCalendar: next };
-            setPrefs(saved);
-            savePrefs(saved);
-          }}
-        />
+        ) : null}
         {/* A CALENDAR FOR EACH SPORT (owner brief 2026-09-24): where
             events live, never which. With games already in a calendar
             the switch asks first — every event is rebuilt in its new
@@ -695,7 +715,8 @@ export default function PreferencesScreen({
             2026-09-24): shown to everyone; in the free state a tap is the
             on-demand way into the offer, exactly as the other Premium
             controls here, and nothing moves. It shows where the events
-            ARE — a lapsed subscriber's calendars stay as they were. */}
+            ARE — a lapsed subscriber's calendars stay as they were. It
+            sits directly over the list it reshapes (2026-09-25). */}
         <SwitchRow
           label={tr('settings.calendar.separateSports')}
           value={prefs.separateSportCalendars}
@@ -725,8 +746,83 @@ export default function PreferencesScreen({
               ],
             );
           }}
-          last
         />
+        {/* THE COLOUR LIST (owner rulings 2026-09-25): the sports
+            followed — sports, not teams — each with its colour's dot.
+            With one calendar a sport's colour paints its games (only
+            where one event can be coloured); with a calendar for each
+            sport the list is those calendars, each dot its calendar's
+            colour. */}
+        {colourGroupsShown.map((group) => {
+          const choice = sportColourChoice(group);
+          const calendarId = sportCalendarIds()[group];
+          const refused =
+            prefs.separateSportCalendars &&
+            calendarId !== undefined &&
+            sportCalendarColourStates()[calendarId]?.status === 'refused';
+          return (
+            <ColourListRow
+              key={group}
+              label={choice.title}
+              {...(refused ? { caption: tr('settings.calendar.colourRefused') } : {})}
+              colour={choice.colour}
+              accessibilityLabel={tr('settings.calendar.colourOfA11y', {
+                name: choice.title,
+                colour: colourName(choice.colour),
+              })}
+              onPress={() =>
+                colourTap(() =>
+                  setColourRequest({
+                    title: choice.title,
+                    chosen: choice.chosen,
+                    ...(choice.inherit ? { inherit: choice.inherit } : {}),
+                    onPick: (hex) => {
+                      if (pickSportColour(group, hex) === 'saved') forceRepaint((n) => n + 1);
+                    },
+                  }),
+                )
+              }
+            />
+          );
+        })}
+        {/* WHERE A NEW FOLLOW STARTS (per-follow calendar control,
+            2026-09-23). A standard platform switch; changing it never
+            touches an existing follow, so it saves without a sync. In
+            the free state it shows OFF — nothing new is written without
+            Premium — and a tap is the on-demand way into the offer. */}
+        <SwitchRow
+          label={tr('settings.calendar.newFollows')}
+          caption={tr('settings.calendar.newFollowsCaption')}
+          value={!premiumLocked() && prefs.newFollowsInCalendar}
+          onValueChange={(next) => {
+            if (premiumLocked()) {
+              offerPremium();
+              return;
+            }
+            const saved = { ...prefs, newFollowsInCalendar: next };
+            setPrefs(saved);
+            savePrefs(saved);
+          }}
+          last={activeBackend() !== 'rest'}
+        />
+        {activeBackend() === 'rest' ? (
+          <ValueRow
+            label={tr('settings.calendar.disconnectGoogle')}
+            caption={tr('settings.calendar.disconnectCaption')}
+            accessibilityLabel={tr('settings.calendar.disconnectGoogle')}
+            onPress={() =>
+              void disconnectGoogleCalendar().then(() => {
+                showToast({
+                  message: tr('settings.calendar.googleDisconnected'),
+                });
+                setTarget(storedTarget());
+                forceRepaint((n) => n + 1);
+              })
+            }
+            last
+          />
+        ) : null}
+        <ColourSheet request={colourRequest} onClose={() => setColourRequest(null)} />
       </Section>
 
       <Section
@@ -860,7 +956,7 @@ export default function PreferencesScreen({
           />
         ) : null}
         <SegmentedRow
-          label={tr('settings.reminders.daysWithoutDates')}
+          label={tr('settings.reminders.allDayEvents')}
           last
           options={ALL_DAY_REMINDER_OPTIONS.map((opt) => ({
             // The short form is what fits a segment; the full wording
@@ -1072,15 +1168,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.m,
   },
-  swatches: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.m,
-  },
-  swatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  // Indented under the calendar row it belongs to.
+  colourListRow: {
+    paddingLeft: spacing.xl + spacing.s,
   },
   rule: {
     borderTopWidth: 1,

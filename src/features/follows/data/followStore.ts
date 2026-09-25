@@ -58,6 +58,10 @@ export interface Followable {
   // the explicit value. A new follow gets its starting state in
   // followActions.follow (domain/calendarInclusion.ts).
   calendar?: CalendarPref;
+  // The colour this follow gives its events (owner rulings 2026-09-25):
+  // beats its sport's, loses to one picked on an event's own card.
+  // Absent = none of its own (calendar-sync/domain/colourLayers.ts).
+  colour?: string;
   // NOTE: venue photography is no longer cached here. A ground belongs
   // to the HOME team of a given fixture, not to whoever you follow, so
   // it is keyed by team name in data/photoCache.ts. Stored follows may
@@ -125,6 +129,18 @@ export function setFollowScope(key: string, scope: FollowScope | null): void {
     return scope === null ? rest : { ...rest, scope };
   });
   store(next);
+}
+
+// Set or clear (undefined) one follow's colour in place. No-op if the
+// follow is gone.
+export function setFollowColour(key: string, colour: string | undefined): void {
+  store(
+    loadFollowables().map((f) => {
+      if (f.key !== key) return f;
+      const { colour: _drop, ...rest } = f;
+      return colour === undefined ? rest : { ...rest, colour };
+    }),
+  );
 }
 
 // The calendar preference, absent-means-in.

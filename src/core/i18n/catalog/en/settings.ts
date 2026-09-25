@@ -14,19 +14,21 @@ export const settingsStrings = {
   'settings.sections.a11y': '{title} settings',
 
   // ── Calendar section ───────────────────────────────────────────────
-  'settings.calendar.googleReconnectCaption':
-    'In your Google Calendar — tap to reconnect the sign-in',
   'settings.calendar.googleReconnectA11y':
     'KickOffCal in Google Calendar. Reconnect Google sign-in',
   'settings.calendar.googleReconnected': 'Google Calendar reconnected',
-  // The connected row at rest (B4 item 2): a statement, no verb. The
-  // reconnect caption above appears only on a real auth-expired sync.
-  'settings.calendar.googleConnectedCaption': 'In your Google Calendar',
+  // The connected row at rest (B4 item 2): a statement, no verb. Its
+  // reconnect form appears only on a real auth-expired sync.
   'settings.calendar.googleConnectedA11y': 'KickOffCal in Google Calendar',
   'settings.calendar.disconnectGoogle': 'Disconnect Google Calendar',
   'settings.calendar.disconnectCaption':
     'Your calendar and its events are untouched',
   'settings.calendar.googleDisconnected': 'Google Calendar disconnected',
+  // The connected row (owner ruling 2026-09-25): named for the app the
+  // calendars live in; the colour list sits under it.
+  'settings.calendar.googleCalendar': 'Google Calendar',
+  'settings.calendar.googleReconnectTap': 'Tap to reconnect the sign-in',
+  'settings.calendar.colourOfA11y': '{name}, colour {colour}. Change the colour',
   'settings.calendar.connectGoogle': 'Connect Google Calendar',
   'settings.calendar.connectCaption': 'Fixtures live in the app until you do',
   // An install waiting to connect that already holds synced events —
@@ -39,10 +41,6 @@ export const settingsStrings = {
   'settings.calendar.targetA11y':
     'Calendar: {label}. {account}. Change where fixtures are written',
   'settings.calendar.chooseA11y': 'Choose where fixtures are written',
-  'settings.calendar.colour': 'Colour',
-  'settings.calendar.colourA11y': 'Calendar colour {name}',
-  'settings.calendar.colourCaption':
-    "How KickOffCal events look inside your phone's calendar app.",
   'settings.calendar.inheritedColour':
     'Your fixtures take the colour of {calendar}, which is yours to set in your calendar app.',
   'settings.calendar.newFollows': 'Add new follows to your calendar',
@@ -71,15 +69,6 @@ export const settingsStrings = {
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'your calendar',
 
-  // Colour names — read out and toasted, so they are copy, not config.
-  'settings.colours.kickoffcalBlue': 'KickOffCal blue',
-  'settings.colours.red': 'Red',
-  'settings.colours.orange': 'Orange',
-  'settings.colours.green': 'Green',
-  'settings.colours.teal': 'Teal',
-  'settings.colours.purple': 'Purple',
-  'settings.colours.pink': 'Pink',
-  'settings.colours.graphite': 'Graphite',
 
   // ── Events section ─────────────────────────────────────────────────
   'settings.events.footnote':
@@ -94,7 +83,11 @@ export const settingsStrings = {
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Reminders',
   'settings.reminders.footnote': 'Changes apply the next time your calendar updates.',
-  'settings.reminders.daysWithoutDates': 'Days without dates',
+  // The reminder for entries written as ALL-DAY events — a date with no
+  // kick-off time yet, a postponed game, a tournament's date block, and
+  // every game when Event style is All-day. Renamed from "Days without
+  // dates" (owner ruling 2026-09-25): a date was never what they lacked.
+  'settings.reminders.allDayEvents': 'All-day events',
   'settings.reminders.slotA11y': 'Reminder {n}, {value}',
   'settings.reminders.slotValueA11y': 'Reminder {n} value',
   'settings.reminders.slotUnitA11y': 'Reminder {n} unit',

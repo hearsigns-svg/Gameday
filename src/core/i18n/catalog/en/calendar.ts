@@ -117,6 +117,8 @@ export const calendarStrings = {
   'calendar.card.useDefaultReminder': 'Use my default reminder',
   'calendar.card.colour': 'Colour',
   'calendar.card.colourValue': 'Colour {value}',
+  'calendar.colour.closeA11y': 'Close colours',
+  'calendar.colour.inheritA11y': 'Same colour as {name}',
   'calendar.card.mainEvent': 'Main event',
   'calendar.card.added': 'Added',
   'calendar.card.add': 'Add',

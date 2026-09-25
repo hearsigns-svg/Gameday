@@ -21,6 +21,8 @@ import { saveCalendarColour } from './calendarColourStore';
 import * as provider from './calendarDriver';
 import { storedTarget } from './calendarTargetStore';
 import { loadPrefs } from './prefsStore';
+import { recordSportCalendarColour, sportCalendarColourStates } from './sportCalendarStore';
+import { SportColourStatus, sportColourNeedsPaint } from '../domain/colourLayers';
 import {
   applyRestCalendarColour,
   ensureRestTarget,
@@ -28,6 +30,7 @@ import {
   restCreateFixtureEvent,
   restCreateSportCalendar,
   restDeleteCalendarIfEmpty,
+  restPaintCalendarColour,
   restDeleteFixtureEvent,
   restEraseCalendars,
   restListTaggedEvents,
@@ -196,13 +199,48 @@ export function nativeSyncRoute(): NativeSyncRoute {
 // backend's business — the app-created scope under REST, our record or
 // the title-plus-no-foreign-events proof on the provider.
 
+// Google makes the calendar and is asked for its colour SEPARATELY — by
+// the caller, once it has RECORDED the new calendar: no request may sit
+// between a calendar's creation and its record (the prune and the sweep
+// work from that record; a kill in that gap leaves a calendar nothing can
+// find, the accepted ghost of DECISIONS 2026-09-24, which must stay as
+// narrow as one request). The device store takes the colour WITH the
+// calendar, so its paint is recorded here as done.
 export async function createSportCalendar(
   title: string,
   colour: string,
 ): Promise<Result<string>> {
-  return activeBackend() === 'rest'
-    ? restCreateSportCalendar(title, colour)
-    : provider.createSportCalendar(title, colour);
+  if (activeBackend() === 'rest') return restCreateSportCalendar(title);
+  const created = await provider.createSportCalendar(title, colour);
+  if (created.ok) recordSportCalendarColour(created.value, { hex: colour, status: 'applied' });
+  return created;
+}
+
+// Paint one sport calendar of ours and record what happened (2026-09-25).
+export async function paintSportCalendar(
+  calendarId: string,
+  hex: string,
+): Promise<SportColourStatus> {
+  const status =
+    activeBackend() === 'rest'
+      ? await restPaintCalendarColour(calendarId, hex)
+      : await provider.paintSportCalendar(calendarId, hex);
+  recordSportCalendarColour(calendarId, { hex, status });
+  return status;
+}
+
+// Every sport calendar the pass relies on, in the colour it should wear:
+// painted when it has no record, when the wanted colour changed, or when
+// the last paint did not land (domain/colourLayers.ts). Never fails the
+// pass — what did not land is recorded 'pending' and tried again.
+export async function conformSportCalendarColours(
+  want: ReadonlyArray<{ calendarId: string; hex: string }>,
+): Promise<void> {
+  const states = sportCalendarColourStates();
+  for (const { calendarId, hex } of want) {
+    if (!sportColourNeedsPaint(states[calendarId], hex)) continue;
+    await paintSportCalendar(calendarId, hex);
+  }
 }
 
 // Which of `candidateIds` exist, plus (provider only) the "KickOffCal · …"

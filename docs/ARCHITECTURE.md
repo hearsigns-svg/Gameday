@@ -151,6 +151,23 @@ on the provider path; `PATCH users/me/calendarList/{id}?colorRgbFormat=
 true` on the REST path — at creation, on every resolve until applied,
 and on each change. A refusal (403/400) is recorded and shown, never
 assumed away; a scope refusal is not a rate limit and is not retried.
+Each SPORT calendar keeps the same three-state record
+(`sportCalendarColours.v1`, keyed by calendar id): a per-sport pass
+paints every present sport calendar with no record, a changed wanted
+colour, or a paint still pending (`conformSportCalendarColours`); a new
+one is recorded BEFORE its colour is requested (DECISIONS 2026-09-25).
+
+**Colour layers** (`domain/colourLayers.ts`, owner rulings 2026-09-25).
+An event with no colour of its own inherits one: its most specific
+coloured follow that is in the calendar (the inclusion ladder, then the
+order followed), else — one calendar only — its sport's
+(`prefs.sportColours`, by calendar group). The planner receives this as
+`PlanOptions.colourOf`; the ledger already records the colour written, so
+a change is an update and an unchanged pick writes nothing. Only a layer
+whose `calendarCapabilities().perEventColour` is true paints events. A
+per-sport move rebuilds each event in the colour it wears in the new
+layout (no rebuild-then-recolour). The screens read and set all of it
+through `colourChoices.ts`.
 
 Google's sensitive-scope verification for `calendar.app.created` is a
 launch-prep item (PLAN.md, M7); until then the consent screen runs in

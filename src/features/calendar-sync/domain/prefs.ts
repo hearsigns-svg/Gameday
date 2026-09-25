@@ -66,6 +66,12 @@ export interface CalendarPrefs {
   // A separate calendar for each sport (owner brief 2026-09-24): where
   // events LIVE, never which — domain/sportCalendars.ts. Off by default.
   separateSportCalendars: boolean;
+  // Colours picked for SPORTS (owner rulings 2026-09-25), by calendar
+  // group (follows/domain/sportCalendarGroup.ts). Absent = none of its
+  // own: nothing is painted until someone picks. One calendar: paints the
+  // sport's events; a calendar for each sport: that calendar's colour
+  // (domain/colourLayers.ts).
+  sportColours: Record<string, string>;
 }
 
 export type TournamentTier = 'block' | 'key' | 'all';
@@ -96,6 +102,7 @@ export const DEFAULT_PREFS: CalendarPrefs = {
   newFollowsInCalendar: true,
   sessionRungs: {},
   separateSportCalendars: false,
+  sportColours: {},
 };
 
 // `short` is the form a one-row control uses: the durations have to fit

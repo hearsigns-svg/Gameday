@@ -34,6 +34,7 @@ import { calendarColour } from './calendarColourStore';
 import type { EventInput, ResolvedTarget } from './calendarDriver';
 import { clearTarget, saveTarget } from './calendarTargetStore';
 import { googleColorIdFor } from '../domain/googleEventColour';
+import type { SportColourStatus } from '../domain/colourLayers';
 import {
   calendarHasAnyEvent,
   createOwnedCalendar,
@@ -278,17 +279,26 @@ export async function restListTaggedEvents(
 // this app create them and address nothing else. The colour is set ONCE
 // here and never repainted: from then on it is the user's, in Google
 // Calendar. A failed paint never fails the create.
-export async function restCreateSportCalendar(
-  title: string,
-  colour: string,
-): Promise<Result<string>> {
-  const created = await createOwnedCalendar(title, token());
-  if (!created.ok) return created;
-  const painted = await patchCalendarListColour(created.value, colour, token());
-  if (!painted.ok) {
-    console.warn(`[gameday] sport calendar colour not set: ${JSON.stringify(painted.error)}`);
-  }
-  return created;
+// Its colour is painted by the caller (data/driver.ts createSportCalendar),
+// which records whether it took — a paint that fails here is retried on
+// the next pass instead of being lost with a log line (2026-09-25).
+export async function restCreateSportCalendar(title: string): Promise<Result<string>> {
+  return createOwnedCalendar(title, token());
+}
+
+// One sport calendar's colour, and what Google made of it. A 403/400 is
+// Google refusing this colour; anything else — offline, an expired grant,
+// a 5xx that outlasted the backoff — is worth another try next pass.
+export async function restPaintCalendarColour(
+  calendarId: string,
+  hex: string,
+): Promise<SportColourStatus> {
+  const r = await patchCalendarListColour(calendarId, hex, token());
+  if (r.ok) return 'applied';
+  console.warn(`[gameday] sport calendar colour not set: ${JSON.stringify(r.error)}`);
+  return r.error.kind === 'provider' && (r.error.status === 403 || r.error.status === 400)
+    ? 'refused'
+    : 'pending';
 }
 
 // Which of these calendars of ours still exist (2026-09-24) — asked

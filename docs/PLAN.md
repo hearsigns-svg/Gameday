@@ -301,6 +301,24 @@ silent).
   - [x] Owner ruling (same day): the locked reminder slots use the shared
     routine — after a decline a free tap shows the Premium line instead of
     nothing (`settings/reminderSlotRules.ts`).
+- [x] 2026-09-25 owner report from the Pixel + rulings on the colour
+  redesign (DECISIONS 2026-09-25, five entries): the reminder wheels
+  scroll on Android (611c03e); "Days without dates" → "All-day events";
+  COLOUR IN THREE LAYERS — sport (Settings under the calendar row, and a
+  follow's page), follow (its page), event (its card), the more specific
+  winning, nothing painted until picked, Google's eleven everywhere,
+  Premium; sport calendars painted until the colour sticks (recorded
+  before painted); Settings reordered (switch over the list it reshapes,
+  Disconnect last). Gate 170 suites / 1,937 tests (both zones), tsc,
+  functions build; each new rule mutation-tested (7 + 5 + 4 + 3 defects,
+  all caught).
+  - [ ] Pixel: install and the owner's finger check (wheels, dots, the
+    sport calendars' colours landing) — the phone was unplugged.
+  - [ ] Owner's #1 answer ("no worries") on asking Android to refresh
+    Google Calendar after new calendars are made — read as "leave it",
+    to confirm.
+  - [ ] Next, agreed: send Google moves in batches (50 a request) so a
+    move finishes in seconds.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

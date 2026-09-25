@@ -27,6 +27,9 @@ export interface WrittenEvent {
   allDayReminder?: AllDayReminder;
   extraReminders?: number[];
   note?: string;
+  // The colour it was written with (2026-09-25): null = none of its own.
+  // Absent = the entry's colour carried unchanged.
+  colour?: string | null;
 }
 
 export interface RelocationDeps {
@@ -76,7 +79,7 @@ export async function relocate(
     const group = step.to.group ?? step.entry.sport;
     // ONE write: repoint AND owe the old event a delete (naming its
     // calendar). Splitting these would strand an event nothing drains.
-    deps.upsert(step.fixtureId, {
+    const next: LedgerEntry = {
       ...movedEntry(
         step.entry,
         created.value.eventId,
@@ -87,7 +90,12 @@ export async function relocate(
       ),
       ...(group ? { sport: group } : {}),
       ...(created.value.note !== undefined ? { note: created.value.note } : {}),
-    });
+    };
+    // What the new event actually wears, so the next plan compares
+    // against it rather than the old event's colour.
+    if (created.value.colour === null) delete next.colour;
+    else if (created.value.colour !== undefined) next.colour = created.value.colour;
+    deps.upsert(step.fixtureId, next);
     const del = await deps.deleteEvent(step.entry.eventId, step.entry.calendarId);
     if (del.ok) {
       const entry = deps.ledger()[step.fixtureId];

@@ -65,8 +65,14 @@ jest.mock('../data/prefsStore', () => ({
 jest.mock('../../follows/data/followStore', () => ({
   calendarPrefOf: () => 'in',
   fixtureWantedByFollows: () => () => true,
-  loadFollowables: () => [],
+  loadFollowables: () => mockState.followables,
   loadFollowKeys: () => mockState.follows,
+  toInclusionFollow: (f: MockFollow) => ({
+    key: f.key,
+    type: f.type,
+    calendar: f.calendar ?? 'in',
+    queryKeys: [f.key],
+  }),
 }));
 jest.mock('../../fixtures/data/fixturesRepo', () => ({
   fetchFixturesForFollows: async (keys: readonly string[]) => ({
@@ -107,6 +113,9 @@ jest.mock('../data/driver', () => ({
     mockStore.deleteEvent(eventId, calendarId),
   listTaggedEvents: (id: string) => mockStore.listTagged(id),
   createSportCalendar: (title: string, colour: string) => mockStore.createCalendar(title, colour),
+  calendarCapabilities: () => ({ perEventColour: mockState.eventColours }),
+  conformSportCalendarColours: async (want: Array<{ calendarId: string; hex: string }>) =>
+    mockStore.conform(want),
   deleteSportCalendarIfEmpty: (id: string, recorded: boolean) =>
     mockStore.deleteCalendarIfEmpty(id, recorded),
   vacateTargetIfEmpty: () => mockStore.vacateTarget(),
@@ -118,6 +127,14 @@ import { loadLedger } from '../data/ledger';
 import { sportCalendarIds, setPendingLayoutMove } from '../data/sportCalendarStore';
 import { DEFAULT_PREFS } from '../domain/prefs';
 import { CalendarLayout } from '../domain/sportCalendars';
+
+type MockFollow = {
+  key: string;
+  type: 'team' | 'competition' | 'athlete' | 'series';
+  sportKey: string;
+  calendar?: 'in' | 'out';
+  colour?: string;
+};
 
 type MockInput = {
   fixtureId: string;
@@ -173,6 +190,17 @@ const mockStore = {
   // Calendars the survey wrongly reports gone (a transient not-found).
   hidden: new Set<string>(),
   creates: new Map<string, number>(),
+  updates: 0,
+  // Sport calendar paints the passes asked for (never a kill point: a
+  // paint is idempotent and touches no event or record of ours).
+  paints: [] as Array<{ calendarId: string; hex: string }>,
+  conform(want: Array<{ calendarId: string; hex: string }>) {
+    for (const w of want) {
+      const cal = this.cals.get(w.calendarId);
+      if (cal) cal.colour = w.hex;
+      this.paints.push(w);
+    }
+  },
   // The app dies BEFORE this write, or right AFTER it — every state
   // between two writes is a kill point.
   write<T>(fn: () => T, kind = 'other'): T {
@@ -203,6 +231,8 @@ const mockStore = {
     this.blind = new Set();
     this.hidden = new Set();
     this.creates = new Map();
+    this.updates = 0;
+    this.paints = [];
   },
   // The real resolution's order: the stored target; else a calendar of
   // ours already called KickOffCal (resolveOurCalendar — how a create
@@ -286,6 +316,7 @@ const mockStore = {
     for (const cal of this.addressed(calendarId, eventId)) {
       const ev = cal.events.get(eventId);
       if (!ev) continue;
+      this.updates++;
       this.write(() =>
         cal.events.set(eventId, {
           ...ev,
@@ -394,8 +425,15 @@ const mockState = {
   archive: [] as Fixture[],
   lookupFails: false,
   eventSettings: {} as Record<string, { colour?: string; at: string }>,
+  sportColours: {} as Record<string, string>,
+  followables: [] as MockFollow[],
+  eventColours: true,
   prefs() {
-    return { ...DEFAULT_PREFS, separateSportCalendars: this.layout === 'per-sport' };
+    return {
+      ...DEFAULT_PREFS,
+      separateSportCalendars: this.layout === 'per-sport',
+      sportColours: this.sportColours,
+    };
   },
 };
 
@@ -509,6 +547,9 @@ async function combinedWorld(): Promise<void> {
   mockState.archive = [FINISHED, ...UPCOMING];
   mockState.lookupFails = false;
   mockState.eventSettings = {};
+  mockState.sportColours = {};
+  mockState.followables = [];
+  mockState.eventColours = true;
   await settle();
   const ledgerKey = 'ledger.v1';
   const storage = jest.requireMock('../../../core/storage') as {
@@ -721,6 +762,104 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
     await pass();
     expect(eventOf('fd-1')?.colour).toBeUndefined();
     expect(mockStore.misaddressed).toBe(0);
+  });
+
+  // ─── Colour layers (owner rulings 2026-09-25) ─────────────────────
+  const GREEN = '#0B8043';
+  const RED = '#D50000';
+  const GRAPE = '#8E24AA';
+  const eventOf = (id: string) =>
+    [...mockStore.cals.values()].flatMap((c) => [...c.events.values()]).find((e) => e.fixtureId === id);
+  const SOCCER_UPCOMING = ['fd-1', 'fd-2', 'fd-3', 'fd-4'];
+  const NOT_SOCCER = ['nba-1', 'nba-2', 'nba-3', 'f1-1', 'mgp-1', 'oly-1'];
+
+  test('nothing picked: a pass after the upgrade writes nothing at all', async () => {
+    await combinedWorld();
+    const writes = mockStore.writes;
+    await pass();
+    expect(mockStore.writes).toBe(writes);
+  });
+
+  test('one calendar: a sport’s colour paints its upcoming events, and only those; clearing it takes it off', async () => {
+    await combinedWorld();
+    const writes = mockStore.writes;
+    mockState.sportColours = { soccer: GREEN };
+    await pass();
+    for (const id of SOCCER_UPCOMING) expect([id, eventOf(id)?.colour]).toEqual([id, GREEN]);
+    for (const id of NOT_SOCCER) expect([id, eventOf(id)?.colour]).toEqual([id, undefined]);
+    // A finished game is frozen (the horizon rule): never recoloured.
+    expect(eventOf('fd-0')?.colour).toBeUndefined();
+    expect(mockStore.writes).toBe(writes + SOCCER_UPCOMING.length);
+    mockState.sportColours = {};
+    await pass();
+    for (const id of SOCCER_UPCOMING) expect([id, eventOf(id)?.colour]).toEqual([id, undefined]);
+    expect(mockStore.misaddressed).toBe(0);
+  });
+
+  test('a follow’s colour beats its sport’s, and an event’s own beats both', async () => {
+    await combinedWorld();
+    mockState.sportColours = { soccer: GREEN };
+    mockState.followables = [{ key: 'fdorg-team-64', type: 'team', sportKey: 'soccer', colour: RED }];
+    mockState.eventSettings = { 'fd-3': { colour: GRAPE, at: new Date().toISOString() } };
+    await pass();
+    expect(['fd-1', 'fd-2', 'fd-4'].map((id) => eventOf(id)?.colour)).toEqual([RED, RED, RED]);
+    expect(eventOf('fd-3')?.colour).toBe(GRAPE);
+  });
+
+  test('a calendar for each sport: the sport’s colour is its calendar’s, and the move writes each game once', async () => {
+    await combinedWorld();
+    mockState.sportColours = { soccer: GREEN };
+    await pass(); // the soccer games wear it, in the one calendar
+    expect(eventOf('fd-1')?.colour).toBe(GREEN);
+    mockStore.creates.clear();
+    const updates = mockStore.updates;
+    switchTo('per-sport');
+    await settle();
+    expectLayout('per-sport');
+    const football = [...mockStore.cals.values()].find((c) => c.title === CALENDAR_OF.soccer);
+    expect(football?.colour).toBe(GREEN);
+    // The events carry none of their own — they wear the calendar's…
+    for (const id of SOCCER_UPCOMING) expect([id, eventOf(id)?.colour]).toEqual([id, undefined]);
+    // …and got there in ONE write each: rebuilt without it, not rebuilt
+    // with it and then rewritten.
+    for (const id of Object.keys(GROUP_OF)) expect([id, mockStore.creates.get(id)]).toEqual([id, 1]);
+    expect(mockStore.updates).toBe(updates);
+  });
+
+  test('picked while each sport has its calendar: that calendar is painted, no event is touched', async () => {
+    await combinedWorld();
+    switchTo('per-sport');
+    await settle();
+    const writes = mockStore.writes;
+    mockState.sportColours = { basketball: GRAPE };
+    await pass();
+    const basketball = [...mockStore.cals.entries()].find(([, c]) => c.title === CALENDAR_OF.basketball);
+    expect(basketball?.[1].colour).toBe(GRAPE);
+    expect(mockStore.paints).toContainEqual({ calendarId: basketball?.[0], hex: GRAPE });
+    expect(mockStore.writes).toBe(writes);
+  });
+
+  test('back to one calendar: the sport’s colour goes onto its events', async () => {
+    await combinedWorld();
+    mockState.sportColours = { soccer: GREEN };
+    switchTo('per-sport');
+    await settle();
+    switchTo('combined');
+    await settle();
+    expectLayout('combined');
+    for (const id of SOCCER_UPCOMING) expect([id, eventOf(id)?.colour]).toEqual([id, GREEN]);
+    for (const id of NOT_SOCCER) expect([id, eventOf(id)?.colour]).toEqual([id, undefined]);
+  });
+
+  test('a calendar layer that cannot colour one event paints none, whatever is picked', async () => {
+    await combinedWorld();
+    mockState.eventColours = false;
+    mockState.sportColours = { soccer: GREEN };
+    mockState.followables = [{ key: 'fdorg-team-64', type: 'team', sportKey: 'soccer', colour: RED }];
+    const writes = mockStore.writes;
+    await pass();
+    expect(mockStore.writes).toBe(writes);
+    for (const id of SOCCER_UPCOMING) expect(eventOf(id)?.colour).toBeUndefined();
   });
 
   test('the "done" toast waits for the last game: a failed lookup holds it back a pass', async () => {

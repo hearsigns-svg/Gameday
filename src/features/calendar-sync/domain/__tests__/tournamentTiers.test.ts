@@ -23,6 +23,7 @@ const PREFS: CalendarPrefs = {
   newFollowsInCalendar: true,
   sessionRungs: {},
   separateSportCalendars: false,
+  sportColours: {},
 };
 
 const parent: Fixture = {

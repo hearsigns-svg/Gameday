@@ -189,7 +189,9 @@ export function desiredEventFor(
   // A PIN is an explicit per-event opt-in, and like an exclusion it
   // beats the broader rule: a session the ladder leaves out still goes
   // in when it is pinned (the entity page's Add on that row).
-  opts: { pinned?: boolean } = {},
+  // `inheritedColour`: what the event wears when it has no colour of its
+  // own — a follow's or its sport's (domain/colourLayers.ts).
+  opts: { pinned?: boolean; inheritedColour?: string } = {},
 ): DesiredEvent | null {
   // THE SESSION LADDER (per-follow calendar control, Stage 5): a fixture
   // that carries a session type is kept or dropped by its series' rung
@@ -206,7 +208,8 @@ export function desiredEventFor(
   }
   const matchTitle = f.title;
   if (f.status === 'cancelled') return null;
-  const chosenColour = settings[f.id]?.colour;
+  // The event's own colour beats everything it would inherit.
+  const chosenColour = settings[f.id]?.colour ?? opts.inheritedColour;
   const colour = chosenColour ? { colour: chosenColour } : {};
 
   const allDayFor = (suffix: string, days = 1): DesiredEvent => {
@@ -367,6 +370,11 @@ export interface PlanOptions {
   // PREFERENCE_DELETE_CAP) so the engine can queue the pass that drains
   // them. Not called when nothing was held back.
   onRemovalsHeldBack?: (count: number) => void;
+  // The colour a fixture's event INHERITS from its follows or its sport
+  // when it has none of its own (owner rulings 2026-09-25 —
+  // domain/colourLayers.ts). Absent, or undefined for a fixture = the
+  // calendar's colour: nothing is written.
+  colourOf?: (f: Fixture) => string | undefined;
 }
 
 // Downgrade removals are batched: at most this many removal ops per
@@ -421,8 +429,10 @@ export function planSync(
     // update, and not a create if its event has somehow gone. Its ledger
     // entry is retained below so the prune sweep still sees it referenced.
     if (isPast(f, nowMs)) continue;
+    const inheritedColour = options.colourOf?.(f);
     const desired = desiredEventFor(f, prefs, seriesScopes, settings, {
       pinned: pinned.has(f.id),
+      ...(inheritedColour ? { inheritedColour } : {}),
     });
     if (!desired) continue;
     // The product is upcoming games: a finished season must never pour

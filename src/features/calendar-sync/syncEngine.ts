@@ -19,16 +19,16 @@ import {
   fixtureWantedByFollows,
   loadFollowables,
   loadFollowKeys,
+  toInclusionFollow,
 } from '../follows/data/followStore';
+import { inheritedColourResolver, sportCalendarColourFor } from './domain/colourLayers';
+import { sportCalendarTitle } from './sportCalendarNames';
 import {
   followQueryKeys,
   seriesScopesFrom,
   tournamentTierOverridesFrom,
 } from '../follows/domain/followScopes';
-import { calendarGroupOf, sportCalendarColour } from '../follows/domain/sportCalendarGroup';
-import { sportByKey } from '../follows/domain/sportsConfig';
-import { sportLabelFor } from '../follows/domain/sportTerms';
-import { activeRegion } from '../../core/regionStore';
+import { calendarGroupOf } from '../follows/domain/sportCalendarGroup';
 import { activeBackend } from './data/calendarBackend';
 import { calendarChoice, setCalendarChoice } from './data/calendarChoice';
 import { calendarConnection } from './data/calendarConnection';
@@ -52,7 +52,9 @@ import {
 import { CalendarPrefs } from './domain/prefs';
 import {
   applyTargetRequest,
+  calendarCapabilities,
   CalendarHandle,
+  conformSportCalendarColours,
   createFixtureEvent,
   createSportCalendar,
   currentTargetId,
@@ -89,7 +91,6 @@ import {
   mergeRecoveredCalendars,
   Placement,
   planLayoutRelocation,
-  SPORT_CALENDAR_PREFIX,
   unreferencedCalendarIds,
 } from './domain/sportCalendars';
 import { isEndPast, isPast } from '../fixtures/domain/horizon';
@@ -691,10 +692,6 @@ export async function switchCalendarTarget(
 // "KickOffCal · <the sport as the Following row names it>" — the region's
 // and language's word at the moment the calendar is created. Never
 // renamed after: from then on the calendar is the user's to edit.
-function sportCalendarTitle(group: string): string {
-  const label = sportLabelFor(group, sportByKey(group)?.label ?? group, activeRegion());
-  return `${SPORT_CALENDAR_PREFIX}${label}`;
-}
 
 // A sport's calendar: the recorded one, or a new one — created, in its
 // sport's colour, and RECORDED before any event goes in it (the prune and
@@ -703,12 +700,14 @@ function sportCalendarTitle(group: string): string {
 async function sportCalendarFor(group: string): Promise<Result<string>> {
   const known = sportCalendarIds()[group];
   if (known) return ok(known);
-  const created = await createSportCalendar(
-    sportCalendarTitle(group),
-    sportCalendarColour(group),
-  );
+  // The sport's picked colour, else its own distinct one (2026-09-25).
+  const colour = sportCalendarColourFor(group, loadPrefs().sportColours);
+  const created = await createSportCalendar(sportCalendarTitle(group), colour);
   if (!created.ok) return created;
   recordSportCalendar(group, created.value);
+  // Recorded first, THEN painted where the colour did not come with the
+  // calendar (Google) — and a paint that fails is the next pass's.
+  await conformSportCalendarColours([{ calendarId: created.value, hex: colour }]);
   return created;
 }
 
@@ -893,6 +892,21 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     const survey = await surveyOurCalendars(layout, home);
     if (!survey.ok) return survey;
     const { present, unrecordedSport } = survey.value;
+    // Each sport calendar in the colour it should wear (2026-09-25): the
+    // sport's picked colour, else the one it was made in — painted until
+    // it sticks. Never fails the pass.
+    if (layout === 'per-sport') {
+      const sportColours = loadPrefs().sportColours;
+      await conformSportCalendarColours(
+        Object.entries(sportCalendarIds())
+          .filter(([, calendarId]) => present.has(calendarId))
+          .map(([group, calendarId]) => ({
+            calendarId,
+            hex: sportCalendarColourFor(group, sportColours),
+          })),
+      );
+      beat();
+    }
     // Every calendar of ours that exists, the target first.
     const ourCalendars = (): string[] => [
       ...new Set([
@@ -1107,6 +1121,20 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
     // tier copy is stamped with its own draw's key so an `out` draw's
     // matches are refused here, not silently re-admitted by a tour key.
     const wantedByFollows = fixtureWantedByFollows(loadFollowables());
+    // COLOUR LAYERS (owner rulings 2026-09-25): what an event with no
+    // colour of its own inherits — its most specific coloured follow's,
+    // else, with one calendar, its sport's (domain/colourLayers.ts).
+    // Nothing picked anywhere → nothing written, so an upgrade rewrites
+    // no one's calendar.
+    const colourOf = inheritedColourResolver({
+      layout,
+      sportColours: prefs.sportColours,
+      follows: loadFollowables().map((f) => ({
+        ...toInclusionFollow(f),
+        ...(f.colour ? { colour: f.colour } : {}),
+      })),
+      eventColours: calendarCapabilities().perEventColour,
+    });
 
     // THE PER-SPORT MOVE, each event placed by its own fixture's sport:
     // after the tier pass, so a tournament's bookends and matches are in
@@ -1147,6 +1175,16 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
                 : undefined;
               if (note) input.note = note;
             }
+            // The colour it wears in THIS layout, while the fixture is in
+            // hand: a sport's colour is its calendar's here, not the
+            // event's — carrying the old layout's colour across would only
+            // have the plan rewrite every moved event straight after.
+            const fixture = tieredById.get(step.fixtureId);
+            if (fixture) {
+              const colour = settings[fixture.id]?.colour ?? colourOf(fixture);
+              if (colour) input.colour = colour;
+              else delete input.colour;
+            }
             const made = await createFixtureEvent(h.value, input);
             if (!made.ok) return made;
             return ok({
@@ -1155,6 +1193,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
               allDayReminder: input.allDayReminder,
               extraReminders: input.extraRemindersBefore,
               ...(input.note ? { note: input.note } : {}),
+              colour: input.colour ?? null,
             });
           },
           deleteEvent: (eventId, calendarId) => deleteFixtureEvent(eventId, calendarId),
@@ -1188,6 +1227,7 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       {
         entitlement: planEntitlement(Date.now()),
         includes: (f) => wantedByFollows(f.followKeys),
+        colourOf,
         onRemovalsHeldBack: (n) => {
           removalsHeldBack = n;
         },

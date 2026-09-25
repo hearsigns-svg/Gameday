@@ -5350,3 +5350,58 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   "offline" passes (the next failure will name itself), and the two
   sport calendars' colours — set once by design, so a failed first paint
   leaves Google's default colour for good.
+- 2026-09-25 — **The reminder wheels scroll on Android** (611c03e). The
+  owner found them "press selectors" on the Pixel: a vertical list inside
+  Preferences' own vertical ScrollView gets no vertical drag on Android
+  unless it opts into nested scrolling. `nestedScrollEnabled` on the
+  wheel's FlatList; iOS nests natively and is unchanged.
+- 2026-09-25 — **"Days without dates" is "All-day events"** (owner ruling).
+  The English label named the wrong absence — the other five languages
+  already said "days without a time". It is the reminder for entries
+  written as all-day events: a date with no kick-off time yet, a
+  postponed game, a tournament's date block, and every game when Event
+  style is All-day. Key renamed `settings.reminders.allDayEvents`, all six
+  languages.
+- 2026-09-25 — **Colour, in three layers** (owner rulings on the redesign
+  questions). SPORT (Settings, and a follow's page), FOLLOW (a team,
+  fighter or competition — its own page) and EVENT (the fixture card):
+  the more specific wins. One colour per sport, by calendar group (F1 is
+  Motorsport's), kept when the layout switch flips: with one calendar it
+  paints that sport's events, with a calendar for each sport it IS that
+  calendar's colour. When several coloured follows want one event, the
+  inclusion rule's own ladder decides — the most specific, then the one
+  followed first — and only follows that are IN the calendar count.
+  NOTHING IS PAINTED UNTIL SOMEONE PICKS: a sport or follow with no colour
+  of its own writes nothing, so no upgrading calendar is rewritten; one
+  that has none wears its calendar's. Only a calendar layer that can
+  colour one event paints events (Google Calendar; EventKit cannot), so on
+  an iPhone the follow and event dots are absent and a sport's dot exists
+  only with a calendar per sport (rule 10 — omitted, never explained). The
+  picker offers Google's eleven event colours everywhere, in Google's own
+  order, so a sport looks the same in either layout; the calendars' own
+  starting colours (KickOffCal blue, the distinct sport colours) are
+  unchanged. Every dot is a Premium control (rule 19). Pure core
+  `domain/colourLayers.ts`; store half `colourChoices.ts`; the sheet
+  `screens/ColourPicker.tsx`.
+- 2026-09-25 — **A sport calendar's colour is painted until it sticks**,
+  replacing "set once at creation" (2026-09-24). The Pixel's two sport
+  calendars kept Google's default colour because both paints at creation
+  failed and nothing recorded it. Each sport calendar now has a record of
+  what it is known to wear — applied, pending or refused, KickOffCal's own
+  three states — and every per-sport pass paints a calendar with no
+  record, a changed colour, or a paint that did not land; a colour Google
+  refused (403/400) is not asked for again until another is picked. A new
+  calendar is RECORDED before its colour is asked for: no request may sit
+  between a calendar's creation and its record, which keeps the accepted
+  ghost-calendar window one request wide. The user's own later change in
+  their calendar app is still theirs — the app repaints only when its own
+  wanted colour changes.
+- 2026-09-25 — **Settings' calendar card, reordered around the colour
+  list.** Android: "Google Calendar" (with KickOffCal's colour as a dot,
+  and "KickOffCal" beneath, when there is one calendar), then the
+  per-sport switch, then the list it reshapes — the sports followed, or
+  with a calendar for each sport the calendars — then "Add new follows",
+  then Disconnect, which now closes the card. iPhone: the calendar row
+  carries the dot where the calendar is ours; the list appears only with
+  a calendar per sport. The eight-swatch block is gone. A follow's page
+  gains a Colour row: the sport's chip and the follow's own.

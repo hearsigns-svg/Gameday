@@ -59,7 +59,7 @@ Rules:
   <Sport>" calendar per sport, named with the Following row's word for the
   sport (Motorsport is ONE calendar, "F1 & Motorsport" or "Motorsport" by
   region; Olympic events have their own Olympics calendar). Each is
-  created, in a colour of its own, when its sport first has an event, and
+  created, in its sport's colour, when its sport first has an event, and
   removed once it holds nothing. Premium; the switch is shown to everyone
   and in the free state leads to the offer. The layout decides where,
   never which:
@@ -67,6 +67,17 @@ Rules:
   the same either way. Switching moves every game (a confirmation first
   when there are any), survives the app being closed partway, and says
   when it is done.
+- COLOUR comes in three layers, the more specific winning (2026-09-25):
+  a SPORT's colour (Settings, under the calendar row, and a follow's
+  page), a FOLLOW's own (a team, fighter or competition, on its page) and
+  an EVENT's own (its card). With one calendar a sport's colour paints
+  its games; with a calendar per sport it is that calendar's colour. A
+  sport or follow with no colour of its own adds none — its games wear
+  the calendar's — so nothing is repainted until someone picks. One dot
+  per thing, opening Google Calendar's eleven colours. Where the calendar
+  cannot colour a single event (an iPhone's), the follow and event dots
+  do not exist and a sport's exists only with a calendar per sport.
+  Premium, shown to everyone.
 - Motorsport series with session data (Formula 1) carry a per-series
   session ladder — Race only · Qualifying & race · All sessions, default
   Qualifying & race — on their cards and pages. A sprint counts as a race,

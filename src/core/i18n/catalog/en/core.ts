@@ -95,6 +95,20 @@ export const coreStrings = {
   'core.actions.remove': 'Remove',
   'core.actions.removed': 'Removed',
   'core.actions.cancel': 'Cancel',
+
+  // Google Calendar's eleven colours, by the names Google's own app
+  // gives them (the picker: calendar-sync/domain/googleEventColour.ts).
+  'core.colours.tomato': 'Tomato',
+  'core.colours.flamingo': 'Flamingo',
+  'core.colours.tangerine': 'Tangerine',
+  'core.colours.banana': 'Banana',
+  'core.colours.sage': 'Sage',
+  'core.colours.basil': 'Basil',
+  'core.colours.peacock': 'Peacock',
+  'core.colours.blueberry': 'Blueberry',
+  'core.colours.lavender': 'Lavender',
+  'core.colours.grape': 'Grape',
+  'core.colours.graphite': 'Graphite',
   'core.follow.follow': 'Follow',
   'core.follow.following': 'Following',
   'core.follow.followA11y': 'Follow {subject}',

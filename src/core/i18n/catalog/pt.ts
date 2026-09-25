@@ -83,6 +83,20 @@ export const pt: Catalog = {
   'core.actions.remove': 'Remover',
   'core.actions.removed': 'Removido',
   'core.actions.cancel': 'Cancelar',
+
+  // Google Calendar's eleven colours, by the names Google's own app
+  // gives them (the picker: calendar-sync/domain/googleEventColour.ts).
+  'core.colours.tomato': 'Tomate',
+  'core.colours.flamingo': 'Flamingo',
+  'core.colours.tangerine': 'Tangerina',
+  'core.colours.banana': 'Banana',
+  'core.colours.sage': 'Sálvia',
+  'core.colours.basil': 'Manjericão',
+  'core.colours.peacock': 'Pavão',
+  'core.colours.blueberry': 'Mirtilo',
+  'core.colours.lavender': 'Lavanda',
+  'core.colours.grape': 'Uva',
+  'core.colours.graphite': 'Grafite',
   'core.follow.follow': 'Seguir',
   'core.follow.following': 'Seguindo',
   'core.follow.followA11y': 'Seguir {subject}',
@@ -423,6 +437,8 @@ export const pt: Catalog = {
   'calendar.card.useDefaultReminder': 'Usar meu lembrete padrão',
   'calendar.card.colour': 'Cor',
   'calendar.card.colourValue': 'Cor {value}',
+  'calendar.colour.closeA11y': 'Fechar cores',
+  'calendar.colour.inheritA11y': 'Mesma cor de {name}',
   'calendar.card.mainEvent': 'Luta principal',
   'calendar.card.added': 'Adicionado',
   'calendar.card.add': 'Adicionar',
@@ -530,17 +546,17 @@ export const pt: Catalog = {
   'settings.sections.a11y': 'Configurações de {title}',
 
   // ── Calendar section ───────────────────────────────────────────────
-  'settings.calendar.googleReconnectCaption':
-    'No seu Google Agenda — toque para reconectar o login',
   'settings.calendar.googleReconnectA11y':
     'KickOffCal no Google Agenda. Reconectar login do Google',
   'settings.calendar.googleReconnected': 'Google Agenda reconectado',
-  'settings.calendar.googleConnectedCaption': 'No seu Google Agenda',
   'settings.calendar.googleConnectedA11y': 'KickOffCal no Google Agenda',
   'settings.calendar.disconnectGoogle': 'Desconectar Google Agenda',
   'settings.calendar.disconnectCaption':
     'Seu calendário e os eventos dele ficam intactos',
   'settings.calendar.googleDisconnected': 'Google Agenda desconectado',
+  'settings.calendar.googleCalendar': 'Google Agenda',
+  'settings.calendar.googleReconnectTap': 'Toque para reconectar o login',
+  'settings.calendar.colourOfA11y': '{name}, cor {colour}. Mudar a cor',
   'settings.calendar.connectGoogle': 'Conectar Google Agenda',
   'settings.calendar.connectCaption':
     'Os jogos ficam no app até você conectar',
@@ -552,10 +568,6 @@ export const pt: Catalog = {
   'settings.calendar.targetA11y':
     'Calendário: {label}. {account}. Mudar onde os jogos são gravados',
   'settings.calendar.chooseA11y': 'Escolher onde os jogos são gravados',
-  'settings.calendar.colour': 'Cor',
-  'settings.calendar.colourA11y': 'Cor do calendário {name}',
-  'settings.calendar.colourCaption':
-    'Como os eventos do KickOffCal aparecem no app de calendário do seu celular.',
   'settings.calendar.inheritedColour':
     'Seus jogos usam a cor de {calendar}, que você define no seu app de calendário.',
   'settings.calendar.newFollows': 'Adicionar ao seu calendário o que você passar a seguir',
@@ -580,15 +592,6 @@ export const pt: Catalog = {
   // The calendar-name fallback when no target is stored yet.
   'settings.words.yourCalendar': 'seu calendário',
 
-  // Colour names — read out and toasted, so they are copy, not config.
-  'settings.colours.kickoffcalBlue': 'Azul KickOffCal',
-  'settings.colours.red': 'Vermelho',
-  'settings.colours.orange': 'Laranja',
-  'settings.colours.green': 'Verde',
-  'settings.colours.teal': 'Verde-azulado',
-  'settings.colours.purple': 'Roxo',
-  'settings.colours.pink': 'Rosa',
-  'settings.colours.graphite': 'Grafite',
 
   // ── Events section ─────────────────────────────────────────────────
   'settings.events.footnote':
@@ -603,7 +606,7 @@ export const pt: Catalog = {
   // ── Reminders section ──────────────────────────────────────────────
   'settings.reminders.title': 'Lembretes',
   'settings.reminders.footnote': 'As alterações valem na próxima atualização do seu calendário.',
-  'settings.reminders.daysWithoutDates': 'Dias sem horário',
+  'settings.reminders.allDayEvents': 'Eventos de dia inteiro',
   'settings.reminders.slotA11y': 'Lembrete {n}, {value}',
   'settings.reminders.slotValueA11y': 'Valor do lembrete {n}',
   'settings.reminders.slotUnitA11y': 'Unidade do lembrete {n}',

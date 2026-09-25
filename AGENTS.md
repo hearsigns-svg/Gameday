@@ -142,6 +142,10 @@ source of truth for build state — never chat history.
   deployed for older clients. Deploy `functions:directory` (and the
   legacy route you changed) — the client falls back to the legacy path
   only on a 404. Measure cold starts with curl before blaming a device.
+- **`expo run:ios --configuration Release` STARTS A BUNDLER ON 8081**
+  unless told not to (2026-09-25: it sat listening on MedHandover's port
+  after the install, attached to the build's terminal). A Release build
+  embeds its bundle and needs none — always pass `--no-bundler`.
 - CocoaPods needs UTF-8: prefix pod/expo-run commands with
   `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`.
 - Emulator DNS is captured AT BOOT. If the host Mac changes network
@@ -405,9 +409,11 @@ These apply to every stage. They do not need restating in a brief.
     paywall, else the inline Premium line) and changes NOTHING; after a
     lapse the setting stays where the user left it, and changing it — in
     either direction — needs Premium again. Reference cases: the calendar
-    colour swatches, the per-sport switch, the fixture card's per-event
-    colour row, the calendar glyph, the locked reminder slots (DECISIONS
-    2026-09-24).
+    colour dot, the per-sport switch, the fixture card's per-event colour
+    row, the calendar glyph, the locked reminder slots (DECISIONS
+    2026-09-24), and the sport and follow colour dots (2026-09-25) — every
+    colour control goes through `colourTap` / the pick handlers in
+    `calendar-sync/colourChoices.ts`.
 
 ## Concurrency against production
 

@@ -677,6 +677,26 @@ export async function createSportCalendar(
   }
 }
 
+// A sport calendar's colour on the device's own calendar store
+// (2026-09-25). Only a calendar still titled as one of ours is touched —
+// the caller passes only calendars in our record, and this is the second
+// look: recolouring a calendar that is no longer visibly ours would be
+// vandalism, so it is 'refused' and left alone until the user picks
+// again. A store that fails to answer is 'pending': next pass.
+export async function paintSportCalendar(
+  calendarId: string,
+  hex: string,
+): Promise<'applied' | 'pending' | 'refused'> {
+  try {
+    const cal = await Calendar.ExpoCalendar.get(calendarId);
+    if (!(cal.title ?? '').startsWith(SPORT_CALENDAR_PREFIX)) return 'refused';
+    await cal.update({ color: hex });
+    return 'applied';
+  } catch {
+    return 'pending';
+  }
+}
+
 // One look at the store per pass (2026-09-24): which of the calendars a
 // pass is about to rely on still exist, and which "KickOffCal · …"
 // calendars are provably ours without being in our record — a reinstall

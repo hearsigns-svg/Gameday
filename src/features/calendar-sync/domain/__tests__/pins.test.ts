@@ -19,6 +19,7 @@ const PREFS: CalendarPrefs = {
   newFollowsInCalendar: true,
   sessionRungs: {},
   separateSportCalendars: false,
+  sportColours: {},
 };
 const HORIZON = '2026-07-01T00:00:00.000Z';
 const DAY = 86_400_000;

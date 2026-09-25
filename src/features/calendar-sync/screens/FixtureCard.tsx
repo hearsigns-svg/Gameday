@@ -86,6 +86,8 @@ import {
   useVenuePlacePhoto,
 } from '../../follows/useEntityPhoto';
 import { calendarCapabilities } from '../data/driver';
+import { colourTap, eventInherit } from '../colourChoices';
+import { ColourDot, colourName, ColourRequest, ColourSheet } from './ColourPicker';
 import {
   loadEventSettings,
   setEventAllDayReminder,
@@ -194,6 +196,8 @@ export function FixtureCardBody(props: {
     w: true,
   });
   const [failed, setFailed] = useState(false);
+  // The colour sheet, when open (owner rulings 2026-09-25).
+  const [colourRequest, setColourRequest] = useState<ColourRequest | null>(null);
   const [, forceRender] = useState(0);
   const repaint = useCallback(() => forceRender((n) => n + 1), []);
 
@@ -693,12 +697,27 @@ export function FixtureCardBody(props: {
                   <Rule theme={theme} />
                   <ColourRow
                     theme={theme}
-                    chosen={settings[fixture.id]?.colour}
-                    onPick={(hex) => {
+                    // What it wears now: its own colour, else what it
+                    // inherits — its follow's, its sport's, its calendar's.
+                    colour={settings[fixture.id]?.colour ?? eventInherit(fixture).colour}
+                    onPress={() =>
                       // Premium (owner ruling 2026-09-24): a free tap is
-                      // the offer, and nothing is saved.
-                      if (pickEventColour(fixture.id, hex) === 'saved') repaint();
-                    }}
+                      // the offer — no sheet, nothing saved.
+                      colourTap(() =>
+                        setColourRequest({
+                          title: fixture.title,
+                          chosen: settings[fixture.id]?.colour,
+                          inherit: eventInherit(fixture),
+                          onPick: (hex) => {
+                            if (pickEventColour(fixture.id, hex) === 'saved') repaint();
+                          },
+                        }),
+                      )
+                    }
+                  />
+                  <ColourSheet
+                    request={colourRequest}
+                    onClose={() => setColourRequest(null)}
                   />
                 </>
               ) : null}
@@ -1026,52 +1045,22 @@ function AllDayReminderRow(props: {
 
 // Rendered only where the calendar layer can actually colour ONE event
 // (data/calendarDriver.ts::calendarCapabilities). Nothing about its
-// absence is ever explained.
-const EVENT_COLOURS = [
-  '#C22A2A',
-  '#D97706',
-  '#0B7A4B',
-  '#1463F3',
-  '#6D28D9',
-  '#111111',
-];
-
-function ColourRow(props: {
-  theme: TeamTheme;
-  chosen?: string;
-  onPick: (hex: string | undefined) => void;
-}) {
+// absence is ever explained. One dot in the colour the event wears now,
+// and a tap opens the eleven (owner rulings 2026-09-25: the same control
+// as a sport's and a follow's, with the same colours).
+function ColourRow(props: { theme: TeamTheme; colour: string; onPress: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('calendar.card.colourValue', { value: colourName(props.colour) })}
+      onPress={props.onPress}
+      style={styles.row}
+    >
       <Text style={[type.body, { color: props.theme.onGradient, flex: 1 }]}>
         {t('calendar.card.colour')}
       </Text>
-      <View style={styles.segments}>
-        {EVENT_COLOURS.map((hex) => {
-          const selected = props.chosen === hex;
-          return (
-            <Pressable
-              key={hex}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              accessibilityLabel={
-                selected
-                  ? t('calendar.card.optionSelected', {
-                      label: t('calendar.card.colourValue', { value: hex }),
-                    })
-                  : t('calendar.card.colourValue', { value: hex })
-              }
-              onPress={() => props.onPick(selected ? undefined : hex)}
-              style={[
-                styles.swatch,
-                { backgroundColor: hex },
-                selected ? { borderColor: props.theme.onGradient } : null,
-              ]}
-            />
-          );
-        })}
-      </View>
-    </View>
+      <ColourDot colour={props.colour} size={28} ringColour={props.theme.onGradient} />
+    </Pressable>
   );
 }
 
@@ -1185,13 +1174,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  swatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
   reset: { minWidth: 28, alignItems: 'center' },
   // Self-sized, outlined, 44pt: the visible bounds ARE the tap bounds.
