@@ -5427,3 +5427,25 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   harness's kill test now asserts the EXACT number of created-but-
   unrecorded events the prune meets (up to a batch's worth on Google, one
   on the device store) instead of "one or none".
+- 2026-09-25 — **The ordinary sync's Google writes are batched too** (owner
+  ruling: "I think so, especially if it prevents edge case errors"). On
+  Google a pass writes its plan in groups of fifty, at most three
+  requests a group: removals and the old half of an all-day ↔ timed flip,
+  then updates in place, then every create (new events, a flip's new
+  half, and an event deleted by hand whose fixture is still wanted — the
+  recreate the one-by-one loop does on a not-found update). Each write
+  keeps its one-by-one meaning: a failed delete never drops its ledger
+  entry, a create is recorded as soon as its answer is in, and the first
+  refusal ends the pass after everything that landed is recorded (one by
+  one, the pass stopped AT the refusal; batched, the rest of that group
+  still lands). The device store keeps the one-by-one loop, sharing its
+  input and ledger code with the batched one. What batching does for edge
+  cases, honestly: it removes round trips, not failure modes — a pass
+  that used to need hundreds of requests now needs a handful, so far less
+  of it is exposed to Android pausing the app, a flaky connection, or the
+  pass's time budget running out mid-way. The harness gained tests for a
+  first sync (one request), a hand-deleted event remade, a full all-day
+  flip with nothing left for the prune, a refused create and a failed
+  delete, on both stores; five defects mutation-tested, all caught (the
+  first run let a flip that skipped its delete survive, because the prune
+  quietly healed it — the test now demands the prune find nothing).

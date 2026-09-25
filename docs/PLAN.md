@@ -321,8 +321,9 @@ silent).
     request (DECISIONS 2026-09-25) — format proven against the live
     endpoint; gate 171 suites / 1,959 tests; 8 batching defects
     mutation-tested. The Pixel measures the real speed.
-  - [ ] Ruling wanted: batch the ordinary plan too (a first sync, a
-    sport colour repaint of hundreds of events).
+  - [x] Owner ruling (same day): the ordinary plan is batched too — a
+    first sync, a colour repaint, a style flip (DECISIONS 2026-09-25).
+    Gate 171 suites / 1,969 tests. The Pixel measures the real speed.
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

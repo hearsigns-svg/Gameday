@@ -43,6 +43,7 @@ import {
   deleteRestEvents,
   insertRestEvent,
   insertRestEvents,
+  updateRestEvents,
   listRestTaggedEvents,
   patchCalendarListColour,
   RestEventInput,
@@ -235,6 +236,23 @@ export async function restCreateFixtureEvents(
     items.map((it) => ({ calendarId: it.calendarId, input: toRestInput(it.input) })),
     token(),
   );
+}
+
+export async function restUpdateFixtureEvents(
+  items: ReadonlyArray<{ eventId: string; calendarId?: string; input: EventInput }>,
+): Promise<Result<Array<Result<string>>>> {
+  const fallback = restCalendarId();
+  const known = items.flatMap((it, i) => {
+    const calendarId = it.calendarId ?? fallback;
+    return calendarId ? [{ i, calendarId, eventId: it.eventId, input: toRestInput(it.input) }] : [];
+  });
+  const r = await updateRestEvents(known, token());
+  if (!r.ok) return r;
+  const out: Array<Result<string>> = items.map(() => err({ kind: 'not-found', what: 'calendar' }));
+  known.forEach((k, j) => {
+    out[k.i] = r.value[j];
+  });
+  return ok(out);
 }
 
 // Already gone is done, as for one delete. Absent calendar → the one

@@ -13,6 +13,7 @@ import {
   MARKER_KEY,
   parseBatchAnswer,
   RestEventInput,
+  updateRestEvents,
 } from '../googleCalendarRest';
 
 const token = async (): Promise<Result<string>> => ok('tok-1');
@@ -281,4 +282,22 @@ test('an expired grant answers every call 401 inside a 200 — that is the recon
   });
   expect(r.ok ? null : r.error.kind).toBe('auth-expired');
   expect(g.requests).toHaveLength(1);
+});
+
+test('updates are full writes (PUT) like one update; a hand-deleted event answers not-found for the caller to remake', async () => {
+  const g = fakeGoogle((c) => (c.path.endsWith('gone') ? { status: 404 } : { status: 200, json: { id: 'x' } }));
+  const r = await updateRestEvents(
+    [
+      { calendarId: 'cal', eventId: 'e1', input: game(1) },
+      { calendarId: 'cal', eventId: 'gone', input: game(2) },
+    ],
+    token,
+    { fetchFn: g.fetchFn, sleep: noSleep },
+  );
+  expect(g.requests[0].inner.map((c) => c.method)).toEqual(['PUT', 'PUT']);
+  expect(g.requests[0].inner[0].body).toMatchObject({ summary: 'Game 1' });
+  expect(r.ok).toBe(true);
+  if (!r.ok) return;
+  expect(r.value[0]).toEqual(ok('e1'));
+  expect(r.value[1].ok ? null : r.value[1].error.kind).toBe('not-found');
 });

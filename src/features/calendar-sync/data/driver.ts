@@ -36,6 +36,7 @@ import {
   restPaintCalendarColour,
   restDeleteFixtureEvent,
   restDeleteFixtureEvents,
+  restUpdateFixtureEvents,
   restEraseCalendars,
   restListTaggedEvents,
   restPresentCalendars,
@@ -159,6 +160,15 @@ export async function createFixtureEvents(
   }
   const out: Array<Result<string>> = [];
   for (const it of items) out.push(await createFixtureEvent(it.handle, it.input));
+  return ok(out);
+}
+
+export async function updateFixtureEvents(
+  items: ReadonlyArray<{ eventId: string; calendarId?: string; input: EventInput }>,
+): Promise<Result<Array<Result<string>>>> {
+  if (activeBackend() === 'rest') return restUpdateFixtureEvents(items);
+  const out: Array<Result<string>> = [];
+  for (const it of items) out.push(await updateFixtureEvent(it.eventId, it.input, it.calendarId));
   return ok(out);
 }
 

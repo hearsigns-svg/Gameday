@@ -119,13 +119,21 @@ jest.mock('../data/driver', () => ({
   // dying mid-request, with some of the batch made and none recorded.
   writeBatchSize: () => (mockStore.backend === 'rest' ? 50 : 1),
   createFixtureEvents: async (items: Array<{ handle: { calendarId: string }; input: MockInput }>) => {
-    mockStore.batches++;
+    if (items.length > 0) mockStore.batches++;
     const out = [];
     for (const it of items) out.push(await mockStore.createEvent(it.handle.calendarId, it.input));
     return { ok: true, value: out };
   },
+  updateFixtureEvents: async (
+    items: Array<{ eventId: string; calendarId?: string; input: MockInput }>,
+  ) => {
+    if (items.length > 0) mockStore.batches++;
+    const out = [];
+    for (const it of items) out.push(await mockStore.updateEvent(it.eventId, it.input, it.calendarId));
+    return { ok: true, value: out };
+  },
   deleteFixtureEvents: async (items: Array<{ eventId: string; calendarId?: string }>) => {
-    mockStore.batches++;
+    if (items.length > 0) mockStore.batches++;
     const out = [];
     for (const it of items) out.push(await mockStore.deleteEvent(it.eventId, it.calendarId));
     return { ok: true, value: out };
@@ -209,6 +217,9 @@ const mockStore = {
   updates: 0,
   // Batched requests made (Google only).
   batches: 0,
+  // Writes the store turns down: creates by fixture, deletes by event.
+  refuseCreate: new Set<string>(),
+  refuseDelete: new Set<string>(),
   // Sport calendar paints the passes asked for (never a kill point: a
   // paint is idempotent and touches no event or record of ours).
   paints: [] as Array<{ calendarId: string; hex: string }>,
@@ -251,6 +262,8 @@ const mockStore = {
     this.creates = new Map();
     this.updates = 0;
     this.batches = 0;
+    this.refuseCreate = new Set();
+    this.refuseDelete = new Set();
     this.paints = [];
   },
   // The real resolution's order: the stored target; else a calendar of
@@ -306,6 +319,9 @@ const mockStore = {
   async createEvent(calendarId: string, input: MockInput) {
     const cal = this.cals.get(calendarId);
     if (!cal) return { ok: false as const, error: { kind: 'not-found' as const, what: 'calendar' } };
+    if (this.refuseCreate.has(input.fixtureId)) {
+      return { ok: false as const, error: { kind: 'provider' as const, status: 400, message: 'refused' } };
+    }
     const id = this.write(() => {
       const eid = `ev-${this.seq++}`;
       cal.events.set(eid, {
@@ -352,6 +368,9 @@ const mockStore = {
     return { ok: false as const, error: { kind: 'not-found' as const, what: 'event' } };
   },
   async deleteEvent(eventId: string, calendarId?: string) {
+    if (this.refuseDelete.has(eventId)) {
+      return { ok: false as const, error: { kind: 'provider' as const, status: 500, message: 'busy' } };
+    }
     for (const cal of this.addressed(calendarId, eventId)) {
       if (cal.events.has(eventId)) this.write(() => cal.events.delete(eventId));
     }
@@ -494,6 +513,13 @@ function where(): Record<string, string[]> {
     for (const e of cal.events.values()) (out[e.fixtureId] ??= []).push(cal.title);
   }
   return out;
+}
+
+// A game's event, by fixture.
+function eventOfTitle(fixtureId: string) {
+  return [...mockStore.cals.values()]
+    .flatMap((c) => [...c.events.values()])
+    .find((e) => e.fixtureId === fixtureId);
 }
 
 // Events in the store that no ledger entry names — created, and the app
@@ -817,6 +843,101 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
     } else {
       expect(mockStore.batches).toBe(0);
     }
+  });
+
+  // ─── The plan's writes, batched on Google (owner ruling 2026-09-25) ──
+  const eventIdOf = (fixtureId: string) =>
+    [...mockStore.cals.values()]
+      .flatMap((c) => [...c.events.entries()])
+      .find(([, e]) => e.fixtureId === fixtureId)?.[0];
+
+  test('a first sync: every game in, one request on Google', async () => {
+    mockStore.reset();
+    (jest.requireMock('../../../core/storage') as { mockWipe: () => void }).mockWipe();
+    mockState.layout = 'combined';
+    mockState.follows = [...new Set(UPCOMING.flatMap((f) => f.followKeys))];
+    mockState.fixtures = [...UPCOMING];
+    mockState.archive = [...UPCOMING];
+    await pass();
+    expect(Object.keys(where()).sort()).toEqual(UPCOMING.map((f) => f.id).sort());
+    expect(mockStore.batches).toBe(backend === 'rest' ? 1 : 0);
+  });
+
+  test('an event deleted by hand, whose game then changes, is made again — batched as one by one', async () => {
+    await combinedWorld();
+    const gone = eventIdOf('fd-3') as string;
+    for (const cal of mockStore.cals.values()) cal.events.delete(gone);
+    mockState.fixtures = UPCOMING.map((f) => (f.id === 'fd-3' ? { ...f, startUtc: at(19) } : f));
+    const r = await pass();
+    expect(r.ok).toBe(true);
+    expect(where()['fd-3']).toEqual(['KickOffCal']);
+    expect(loadLedger()['fd-3'].eventId).not.toBe(gone);
+    expect(loadLedger()['fd-3'].startUtc).toBe(at(19));
+  });
+
+  test('all-day ↔ timed: every upcoming event is rebuilt once, none lost or doubled', async () => {
+    await combinedWorld();
+    mockStore.creates.clear();
+    const allDay = { ...DEFAULT_PREFS, eventStyle: 'all-day' as const };
+    const prefsBefore = mockState.prefs;
+    mockState.prefs = () => ({ ...allDay, sportColours: {} });
+    prunedSince = 0;
+    try {
+      await settle();
+      // The flip deleted each old event itself: nothing was left for the
+      // prune to find.
+      expect(prunedSince).toBe(0);
+      // (No "time not confirmed" note on an all-day entry — it claims no
+      // time — so this checks placement directly, not expectLayout.)
+      const w = where();
+      for (const f of UPCOMING) expect([f.id, w[f.id]]).toEqual([f.id, ['KickOffCal']]);
+      expect(mockStore.misaddressed).toBe(0);
+      for (const f of UPCOMING) {
+        expect([f.id, mockStore.creates.get(f.id)]).toEqual([f.id, 1]);
+        expect([f.id, eventOfTitle(f.id)?.allDay]).toEqual([f.id, true]);
+      }
+    } finally {
+      mockState.prefs = prefsBefore;
+    }
+  });
+
+  test('a create the store refuses: the rest land, the pass fails, the next pass makes it', async () => {
+    mockStore.reset();
+    (jest.requireMock('../../../core/storage') as { mockWipe: () => void }).mockWipe();
+    mockState.layout = 'combined';
+    mockState.follows = [...new Set(UPCOMING.flatMap((f) => f.followKeys))];
+    mockState.fixtures = [...UPCOMING];
+    mockState.archive = [...UPCOMING];
+    mockStore.refuseCreate = new Set(['nba-2']);
+    const r = await pass();
+    expect(r.ok).toBe(false);
+    expect(where()['nba-2']).toBeUndefined();
+    // On Google the rest of the group landed and were recorded; on the
+    // device store the pass stopped at the refusal, as it always did.
+    if (backend === 'rest') {
+      expect(Object.keys(where()).length).toBe(UPCOMING.length - 1);
+      for (const id of Object.keys(where())) expect(loadLedger()[id]).toBeDefined();
+    }
+    mockStore.refuseCreate = new Set();
+    await settle();
+    expect(Object.keys(where()).sort()).toEqual(UPCOMING.map((f) => f.id).sort());
+  });
+
+  test('a delete that fails never drops its ledger entry — the game goes on a later pass', async () => {
+    await combinedWorld();
+    const nba1 = eventIdOf('nba-1') as string;
+    mockStore.refuseDelete = new Set([nba1]);
+    mockState.fixtures = UPCOMING.filter((f) => !f.id.startsWith('nba-'));
+    mockState.follows = mockState.follows.filter((k) => k !== 'tsdb-team-134860');
+    const r = await pass();
+    expect(r.ok).toBe(false);
+    expect(loadLedger()['nba-1']).toBeDefined();
+    expect(where()['nba-1']).toEqual(['KickOffCal']);
+    mockStore.refuseDelete = new Set();
+    await settle();
+    expect(loadLedger()['nba-1']).toBeUndefined();
+    expect(where()['nba-1']).toBeUndefined();
+    expect(where()['nba-2']).toBeUndefined();
   });
 
   // ─── Colour layers (owner rulings 2026-09-25) ─────────────────────

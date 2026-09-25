@@ -57,6 +57,7 @@ import {
   conformSportCalendarColours,
   createFixtureEvents,
   deleteFixtureEvents,
+  updateFixtureEvents,
   writeBatchSize,
   createFixtureEvent,
   createSportCalendar,
@@ -115,17 +116,20 @@ import {
   upsertLedgerEntry,
 } from './data/ledger';
 import {
+  DesiredEvent,
   desiredEventFor,
   DOWNGRADE_DELETE_CAP,
   horizonStartFrom,
   isRunAbandoned,
   Ledger,
+  LedgerEntry,
   nowFromHorizon,
   orderOps,
   passBudgetMs,
   planSync,
   shouldStopPass,
   SnapshotFixture,
+  SyncOp,
   upcomingSnapshot,
 } from './domain/syncPlan';
 import { fixturesInWindow } from './domain/schedulePaging';
@@ -1301,100 +1305,209 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       at: new Date().toISOString(),
     };
 
-    for (const op of ordered) {
-      if (shouldStopPass(applied, Date.now() - passStartedAt, budgetMs)) break;
-      beat();
-      if (op.op === 'create' || op.op === 'update') {
-        const f = op.fixture;
-        const d = op.desired;
-        const input = {
-          fixtureId: f.id,
-          title: d.title,
-          startUtc: d.startUtc,
-          endUtc: d.endUtc,
-          allDay: d.allDay,
-          // The plan decides the reminder — per-event override first,
-          // preference behind it, nothing at all on an all-day
-          // placeholder. Deciding it HERE was what made a reminder
-          // invisible to the planner and lost it on every recreate.
-          reminderMinutesBefore: d.reminderMinutes,
-          extraRemindersBefore: d.extraReminders,
-          allDayReminder: d.allDayReminder,
-          ...(d.note ? { note: d.note } : {}),
-          // Round 5 ruling 7: the chosen colour reaches the event (REST
-          // maps it to Google's nearest swatch; layers without per-event
-          // colour never rendered the control, so never see one).
-          ...(d.colour ? { colour: d.colour } : {}),
-        };
+    // What an op writes, and the ledger entry that records it — one
+    // definition for the one-by-one loop and the batched one.
+    const inputOf = (f: Fixture, d: DesiredEvent): EventInput => ({
+      fixtureId: f.id,
+      title: d.title,
+      startUtc: d.startUtc,
+      endUtc: d.endUtc,
+      allDay: d.allDay,
+      // The plan decides the reminder — per-event override first,
+      // preference behind it, nothing at all on an all-day placeholder.
+      // Deciding it HERE was what made a reminder invisible to the
+      // planner and lost it on every recreate.
+      reminderMinutesBefore: d.reminderMinutes,
+      extraRemindersBefore: d.extraReminders,
+      allDayReminder: d.allDayReminder,
+      ...(d.note ? { note: d.note } : {}),
+      // Round 5 ruling 7: the chosen colour reaches the event (REST maps
+      // it to Google's nearest swatch; layers without per-event colour
+      // never rendered the control, so never see one).
+      ...(d.colour ? { colour: d.colour } : {}),
+    });
+    const record = (
+      f: Fixture,
+      d: DesiredEvent,
+      input: EventInput,
+      eventId: string,
+      calendarId: string,
+    ): void => {
+      upsertLedgerEntry(f.id, {
+        eventId,
+        calendarId,
+        startUtc: input.startUtc,
+        endUtc: input.endUtc,
+        title: input.title,
+        allDay: input.allDay,
+        // Recorded so the NEXT plan can see a reminder change. A recreate
+        // (the all-day↔timed kind flip) lands here too, which is what
+        // makes "we own reminders, so we restore them" true rather than
+        // aspirational.
+        reminderMinutes: input.reminderMinutesBefore,
+        extraReminders: input.extraRemindersBefore,
+        allDayReminder: d.allDayReminder,
+        ...(d.colour ? { colour: d.colour } : {}),
         // The fixture's own calendar group, stamped on the entry so a
         // later move can place the event without the fixture in hand.
-        const group = calendarGroupOf(f);
-        // A NEW event goes where the layout wants it; an update stays in
-        // the calendar the event is in (a move not yet reached carries
-        // it across later, rebuilt from this very entry).
-        const createPlaced = async (): Promise<
-          Result<{ eventId: string; calendarId: string }>
-        > => {
-          const cal =
-            layout === 'combined' && home !== null
-              ? ok(home)
-              : await sportCalendarFor(group);
+        sport: calendarGroupOf(f),
+        ...(d.note ? { note: d.note } : {}),
+      });
+    };
+    // A NEW event goes where the layout wants it; an update stays in the
+    // calendar the event is in (a move not yet reached carries it across
+    // later, rebuilt from this very entry).
+    const placeFor = async (f: Fixture): Promise<Result<string>> =>
+      layout === 'combined' && home !== null ? ok(home) : sportCalendarFor(calendarGroupOf(f));
+    // EventKit half-applies all-day ↔ timed conversions on update (flag
+    // flips, dates don't). A kind change is always delete + recreate;
+    // same-kind changes update in place.
+    const isKindFlip = (op: SyncOp): boolean =>
+      op.op === 'update' && (op.entry.allDay ?? false) !== op.desired.allDay;
+
+    const batchSize = writeBatchSize();
+    if (batchSize > 1) {
+      // FIFTY TO A REQUEST (owner ruling 2026-09-25): on Google the plan's
+      // writes go in groups, three requests at most per group — removals
+      // (and the old half of a kind flip), then updates in place, then
+      // every create (new events, a flip's new half, and an event deleted
+      // by hand whose fixture is still wanted). Each write keeps its
+      // one-by-one meaning: a delete that failed never drops its ledger
+      // entry, a create is recorded the moment its answer is in, and the
+      // first refusal ends the pass — after everything that DID land is
+      // recorded.
+      let refused: Result<never> | null = null;
+      for (let i = 0; i < ordered.length && refused === null; i += batchSize) {
+        if (shouldStopPass(applied, Date.now() - passStartedAt, budgetMs)) break;
+        beat();
+        const chunk = ordered.slice(i, i + batchSize);
+        const toCreate: Array<Extract<SyncOp, { op: 'create' | 'update' }>> = [];
+        const removals = chunk.filter(
+          (op): op is Extract<SyncOp, { entry: LedgerEntry }> =>
+            op.op === 'delete' || isKindFlip(op),
+        );
+        const dels = await deleteFixtureEvents(
+          removals.map((op) => ({ eventId: op.entry.eventId, calendarId: op.entry.calendarId })),
+        );
+        if (!dels.ok) return dels;
+        removals.forEach((op, k) => {
+          const del = dels.value[k];
+          if (!del.ok) {
+            refused ??= del; // never drop a ledger entry on a failed delete
+            return;
+          }
+          if (op.op === 'delete') {
+            removeLedgerEntry(op.fixtureId);
+            outcome.deleted++;
+            applied++;
+          } else if (op.op === 'update') {
+            toCreate.push(op);
+          }
+        });
+        const inPlace = chunk.filter(
+          (op): op is Extract<SyncOp, { op: 'update' }> => op.op === 'update' && !isKindFlip(op),
+        );
+        const updateInputs = inPlace.map((op) => inputOf(op.fixture, op.desired));
+        const ups = await updateFixtureEvents(
+          inPlace.map((op, k) => ({
+            eventId: op.entry.eventId,
+            calendarId: op.entry.calendarId,
+            input: updateInputs[k],
+          })),
+        );
+        if (!ups.ok) return ups;
+        inPlace.forEach((op, k) => {
+          const u = ups.value[k];
+          if (u.ok) {
+            record(op.fixture, op.desired, updateInputs[k], u.value, op.entry.calendarId);
+            outcome.updated++;
+            applied++;
+          } else if (u.error.kind === 'not-found') {
+            // Deleted by hand, still wanted: recreated below.
+            toCreate.push(op);
+          } else {
+            refused ??= u;
+          }
+        });
+        const creates = [
+          ...chunk.filter((op): op is Extract<SyncOp, { op: 'create' }> => op.op === 'create'),
+          ...toCreate,
+        ];
+        const placed: Array<{ calendarId: string; handle: CalendarHandle }> = [];
+        for (const op of creates) {
+          const cal = await placeFor(op.fixture);
           if (!cal.ok) return cal;
           const h = await handleFor(cal.value);
           if (!h.ok) return h;
-          const made = await createFixtureEvent(h.value, input);
-          return made.ok ? ok({ eventId: made.value, calendarId: cal.value }) : made;
-        };
-        // EventKit half-applies all-day ↔ timed conversions on update
-        // (flag flips, dates don't). A kind change is always delete +
-        // recreate; same-kind changes update in place.
-        const kindFlip =
-          op.op === 'update' &&
-          (op.entry.allDay ?? false) !== op.desired.allDay;
-        if (kindFlip) await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
-        let r: Result<{ eventId: string; calendarId: string }>;
-        if (op.op === 'create' || kindFlip) {
-          r = await createPlaced();
-        } else {
-          const inPlace = op.entry.calendarId;
-          const u = await updateFixtureEvent(op.entry.eventId, input, inPlace);
-          r = u.ok ? ok({ eventId: u.value, calendarId: inPlace }) : u;
-          // A hand-deleted event whose fixture then changed: the update
-          // finds nothing, but the fixture is still WANTED — recreate it
-          // and let the ledger repoint below. Without this, one missing
-          // event aborted every sync from the moment its time moved
-          // (the delete-side twin of the same wedge parked a real phone
-          // at 174 events for an evening).
-          if (!r.ok && r.error.kind === 'not-found') r = await createPlaced();
+          placed.push({ calendarId: cal.value, handle: h.value });
         }
-        if (!r.ok) return r;
-        upsertLedgerEntry(f.id, {
-          eventId: r.value.eventId,
-          calendarId: r.value.calendarId,
-          startUtc: input.startUtc,
-          endUtc: input.endUtc,
-          title: input.title,
-          allDay: input.allDay,
-          // Recorded so the NEXT plan can see a reminder change. A
-          // recreate (the all-day↔timed kind flip) lands here too, which
-          // is what makes "we own reminders, so we restore them" true
-          // rather than aspirational.
-          reminderMinutes: input.reminderMinutesBefore,
-          extraReminders: input.extraRemindersBefore,
-          allDayReminder: d.allDayReminder,
-          ...(d.colour ? { colour: d.colour } : {}),
-          sport: group,
-          ...(d.note ? { note: d.note } : {}),
+        const createInputs = creates.map((op) => inputOf(op.fixture, op.desired));
+        const made = await createFixtureEvents(
+          creates.map((_op, k) => ({ handle: placed[k].handle, input: createInputs[k] })),
+        );
+        if (!made.ok) return made;
+        creates.forEach((op, k) => {
+          const m = made.value[k];
+          if (!m.ok) {
+            refused ??= m;
+            return;
+          }
+          record(op.fixture, op.desired, createInputs[k], m.value, placed[k].calendarId);
+          if (op.op === 'create') outcome.created++;
+          else outcome.updated++;
+          applied++;
         });
-        if (op.op === 'create') outcome.created++;
-        else outcome.updated++;
-        applied++;
-      } else {
-        const del = await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
-        if (!del.ok) return del; // never drop a ledger entry on a failed delete
-        removeLedgerEntry(op.fixtureId);
-        outcome.deleted++;
-        applied++;
+      }
+      if (refused) return refused;
+    } else {
+      for (const op of ordered) {
+        if (shouldStopPass(applied, Date.now() - passStartedAt, budgetMs)) break;
+        beat();
+        if (op.op === 'create' || op.op === 'update') {
+          const f = op.fixture;
+          const d = op.desired;
+          const input = inputOf(f, d);
+          const createPlaced = async (): Promise<
+            Result<{ eventId: string; calendarId: string }>
+          > => {
+            const cal = await placeFor(f);
+            if (!cal.ok) return cal;
+            const h = await handleFor(cal.value);
+            if (!h.ok) return h;
+            const made = await createFixtureEvent(h.value, input);
+            return made.ok ? ok({ eventId: made.value, calendarId: cal.value }) : made;
+          };
+          const kindFlip = isKindFlip(op);
+          if (kindFlip && op.op === 'update') {
+            await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
+          }
+          let r: Result<{ eventId: string; calendarId: string }>;
+          if (op.op === 'create' || kindFlip) {
+            r = await createPlaced();
+          } else {
+            const inPlace = op.entry.calendarId;
+            const u = await updateFixtureEvent(op.entry.eventId, input, inPlace);
+            r = u.ok ? ok({ eventId: u.value, calendarId: inPlace }) : u;
+            // A hand-deleted event whose fixture then changed: the update
+            // finds nothing, but the fixture is still WANTED — recreate it
+            // and let the ledger repoint below. Without this, one missing
+            // event aborted every sync from the moment its time moved
+            // (the delete-side twin of the same wedge parked a real phone
+            // at 174 events for an evening).
+            if (!r.ok && r.error.kind === 'not-found') r = await createPlaced();
+          }
+          if (!r.ok) return r;
+          record(f, d, input, r.value.eventId, r.value.calendarId);
+          if (op.op === 'create') outcome.created++;
+          else outcome.updated++;
+          applied++;
+        } else {
+          const del = await deleteFixtureEvent(op.entry.eventId, op.entry.calendarId);
+          if (!del.ok) return del; // never drop a ledger entry on a failed delete
+          removeLedgerEntry(op.fixtureId);
+          outcome.deleted++;
+          applied++;
+        }
       }
     }
     const deferred = ordered.length - applied + removalsHeldBack;

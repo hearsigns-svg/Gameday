@@ -620,6 +620,32 @@ export async function insertRestEvents(
   );
 }
 
+// Many full-write updates (PUT, as one update is), fifty to a request.
+// Not-found = the event is gone (deleted by hand): the caller recreates.
+export async function updateRestEvents(
+  items: ReadonlyArray<{ calendarId: string; eventId: string; input: RestEventInput }>,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<Array<Result<string>>>> {
+  const r = await batchRequest(
+    items.map((it) => ({
+      method: 'PUT' as const,
+      path: `/calendars/${encodeURIComponent(it.calendarId)}/events/${encodeURIComponent(it.eventId)}`,
+      body: toRestBody(it.input),
+    })),
+    token,
+    deps,
+  );
+  if (!r.ok) return r;
+  return ok(
+    r.value.map((a, i): Result<string> => {
+      if (a.status >= 200 && a.status < 300) return ok(items[i].eventId);
+      if (a.status === 404 || a.status === 410) return err({ kind: 'not-found', what: 'event' });
+      return err({ kind: 'provider', status: a.status, message: 'calendar API update (batch) failed' });
+    }),
+  );
+}
+
 // Many deletes, fifty to a request. Already gone is done.
 export async function deleteRestEvents(
   items: ReadonlyArray<{ calendarId: string; eventId: string }>,
