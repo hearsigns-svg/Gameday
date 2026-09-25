@@ -40,7 +40,9 @@ import {
   createOwnedCalendar,
   deleteOwnedCalendar,
   deleteRestEvent,
+  deleteRestEvents,
   insertRestEvent,
+  insertRestEvents,
   listRestTaggedEvents,
   patchCalendarListColour,
   RestEventInput,
@@ -222,6 +224,34 @@ export async function restCreateFixtureEvent(
   input: EventInput,
 ): Promise<Result<string>> {
   return insertRestEvent(calendarId, toRestInput(input), token());
+}
+
+// Many at once (owner ruling 2026-09-25): fifty to a request, each with
+// its own answer — googleCalendarRest.ts batchRequest.
+export async function restCreateFixtureEvents(
+  items: ReadonlyArray<{ calendarId: string; input: EventInput }>,
+): Promise<Result<Array<Result<string>>>> {
+  return insertRestEvents(
+    items.map((it) => ({ calendarId: it.calendarId, input: toRestInput(it.input) })),
+    token(),
+  );
+}
+
+// Already gone is done, as for one delete. Absent calendar → the one
+// KickOffCal calendar, as before.
+export async function restDeleteFixtureEvents(
+  items: ReadonlyArray<{ eventId: string; calendarId?: string }>,
+): Promise<Result<Array<Result<true>>>> {
+  const fallback = restCalendarId();
+  const addressed = items.map((it) => ({ eventId: it.eventId, calendarId: it.calendarId ?? fallback }));
+  const known = addressed.flatMap((it, i) => (it.calendarId ? [{ i, calendarId: it.calendarId, eventId: it.eventId }] : []));
+  const r = await deleteRestEvents(known, token());
+  if (!r.ok) return r;
+  const out: Array<Result<true>> = addressed.map(() => err({ kind: 'not-found', what: 'calendar' }));
+  known.forEach((k, j) => {
+    out[k.i] = r.value[j];
+  });
+  return ok(out);
 }
 
 // Not-found propagates as the typed kind — the engine answers it by

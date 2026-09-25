@@ -127,8 +127,10 @@ first has an event; the target is then only READ (`currentTargetId`),
 never created. Every pass surveys the calendars it relies on once
 (a recorded one deleted by hand is forgotten, then recreated), drains
 leftovers naming their calendar (`strayCalendarId`), moves what the
-layout wants elsewhere (`data/layoutRelocation.ts` — the target switch's
-create → repoint-and-owe → delete, placed by the ledger's `sport`
+layout wants elsewhere (`data/layoutRelocation.ts` — the ONE move routine,
+used by both layouts and the target switch: create → repoint-and-owe →
+delete, fifty to a request on Google's batch endpoint and one by one on
+the device store (`writeBatchSize`), placed by the ledger's `sport`
 stamp, this pass's fixtures, or a by-id lookup), plans and applies (new
 events land by the layout; updates and deletes address the event's own
 calendar — Google reaches an event only through its calendar), prunes

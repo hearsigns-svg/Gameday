@@ -19,6 +19,13 @@ import { Ledger, LedgerEntry } from '../../domain/syncPlan';
 const HOME = 'home';
 class Kill extends Error {}
 
+// How many writes go in one request: 1 is the device's own store; more is
+// Google's batch (2026-09-25) — 3 here, so ten games take four requests and
+// a kill can land inside a batch as well as between them.
+let batchSize = 1;
+// Fixtures Google refuses to create, for the refusal test.
+let refuse = new Set<string>();
+
 interface World {
   ledger: Ledger;
   calendars: Map<string, Map<string, string>>; // calendarId → eventId → fixtureId
@@ -76,7 +83,11 @@ function placementIn(w: World, layout: CalendarLayout) {
 }
 
 // One pass. `budget` = side effects allowed before the app "dies".
-async function pass(w: World, layout: CalendarLayout, budget = Infinity): Promise<void> {
+async function pass(
+  w: World,
+  layout: CalendarLayout,
+  budget = Infinity,
+): Promise<Awaited<ReturnType<typeof relocate>>> {
   let spent = 0;
   const spend = () => {
     if (++spent > budget) throw new Kill();
@@ -94,6 +105,10 @@ async function pass(w: World, layout: CalendarLayout, budget = Infinity): Promis
     },
     calendarFor: async (to) => {
       if (to.calendarId !== null) return { ok: true, value: to.calendarId };
+      // The engine's sportCalendarFor: the recorded calendar, if this
+      // pass already made one.
+      const known = w.sportMap[to.group];
+      if (known) return { ok: true, value: known };
       spend(); // the native create
       const id = `cal-${to.group}-${w.seq++}`;
       w.calendars.set(id, new Map());
@@ -102,6 +117,9 @@ async function pass(w: World, layout: CalendarLayout, budget = Infinity): Promis
       return { ok: true, value: id };
     },
     create: async (calendarId, step) => {
+      if (refuse.has(step.fixtureId)) {
+        return { ok: false, error: { kind: 'provider', status: 400, message: 'no' } };
+      }
       spend();
       const id = `e-${step.fixtureId}-${w.seq++}`;
       w.calendars.get(calendarId)!.set(id, step.fixtureId);
@@ -110,13 +128,40 @@ async function pass(w: World, layout: CalendarLayout, budget = Infinity): Promis
     deleteEvent: (eventId) => deleteEvent(eventId),
     stop: () => false,
     beat: () => undefined,
+    ...(batchSize > 1
+      ? {
+          batch: {
+            size: batchSize,
+            // Each write inside a request is its own kill point: the app
+            // can die with part of a batch made and none of it recorded.
+            create: async (items) =>
+              ({
+                ok: true as const,
+                value: items.map(({ calendarId, step }) => {
+                  if (refuse.has(step.fixtureId)) {
+                    return { ok: false as const, error: { kind: 'provider' as const, status: 400, message: 'no' } };
+                  }
+                  spend();
+                  const id = `e-${step.fixtureId}-${w.seq++}`;
+                  w.calendars.get(calendarId)!.set(id, step.fixtureId);
+                  return { ok: true as const, value: { eventId: id } };
+                }),
+              }),
+            deleteEvents: async (items) => {
+              const value = [];
+              for (const it of items) value.push(await deleteEvent(it.eventId));
+              return { ok: true as const, value };
+            },
+          },
+        }
+      : {}),
   };
   if (layout === 'combined' && !w.calendars.has(HOME)) {
     spend();
     w.calendars.set(HOME, new Map()); // ensureCalendarTarget recreates it
   }
   await drainStrayEvents(deps);
-  await relocate(planLayoutRelocation(w.ledger, placementIn(w, layout)), deps);
+  const moved = await relocate(planLayoutRelocation(w.ledger, placementIn(w, layout)), deps);
   // Prune: every calendar of ours — recorded or not — sheds events no
   // ledger entry references.
   const ledgered = new Set(Object.values(w.ledger).map((e) => e.eventId));
@@ -137,6 +182,7 @@ async function pass(w: World, layout: CalendarLayout, budget = Infinity): Promis
       }
     }
   }
+  return moved;
 }
 
 async function runToCompletion(w: World, layout: CalendarLayout) {
@@ -167,73 +213,137 @@ function expectConverged(w: World, layout: CalendarLayout) {
   }
 }
 
-test('on, then off: every game moves, once, and the emptied calendars go', async () => {
-  const w = combinedWorld();
-  await runToCompletion(w, 'per-sport');
-  expectConverged(w, 'per-sport');
-  await runToCompletion(w, 'combined');
-  expectConverged(w, 'combined');
-});
+describe.each([1, 3])('%i write(s) to a request', (size) => {
+  beforeEach(() => {
+    batchSize = size;
+    refuse = new Set();
+  });
 
-describe('killed after every single side effect, then reopened', () => {
-  for (const layoutPair of [
-    ['combined', 'per-sport'],
-    ['per-sport', 'combined'],
-  ] as const) {
-    const [from, to] = layoutPair;
-    test(`${from} → ${to}`, async () => {
-      // Count the side effects of an uninterrupted switch, then kill at each.
-      let total = 0;
-      {
-        const w = combinedWorld();
-        if (from === 'per-sport') await runToCompletion(w, 'per-sport');
-        for (;;) {
-          try {
-            await pass(clone(w), to, total);
-            break;
-          } catch (e) {
-            if (!(e instanceof Kill)) throw e;
-            total++;
+  test('on, then off: every game moves, once, and the emptied calendars go', async () => {
+    const w = combinedWorld();
+    await runToCompletion(w, 'per-sport');
+    expectConverged(w, 'per-sport');
+    await runToCompletion(w, 'combined');
+    expectConverged(w, 'combined');
+  });
+
+  describe('killed after every single side effect, then reopened', () => {
+    for (const layoutPair of [
+      ['combined', 'per-sport'],
+      ['per-sport', 'combined'],
+    ] as const) {
+      const [from, to] = layoutPair;
+      test(`${from} → ${to}`, async () => {
+        // Count the side effects of an uninterrupted switch, then kill at each.
+        let total = 0;
+        {
+          const w = combinedWorld();
+          if (from === 'per-sport') await runToCompletion(w, 'per-sport');
+          for (;;) {
+            try {
+              await pass(clone(w), to, total);
+              break;
+            } catch (e) {
+              if (!(e instanceof Kill)) throw e;
+              total++;
+            }
           }
         }
-      }
-      expect(total).toBeGreaterThan(20);
-      for (let kill = 0; kill <= total; kill++) {
-        const w = combinedWorld();
-        if (from === 'per-sport') await runToCompletion(w, 'per-sport');
-        try {
-          await pass(w, to, kill);
-        } catch (e) {
-          if (!(e instanceof Kill)) throw e;
+        expect(total).toBeGreaterThan(20);
+        for (let kill = 0; kill <= total; kill++) {
+          const w = combinedWorld();
+          if (from === 'per-sport') await runToCompletion(w, 'per-sport');
+          try {
+            await pass(w, to, kill);
+          } catch (e) {
+            if (!(e instanceof Kill)) throw e;
+          }
+          await runToCompletion(w, to);
+          expectConverged(w, to);
         }
-        await runToCompletion(w, to);
-        expectConverged(w, to);
-      }
-    });
-  }
-});
-
-test('killed again and again, at random points, it still converges', async () => {
-  let seed = 7;
-  const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
-  const w = combinedWorld();
-  for (let i = 0; i < 40; i++) {
-    const layout: CalendarLayout = i % 10 < 5 ? 'per-sport' : 'combined';
-    try {
-      await pass(w, layout, Math.floor(rand() * 12));
-    } catch (e) {
-      if (!(e instanceof Kill)) throw e;
+      });
     }
-  }
-  await runToCompletion(w, 'per-sport');
-  expectConverged(w, 'per-sport');
-});
+  });
 
-test('an entry whose sport is not known yet stays where it is', async () => {
-  const w = combinedWorld();
-  const { sport: _s, ...unknown } = w.ledger['fd-1'];
-  w.ledger = { ...w.ledger, 'fd-1': unknown };
-  await runToCompletion(w, 'per-sport');
-  expect(w.ledger['fd-1'].calendarId).toBe(HOME);
-  expect(w.calendars.get(HOME)?.size).toBe(1); // home kept: it still holds a game
+  test('killed again and again, at random points, it still converges', async () => {
+    let seed = 7;
+    const rand = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+    const w = combinedWorld();
+    for (let i = 0; i < 40; i++) {
+      const layout: CalendarLayout = i % 10 < 5 ? 'per-sport' : 'combined';
+      try {
+        await pass(w, layout, Math.floor(rand() * 12));
+      } catch (e) {
+        if (!(e instanceof Kill)) throw e;
+      }
+    }
+    await runToCompletion(w, 'per-sport');
+    expectConverged(w, 'per-sport');
+  });
+
+  test('an entry whose sport is not known yet stays where it is', async () => {
+    const w = combinedWorld();
+    const { sport: _s, ...unknown } = w.ledger['fd-1'];
+    w.ledger = { ...w.ledger, 'fd-1': unknown };
+    await runToCompletion(w, 'per-sport');
+    expect(w.ledger['fd-1'].calendarId).toBe(HOME);
+    expect(w.calendars.get(HOME)?.size).toBe(1); // home kept: it still holds a game
+  });
+
+  test('a game Google refuses to create stays where it was; the rest move, and it follows next pass', async () => {
+    const w = combinedWorld();
+    refuse = new Set(['nba-2']);
+    // The pass ends failed, as a refused create always ended it — so the
+    // engine does not rerun at once into the same refusal.
+    const r = await pass(w, 'per-sport');
+    expect(r.ok).toBe(false);
+    expect(w.ledger['nba-2'].calendarId).toBe(HOME);
+    expect(w.ledger['fd-1'].calendarId).toBe(w.sportMap.soccer);
+    refuse = new Set();
+    await runToCompletion(w, 'per-sport');
+    expectConverged(w, 'per-sport');
+  });
+
+  test('a leftover whose delete fails keeps its debt for the next pass', async () => {
+    const ledger: Ledger = {
+      'fd-1': { ...entry('e-new', 'cal-x'), strayEventId: 'e-old', strayCalendarId: HOME },
+    };
+    let w: Ledger = ledger;
+    let attempt = 0;
+    const deps = {
+      ledger: () => w,
+      upsert: (id: string, e: LedgerEntry) => {
+        w = { ...w, [id]: e };
+      },
+      deleteEvent: async () => {
+        attempt++;
+        return attempt === 1
+          ? { ok: false as const, error: { kind: 'offline' as const } }
+          : { ok: true as const, value: true as const };
+      },
+      beat: () => undefined,
+      ...(size > 1
+        ? {
+            batch: {
+              size,
+              deleteEvents: async () => {
+                attempt++;
+                return {
+                  ok: true as const,
+                  value: [
+                    attempt === 1
+                      ? { ok: false as const, error: { kind: 'provider' as const, status: 500, message: 'x' } }
+                      : { ok: true as const, value: true as const },
+                  ],
+                };
+              },
+            },
+          }
+        : {}),
+    };
+    expect(await drainStrayEvents(deps)).toBe(0);
+    expect(w['fd-1'].strayEventId).toBe('e-old');
+    expect(await drainStrayEvents(deps)).toBe(1);
+    expect(w['fd-1'].strayEventId).toBeUndefined();
+  });
 });

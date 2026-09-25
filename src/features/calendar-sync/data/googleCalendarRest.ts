@@ -417,6 +417,232 @@ export async function deleteRestEvent(
   return ok(undefined);
 }
 
+// ─── Batches (owner ruling 2026-09-25) ────────────────────────────────
+//
+// Up to BATCH_MAX calls in ONE HTTP request — Google's batch endpoint for
+// Calendar, a multipart/mixed body of inner HTTP requests. A move of
+// hundreds of games was spending its minutes on round trips, one create
+// and one delete per game; a batch pays the trip once per fifty. Every
+// inner call still counts against the user's quota and answers for
+// itself: the outer request can succeed while any single call fails.
+//
+// Outer failures are the one-request rules: no answer → offline (with the
+// platform's words, for logcat), 401 → auth-expired, 429/5xx → backoff
+// and retry. Inner calls Google asks us to slow down for (429, 5xx, a
+// rate-limit 403) are sent again, alone of their batch, on the same
+// backoff; whatever still fails comes back as its own status for the
+// caller to leave for the next pass.
+const BATCH_URL = 'https://www.googleapis.com/batch/calendar/v3';
+export const BATCH_MAX = 50;
+
+export interface BatchCall {
+  method: 'POST' | 'PUT' | 'DELETE';
+  path: string; // as request() takes it: under /calendar/v3
+  body?: unknown;
+}
+
+// status 0: Google's answer carried nothing for this call.
+export interface BatchAnswer {
+  status: number;
+  json: unknown;
+}
+
+function batchBody(calls: readonly BatchCall[], boundary: string): string {
+  const parts = calls.map((c, i) =>
+    [
+      `--${boundary}`,
+      'Content-Type: application/http',
+      `Content-ID: <item${i}>`,
+      '',
+      `${c.method} /calendar/v3${c.path} HTTP/1.1`,
+      ...(c.body !== undefined
+        ? ['Content-Type: application/json', '', JSON.stringify(c.body)]
+        : ['']),
+      '',
+    ].join('\r\n'),
+  );
+  return `${parts.join('')}--${boundary}--\r\n`;
+}
+
+// The multipart answer, by the Content-ID each part echoes back
+// ("response-item7"). PURE — pinned against Google's documented shape.
+export function parseBatchAnswer(text: string, boundary: string, count: number): BatchAnswer[] {
+  const out: BatchAnswer[] = Array.from({ length: count }, () => ({ status: 0, json: null }));
+  for (const raw of text.split(`--${boundary}`)) {
+    const part = raw.replace(/^\r?\n/, '');
+    if (part.trim() === '' || part.startsWith('--')) continue;
+    const id = /Content-ID:\s*<?response-item(\d+)>?/i.exec(part);
+    const status = /HTTP\/1\.1\s+(\d{3})/.exec(part);
+    if (!id || !status) continue;
+    const index = Number(id[1]);
+    if (index < 0 || index >= count) continue;
+    // The inner response's body: after the blank line that ends ITS headers.
+    const afterStatus = part.slice(status.index);
+    const blank = afterStatus.search(/\r?\n\r?\n/);
+    const bodyText = blank < 0 ? '' : afterStatus.slice(blank).trim();
+    let json: unknown = null;
+    if (bodyText) {
+      try {
+        json = JSON.parse(bodyText);
+      } catch {
+        json = null;
+      }
+    }
+    out[index] = { status: Number(status[1]), json };
+  }
+  return out;
+}
+
+function innerRetriable(a: BatchAnswer): boolean {
+  if (a.status === 429 || a.status >= 500) return true;
+  if (a.status !== 403) return false;
+  const reason = (a.json as { error?: { errors?: Array<{ reason?: string }> } } | null)?.error
+    ?.errors?.[0]?.reason;
+  return reason === undefined || RATE_LIMIT_REASONS.has(reason);
+}
+
+async function sendBatch(
+  calls: readonly BatchCall[],
+  token: TokenProvider,
+  deps: RestDeps,
+): Promise<Result<BatchAnswer[]>> {
+  const fetchFn = deps.fetchFn ?? fetch;
+  const sleep = deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  for (let attempt = 0; ; attempt++) {
+    const t = await token();
+    if (!t.ok) return t;
+    const boundary = `kickoffcal_batch_${Date.now().toString(36)}_${attempt}`;
+    let res: Response;
+    try {
+      res = await fetchFn(BATCH_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${t.value}`,
+          'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        },
+        body: batchBody(calls, boundary),
+      });
+    } catch (e) {
+      console.warn(`[gameday] calendar API batch of ${calls.length} did not reach Google: ${e}`);
+      return err({ kind: 'offline' });
+    }
+    if (res.status === 401) {
+      console.warn(`[gameday] calendar API batch of ${calls.length} answered 401`);
+      return err({ kind: 'auth-expired' });
+    }
+    if (res.ok) {
+      const type = res.headers.get('content-type') ?? '';
+      const answered = /boundary=("?)([^";]+)\1/i.exec(type)?.[2];
+      if (!answered) {
+        return err({ kind: 'unknown', message: 'calendar API batch answer had no boundary' });
+      }
+      let text: string;
+      try {
+        text = await res.text();
+      } catch {
+        return err({ kind: 'unknown', message: 'calendar API batch answer unreadable' });
+      }
+      return ok(parseBatchAnswer(text, answered, calls.length));
+    }
+    if ((res.status === 429 || res.status >= 500) && attempt < RETRIES) {
+      await sleep(BACKOFF_MS[attempt] ?? 4000);
+      continue;
+    }
+    return err({
+      kind: 'provider',
+      status: res.status,
+      message: `calendar API batch of ${calls.length} failed`,
+    });
+  }
+}
+
+export async function batchRequest(
+  calls: readonly BatchCall[],
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<BatchAnswer[]>> {
+  if (calls.length === 0) return ok([]);
+  if (calls.length > BATCH_MAX) {
+    return err({ kind: 'unknown', message: `a batch holds at most ${BATCH_MAX} calls` });
+  }
+  const sleep = deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const first = await sendBatch(calls, token, deps);
+  if (!first.ok) return first;
+  const answers = first.value;
+  // An expired grant does NOT fail a batch as a whole: Google parses it
+  // and answers EVERY call 401 inside a 200 (probed against the live
+  // endpoint, 2026-09-25). One token signs them all, so one 401 is the
+  // reconnect ask — never a pile of per-call errors the chip cannot read.
+  if (answers.some((a) => a.status === 401)) {
+    console.warn(`[gameday] calendar API batch of ${calls.length} answered 401`);
+    return err({ kind: 'auth-expired' });
+  }
+  for (let attempt = 0; attempt < RETRIES; attempt++) {
+    const again = answers.flatMap((a, i) => (innerRetriable(a) ? [i] : []));
+    if (again.length === 0) break;
+    await sleep(BACKOFF_MS[attempt] ?? 4000);
+    const retried = await sendBatch(again.map((i) => calls[i]), token, deps);
+    // The first answers stand: what could not be asked again is left as
+    // Google last answered it.
+    if (!retried.ok) break;
+    if (retried.value.some((a) => a.status === 401)) return err({ kind: 'auth-expired' });
+    again.forEach((i, k) => {
+      answers[i] = retried.value[k];
+    });
+  }
+  return ok(answers);
+}
+
+// Many inserts, fifty to a request: per call, the new event's id, or why
+// not. Not-found = the calendar itself is gone.
+export async function insertRestEvents(
+  items: ReadonlyArray<{ calendarId: string; input: RestEventInput }>,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<Array<Result<string>>>> {
+  const r = await batchRequest(
+    items.map((it) => ({
+      method: 'POST' as const,
+      path: `/calendars/${encodeURIComponent(it.calendarId)}/events`,
+      body: toRestBody(it.input),
+    })),
+    token,
+    deps,
+  );
+  if (!r.ok) return r;
+  return ok(
+    r.value.map((a): Result<string> => {
+      const id = (a.json as { id?: string } | null)?.id;
+      if (a.status >= 200 && a.status < 300 && id) return ok(id);
+      if (a.status === 404 || a.status === 410) return err({ kind: 'not-found', what: 'calendar' });
+      return err({ kind: 'provider', status: a.status, message: 'calendar API insert (batch) failed' });
+    }),
+  );
+}
+
+// Many deletes, fifty to a request. Already gone is done.
+export async function deleteRestEvents(
+  items: ReadonlyArray<{ calendarId: string; eventId: string }>,
+  token: TokenProvider,
+  deps: RestDeps = {},
+): Promise<Result<Array<Result<true>>>> {
+  const r = await batchRequest(
+    items.map((it) => ({
+      method: 'DELETE' as const,
+      path: `/calendars/${encodeURIComponent(it.calendarId)}/events/${encodeURIComponent(it.eventId)}`,
+    })),
+    token,
+    deps,
+  );
+  if (!r.ok) return r;
+  return ok(
+    r.value.map((a): Result<true> => {
+      if ((a.status >= 200 && a.status < 300) || a.status === 404 || a.status === 410) return ok(true);
+      return err({ kind: 'provider', status: a.status, message: 'calendar API delete (batch) failed' });
+    }),
+  );
+}
+
 // Every event WE wrote into the calendar, and nothing else. The
 // server-side filter matches the private marker property, so an event
 // the user added to our calendar by hand is not merely skipped — it is

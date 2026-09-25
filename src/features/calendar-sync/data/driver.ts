@@ -23,15 +23,19 @@ import { storedTarget } from './calendarTargetStore';
 import { loadPrefs } from './prefsStore';
 import { recordSportCalendarColour, sportCalendarColourStates } from './sportCalendarStore';
 import { SportColourStatus, sportColourNeedsPaint } from '../domain/colourLayers';
+import { BATCH_MAX } from './googleCalendarRest';
+import type { EventInput } from './calendarDriver';
 import {
   applyRestCalendarColour,
   ensureRestTarget,
   eraseRestCalendar,
   restCreateFixtureEvent,
+  restCreateFixtureEvents,
   restCreateSportCalendar,
   restDeleteCalendarIfEmpty,
   restPaintCalendarColour,
   restDeleteFixtureEvent,
+  restDeleteFixtureEvents,
   restEraseCalendars,
   restListTaggedEvents,
   restPresentCalendars,
@@ -129,6 +133,42 @@ export async function deleteFixtureEvent(
   return activeBackend() === 'rest'
     ? restDeleteFixtureEvent(eventId, calendarId)
     : provider.deleteFixtureEvent(eventId);
+}
+
+// ─── Many writes at once (owner ruling 2026-09-25) ────────────────────
+//
+// How many event writes the backend takes in one request: Google's batch
+// endpoint takes fifty; the device's own store is local and takes them
+// one at a time, as it always has (its move keeps its one-event step).
+export function writeBatchSize(): number {
+  return activeBackend() === 'rest' ? BATCH_MAX : 1;
+}
+
+// Per item, the new event's id or why not; the outer Result fails only
+// when nothing could be asked at all (offline, an expired grant).
+export async function createFixtureEvents(
+  items: ReadonlyArray<{ handle: CalendarHandle; input: EventInput }>,
+): Promise<Result<Array<Result<string>>>> {
+  if (activeBackend() === 'rest') {
+    return restCreateFixtureEvents(
+      items.map((it) => ({
+        calendarId: it.handle.kind === 'rest' ? it.handle.calendarId : it.handle.cal.id,
+        input: it.input,
+      })),
+    );
+  }
+  const out: Array<Result<string>> = [];
+  for (const it of items) out.push(await createFixtureEvent(it.handle, it.input));
+  return ok(out);
+}
+
+export async function deleteFixtureEvents(
+  items: ReadonlyArray<{ eventId: string; calendarId?: string }>,
+): Promise<Result<Array<Result<true>>>> {
+  if (activeBackend() === 'rest') return restDeleteFixtureEvents(items);
+  const out: Array<Result<true>> = [];
+  for (const it of items) out.push(await deleteFixtureEvent(it.eventId, it.calendarId));
+  return ok(out);
 }
 
 export async function listTaggedEvents(

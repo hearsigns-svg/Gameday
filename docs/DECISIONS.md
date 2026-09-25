@@ -5405,3 +5405,25 @@ Free tier live (separate RapidAPI account, key is NOT `ATP_VENDOR_KEY`).
   carries the dot where the calendar is ours; the list appears only with
   a calendar per sport. The eight-swatch block is gone. A follow's page
   gains a Colour row: the sport's chip and the follow's own.
+- 2026-09-25 — **A move's Google writes go fifty to a request** (owner
+  ruling: "send Google the games 50 at a time"). Google's batch endpoint
+  (`batch/calendar/v3`, multipart/mixed): each call answers for itself,
+  calls Google asks us to slow down for (429, 5xx, a rate-limit 403) are
+  sent again alone, and whatever still fails stays for the next pass —
+  a refused create ends the pass as it always did, after recording the
+  events that were made. The request format was proven against the LIVE
+  endpoint with an unauthenticated probe (no credentials, nothing
+  written): Google parsed it and answered each call 401 inside a 200 —
+  which also showed that an expired grant never fails a batch as a
+  whole, so a 401 inside one is the reconnect ask (auth-expired), not a
+  per-call error. Scope: the layout move both ways, a calendar-target
+  switch and the stray drain; the device's own store keeps its
+  one-by-one step (`writeBatchSize` 1). The combined layout's move now
+  runs on the same routine as the per-sport one (`relocate`), so there is
+  one move with one kill-safe order. Every call still counts against the
+  user's per-minute quota — a big move is bounded by that, not by round
+  trips. NOT batched yet: the ordinary plan's creates/updates/deletes (a
+  first sync, a sport colour repaint) — flagged for a ruling. The engine
+  harness's kill test now asserts the EXACT number of created-but-
+  unrecorded events the prune meets (up to a batch's worth on Google, one
+  on the device store) instead of "one or none".

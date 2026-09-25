@@ -55,6 +55,9 @@ import {
   calendarCapabilities,
   CalendarHandle,
   conformSportCalendarColours,
+  createFixtureEvents,
+  deleteFixtureEvents,
+  writeBatchSize,
   createFixtureEvent,
   createSportCalendar,
   currentTargetId,
@@ -76,7 +79,12 @@ import {
 } from './data/driver';
 import { isScanAnomaly, orphanEventIds, RecoveredEvent } from './domain/recovery';
 import { pastEntriesWithRecordGone, pastRecordIds } from './domain/recordGone';
-import { drainStrayEvents, relocate } from './data/layoutRelocation';
+import {
+  drainStrayEvents,
+  relocate,
+  RelocationDeps,
+  WrittenEvent,
+} from './data/layoutRelocation';
 import {
   forgetSportCalendar,
   pendingLayoutMove,
@@ -91,12 +99,11 @@ import {
   mergeRecoveredCalendars,
   Placement,
   planLayoutRelocation,
+  RelocationStep,
   unreferencedCalendarIds,
 } from './domain/sportCalendars';
 import { isEndPast, isPast } from '../fixtures/domain/horizon';
 import {
-  clearedStray,
-  movedEntry,
   planTargetMigration,
   strayEventIds,
   vacatedCalendarIds,
@@ -574,12 +581,59 @@ function inputFor(
 // this is the ONLY thing that can clean them up.
 async function drainStrays(): Promise<void> {
   // Each leftover names its calendar (2026-09-24): a REST delete has to.
+  // Fifty to a request where the layer takes a batch (2026-09-25).
+  const size = writeBatchSize();
   await drainStrayEvents({
     ledger: loadLedger,
     upsert: upsertLedgerEntry,
     deleteEvent: deleteFixtureEvent,
     beat,
+    ...(size > 1 ? { batch: { size, deleteEvents: deleteFixtureEvents } } : {}),
   });
+}
+
+// What a moved event was written with — recorded so the next plan
+// compares against it.
+function writtenFrom(eventId: string, input: EventInput): WrittenEvent {
+  return {
+    eventId,
+    reminderMinutes: input.reminderMinutesBefore,
+    allDayReminder: input.allDayReminder,
+    extraReminders: input.extraRemindersBefore,
+    ...(input.note ? { note: input.note } : {}),
+    colour: input.colour ?? null,
+  };
+}
+
+// A move's writes MANY AT ONCE (owner ruling 2026-09-25): where the
+// calendar layer takes a batch (Google, fifty to a request), the move's
+// creates and deletes go that way — a move of hundreds of games was
+// spending its minutes on one round trip per write. The device's own
+// store is local and keeps its one-event step (no batch).
+function moveBatch(
+  inputOf: (step: RelocationStep) => EventInput,
+  handleFor: (calendarId: string) => Promise<Result<CalendarHandle>>,
+): RelocationDeps['batch'] {
+  const size = writeBatchSize();
+  if (size <= 1) return undefined;
+  return {
+    size,
+    create: async (items) => {
+      const handles: CalendarHandle[] = [];
+      for (const it of items) {
+        const h = await handleFor(it.calendarId);
+        if (!h.ok) return h;
+        handles.push(h.value);
+      }
+      const inputs = items.map((it) => inputOf(it.step));
+      const made = await createFixtureEvents(
+        items.map((_it, k) => ({ handle: handles[k], input: inputs[k] })),
+      );
+      if (!made.ok) return made;
+      return ok(made.value.map((r, k) => (r.ok ? ok(writtenFrom(r.value, inputs[k])) : r)));
+    },
+    deleteEvents: (items) => deleteFixtureEvents(items),
+  };
 }
 
 export interface MoveProgress {
@@ -600,36 +654,33 @@ async function migrateToTarget(
 ): Promise<Result<number>> {
   const steps = planTargetMigration(loadLedger(), targetCalendarId);
   if (steps.length === 0) return ok(0);
-  let moved = 0;
-  onProgress?.({ moved, total: steps.length });
-  for (const step of steps) {
-    const input = inputFor(step.fixtureId, step.entry, prefs, settings);
-    const created = await createFixtureEvent(calObj, input);
-    if (!created.ok) return created;
-    // ONE write: the ledger now points at the new event and owes the old
-    // one a delete. Splitting these would strand an event in a calendar
-    // nothing scans again.
-    upsertLedgerEntry(
-      step.fixtureId,
-      movedEntry(
-        step.entry,
-        created.value,
-        targetCalendarId,
-        input.reminderMinutesBefore,
-        input.allDayReminder,
-        input.extraRemindersBefore,
-      ),
-    );
-    const del = await deleteFixtureEvent(step.entry.eventId, step.entry.calendarId);
-    if (del.ok) {
-      const entry = loadLedger()[step.fixtureId];
-      if (entry) upsertLedgerEntry(step.fixtureId, clearedStray(entry));
-    }
-    moved++;
-    beat();
-    onProgress?.({ moved, total: steps.length });
-  }
-  return ok(moved);
+  onProgress?.({ moved: 0, total: steps.length });
+  // The one move routine (data/layoutRelocation.ts), every step aimed at
+  // the target: create, ONE ledger write (repoint + owe the delete), the
+  // delete, the debt cleared — fifty at a time where the layer batches.
+  // No time budget: a target switch runs to the end, as it always has.
+  const inputOf = (step: RelocationStep) => inputFor(step.fixtureId, step.entry, prefs, settings);
+  const rel = await relocate(
+    steps.map((step) => ({ ...step, to: { calendarId: targetCalendarId } })),
+    {
+      ledger: loadLedger,
+      upsert: upsertLedgerEntry,
+      calendarFor: async () => ok(targetCalendarId),
+      create: async (_calendarId, step) => {
+        const input = inputOf(step);
+        const made = await createFixtureEvent(calObj, input);
+        if (!made.ok) return made;
+        return ok(writtenFrom(made.value, input));
+      },
+      deleteEvent: (eventId, calendarId) => deleteFixtureEvent(eventId, calendarId),
+      stop: () => false,
+      beat,
+      onMoved: (moved) => onProgress?.({ moved, total: steps.length }),
+      batch: moveBatch(inputOf, async () => ok(calObj)),
+    },
+  );
+  if (!rel.ok) return rel;
+  return ok(rel.value.moved);
 }
 
 // Changing where fixtures are written. Everything already in a calendar
@@ -1153,6 +1204,29 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
       if (!known.complete) layoutSettled = false;
       const tieredById = new Map(tieredFixtures.map((f) => [f.id, f] as const));
       const scopes = seriesScopesFrom(loadFollowables());
+      // What a moved event is written as, while its fixture is in hand.
+      const moveInput = (step: RelocationStep): EventInput => {
+        const input = inputFor(step.fixtureId, step.entry, prefs, settings);
+        const fixture = tieredById.get(step.fixtureId);
+        // An entry written before notes were recorded: its note is read
+        // off the fixture.
+        if (input.note === undefined && fixture) {
+          const note = desiredEventFor(fixture, prefs, scopes, settings, {
+            pinned: pins.has(fixture.id),
+          })?.note;
+          if (note) input.note = note;
+        }
+        // The colour it wears in THIS layout: a sport's colour is its
+        // calendar's here, not the event's — carrying the old layout's
+        // colour across would only have the plan rewrite every moved
+        // event straight after.
+        if (fixture) {
+          const colour = settings[fixture.id]?.colour ?? colourOf(fixture);
+          if (colour) input.colour = colour;
+          else delete input.colour;
+        }
+        return input;
+      };
       const rel = await relocate(
         planLayoutRelocation(loadLedger(), (fixtureId) =>
           sportPlacement(known.groups.get(fixtureId)),
@@ -1165,40 +1239,15 @@ async function runSyncInner(): Promise<Result<SyncOutcome>> {
           create: async (calendarId, step) => {
             const h = await handleFor(calendarId);
             if (!h.ok) return h;
-            const input = inputFor(step.fixtureId, step.entry, prefs, settings);
-            // An entry written before notes were recorded: its note is
-            // read off the fixture, while the fixture is still in hand.
-            if (input.note === undefined) {
-              const f = tieredById.get(step.fixtureId);
-              const note = f
-                ? desiredEventFor(f, prefs, scopes, settings, { pinned: pins.has(f.id) })?.note
-                : undefined;
-              if (note) input.note = note;
-            }
-            // The colour it wears in THIS layout, while the fixture is in
-            // hand: a sport's colour is its calendar's here, not the
-            // event's — carrying the old layout's colour across would only
-            // have the plan rewrite every moved event straight after.
-            const fixture = tieredById.get(step.fixtureId);
-            if (fixture) {
-              const colour = settings[fixture.id]?.colour ?? colourOf(fixture);
-              if (colour) input.colour = colour;
-              else delete input.colour;
-            }
+            const input = moveInput(step);
             const made = await createFixtureEvent(h.value, input);
             if (!made.ok) return made;
-            return ok({
-              eventId: made.value,
-              reminderMinutes: input.reminderMinutesBefore,
-              allDayReminder: input.allDayReminder,
-              extraReminders: input.extraRemindersBefore,
-              ...(input.note ? { note: input.note } : {}),
-              colour: input.colour ?? null,
-            });
+            return ok(writtenFrom(made.value, input));
           },
           deleteEvent: (eventId, calendarId) => deleteFixtureEvent(eventId, calendarId),
           stop: (n) => shouldStopPass(n, Date.now() - passStartedAt, budgetMs),
           beat,
+          batch: moveBatch(moveInput, handleFor),
         },
       );
       if (!rel.ok) return rel;

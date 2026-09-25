@@ -317,8 +317,12 @@ silent).
   - [ ] Owner's #1 answer ("no worries") on asking Android to refresh
     Google Calendar after new calendars are made — read as "leave it",
     to confirm.
-  - [ ] Next, agreed: send Google moves in batches (50 a request) so a
-    move finishes in seconds.
+  - [x] Agreed next step, done: a move's Google writes go 50 to a
+    request (DECISIONS 2026-09-25) — format proven against the live
+    endpoint; gate 171 suites / 1,959 tests; 8 batching defects
+    mutation-tested. The Pixel measures the real speed.
+  - [ ] Ruling wanted: batch the ordinary plan too (a first sync, a
+    sport colour repaint of hundreds of events).
 - Verification: review checklist clean; EAS production builds submitted
   to TestFlight/closed track.
 

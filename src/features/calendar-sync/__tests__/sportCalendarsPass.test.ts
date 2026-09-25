@@ -114,6 +114,22 @@ jest.mock('../data/driver', () => ({
   listTaggedEvents: (id: string) => mockStore.listTagged(id),
   createSportCalendar: (title: string, colour: string) => mockStore.createCalendar(title, colour),
   calendarCapabilities: () => ({ perEventColour: mockState.eventColours }),
+  // Google takes fifty writes to a request (2026-09-25); each is still its
+  // own write in the model, so a kill can land between any two — the app
+  // dying mid-request, with some of the batch made and none recorded.
+  writeBatchSize: () => (mockStore.backend === 'rest' ? 50 : 1),
+  createFixtureEvents: async (items: Array<{ handle: { calendarId: string }; input: MockInput }>) => {
+    mockStore.batches++;
+    const out = [];
+    for (const it of items) out.push(await mockStore.createEvent(it.handle.calendarId, it.input));
+    return { ok: true, value: out };
+  },
+  deleteFixtureEvents: async (items: Array<{ eventId: string; calendarId?: string }>) => {
+    mockStore.batches++;
+    const out = [];
+    for (const it of items) out.push(await mockStore.deleteEvent(it.eventId, it.calendarId));
+    return { ok: true, value: out };
+  },
   conformSportCalendarColours: async (want: Array<{ calendarId: string; hex: string }>) =>
     mockStore.conform(want),
   deleteSportCalendarIfEmpty: (id: string, recorded: boolean) =>
@@ -191,6 +207,8 @@ const mockStore = {
   hidden: new Set<string>(),
   creates: new Map<string, number>(),
   updates: 0,
+  // Batched requests made (Google only).
+  batches: 0,
   // Sport calendar paints the passes asked for (never a kill point: a
   // paint is idempotent and touches no event or record of ours).
   paints: [] as Array<{ calendarId: string; hex: string }>,
@@ -232,6 +250,7 @@ const mockStore = {
     this.hidden = new Set();
     this.creates = new Map();
     this.updates = 0;
+    this.batches = 0;
     this.paints = [];
   },
   // The real resolution's order: the stored target; else a calendar of
@@ -477,6 +496,21 @@ function where(): Record<string, string[]> {
   return out;
 }
 
+// Events in the store that no ledger entry names — created, and the app
+// died before recording them.
+function unrecordedEvents(): number {
+  const named = new Set<string>();
+  for (const e of Object.values(loadLedger())) {
+    named.add(e.eventId);
+    if (e.strayEventId) named.add(e.strayEventId);
+  }
+  let n = 0;
+  for (const cal of mockStore.cals.values()) {
+    for (const id of cal.events.keys()) if (!named.has(id)) n++;
+  }
+  return n;
+}
+
 // Empty calendars nothing records — what Google's store keeps when the
 // app dies between creating a calendar and recording its id: REST can
 // never list calendars, so nothing can find it again.
@@ -683,12 +717,14 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
           }
           switchTo(to);
           await pass(kill); // the app dies here
-          const orphanPossible = mockStore.diedAfterWrite && mockStore.lastWrite === 'event-create';
+          const unrecorded = unrecordedEvents();
           prunedSince = 0;
           await settle(); // …and is opened again
           // The drain, not the prune, cleans up after a kill: the prune
-          // only ever meets an event created and not yet recorded.
-          expect([kill, prunedSince]).toEqual([kill, orphanPossible ? 1 : 0]);
+          // only ever meets events created and not yet recorded — one on
+          // the device's store, up to a batch's worth on Google's.
+          expect([kill, prunedSince]).toEqual([kill, unrecorded]);
+          if (backend === 'provider') expect(unrecorded).toBeLessThanOrEqual(1);
           const leaked = leakedCalendars().length;
           if (leaked > 0) leakedAt.push(kill);
           // Google: a calendar created in the instant before its id was
@@ -762,6 +798,25 @@ describe.each(['provider', 'rest'] as const)('%s calendar store', (backend) => {
     await pass();
     expect(eventOf('fd-1')?.colour).toBeUndefined();
     expect(mockStore.misaddressed).toBe(0);
+  });
+
+  test('on Google a move goes fifty to a request, both ways; the device store keeps its one-by-one step', async () => {
+    await combinedWorld();
+    mockStore.batches = 0;
+    switchTo('per-sport');
+    await settle();
+    expectLayout('per-sport');
+    const there = mockStore.batches;
+    switchTo('combined');
+    await settle();
+    expectLayout('combined');
+    if (backend === 'rest') {
+      // Eleven games: one request of creates and one of deletes each way.
+      expect(there).toBe(2);
+      expect(mockStore.batches).toBe(4);
+    } else {
+      expect(mockStore.batches).toBe(0);
+    }
   });
 
   // ─── Colour layers (owner rulings 2026-09-25) ─────────────────────
